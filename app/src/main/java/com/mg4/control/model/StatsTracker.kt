@@ -112,7 +112,8 @@ class StatsTracker(
         if (ready == true) {
             // Calculé avant la recopie : il dit à la fois combien ajouter et si l'intervalle
             // comptait, ce qui n'est pas la même chose qu'ajouter zéro.
-            val pas = enCours?.let { integrationStep(it, snapshot) }
+            val pas10 = enCours?.let { integrationStep(it, snapshot) }
+            val pas = enCours?.let { pasALaSeconde(it, snapshot) ?: pas10 }
             trip = if (enCours == null) PendingTrip(
                 startMs = snapshot.timestampMs,
                 odometerStart = snapshot.odometerKm,
@@ -136,7 +137,13 @@ class StatsTracker(
                 integratedRegenKwh = snapshot.tripRegenKwh,
                 auxStart = snapshot.auxSinceStartKwh,
                 auxLast = snapshot.auxSinceStartKwh,
-            ) else enCours.copy(
+                segmentStarts = listOf(SegmentStart(snapshot.profileId, snapshot.profileName, snapshot.timestampMs, 0f,
+                    snapshot.odometerKm, snapshot.energySinceStartKwh, snapshot.regenSinceStartKwh,
+                    snapshot.tripConsumedKwh, snapshot.tripRegenKwh)),
+                curve = TripCurve.advance(TripCurve.start(snapshot.timestampMs), 0f, snapshot.tripConsumedKwh,
+                    snapshot.tripRegenKwh, snapshot.timestampMs, snapshot.altitudeM, measured = true),
+                lastTripDistanceKm = snapshot.tripDistanceKm,
+            ) else suivreProfil(enCours.copy(
                 lastMs = snapshot.timestampMs,
                 odometerLast = snapshot.odometerKm ?: enCours.odometerLast,
                 energyLast = snapshot.energySinceStartKwh ?: enCours.energyLast,
@@ -149,6 +156,10 @@ class StatsTracker(
                 tempCount = enCours.tempCount + if (snapshot.outsideTempC != null) 1 else 0,
                 integratedKm = enCours.integratedKm + (pas ?: 0f),
                 integrated = enCours.integrated || pas != null,
+                // Une valeur manquée oblige le relevé suivant à repasser par le repli : sinon son
+                // écart couvrirait aussi l'intervalle déjà compté par le repli.
+                lastTripDistanceKm = snapshot.tripDistanceKm,
+                checkKm = enCours.checkKm + (pas10 ?: 0f),
                 // Une vitesse manquée ne réinitialise pas le trapèze : le prochain intervalle
                 // repart de la dernière vitesse connue, ce qui sous-estime sans jamais inventer.
                 lastSpeedKmh = snapshot.speedKmh ?: enCours.lastSpeedKmh,
@@ -157,18 +168,29 @@ class StatsTracker(
                 // Le départ peut avoir été illisible : le premier relevé lisible en tient lieu.
                 auxStart = enCours.auxStart ?: snapshot.auxSinceStartKwh,
                 auxLast = snapshot.auxSinceStartKwh ?: enCours.auxLast,
-            )
+                curve = enCours.curve?.let {
+                    TripCurve.advance(it, enCours.integratedKm + (pas ?: 0f), snapshot.tripConsumedKwh,
+                        snapshot.tripRegenKwh, snapshot.timestampMs, snapshot.altitudeM, measured = pas != null)
+                },
+            ), snapshot)
         } else if (ready == false && enCours != null) {
             // Entre le dernier relevé sous contact et celui qui le coupe, la voiture roulait
             // encore : sans ce dernier trapèze, chaque trajet perdrait sa fin. Seules la distance
             // et l'heure de fin sont reprises — les compteurs d'énergie restent ceux du dernier
             // relevé sous contact, dont on sait qu'ils étaient valides.
-            val fin = integrationStep(enCours, snapshot)
+            val fin10 = integrationStep(enCours, snapshot)
+            val fin = pasALaSeconde(enCours, snapshot) ?: fin10
             var clos = enCours
             if (fin != null) clos = clos.copy(
                 lastMs = snapshot.timestampMs,
                 integratedKm = enCours.integratedKm + fin,
                 integrated = true,
+                checkKm = enCours.checkKm + (fin10 ?: 0f),
+                // Le dernier trapèze nourrit aussi la courbe : sans lui, le dernier tronçon manquerait.
+                curve = enCours.curve?.let {
+                    TripCurve.advance(it, enCours.integratedKm + fin, snapshot.tripConsumedKwh,
+                        snapshot.tripRegenKwh, snapshot.timestampMs, snapshot.altitudeM, measured = true)
+                },
             )
             // L'énergie intégrée, elle, est reprise : c'est notre propre mesure, arrêtée par le
             // collecteur juste avant ce relevé, et non un compteur du véhicule qui a pu retomber.
@@ -300,6 +322,22 @@ class StatsTracker(
     }
 
     /**
+     * Distance depuis le relevé précédent d'après l'intégration à la seconde ([SpeedIntegrator]) :
+     * l'écart des deux cumuls. Null sans les deux valeurs, ou pour un écart impossible — négatif
+     * (intégration repartie de zéro) ou au-delà de 300 km/h sur l'intervalle — : le repli à 10 s
+     * ([integrationStep]) prend alors le relais.
+     */
+    private fun pasALaSeconde(p: PendingTrip, s: EnergySnapshot): Float? {
+        val avant = p.lastTripDistanceKm ?: return null
+        val apres = s.tripDistanceKm ?: return null
+        val d = apres - avant
+        val dt = s.timestampMs - p.lastMs
+        if (d < 0f || dt <= 0L || dt > MAX_SAMPLE_GAP_MS) return null
+        if (d > 300f * dt / 3_600_000f * 1.5f + 0.05f) return null
+        return d
+    }
+
+    /**
      * Fin de trajet, à partir du dernier relevé observé. Rend null pour un trajet sans distance ni
      * énergie : mettre le contact pour régler la climatisation n'est pas un trajet, et remplirait
      * la liste de lignes vides.
@@ -321,6 +359,8 @@ class StatsTracker(
         // trajet, même si l'odomètre n'a pas changé de kilomètre.
         val integre = if (p.integrated) p.integratedKm.roundTenth() else null
         if (distance <= 0 && energy <= 0f && (integre ?: 0f) <= 0f) return null
+        val fin = SegmentStart(null, null, p.lastMs, p.integratedKm, p.odometerLast, p.energyLast, p.regenLast,
+            p.integratedEnergyKwh, p.integratedRegenKwh)
         return Trip(
             startMs = p.startMs,
             endMs = p.lastMs,
@@ -341,7 +381,26 @@ class StatsTracker(
             integratedKm = integre,
             energyIntegrated = parIntegration,
             auxiliaryKwh = if (parIntegration) counterDelta(p.auxStart, p.auxLast) else null,
+            segments = TripSegments.build(p.segmentStarts, fin, p.integrated, parIntegration),
+            curve = TripCurve.finish(p.curve),
+            distanceCheckKm = if (p.integrated) p.checkKm.roundTenth() else null,
+            odometerEndKm = p.odometerLast?.takeIf { it > 0 },
         )
+    }
+
+    /**
+     * Changement de profil en cours de route (2026-11-05) : un nouveau morceau commence, aux
+     * compteurs de ce relevé. Un profil d'abord inconnu est complété plutôt que d'ouvrir un morceau.
+     */
+    private fun suivreProfil(p: PendingTrip, s: EnergySnapshot): PendingTrip {
+        val id = s.profileId ?: return p
+        val debuts = p.segmentStarts ?: return p
+        val dernier = debuts.lastOrNull() ?: return p
+        if (dernier.profileId == id) return p
+        if (dernier.profileId == null)
+            return p.copy(segmentStarts = debuts.dropLast(1) + dernier.copy(profileId = id, profileName = s.profileName))
+        return p.copy(segmentStarts = debuts + SegmentStart(id, s.profileName, p.lastMs, p.integratedKm, p.odometerLast,
+            p.energyLast, p.regenLast, p.integratedEnergyKwh, p.integratedRegenKwh))
     }
 
     private fun finishCharge(p: PendingCharge, endMs: Long, socEnd: Float?): ChargeSession {

@@ -21,7 +21,7 @@ object FloatingButtonState {
      */
     fun bascule(action: ShortcutAction, clim: () -> MG4Hardware.ClimateState?): Boolean? = runCatching {
         when (action) {
-            ShortcutAction.ONE_PEDAL -> MG4Hardware.getRegenLevel()?.let { it == RegenLevel.ONE_PEDAL }
+            ShortcutAction.ONE_PEDAL -> MG4Hardware.isOnePedalOn()
             ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.isEnergySavingOn()
             ShortcutAction.TSR_TOGGLE -> MG4Hardware.isTsrOn()
             ShortcutAction.SOUND_WARNING -> MG4Hardware.isSoundWarningOn()
@@ -45,6 +45,13 @@ object FloatingButtonState {
         val loc = LocaleHelper.applyLocale(ctx)
         when (action) {
             ShortcutAction.REGEN_CYCLE -> MG4Hardware.getRegenLevel()?.let { loc.getString(libelleRegen(it)) }
+            ShortcutAction.DRIVE_MODE_CYCLE -> MG4Hardware.getDriveMode()?.let { loc.getString(when (it) {
+                com.mg4.control.model.DriveMode.ECO -> R.string.drive_eco
+                com.mg4.control.model.DriveMode.NORMAL -> R.string.drive_normal
+                com.mg4.control.model.DriveMode.SPORT -> R.string.drive_sport
+                com.mg4.control.model.DriveMode.SNOW -> R.string.drive_snow
+                com.mg4.control.model.DriveMode.CUSTOM -> R.string.drive_custom
+            }) }
             ShortcutAction.DROWSINESS_SEN_CYCLE -> when (MG4Hardware.getDrowsinessSensitivity()) {
                 MG4Hardware.DrowsinessSensitivity.LOW -> loc.getString(R.string.sens_low)
                 MG4Hardware.DrowsinessSensitivity.MEDIUM -> loc.getString(R.string.sens_medium)

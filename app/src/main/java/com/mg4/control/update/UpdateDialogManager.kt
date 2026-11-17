@@ -22,8 +22,10 @@ import androidx.lifecycle.lifecycleScope
 import com.mg4.control.util.QrCode
 import com.mg4.control.R
 import com.mg4.control.ui.AppDialog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -243,6 +245,21 @@ object UpdateDialogManager {
                         }
                         // Nettoie les anciens APK dans Téléchargements (garde les 5 plus récents)
                         ApkCleanup.cleanIfNeeded()
+                        // Installation silencieuse (2026-11-04, comme DiAuto) : plus d'installeur
+                        // d'Android ; MG4Control se relance seul une fois à jour. En cas d'échec,
+                        // l'ancienne voie : le dossier Téléchargements.
+                        if (SilentInstaller.possible(activity)) {
+                            tvStatus.setText(R.string.update_installing)
+                            progressBar.isIndeterminate = true
+                            btnCancel.visibility = View.GONE
+                            val lance = withContext(Dispatchers.IO) {
+                                runCatching { SilentInstaller.installer(activity.applicationContext, downloaded) }
+                            }
+                            if (lance.isSuccess) break
+                            Log.w(TAG, "Installation silencieuse impossible : ${lance.exceptionOrNull()?.message}")
+                            btnCancel.visibility = View.VISIBLE
+                            progressBar.isIndeterminate = false
+                        }
                         // Ouvre le dossier Téléchargements dans le gestionnaire AAOS
                         openDownloadsFolder(activity)
                         onDownloaded()

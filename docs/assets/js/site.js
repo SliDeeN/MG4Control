@@ -11,7 +11,7 @@
   };
   const lang = () => root.getAttribute('data-lang') || 'fr';
   const L = (fr, en) => (lang() === 'en' ? en : fr);
-  const FW6 = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165'];
+  const FIRMWARES = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165', 'SWI173'];
 
   // ── Langue ────────────────────────────────────────────────────────────────
   // Une page par langue (générées par site-src/build.ps1) : la langue de la page est fixée par son
@@ -68,13 +68,17 @@
   // ── Widgets dépendants du firmware ────────────────────────────────────────
   function refreshWidgets() {
     const fw = window.MG4Sim ? window.MG4Sim.firmware() : 'SWI133';
+    const column = fw === 'SWI173' ? 'SWI131' : fw;
     document.querySelectorAll('.fw-pick button').forEach((b) => b.setAttribute('aria-pressed', b.getAttribute('data-fw') === fw ? 'true' : 'false'));
     document.querySelectorAll('.fw-tags[data-fw]').forEach((box) => {
       const yes = box.getAttribute('data-fw').split(/[ ,]+/);
-      box.innerHTML = FW6.map((g) => '<span class="fw-tag' + (yes.includes(g) ? ' yes' : '') + (g === fw ? ' cur' : '') + '" title="' +
-        (yes.includes(g) ? L('Disponible', 'Available') : L('Non disponible', 'Not available')) + '">' + g + '</span>').join('');
+      box.innerHTML = FIRMWARES.map((g) => {
+        const available = yes.includes(g === 'SWI173' ? 'SWI131' : g);
+        return '<span class="fw-tag' + (available ? ' yes' : '') + (g === fw ? ' cur' : '') + '" title="' +
+          (available ? L('Disponible', 'Available') : L('Non disponible', 'Not available')) + '">' + g + '</span>';
+      }).join('');
     });
-    document.querySelectorAll('.matrix [data-col]').forEach((c) => c.classList.toggle('col-on', c.getAttribute('data-col') === fw));
+    document.querySelectorAll('.matrix [data-col]').forEach((c) => c.classList.toggle('col-on', c.getAttribute('data-col') === column));
     document.querySelectorAll('[data-fw-name]').forEach((n) => { n.textContent = fw; });
     precedence.update();
     gate.update();

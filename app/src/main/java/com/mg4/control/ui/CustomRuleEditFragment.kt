@@ -1,0 +1,1667 @@
+package com.mg4.control.ui
+
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import android.content.Context
+import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Switch
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import com.mg4.control.R
+import com.mg4.control.api.ExternalApi
+import com.mg4.control.automation.CustomRuleStore
+import com.mg4.control.automation.CustomRules
+import com.mg4.control.bluetooth.BluetoothProfileManager
+import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.model.AndroidActions
+import com.mg4.control.model.CustomRule
+import com.mg4.control.model.DriveMode
+import com.mg4.control.model.RegenLevel
+import com.mg4.control.model.RuleAction
+import com.mg4.control.model.RuleCondition
+import com.mg4.control.model.RuleEvent
+import com.mg4.control.model.RuleOp
+import com.mg4.control.model.RuleRun
+import com.mg4.control.model.RuleSignal
+import com.mg4.control.model.RuleText
+import com.mg4.control.model.RuleKeys
+import com.mg4.control.model.RuleClipboard
+import com.mg4.control.model.RuleLogic
+import com.mg4.control.model.RuleTrigger
+import com.mg4.control.model.SunEvent
+import com.mg4.control.automation.AndroidControls
+import com.mg4.control.automation.RulePlaces
+import com.mg4.control.automation.RuleVariables
+import com.mg4.control.shortcut.ShortcutAction
+import com.mg4.control.profile.ProfileManager
+import com.mg4.control.ui.widget.SegmentSwitch
+import java.text.DateFormat
+import java.util.Date
+
+/**
+ * Éditeur de Mes automatisations (issue #201, étape 2) : une colonne façon Home Assistant —
+ * **Quand** (déclencheurs), **Et si** (arbre de conditions, groupes Toutes / Au moins une / Aucune),
+ * **Alors** (actions, blocs Si / Sinon et Répéter imbriqués), **Options**.
+ *
+ * L'automatisation affichée est une valeur ([regle]) : chaque modification en construit une
+ * nouvelle par des « mises à jour » (`put`) passées de bloc en bloc, puis redessine tout. Rien
+ * n'est écrit avant « Enregistrer » ; « Tester » lance la version affichée.
+ *
+ * Ouvert depuis la page Mes automatisations : [ARG_RULE_ID] pour en modifier une, ou
+ * [ARG_NEW_RULE] (JSON) pour une nouvelle, vide ou venue d'un modèle.
+ */
+class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
+
+    companion object {
+        const val ARG_RULE_ID = "rule_id"
+        const val ARG_NEW_RULE = "new_rule"
+        private const val STATE_RULE = "rule"
+        private const val STATE_INITIAL = "initial"
+
+        /** Imbrication proposée dans l'éditeur : groupes et blocs au plus à ce niveau. */
+        private const val PROFONDEUR_MAX = 3
+        private const val LARGEUR_SEGMENTS_DP = 460f
+    }
+
+    private lateinit var regle: CustomRule
+    /** La version à l'ouverture : quitter sans enregistrer ne demande confirmation que si elle a changé. */
+    private lateinit var initiale: CustomRule
+    private lateinit var mots: AndroidRuleWords
+    private lateinit var texte: RuleText
+    private var corps: LinearLayout? = null
+    private var defilement: ScrollView? = null
+
+    private val ctx: Context get() = requireContext()
+    private fun s(id: Int, vararg a: Any): String = ctx.getString(id, *a)
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        mots = AndroidRuleWords(ctx)
+        texte = RuleText(mots)
+        corps = view.findViewById(R.id.rule_edit_body)
+        defilement = view.findViewById(R.id.rule_edit_scroll)
+
+        fun decode(json: String?) = json?.let { CustomRuleStore.decode("[$it]").firstOrNull() }
+        val enregistree = arguments?.getString(ARG_RULE_ID)?.let { id -> CustomRuleStore.all(ctx).firstOrNull { it.id == id } }
+        val ouverte = enregistree ?: decode(arguments?.getString(ARG_NEW_RULE)) ?: CustomRule(name = s(R.string.rule_name_default_fmt, 1))
+        regle = decode(savedInstanceState?.getString(STATE_RULE)) ?: ouverte
+        initiale = decode(savedInstanceState?.getString(STATE_INITIAL)) ?: ouverte
+
+        view.findViewById<EditText>(R.id.rule_edit_name).apply {
+            setText(regle.name)
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun afterTextChanged(e: Editable?) { regle = regle.copy(name = e?.toString().orEmpty()) }
+            })
+        }
+        view.findViewById<Switch>(R.id.rule_edit_enabled).apply {
+            isChecked = regle.enabled
+            setOnCheckedChangeListener { _, on -> regle = regle.copy(enabled = on) }
+        }
+        view.findViewById<View>(R.id.rule_edit_save).setOnClickListener { enregistrer() }
+        view.findViewById<View>(R.id.rule_edit_cancel).setOnClickListener { quitter() }
+        view.findViewById<View>(R.id.rule_edit_test).setOnClickListener { tester() }
+        view.findViewById<View>(R.id.rule_edit_journal).setOnClickListener { journal() }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = quitter()
+        })
+        dessiner()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (!::regle.isInitialized) return
+        outState.putString(STATE_RULE, CustomRuleStore.encode(listOf(regle)).removeSurrounding("[", "]"))
+        outState.putString(STATE_INITIAL, CustomRuleStore.encode(listOf(initiale)).removeSurrounding("[", "]"))
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        corps = null
+        defilement = null
+    }
+
+    // ── Pied de page ─────────────────────────────────────────────────────────
+
+    private fun nomFinal(): String = regle.name.trim().ifEmpty { s(R.string.rule_name_default_fmt, CustomRuleStore.all(ctx).size + 1) }
+
+    private fun enregistrer() {
+        val manque = when {
+            regle.triggers.isEmpty() -> R.string.rule_need_trigger
+            regle.actions.isEmpty() -> R.string.rule_need_action
+            else -> null
+        }
+        if (manque != null) {
+            AppDialog.confirmer(ctx, titre = s(manque), ton = AppDialog.Ton.ALERTE, oui = s(R.string.nav_close))
+            return
+        }
+        val finale = regle.copy(name = nomFinal())
+        if (!CustomRuleStore.upsert(ctx, finale)) {
+            Toast.makeText(ctx, s(R.string.rule_max_reached, CustomRuleStore.MAX_RULES), Toast.LENGTH_LONG).show()
+            return
+        }
+        CustomRules.refresh(ctx)
+        findNavController().popBackStack()
+    }
+
+    private fun quitter() {
+        if (regle == initiale) {
+            findNavController().popBackStack()
+            return
+        }
+        AppDialog.confirmer(ctx,
+            titre = s(R.string.rule_discard_title),
+            ton = AppDialog.Ton.ALERTE,
+            oui = s(R.string.rule_discard),
+            non = s(R.string.rule_keep_editing),
+            onOui = { findNavController().popBackStack() })
+    }
+
+    private fun tester() {
+        if (regle.actions.isEmpty()) {
+            AppDialog.confirmer(ctx, titre = s(R.string.rule_need_action), ton = AppDialog.Ton.ALERTE, oui = s(R.string.nav_close))
+            return
+        }
+        val essai = regle.copy(name = nomFinal())
+        CustomRules.test(ctx, essai)
+        Toast.makeText(ctx, s(R.string.rule_test_started, essai.name), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun journal() {
+        val run = CustomRules.lastRun(ctx, regle.id)
+        val message = if (run == null) s(R.string.rule_never_run) else {
+            val quand = run.atMs?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) }
+                ?: s(R.string.rule_run_time_unknown)
+            val entete = s(R.string.rule_last_run_actions_fmt, quand,
+                RuleRunText.actions(ctx, run), run.failed)
+            val lignes = run.journal.orEmpty()
+            if (lignes.isEmpty()) entete else entete + "\n\n" + lignes.joinToString("\n")
+        }
+        AppDialog.confirmer(ctx,
+            titre = s(R.string.rule_journal_title_fmt, nomFinal()),
+            message = message,
+            icone = R.drawable.ic_dialog_list,
+            oui = s(R.string.nav_close))
+    }
+
+    // ── Dessin ───────────────────────────────────────────────────────────────
+
+    /** Remplace l'automatisation affichée et redessine, en gardant la position dans la page. */
+    private fun maj(f: (CustomRule) -> CustomRule) {
+        regle = f(regle)
+        dessiner()
+    }
+
+    private fun dessiner() {
+        val box = corps ?: return
+        val y = defilement?.scrollY ?: 0
+        box.removeAllViews()
+
+        section(box, R.string.rule_sec_when, R.string.rule_sec_when_hint) { s ->
+            if (regle.triggers.isEmpty()) vide(s, R.string.rule_none_triggers)
+            val put: (List<RuleTrigger>) -> Unit = { l -> maj { it.copy(triggers = l) } }
+            regle.triggers.forEachIndexed { i, t ->
+                val editer = { declencheur(t) { n -> put(regle.triggers.remplace(i, n)) } }
+                ligne(s, texte.trigger(t), editer) { menu(texte.trigger(t), regle.triggers, i, put, editer) }
+                // « Bouton, bulle ou automatisation » : rien ne se règle ici, on dit qui la lance (2026-11-12).
+                if (t.type == RuleTrigger.Type.MANUAL) lanceursDe(s)
+            }
+            val bTrig = rangeeBoutons(s)
+            ajouter(bTrig, R.string.rule_add_trigger) { declencheur(null) { n -> put(regle.triggers + n) } }
+            RuleClipboard.trigger?.let { t -> coller(bTrig) { put(regle.triggers + t) } }
+        }
+
+        section(box, R.string.rule_sec_if, R.string.rule_sec_if_hint) { s ->
+            groupe(s, regle.condition, 0, racine = true) { c -> maj { it.copy(condition = c) } }
+        }
+
+        section(box, R.string.rule_sec_then, R.string.rule_sec_then_hint) { s ->
+            actions(s, regle.actions, 0, R.string.rule_none_actions) { l -> maj { it.copy(actions = l) } }
+        }
+
+        section(box, R.string.rule_sec_options, null) { s -> options(s) }
+
+        defilement?.post { defilement?.scrollTo(0, y) }
+    }
+
+    private fun dp(v: Float) = AppDialog.dp(ctx, v)
+
+    private fun lp(haut: Float = 0f, debut: Float = 0f) = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+    ).also { it.topMargin = dp(haut); it.marginStart = dp(debut) }
+
+    private fun texteVue(t: CharSequence, sp: Float, couleur: Int, gras: Boolean = false) = TextView(ctx).apply {
+        text = t
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
+        setTextColor(ctx.getColor(couleur))
+        if (gras) paint.isFakeBoldText = true
+    }
+
+    private fun section(box: LinearLayout, titre: Int, aide: Int?, remplir: (LinearLayout) -> Unit) {
+        val carte = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_card_rounded)
+            val p = dp(18f)
+            setPadding(p, p, p, p)
+            layoutParams = lp(haut = if (box.childCount == 0) 0f else 14f)
+        }
+        carte.addView(texteVue(s(titre), 22f, R.color.text_primary, gras = true))
+        aide?.let { carte.addView(texteVue(s(it), 18f, R.color.text_secondary).apply { layoutParams = lp(haut = 2f) }) }
+        remplir(carte)
+        box.addView(carte)
+    }
+
+    /** Un bloc imbriqué (groupe, Si, Répéter) : en retrait, sur un fond plus sombre. */
+    private fun bloc(box: LinearLayout): LinearLayout = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        setBackgroundResource(R.drawable.bg_section_rounded)
+        val p = dp(14f)
+        setPadding(p, p, p, p)
+        layoutParams = lp(haut = 10f, debut = 24f)
+        box.addView(this)
+    }
+
+    private fun etiquette(box: LinearLayout, t: Int) {
+        box.addView(texteVue(s(t), 17f, R.color.text_secondary, gras = true).apply {
+            isAllCaps = true
+            letterSpacing = 0.08f
+            layoutParams = lp(haut = 12f)
+        })
+    }
+
+    /** Sous le déclencheur « Bouton, bulle ou automatisation » : ce qui lance celle-ci, ou comment la lancer. */
+    private fun lanceursDe(box: LinearLayout) {
+        val lanceurs = runCatching { RuleLaunchers.of(ctx, regle.id, CustomRuleStore.all(ctx)) }.getOrDefault(emptyList())
+        val texte = if (lanceurs.isEmpty()) s(R.string.rule_manual_none)
+            else s(R.string.rule_manual_by_fmt, lanceurs.joinToString(" · "))
+        box.addView(texteVue(texte, 17f, if (lanceurs.isEmpty()) R.color.dash_text_lo else R.color.text_secondary).apply {
+            layoutParams = lp(haut = 6f)
+            setPadding(dp(18f), 0, dp(18f), 0)
+        })
+    }
+
+    private fun vide(box: LinearLayout, t: Int) {
+        box.addView(texteVue(s(t), 18f, R.color.dash_text_lo).apply { layoutParams = lp(haut = 10f) })
+    }
+
+    /** Une ligne : son texte (toucher = modifier, ou le menu s'il n'y a rien à modifier) et ⋮. */
+    private fun ligne(box: LinearLayout, t: String, editer: (() -> Unit)?, menu: () -> Unit) {
+        val rangee = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundResource(R.drawable.bg_dialog_tile)
+            minimumHeight = dp(64f)
+            layoutParams = lp(haut = 8f)
+        }
+        rangee.addView(texteVue(t, 19f, R.color.text_primary).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            setPadding(dp(18f), dp(12f), dp(8f), dp(12f))
+        })
+        rangee.addView(boutonMenu(menu))
+        rangee.setOnClickListener { enchainement(editer ?: menu) }
+        box.addView(rangee)
+    }
+
+    /** L'en-tête discret d'un bloc (« Bloc si / sinon ») et son ⋮. */
+    private fun enTeteBloc(box: LinearLayout, t: String, menu: () -> Unit) {
+        val rangee = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = lp()
+            setOnClickListener { enchainement(menu) }
+        }
+        rangee.addView(texteVue(t, 18f, R.color.text_secondary).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        rangee.addView(boutonMenu(menu))
+        box.addView(rangee)
+    }
+
+    private fun boutonMenu(menu: () -> Unit) = texteVue("⋮", 30f, R.color.text_secondary, gras = true).apply {
+        layoutParams = LinearLayout.LayoutParams(dp(64f), dp(64f))
+        gravity = Gravity.CENTER
+        contentDescription = s(R.string.rule_menu_title)
+        setOnClickListener { enchainement(menu) }
+    }
+
+    private fun ajouter(box: LinearLayout, t: Int, onClick: () -> Unit) {
+        box.addView(texteVue("+  " + s(t), 19f, R.color.dash_accent, gras = true).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(56f)).also {
+                it.topMargin = dp(10f)
+                it.marginEnd = dp(10f)
+            }
+            gravity = Gravity.CENTER
+            setPadding(dp(22f), 0, dp(22f), 0)
+            setBackgroundResource(R.drawable.bg_dialog_tile)
+            setOnClickListener { enchainement(onClick) }
+        })
+    }
+
+    /** « Coller » : à côté de « + … », seulement quand l'élément copié a le droit d'aller là. */
+    private fun coller(box: LinearLayout, onClick: () -> Unit) {
+        box.addView(texteVue(s(R.string.rule_paste), 19f, R.color.dash_accent, gras = true).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(56f)).also {
+                it.topMargin = dp(10f)
+                it.marginEnd = dp(10f)
+            }
+            gravity = Gravity.CENTER
+            setPadding(dp(22f), 0, dp(22f), 0)
+            setBackgroundResource(R.drawable.bg_dialog_tile)
+            setOnClickListener { onClick() }
+        })
+    }
+
+    /**
+     * Un enchaînement de choix (ajouter, modifier, ⋮) : ses fenêtres se succèdent dans une seule,
+     * avec Retour à partir de la deuxième étape ([Assistant]).
+     */
+    private fun enchainement(f: () -> Unit) = Assistant.dans(Assistant(ctx), f)
+
+    private fun rangeeBoutons(box: LinearLayout): LinearLayout = LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        layoutParams = lp()
+        box.addView(this)
+    }
+
+    // ── Menu ⋮ ───────────────────────────────────────────────────────────────
+
+    private enum class Geste { EDIT, UP, DOWN, DUPLICATE, COPY, CUT, DELETE }
+
+    private fun <T> menu(titre: String, liste: List<T>, i: Int, put: (List<T>) -> Unit, editer: (() -> Unit)?) {
+        val gestes = buildList {
+            if (editer != null) add(Geste.EDIT)
+            if (i > 0) add(Geste.UP)
+            if (i < liste.lastIndex) add(Geste.DOWN)
+            add(Geste.DUPLICATE)
+            add(Geste.COPY)
+            add(Geste.CUT)
+            add(Geste.DELETE)
+        }
+        AppDialog.choisir(ctx,
+            titre = titre,
+            icone = R.drawable.ic_dialog_edit,
+            choix = gestes.map {
+                AppDialog.Choix(s(when (it) {
+                    Geste.EDIT -> R.string.rule_menu_edit
+                    Geste.UP -> R.string.rule_menu_up
+                    Geste.DOWN -> R.string.rule_menu_down
+                    Geste.DUPLICATE -> R.string.rule_menu_duplicate
+                    Geste.COPY -> R.string.rule_menu_copy
+                    Geste.CUT -> R.string.rule_menu_cut
+                    Geste.DELETE -> R.string.rule_delete
+                }))
+            },
+            annuler = s(R.string.profile_cancel),
+        ) { rang ->
+            when (gestes[rang]) {
+                Geste.EDIT -> editer?.invoke()
+                Geste.UP -> put(liste.toMutableList().also { java.util.Collections.swap(it, i, i - 1) })
+                Geste.DOWN -> put(liste.toMutableList().also { java.util.Collections.swap(it, i, i + 1) })
+                Geste.DUPLICATE -> put(liste.toMutableList().also { it.add(i + 1, liste[i]) })
+                Geste.COPY -> {
+                    RuleClipboard.content = liste[i]
+                    Toast.makeText(ctx, s(R.string.rule_copied, titre), Toast.LENGTH_SHORT).show()
+                    dessiner()   // les boutons « Coller » apparaissent là où il va
+                }
+                Geste.CUT -> {
+                    RuleClipboard.content = liste[i]
+                    Toast.makeText(ctx, s(R.string.rule_copied, titre), Toast.LENGTH_SHORT).show()
+                    put(liste.toMutableList().also { it.removeAt(i) })
+                }
+                Geste.DELETE -> put(liste.toMutableList().also { it.removeAt(i) })
+            }
+        }
+    }
+
+    private fun <T> List<T>.remplace(i: Int, v: T): List<T> = toMutableList().also { it[i] = v }
+
+    // ── Conditions ───────────────────────────────────────────────────────────
+
+    private fun typeGroupe(t: RuleCondition.Type?) = when (t) {
+        RuleCondition.Type.ANY -> 1
+        RuleCondition.Type.NOT -> 2
+        else -> 0
+    }
+
+    private val typesGroupe = listOf(RuleCondition.Type.ALL, RuleCondition.Type.ANY, RuleCondition.Type.NOT)
+
+    /** Le sélecteur Toutes / Au moins une / Aucune d'un groupe. */
+    private fun segmentsGroupe(box: LinearLayout, g: RuleCondition, menu: (() -> Unit)?, put: (RuleCondition) -> Unit) {
+        val rangee = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = lp(haut = 10f)
+        }
+        rangee.addView(texteVue(s(R.string.rule_group_prefix), 18f, R.color.text_secondary).apply {
+            setPadding(0, 0, dp(14f), 0)
+        })
+        val segments = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundResource(R.drawable.bg_dialog_segments)
+            val p = dp(4f)
+            setPadding(p, p, p, p)
+            layoutParams = LinearLayout.LayoutParams(dp(LARGEUR_SEGMENTS_DP), dp(60f))
+        }
+        AppDialog.segments(segments,
+            listOf(s(R.string.rule_group_all), s(R.string.rule_group_any), s(R.string.rule_group_not)),
+            typeGroupe(g.type)) { rang -> put(g.copy(type = typesGroupe[rang])) }
+        rangee.addView(segments)
+        rangee.addView(View(ctx).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
+        if (menu != null) rangee.addView(boutonMenu(menu))
+        box.addView(rangee)
+    }
+
+    /**
+     * Un groupe et ses conditions. La racine (« Et si ») n'a ni cadre ni menu ; un sous-groupe est
+     * un bloc en retrait, avec son propre ⋮ (rendu par la liste qui le contient).
+     */
+    private fun groupe(
+        box: LinearLayout, g: RuleCondition, profondeur: Int, racine: Boolean,
+        siVide: Int = R.string.rule_none_conditions, put: (RuleCondition) -> Unit,
+    ) {
+        val enfants = g.children.orEmpty()
+        if (racine) {
+            if (enfants.isEmpty()) vide(box, siVide)
+            // Toutes / Au moins une / Aucune n'a de sens qu'à partir de deux conditions ; il reste
+            // affiché sur un « Aucune » à une condition, pour pouvoir le défaire.
+            else if (enfants.size >= 2 || g.type == RuleCondition.Type.NOT) segmentsGroupe(box, g, null, put)
+        }
+        val putEnfants: (List<RuleCondition>) -> Unit = { l -> put(g.copy(children = l)) }
+        enfants.forEachIndexed { i, c ->
+            val titre = texte.condition(c)
+            if (c.isGroup) {
+                val b = bloc(box)
+                segmentsGroupe(b, c, { menu(titre, enfants, i, putEnfants, null) }) { n -> putEnfants(enfants.remplace(i, n)) }
+                groupe(b, c, profondeur + 1, racine = false) { n -> putEnfants(enfants.remplace(i, n)) }
+            } else {
+                val editer = { condition(c) { n -> putEnfants(enfants.remplace(i, n)) } }
+                ligne(box, titre, editer) { menu(titre, enfants, i, putEnfants, editer) }
+            }
+        }
+        if (!racine && enfants.isEmpty()) vide(box, R.string.rule_none_in_group)
+        val boutons = rangeeBoutons(box)
+        ajouter(boutons, R.string.rule_add_condition) { nouvelleCondition(profondeur) { n -> putEnfants(enfants + n) } }
+        RuleClipboard.condition?.takeIf { RuleClipboard.fitsCondition(it, profondeur, PROFONDEUR_MAX) }?.let { c ->
+            coller(boutons) { putEnfants(enfants + c) }
+        }
+    }
+
+    /**
+     * Nouvelle condition (2026-11-12) : comme les actions, une tuile par capteur dans sa catégorie ;
+     * au toucher, la comparaison (son mode), puis la valeur. La recherche trouve aussi les modes.
+     */
+    private fun nouvelleCondition(profondeur: Int, ok: (RuleCondition) -> Unit) {
+        val autres = buildList<Pair<Int, () -> Unit>> {
+            add(R.string.rule_cond_time to { plage(null, ok) })
+            add(R.string.rule_cond_days to { jours(null, ok) })
+            add(R.string.rule_cond_season to { saison(null, ok) })
+            add(R.string.rule_cond_place to { lieu(null, ok) })
+            add(R.string.rule_cond_variable to { variable(null, ok) })
+            add(R.string.rule_cond_random to { hasard(null, ok) })
+            if (profondeur < PROFONDEUR_MAX - 1) {
+                add(R.string.rule_cond_group_all to { ok(RuleCondition(RuleCondition.Type.ALL, children = emptyList())) })
+                add(R.string.rule_cond_group_any to { ok(RuleCondition(RuleCondition.Type.ANY, children = emptyList())) })
+                add(R.string.rule_cond_group_not to { ok(RuleCondition(RuleCondition.Type.NOT, children = emptyList())) })
+            }
+        }
+        val capteurs = signaux().map { sig ->
+            tuile(mots.signal(sig), catSignal(sig), "cond:${sig.name}",
+                operations(sig).map { (libelle, op) -> libelle to { valeurPour(sig, op, null, ok) } })
+        }
+        entrees(R.string.rule_choose_condition, autres.map { (res, action) ->
+            Entree(s(res), catCondition(res), resources.getResourceEntryName(res), action)
+        } + capteurs, recents = "cond")
+    }
+
+    private fun catCondition(res: Int): Cat = when (res) {
+        R.string.rule_cond_time, R.string.rule_cond_days, R.string.rule_cond_season -> Cat.TIME
+        R.string.rule_cond_place -> Cat.PLACES
+        else -> Cat.FLOW
+    }
+
+    /** Les comparaisons d'une condition sur [sig], dans l'ordre du choix. */
+    private fun operations(sig: RuleSignal): List<Pair<String, RuleOp>> = when (sig.kind) {
+        RuleSignal.Kind.BOOL -> listOf(s(R.string.segment_yes) to RuleOp.IS_TRUE, s(R.string.segment_no) to RuleOp.IS_FALSE)
+        RuleSignal.Kind.NUMBER -> listOf(s(R.string.rule_op_above) to RuleOp.ABOVE, s(R.string.rule_op_below) to RuleOp.BELOW)
+        RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> listOf(s(R.string.rule_op_is) to RuleOp.EQUALS, s(R.string.rule_op_is_not) to RuleOp.NOT_EQUALS)
+    }
+
+    // ── Capteurs d'abord (2026-11-12) ─────────────────────────────────────────
+
+    /**
+     * Une entrée de la grande fenêtre : ce qu'elle montre, où elle se range, sa clé pour les
+     * « Récents », ce qu'elle fait ; [motsCles] : mots cherchés en plus (ses modes).
+     */
+    private class Entree(
+        val libelle: String, val cat: Cat, val cle: String, val action: () -> Unit,
+        val sous: String? = null, val motsCles: String? = null,
+    )
+
+    private fun entrees(titre: Int, e: List<Entree>, recents: String) {
+        AppDialog.choisir(ctx, titre = s(titre),
+            choix = e.map { AppDialog.Choix(it.libelle, sousLibelle = it.sous, motsCles = it.motsCles) },
+            annuler = s(R.string.profile_cancel),
+            categories = categories(e.map { it.cat }), recents = recents, cles = e.map { it.cle }) { rang -> e[rang].action() }
+    }
+
+    /**
+     * Une tuile à modes, comme dans le choix des actions : un seul mode s'applique au toucher,
+     * plusieurs se choisissent ensuite (« N modes » en seconde ligne) ; la recherche les trouve aussi.
+     */
+    private fun tuile(nom: String, cat: Cat, cle: String, modes: List<Pair<String, () -> Unit>>): Entree =
+        Entree(nom, cat, cle, {
+            if (modes.size == 1) modes[0].second()
+            else valeurs(nom, modes.indices.map { modes[it].first to it }, null) { i -> modes[i].second() }
+        }, sous = if (modes.size > 1) s(R.string.rule_act_modes_fmt, modes.size) else null,
+            motsCles = modes.joinToString(" ") { it.first })
+
+    /** Façons de déclencher sur un capteur, selon son genre. */
+    private enum class Mode(val libelle: Int) {
+        VERS_VRAI(R.string.rule_mode_to_true),
+        VERS_FAUX(R.string.rule_mode_to_false),
+        BASCULE(R.string.rule_mode_both),
+        AU_DESSUS(R.string.rule_mode_above),
+        EN_DESSOUS(R.string.rule_mode_below),
+        DEVIENT(R.string.rule_mode_becomes),
+        N_EST_PLUS(R.string.rule_mode_stops),
+        CHANGE(R.string.rule_mode_change),
+    }
+
+    private fun modes(sig: RuleSignal): List<Mode> = when (sig.kind) {
+        RuleSignal.Kind.BOOL -> listOf(Mode.VERS_VRAI, Mode.VERS_FAUX, Mode.BASCULE)
+        RuleSignal.Kind.NUMBER -> listOfNotNull(Mode.AU_DESSUS, Mode.EN_DESSOUS, Mode.CHANGE.takeIf { sig in CHANGE_NOMBRES })
+        RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> listOf(Mode.DEVIENT, Mode.N_EST_PLUS, Mode.CHANGE)
+    }
+
+    /**
+     * Les raccourcis de déclencheur qui portent sur un capteur (2026-11-12) : ils deviennent des
+     * modes de sa tuile, sous leur nom, à la place du mode de capteur qu'ils valent (s'il y en a un).
+     */
+    private val RACCOURCIS_CAPTEUR: Map<Int, Pair<RuleSignal, Mode?>> = mapOf(
+        R.string.rule_trg_ready_on to (RuleSignal.READY to Mode.VERS_VRAI),
+        R.string.rule_trg_ready_off to (RuleSignal.READY to Mode.VERS_FAUX),
+        R.string.rule_trg_gear_p to (RuleSignal.GEAR to null),
+        R.string.rule_trg_gear_d to (RuleSignal.GEAR to null),
+        R.string.rule_trg_profile_changes to (RuleSignal.PROFILE to Mode.CHANGE),
+        R.string.rule_trg_charge_start to (RuleSignal.CHARGING to Mode.VERS_VRAI),
+        R.string.rule_trg_charge_end to (RuleSignal.CHARGING to Mode.VERS_FAUX),
+        R.string.rule_trg_plugged to (RuleSignal.PLUGGED to Mode.VERS_VRAI),
+        R.string.rule_trg_unplugged to (RuleSignal.PLUGGED to Mode.VERS_FAUX),
+        R.string.rule_trg_locked to (RuleSignal.LOCKED to Mode.VERS_VRAI),
+        R.string.rule_trg_unlocked to (RuleSignal.LOCKED to Mode.VERS_FAUX),
+        R.string.rule_event_door to (RuleSignal.FRONT_DOOR to Mode.VERS_VRAI),
+        R.string.rule_event_door_close to (RuleSignal.FRONT_DOOR to Mode.VERS_FAUX),
+        R.string.rule_trg_phone to (RuleSignal.BT_DEVICE to Mode.DEVIENT),
+        R.string.rule_trg_phone_off to (RuleSignal.BT_DEVICE to Mode.N_EST_PLUS),
+    )
+
+    /** Les tuiles des déclencheurs : une par capteur (ses raccourcis puis ses modes), puis les autres raccourcis. */
+    private fun tuilesDeclencheur(raccourcis: List<Pair<Int, () -> Unit>>, ok: (RuleTrigger) -> Unit): List<Entree> {
+        val parCapteur = raccourcis.filter { it.first in RACCOURCIS_CAPTEUR }.groupBy { RACCOURCIS_CAPTEUR.getValue(it.first).first }
+        val capteurs = signaux().map { sig ->
+            val siens = parCapteur[sig].orEmpty()
+            val remplaces = siens.mapNotNull { RACCOURCIS_CAPTEUR.getValue(it.first).second }.toSet()
+            tuile(mots.signal(sig), catSignal(sig), "trg:${sig.name}",
+                siens.map { (res, action) -> s(res) to action } +
+                    modes(sig).filter { it !in remplaces }.map { m -> s(m.libelle) to { declencherSur(sig, m, ok) } })
+        }
+        val autres = raccourcis.filter { it.first !in RACCOURCIS_CAPTEUR }.map { (res, action) ->
+            Entree(s(res), catDeclencheur(res), resources.getResourceEntryName(res), action)
+        }
+        return autres + capteurs
+    }
+
+    private fun declencherSur(sig: RuleSignal, m: Mode, ok: (RuleTrigger) -> Unit) {
+        val avecDuree: (RuleCondition) -> Unit = { c -> dureeDeclencheur(RuleTrigger(), c, ok) }
+        fun base(op: RuleOp) = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op)
+        when (m) {
+            Mode.VERS_VRAI -> avecDuree(base(RuleOp.IS_TRUE))
+            Mode.VERS_FAUX -> avecDuree(base(RuleOp.IS_FALSE))
+            Mode.BASCULE, Mode.CHANGE -> dureeChange(RuleTrigger(), sig, ok)
+            Mode.AU_DESSUS -> valeurPour(sig, RuleOp.ABOVE, null, avecDuree)
+            Mode.EN_DESSOUS -> valeurPour(sig, RuleOp.BELOW, null, avecDuree)
+            Mode.DEVIENT -> valeurPour(sig, RuleOp.EQUALS, null, avecDuree)
+            Mode.N_EST_PLUS -> valeurPour(sig, RuleOp.NOT_EQUALS, null, avecDuree)
+        }
+    }
+
+    /** « Pendant combien de temps ? » puis le déclencheur « devient vrai » sur [c]. */
+    private fun dureeDeclencheur(t: RuleTrigger, c: RuleCondition, ok: (RuleTrigger) -> Unit) =
+        pendant(t.forSeconds) { sec -> ok(t.copy(type = RuleTrigger.Type.BECOMES, condition = c, forSeconds = sec)) }
+
+    /** « Change » (ou la bascule dans les deux sens) sur [sig], puis « Pendant combien de temps ? ». */
+    private fun dureeChange(t: RuleTrigger, sig: RuleSignal, ok: (RuleTrigger) -> Unit) =
+        pendant(t.forSeconds) { sec ->
+            ok(t.copy(type = RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig), forSeconds = sec))
+        }
+
+    /**
+     * « Pendant combien de temps ? » (2026-11-12) : demandé pour CHAQUE déclencheur qui suit un état,
+     * à la création comme à la modification ; « Tout de suite » = 0. Seuls les moments (heure,
+     * période, soleil, démarrage de l'écran, bouton) s'en passent.
+     */
+    private fun pendant(deja: Int, ok: (Int) -> Unit) =
+        RuleValueDialogs.nombre(ctx, s(R.string.rule_for_title), s(R.string.rule_for_hint), deja, 0, RuleRun.MAX_WAIT_S,
+            texte = { if (it == 0) s(R.string.rule_for_now) else duree(it) }, pas = ::pasDuree, onOk = ok)
+
+    /**
+     * Porte avant ouverte / refermées : tout de suite = l'événement de la porte, comme avant ; avec
+     * une durée = la porte restée ouverte (ou fermée) ce temps-là.
+     */
+    private fun porte(e: RuleEvent, deja: Int, ok: (RuleTrigger) -> Unit) = pendant(deja) { sec ->
+        if (sec == 0) ok(RuleTrigger(RuleTrigger.Type.EVENT, event = e))
+        else ok(RuleTrigger(RuleTrigger.Type.BECOMES, forSeconds = sec, condition = RuleCondition(RuleCondition.Type.COMPARE,
+            signal = RuleSignal.FRONT_DOOR, op = if (e == RuleEvent.FRONT_DOOR_OPEN) RuleOp.IS_TRUE else RuleOp.IS_FALSE)))
+    }
+
+    /** Modifie une condition simple ; un nœud inconnu repart d'une valeur. */
+    private fun condition(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) = when (actuelle?.type) {
+        RuleCondition.Type.TIME_RANGE -> plage(actuelle, ok)
+        RuleCondition.Type.WEEKDAYS -> jours(actuelle, ok)
+        RuleCondition.Type.SEASON -> saison(actuelle, ok)
+        RuleCondition.Type.PLACE -> lieu(actuelle, ok)
+        RuleCondition.Type.VARIABLE -> variable(actuelle, ok)
+        RuleCondition.Type.RANDOM -> hasard(actuelle, ok)
+        else -> comparer(actuelle?.takeIf { it.type == RuleCondition.Type.COMPARE }, ok)
+    }
+
+    private fun plage(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        RuleValueDialogs.plage(ctx, s(R.string.rule_cond_time), actuelle?.from ?: 7 * 60, actuelle?.to ?: 9 * 60) { de, a ->
+            ok(RuleCondition(RuleCondition.Type.TIME_RANGE, from = de, to = a))
+        }
+    }
+
+    private fun jours(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        RuleValueDialogs.jours(ctx, s(R.string.rule_days_title), actuelle?.days ?: listOf(1, 2, 3, 4, 5), mots::dayName) { j ->
+            ok(RuleCondition(RuleCondition.Type.WEEKDAYS, days = j))
+        }
+    }
+
+    private fun saison(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        RuleValueDialogs.periode(ctx, s(R.string.rule_cond_season), actuelle?.from ?: 1201, actuelle?.to ?: 228, mots::monthDay) { de, a ->
+            ok(RuleCondition(RuleCondition.Type.SEASON, from = de, to = a))
+        }
+    }
+
+    private fun hasard(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        RuleValueDialogs.nombre(ctx, s(R.string.rule_cond_random), s(R.string.rule_random_hint), actuelle?.number?.toInt() ?: 50, 1, 99,
+            texte = { "$it %" }) { p -> ok(RuleCondition(RuleCondition.Type.RANDOM, number = p.toDouble())) }
+    }
+
+    /** Une variable : son nom (une existante, ou une nouvelle), puis le test. */
+    private fun variable(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        choisirVariable(actuelle?.text) { nom ->
+            valeurs(nom, listOf(
+                s(R.string.rule_var_true) to RuleOp.IS_TRUE, s(R.string.rule_var_false) to RuleOp.IS_FALSE,
+                s(R.string.rule_op_above) to RuleOp.ABOVE, s(R.string.rule_op_below) to RuleOp.BELOW,
+                s(R.string.rule_op_is) to RuleOp.EQUALS, s(R.string.rule_op_is_not) to RuleOp.NOT_EQUALS,
+            ), actuelle?.op) { op ->
+                val base = RuleCondition(RuleCondition.Type.VARIABLE, text = nom, op = op)
+                when (op) {
+                    RuleOp.IS_TRUE, RuleOp.IS_FALSE -> ok(base)
+                    else -> RuleValueDialogs.nombre(ctx, nom, null, actuelle?.number?.toInt() ?: 0, -9999, 9999,
+                        texte = { "$it" }) { n -> ok(base.copy(number = n.toDouble())) }
+                }
+            }
+        }
+    }
+
+    /** Choisir une variable : celles déjà définies, ou une nouvelle (nom saisi). */
+    private fun choisirVariable(deja: String?, ok: (String) -> Unit) {
+        val connues = RuleVariables.all(ctx).keys.sorted()
+        val nouvelle = s(R.string.rule_var_new)
+        valeurs(s(R.string.rule_choose_variable), connues.map { it to it } + (nouvelle to ""), deja?.let { RuleLogic.variableName(it) }) { v ->
+            if (v.isNotEmpty()) ok(v)
+            else RuleValueDialogs.texte(ctx, s(R.string.rule_var_name), "") { ok(RuleLogic.variableName(it)) }
+        }
+    }
+
+    /** Dans / hors d'un lieu : choisir le lieu (ou enregistrer la position actuelle), puis le sens. */
+    private fun lieu(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        choisirLieu(actuelle?.text) { id ->
+            valeurs(mots.placeName(id), listOf(s(R.string.rule_place_inside) to RuleOp.IS_TRUE, s(R.string.rule_place_outside) to RuleOp.IS_FALSE),
+                actuelle?.op) { op -> ok(RuleCondition(RuleCondition.Type.PLACE, text = id, op = op)) }
+        }
+    }
+
+    private fun choisirLieu(deja: String?, ok: (String) -> Unit) {
+        val lieux = RulePlaces.all(ctx)
+        val ici = "+ " + s(R.string.rule_place_here)
+        valeurs(s(R.string.rule_choose_place), lieux.map { it.name to it.id } + (ici to ""), deja) { id ->
+            if (id.isNotEmpty()) return@valeurs ok(id)
+            Toast.makeText(ctx, s(R.string.rule_place_locating), Toast.LENGTH_SHORT).show()
+            AndroidControls.locate(ctx) { l ->
+                if (!isAdded) return@locate
+                if (l == null) return@locate Toast.makeText(ctx, s(R.string.rule_place_no_fix), Toast.LENGTH_LONG).show()
+                enregistrerLieu(l, ok)
+            }
+        }
+    }
+
+    /** Nom et rayon du lieu à la position [l], puis enregistrement. */
+    private fun enregistrerLieu(l: android.location.Location, ok: (String) -> Unit) {
+        RuleValueDialogs.texte(ctx, s(R.string.rule_place_name), "") { nom ->
+            RuleValueDialogs.nombre(ctx, s(R.string.rule_place_radius), null, 200, 50, 5_000,
+                texte = { "$it m" }, pas = { v, sens -> v + sens * (if (sens > 0 && v < 500 || sens < 0 && v <= 500) 50 else 250) }) { r ->
+                val p = com.mg4.control.model.RulePlace(name = nom, lat = l.latitude, lng = l.longitude, radius = r)
+                RulePlaces.save(ctx, RulePlaces.all(ctx) + p)
+                ok(p.id)
+            }
+        }
+    }
+
+    /**
+     * Une grille de valeurs libellées. [rangement] range chaque choix dans une catégorie de la grande
+     * fenêtre ; [recents] nomme la liste pour ses « Récents ».
+     */
+    private fun <T> valeurs(titre: CharSequence, choix: List<Pair<String, T>>, choisi: T?,
+                            rangement: ((T) -> Cat)? = null, recents: String? = null, ok: (T) -> Unit) {
+        if (choix.isEmpty()) return
+        AppDialog.choisir(ctx, titre = titre, choix = choix.map { AppDialog.Choix(it.first) },
+            annuler = s(R.string.profile_cancel), choisi = choix.indexOfFirst { it.second == choisi },
+            categories = rangement?.let { r -> categories(choix.map { r(it.second) }) },
+            recents = recents, cles = choix.map { it.second.toString() }) { rang -> ok(choix[rang].second) }
+    }
+
+    /**
+     * Catégories de la grande fenêtre (maquette B, 2026-11-05). L'ordre de l'énumération est celui
+     * de la colonne ; une catégorie sans choix n'apparaît pas.
+     */
+    private enum class Cat(val libelle: Int, val icone: Int) {
+        CAR(R.string.rule_cat_car, R.drawable.ic_cat_car),
+        TIME(R.string.rule_cat_time, R.drawable.ic_cat_clock),
+        PLACES(R.string.rule_cat_places, R.drawable.ic_cat_pin),
+        DRIVING(R.string.rule_cat_driving, R.drawable.ic_cat_steering),
+        BATTERY(R.string.rule_cat_battery, R.drawable.ic_cat_battery),
+        CLIMATE(R.string.rule_cat_climate, R.drawable.ic_cat_snow),
+        COMFORT(R.string.rule_cat_comfort, R.drawable.ic_cat_seat),
+        ADAS(R.string.rule_cat_adas, R.drawable.ic_cat_shield),
+        MEDIA(R.string.rule_cat_media, R.drawable.ic_cat_music),
+        SCREEN_SOUND(R.string.rule_cat_screen_sound, R.drawable.ic_cat_screen),
+        SCREEN_APPS(R.string.rule_cat_screen_apps, R.drawable.ic_cat_screen),
+        CONNECTIONS(R.string.rule_cat_connections, R.drawable.ic_cat_wifi),
+        SHORTCUTS(R.string.rule_cat_shortcuts, R.drawable.ic_cat_bolt),
+        FLOW(R.string.rule_cat_flow, R.drawable.ic_cat_flow),
+        SYSTEM(R.string.rule_cat_system, R.drawable.ic_cat_system),
+        ADVANCED(R.string.rule_cat_advanced, R.drawable.ic_cat_adjust),
+    }
+
+    private fun categories(rangs: List<Cat>): List<AppDialog.Categorie> =
+        Cat.entries.mapNotNull { c ->
+            val r = rangs.indices.filter { rangs[it] == c }
+            if (r.isEmpty()) null else AppDialog.Categorie(s(c.libelle), c.icone, r)
+        }
+
+    private fun catDeclencheur(res: Int): Cat = when (res) {
+        R.string.rule_event_app_start, R.string.rule_event_door, R.string.rule_event_door_close,
+        R.string.rule_trg_locked, R.string.rule_trg_unlocked -> Cat.CAR
+        R.string.rule_trg_charge_start, R.string.rule_trg_charge_end, R.string.rule_trg_plugged, R.string.rule_trg_unplugged -> Cat.BATTERY
+        R.string.rule_trg_time, R.string.rule_trg_every, R.string.rule_trg_sun -> Cat.TIME
+        R.string.rule_trg_place, R.string.rule_trg_phone, R.string.rule_trg_phone_off -> Cat.PLACES
+        R.string.rule_trg_ready_on, R.string.rule_trg_ready_off, R.string.rule_trg_gear_p, R.string.rule_trg_gear_d,
+        R.string.rule_trg_profile_changes -> Cat.DRIVING
+        else -> Cat.ADVANCED
+    }
+
+    private fun catAction(res: Int): Cat = when (res) {
+        R.string.rule_act_sound -> Cat.MEDIA
+        R.string.rule_act_notify, R.string.rule_act_app, R.string.rule_act_navigate -> Cat.SCREEN_APPS
+        R.string.rule_act_custom -> Cat.SHORTCUTS
+        R.string.abrp_rule_action -> Cat.CONNECTIONS
+        else -> Cat.FLOW
+    }
+
+    private fun catSignal(sig: RuleSignal): Cat = when (sig) {
+        RuleSignal.LOCKED, RuleSignal.FRONT_DOOR -> Cat.CAR
+        RuleSignal.BT_DEVICE, RuleSignal.ALTITUDE -> Cat.PLACES
+        RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
+        RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES, RuleSignal.PROFILE -> Cat.DRIVING
+        RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
+        RuleSignal.BATTERY_HEAT -> Cat.BATTERY
+        RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP,
+        RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> Cat.CLIMATE
+        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT, RuleSignal.KEY_AWAY -> Cat.COMFORT
+        RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM -> Cat.ADAS
+        RuleSignal.BRIGHTNESS, RuleSignal.VOLUME, RuleSignal.MEDIA_PLAYING, RuleSignal.NIGHT, RuleSignal.SUN_UP -> Cat.SCREEN_SOUND
+        RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON, RuleSignal.PROJECTION,
+        RuleSignal.IN_CALL, RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> Cat.CONNECTIONS
+        else -> Cat.SYSTEM
+    }
+
+    private fun catReglage(cle: String): Cat = when (cle) {
+        ExternalApi.SET_DRIVE_MODE, ExternalApi.SET_REGEN, RuleKeys.ONE_PEDAL, RuleKeys.ENERGY_SAVING -> Cat.DRIVING
+        ExternalApi.SET_SEAT_HEAT_LEFT, ExternalApi.SET_SEAT_HEAT_RIGHT, ExternalApi.SET_STEERING_HEAT -> Cat.COMFORT
+        RuleKeys.BRIGHTNESS, RuleKeys.VOLUME, RuleKeys.VOLUME_STEP -> Cat.SCREEN_SOUND
+        RuleKeys.AEB, RuleKeys.TSR, RuleKeys.ESC, RuleKeys.DROWSINESS, RuleKeys.OVERSPEED_ALARM, RuleKeys.SPEED_LIMIT_TONE,
+        RuleKeys.AUTO_HIGH_BEAM -> Cat.ADAS
+        RuleKeys.BATTERY_HEAT, RuleKeys.CHARGE_LIMIT -> Cat.BATTERY
+        RuleKeys.WIFI, RuleKeys.BLUETOOTH, RuleKeys.HOTSPOT -> Cat.CONNECTIONS
+        else -> Cat.CLIMATE
+    }
+
+    /** Les signaux proposés, dans un ordre de lecture (conduite, énergie, clim, confort, ADAS, appareil). */
+    private fun signaux(): List<RuleSignal> {
+        val clim = MG4Hardware.hasClimateControl()
+        val climat = setOf(RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP,
+            RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR)
+        return listOf(
+            RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
+            RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES,
+            RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
+            RuleSignal.BATTERY_HEAT,
+            RuleSignal.OUTSIDE_TEMP, RuleSignal.NIGHT, RuleSignal.SUN_UP, RuleSignal.ALTITUDE,
+            RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP, RuleSignal.FAN,
+            RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR,
+            RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT,
+            RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
+            RuleSignal.LOCKED, RuleSignal.FRONT_DOOR,
+            RuleSignal.PROFILE, RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON,
+            RuleSignal.PROJECTION, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL, RuleSignal.BRIGHTNESS, RuleSignal.VOLUME,
+            RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB, RuleSignal.FIRMWARE,
+        ).filter { s ->
+            when {
+                s in climat -> clim
+                s == RuleSignal.ESC || s == RuleSignal.DROWSINESS -> MG4Hardware.hasDrowsinessAndEsc()
+                s == RuleSignal.BRIGHTNESS -> MG4Hardware.hasBrightnessControl()
+                s == RuleSignal.BATTERY_HEAT -> MG4Hardware.hasBatteryHeating()
+                s == RuleSignal.FRONT_DOOR -> MG4Hardware.hasDoorDetection()
+                else -> true
+            }
+        }
+    }
+
+    private class Borne(val min: Int, val max: Int, val defaut: Int, val pas: Int)
+
+    private fun borne(s: RuleSignal) = when (s) {
+        RuleSignal.SPEED -> Borne(0, 200, 50, 5)
+        RuleSignal.SOC -> Borne(0, 100, 50, 1)
+        RuleSignal.RANGE -> Borne(0, 700, 100, 5)
+        RuleSignal.OUTSIDE_TEMP -> Borne(-30, 50, 20, 1)
+        RuleSignal.HVAC_TEMP -> Borne(16, 30, 21, 1)
+        RuleSignal.FAN -> Borne(0, 7, 3, 1)
+        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT -> Borne(0, 3, 0, 1)
+        RuleSignal.BRIGHTNESS -> Borne(0, 100, 50, 5)
+        RuleSignal.VOLUME -> Borne(0, 40, 10, 1)
+        RuleSignal.DRIVE_MINUTES -> Borne(0, 600, 30, 5)
+        RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> Borne(0, 50_000, 500, 50)
+        RuleSignal.CHARGE_LIMIT -> Borne(40, 100, 80, 10)
+        RuleSignal.ALTITUDE -> Borne(0, 4000, 500, 50)
+        else -> Borne(0, 100, 0, 1)
+    }
+
+    /** Les valeurs possibles d'un signal texte ; vide = rien à proposer, `null` = valeur à saisir. */
+    private fun choixTexte(sig: RuleSignal): List<Pair<String, String>>? = when (sig) {
+        RuleSignal.GEAR -> listOf(RuleSignal.GEAR_PARK, RuleSignal.GEAR_DRIVE, RuleSignal.GEAR_OTHER).map { mots.value(sig, it) to it }
+        RuleSignal.PROFILE -> ProfileManager(ctx).getAll().map { it.name to it.id }
+        RuleSignal.DRIVE_MODE -> DriveMode.entries.map { mots.driveMode(it) to it.name }
+        RuleSignal.REGEN -> RegenLevel.entries.map { mots.regen(it) to it.name }
+        RuleSignal.RECIRC -> listOf("INNER", "OUTSIDE", "AUTO").map { mots.value(sig, it) to it }
+        RuleSignal.FIRMWARE -> com.mg4.control.util.FirmwareInfo.Gen.entries.map { it.name to it.name }
+        RuleSignal.BT_DEVICE -> runCatching { BluetoothProfileManager.getBondedDevices(ctx) }.getOrNull().orEmpty()
+            .map { it.name to it.mac.uppercase() }
+        RuleSignal.WIFI_SSID -> null
+        else -> emptyList()
+    }
+
+    /** Une comparaison : le signal, puis comment le comparer, puis la valeur. */
+    private fun comparer(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        valeurs(s(R.string.rule_choose_signal), signaux().map { mots.signal(it) to it }, actuelle?.signal,
+            rangement = ::catSignal, recents = "sig") { sig ->
+            comparerSignal(sig, actuelle?.takeIf { it.signal == sig }, ok)
+        }
+    }
+
+    private fun comparerSignal(sig: RuleSignal, meme: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        // Rien à proposer (aucun profil, aucun téléphone) : on le dit avant de demander la comparaison.
+        if (sig.kind == RuleSignal.Kind.TEXT || sig.kind == RuleSignal.Kind.TEXT_SET) {
+            val choix = choixTexte(sig)
+            if (choix != null && choix.isEmpty()) {
+                Toast.makeText(ctx, s(if (sig == RuleSignal.BT_DEVICE) R.string.rule_no_phones else R.string.rule_no_profiles), Toast.LENGTH_LONG).show()
+                return
+            }
+        }
+        valeurs(mots.signal(sig), operations(sig), meme?.op) { op -> valeurPour(sig, op, meme, ok) }
+    }
+
+    /** La valeur à comparer, la comparaison [op] choisie : rien pour oui / non, un nombre, ou un texte. */
+    private fun valeurPour(sig: RuleSignal, op: RuleOp, meme: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        fun base() = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op)
+        when (sig.kind) {
+            RuleSignal.Kind.BOOL -> ok(base())
+            RuleSignal.Kind.NUMBER -> {
+                val b = borne(sig)
+                RuleValueDialogs.nombre(ctx, mots.signal(sig) + " " + s(if (op == RuleOp.ABOVE) R.string.rule_op_above else R.string.rule_op_below).lowercase(),
+                    null, meme?.number?.toInt() ?: b.defaut, b.min, b.max,
+                    texte = { "$it" + mots.unit(sig) }, pas = { v, sens -> v + sens * b.pas }) { n ->
+                    ok(base().copy(number = n.toDouble()))
+                }
+            }
+            RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> {
+                val choix = choixTexte(sig)
+                if (choix != null && choix.isEmpty()) {
+                    Toast.makeText(ctx, s(if (sig == RuleSignal.BT_DEVICE) R.string.rule_no_phones else R.string.rule_no_profiles), Toast.LENGTH_LONG).show()
+                    return
+                }
+                if (choix == null) RuleValueDialogs.texte(ctx, mots.signal(sig), meme?.text ?: AndroidControls.wifiSsid(ctx).orEmpty()) { v ->
+                    ok(base().copy(text = v))
+                }
+                else valeurs(mots.signal(sig), choix, meme?.text) { v -> ok(base().copy(text = v)) }
+            }
+        }
+    }
+
+    // ── Déclencheurs ─────────────────────────────────────────────────────────
+
+    private fun pendantQue(sig: RuleSignal, op: RuleOp, texte: String? = null, ok: (RuleTrigger) -> Unit) =
+        dureeDeclencheur(RuleTrigger(), RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op, text = texte), ok)
+
+    private fun declencheur(actuel: RuleTrigger?, ok: (RuleTrigger) -> Unit) {
+        fun evenement(t: RuleTrigger) = valeurs(s(R.string.rule_choose_event),
+            RuleEvent.entries.filter { (it != RuleEvent.FRONT_DOOR_OPEN && it != RuleEvent.FRONT_DOOR_CLOSE) || MG4Hardware.hasDoorDetection() }
+                .map { mots.event(it) to it }, t.event) { e ->
+                if (e == RuleEvent.FRONT_DOOR_OPEN || e == RuleEvent.FRONT_DOOR_CLOSE) porte(e, 0, ok)
+                else ok(t.copy(type = RuleTrigger.Type.EVENT, event = e))
+            }
+        fun devient(t: RuleTrigger) = condition(t.condition) { c -> dureeDeclencheur(t, c, ok) }
+        fun change(t: RuleTrigger) = valeurs(s(R.string.rule_choose_signal), signaux().filter { it.kind != RuleSignal.Kind.NUMBER || it in CHANGE_NOMBRES }
+            .map { mots.signal(it) to it }, t.condition?.signal, rangement = ::catSignal, recents = "sig") { sig ->
+            dureeChange(t, sig, ok)
+        }
+        fun horaire(t: RuleTrigger) = RuleValueDialogs.heure(ctx, s(R.string.rule_time_title), t.at ?: 7 * 60) { m ->
+            ok(t.copy(type = RuleTrigger.Type.TIME, at = m))
+        }
+        fun periodique(t: RuleTrigger) = RuleValueDialogs.nombre(ctx, s(R.string.rule_every_title), s(R.string.rule_every_hint), t.every ?: 15, 1, 1_440,
+            texte = { if (it < 60) s(R.string.rule_minutes_fmt, it) else duree(it * 60) },
+            pas = { v, sens -> v + sens * (if (sens > 0 && v < 15 || sens < 0 && v <= 15) 1 else if (sens > 0 && v < 120 || sens < 0 && v <= 120) 5 else 30) }) { m ->
+            ok(t.copy(type = RuleTrigger.Type.PERIODIC, every = m))
+        }
+        fun soleil(t: RuleTrigger) = valeurs(s(R.string.rule_trg_sun), listOf(s(R.string.rule_sunrise) to SunEvent.SUNRISE, s(R.string.rule_sunset) to SunEvent.SUNSET), t.sun) { e ->
+            RuleValueDialogs.nombre(ctx, s(R.string.rule_sun_offset), s(R.string.rule_sun_offset_hint), t.offset, -180, 180,
+                texte = { if (it == 0) s(R.string.rule_for_now) else (if (it > 0) "+" else "−") + s(R.string.rule_minutes_fmt, kotlin.math.abs(it)) },
+                pas = { v, sens -> v + sens * 5 }) { o -> ok(t.copy(type = RuleTrigger.Type.SUN, sun = e, offset = o)) }
+        }
+        when (actuel?.type) {
+            RuleTrigger.Type.EVENT -> evenement(actuel)
+            RuleTrigger.Type.BECOMES -> devient(actuel)
+            RuleTrigger.Type.TIME -> horaire(actuel)
+            RuleTrigger.Type.PERIODIC -> periodique(actuel)
+            RuleTrigger.Type.CHANGES -> change(actuel)
+            RuleTrigger.Type.SUN -> soleil(actuel)
+            RuleTrigger.Type.MANUAL -> {}
+            null -> buildList<Pair<Int, () -> Unit>> {
+                add(R.string.rule_event_app_start to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.APP_START)) })
+                if (MG4Hardware.hasDoorDetection())
+                    add(R.string.rule_event_door to { porte(RuleEvent.FRONT_DOOR_OPEN, 0, ok) })
+                if (MG4Hardware.hasDoorDetection())
+                    add(R.string.rule_event_door_close to { porte(RuleEvent.FRONT_DOOR_CLOSE, 0, ok) })
+                addAll(listOf(
+                R.string.rule_trg_ready_on to { pendantQue(RuleSignal.READY, RuleOp.IS_TRUE, ok = ok) },
+                R.string.rule_trg_ready_off to { pendantQue(RuleSignal.READY, RuleOp.IS_FALSE, ok = ok) },
+                R.string.rule_trg_gear_p to { pendantQue(RuleSignal.GEAR, RuleOp.EQUALS, RuleSignal.GEAR_PARK, ok) },
+                R.string.rule_trg_gear_d to { pendantQue(RuleSignal.GEAR, RuleOp.EQUALS, RuleSignal.GEAR_DRIVE, ok) },
+                R.string.rule_trg_profile_changes to { dureeChange(RuleTrigger(), RuleSignal.PROFILE, ok) },
+                R.string.rule_trg_time to { horaire(RuleTrigger()) },
+                R.string.rule_trg_every to { periodique(RuleTrigger()) },
+                R.string.rule_trg_sun to { soleil(RuleTrigger()) },
+                R.string.rule_trg_manual to { ok(RuleTrigger(RuleTrigger.Type.MANUAL)) },
+                R.string.rule_trg_charge_start to { pendantQue(RuleSignal.CHARGING, RuleOp.IS_TRUE, ok = ok) },
+                R.string.rule_trg_charge_end to { pendantQue(RuleSignal.CHARGING, RuleOp.IS_FALSE, ok = ok) },
+                R.string.rule_trg_plugged to { pendantQue(RuleSignal.PLUGGED, RuleOp.IS_TRUE, ok = ok) },
+                R.string.rule_trg_unplugged to { pendantQue(RuleSignal.PLUGGED, RuleOp.IS_FALSE, ok = ok) },
+                R.string.rule_trg_locked to { pendantQue(RuleSignal.LOCKED, RuleOp.IS_TRUE, ok = ok) },
+                R.string.rule_trg_unlocked to { pendantQue(RuleSignal.LOCKED, RuleOp.IS_FALSE, ok = ok) },
+                R.string.rule_trg_phone to { comparerSignal(RuleSignal.BT_DEVICE, null) { c -> dureeDeclencheur(RuleTrigger(), c, ok) } },
+                R.string.rule_trg_phone_off to {
+                    val tel = choixTexte(RuleSignal.BT_DEVICE).orEmpty()
+                    if (tel.isEmpty()) Toast.makeText(ctx, s(R.string.rule_no_phones), Toast.LENGTH_LONG).show()
+                    else valeurs(s(R.string.rule_trg_phone_off), tel, null) { mac -> pendantQue(RuleSignal.BT_DEVICE, RuleOp.NOT_EQUALS, mac, ok) }
+                },
+                R.string.rule_trg_place to { lieu(null) { c -> dureeDeclencheur(RuleTrigger(), c, ok) } },
+                ))
+            }.let { raccourcis ->
+                // Comme les actions (2026-11-12) : une tuile par capteur, le mode se choisit au toucher.
+                entrees(R.string.rule_choose_trigger, tuilesDeclencheur(raccourcis, ok), recents = "trg")
+            }
+        }
+    }
+
+    /** Signaux numériques qu'un déclencheur « change » suit (les autres bougent sans cesse). */
+    private val CHANGE_NOMBRES = setOf(RuleSignal.HVAC_TEMP, RuleSignal.FAN, RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT,
+        RuleSignal.CHARGE_LIMIT, RuleSignal.BRIGHTNESS, RuleSignal.VOLUME)
+
+    /** Une durée lisible : « 45 s », « 2 min », « 2 min 30 s ». */
+    private fun duree(sec: Int): String = when {
+        sec < 60 -> s(R.string.rule_seconds_fmt, sec)
+        sec % 60 == 0 -> s(R.string.rule_minutes_fmt, sec / 60)
+        else -> s(R.string.rule_minutes_fmt, sec / 60) + " " + s(R.string.rule_seconds_fmt, sec % 60)
+    }
+
+    /** Seconde par seconde jusqu'à une minute, puis par 15 s, puis par minute au-delà de 10 min. */
+    private fun pasDuree(v: Int, sens: Int): Int {
+        val pas = when {
+            sens > 0 && v < 60 || sens < 0 && v <= 60 -> 1
+            sens > 0 && v < 600 || sens < 0 && v <= 600 -> 15
+            else -> 60
+        }
+        return v + sens * pas
+    }
+
+    // ── Actions ──────────────────────────────────────────────────────────────
+
+    private fun actions(box: LinearLayout, liste: List<RuleAction>, profondeur: Int, siVide: Int?, put: (List<RuleAction>) -> Unit) {
+        if (liste.isEmpty() && siVide != null) vide(box, siVide)
+        liste.forEachIndexed { i, a ->
+            val titre = texte.action(a)
+            val remplacer: (RuleAction) -> Unit = { n -> put(liste.remplace(i, n)) }
+            when (a.type) {
+                RuleAction.Type.IF -> {
+                    val b = bloc(box)
+                    // En-tête sans la condition : elle est juste en dessous, sous « Si ».
+                    enTeteBloc(b, s(R.string.rule_if_block)) { menu(titre, liste, i, put, null) }
+                    etiquette(b, R.string.rule_if_condition)
+                    groupe(b, a.condition ?: RuleCondition(RuleCondition.Type.ALL), profondeur + 1, racine = true,
+                        siVide = R.string.rule_none_if) { c ->
+                        remplacer(a.copy(condition = c))
+                    }
+                    etiquette(b, R.string.rule_sec_then)
+                    actions(b, a.then.orEmpty(), profondeur + 1, R.string.rule_none_in_block) { l -> remplacer(a.copy(then = l)) }
+                    etiquette(b, R.string.rule_if_else)
+                    actions(b, a.otherwise.orEmpty(), profondeur + 1, R.string.rule_none_in_block) { l -> remplacer(a.copy(otherwise = l)) }
+                }
+                RuleAction.Type.REPEAT -> {
+                    val b = bloc(box)
+                    val editer = { action(a, profondeur, remplacer) }
+                    ligne(b, titre, editer) { menu(titre, liste, i, put, editer) }
+                    actions(b, a.then.orEmpty(), profondeur + 1, R.string.rule_none_in_block) { l -> remplacer(a.copy(then = l)) }
+                }
+                RuleAction.Type.STOP, null -> ligne(box, titre, null) { menu(titre, liste, i, put, null) }
+                else -> {
+                    val editer = { action(a, profondeur, remplacer) }
+                    ligne(box, titre, editer) { menu(titre, liste, i, put, editer) }
+                }
+            }
+        }
+        val boutons = rangeeBoutons(box)
+        ajouter(boutons, R.string.rule_add_action) { action(null, profondeur) { n -> put(liste + n) } }
+        RuleClipboard.action?.takeIf { RuleClipboard.fitsAction(it, profondeur, PROFONDEUR_MAX) }?.let { a ->
+            coller(boutons) {
+                // Une automatisation qui se lancerait elle-même tournerait en boucle.
+                if (RuleClipboard.runsRule(a, regle.id)) Toast.makeText(ctx, s(R.string.rule_paste_self), Toast.LENGTH_LONG).show()
+                else put(liste + a)
+            }
+        }
+    }
+
+    /** Valeur « arrêter » du choix ABRP, à côté des identifiants de comptes. */
+    private val STOP_ABRP = "#abrp-stop"
+
+    /**
+     * Une façon d'agir sur un sujet (« Régler sur… », « Bascule »…) : son libellé, le libellé du
+     * raccourci d'origine (cherché aussi), si une action existante l'utilise, et ce qu'elle fait.
+     */
+    private class ModeAct(val libelle: String, val mot: String, val choisi: (RuleAction) -> Boolean, val lancer: (RuleAction) -> Unit)
+
+    /** Une tuile du choix des actions (2026-11-12, maquette validée) : un sujet et ses modes. */
+    private class Sujet(val nom: String, val cat: Cat, val cle: String, val modes: List<ModeAct>, val mots: String) {
+        val recherche: String get() = (listOf(mots) + modes.map { it.libelle + " " + it.mot }).joinToString(" ")
+    }
+
+    /** Ajoute ([actuelle] nulle) ou modifie une action. */
+    private fun action(actuelle: RuleAction?, profondeur: Int, ok: (RuleAction) -> Unit) {
+        val catalogue = ShortcutCatalog.items(ctx).filter { it.action !in CustomRules.INTERDITS }
+        fun raccourcis(a: RuleAction, parmi: List<ShortcutAction>?, titre: Int) = valeurs(s(titre),
+            catalogue.filter { parmi == null || it.action in parmi }.map { it.label to it.action.name }, a.shortcut) { n ->
+            ok(a.copy(type = RuleAction.Type.SHORTCUT, shortcut = n))
+        }
+        fun profil(a: RuleAction) {
+            val p = ProfileManager(ctx).getAll()
+            if (p.isEmpty()) return Toast.makeText(ctx, s(R.string.rule_no_profiles), Toast.LENGTH_LONG).show()
+            valeurs(s(R.string.rule_choose_profile), p.map { it.name to it.id }, a.profileId) { id ->
+                ok(a.copy(type = RuleAction.Type.PROFILE, profileId = id))
+            }
+        }
+        fun attente(a: RuleAction) = RuleValueDialogs.nombre(ctx, s(R.string.rule_wait_title), null, a.seconds ?: 10, 1, RuleRun.MAX_WAIT_S,
+            texte = ::duree, pas = ::pasDuree) { sec -> ok(a.copy(type = RuleAction.Type.WAIT, seconds = sec)) }
+        fun attenteQue(a: RuleAction) = condition(a.condition) { c ->
+            RuleValueDialogs.nombre(ctx, s(R.string.rule_wait_until_title), s(R.string.rule_wait_until_hint), a.seconds ?: 60, 1, RuleRun.MAX_WAIT_S,
+                texte = ::duree, pas = ::pasDuree) { sec -> ok(a.copy(type = RuleAction.Type.WAIT_UNTIL, condition = c, seconds = sec)) }
+        }
+        fun message(a: RuleAction) = RuleValueDialogs.texte(ctx, s(R.string.rule_notify_title), a.text.orEmpty()) { t ->
+            ok(a.copy(type = RuleAction.Type.NOTIFY, text = t))
+        }
+        fun question(a: RuleAction) = RuleValueDialogs.texte(ctx, s(R.string.rule_confirm_title), a.text.orEmpty()) { t ->
+            RuleValueDialogs.nombre(ctx, s(R.string.rule_confirm_delay), null, a.seconds ?: 15, 5, 120, texte = { s(R.string.rule_seconds_fmt, it) }) { sec ->
+                valeurs(s(R.string.rule_confirm_no_answer), listOf(s(R.string.rule_confirm_no_answer_stop) to "no", s(R.string.rule_confirm_no_answer_go) to "yes"), a.value) { v ->
+                    ok(a.copy(type = RuleAction.Type.CONFIRM, text = t, seconds = sec, value = v))
+                }
+            }
+        }
+        fun son(a: RuleAction) = choisirSon(a, ok)
+        fun appli(a: RuleAction) {
+            val pm = ctx.packageManager
+            val apps = pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0)
+                .map { it.loadLabel(pm).toString() to it.activityInfo.packageName }.sortedBy { it.first.lowercase() }
+            valeurs(s(R.string.shortcuts_pick_app_title), apps, a.text) { p -> ok(a.copy(type = RuleAction.Type.OPEN_APP, text = p)) }
+        }
+        fun perso(a: RuleAction) = CustomShortcutDialog.choisir(ctx, a.text) { c -> ok(a.copy(type = RuleAction.Type.CUSTOM_SHORTCUT, text = c.id)) }
+        val quoiRegle = listOf(s(R.string.rule_rule_run) to "run", s(R.string.rule_rule_stop) to "stop",
+            s(R.string.rule_rule_enable) to "1", s(R.string.rule_rule_disable) to "0")
+        fun automatisationQuoi(a: RuleAction, quoi: String) =
+            RuleChooser.choisir(ctx, a.text, sauf = if (quoi == "run" || quoi == "stop") regle.id else null) { r ->
+                ok(when (quoi) {
+                    "run" -> RuleAction(RuleAction.Type.RUN_RULE, text = r.id)
+                    "stop" -> RuleAction(RuleAction.Type.RULE_STOP, text = r.id)
+                    else -> RuleAction(RuleAction.Type.RULE_ENABLE, text = r.id, value = quoi)
+                })
+            }
+        fun automatisation(a: RuleAction) = valeurs(s(R.string.rule_act_rule), quoiRegle,
+            when (a.type) { RuleAction.Type.RUN_RULE -> "run"; RuleAction.Type.RULE_STOP -> "stop"; RuleAction.Type.RULE_ENABLE -> a.value; else -> null }) { quoi ->
+            automatisationQuoi(a, quoi)
+        }
+        fun definir(a: RuleAction) = choisirVariable(a.key) { nom ->
+            val ADD = "#add"
+            valeurs(nom, listOf(s(R.string.rule_var_true) to "true", s(R.string.rule_var_false) to "false", s(R.string.rule_var_number) to "",
+                s(R.string.rule_var_add) to ADD), if (a.type == RuleAction.Type.VARIABLE_ADD) ADD else a.value) { v ->
+                if (v == ADD) RuleValueDialogs.nombre(ctx, s(R.string.rule_var_add_title, nom), null,
+                    a.value?.toDoubleOrNull()?.toInt()?.takeIf { a.type == RuleAction.Type.VARIABLE_ADD } ?: 1, -1000, 1000,
+                    texte = { if (it > 0) "+$it" else "$it" }) { n ->
+                    ok(RuleAction(RuleAction.Type.VARIABLE_ADD, key = nom, value = "$n"))
+                }
+                else if (v.isNotEmpty()) ok(a.copy(type = RuleAction.Type.SET_VARIABLE, key = nom, value = v))
+                else RuleValueDialogs.nombre(ctx, nom, null, a.value?.toIntOrNull() ?: 0, -9999, 9999, texte = { "$it" }) { n ->
+                    ok(a.copy(type = RuleAction.Type.SET_VARIABLE, key = nom, value = "$n"))
+                }
+            }
+        }
+        // 2026-11-06 : la valeur LUE d'un signal, gardée dans une variable (volume, A/C, média…).
+        fun memoriser(a: RuleAction) = valeurs(s(R.string.rule_choose_signal), signaux().map { mots.signal(it) to it.name }, a.text,
+            rangement = { n -> catSignal(RuleSignal.valueOf(n)) }) { sig ->
+            choisirVariable(a.key) { nom -> ok(RuleAction(RuleAction.Type.SAVE_VALUE, key = nom, text = sig)) }
+        }
+        fun parler(a: RuleAction) = RuleValueDialogs.texte(ctx, s(R.string.rule_speak_title), a.text.orEmpty()) { t ->
+            ok(a.copy(type = RuleAction.Type.SPEAK, text = t))
+        }
+        fun naviguer(a: RuleAction) = choisirLieu(a.text) { id -> ok(a.copy(type = RuleAction.Type.NAVIGATE, text = id)) }
+        // ABRP (issue #188) : envoi continu vers un compte, ou arrêt. Les comptes se gèrent dans l'outil « Comptes ABRP ».
+        fun abrp(a: RuleAction) {
+            val comptes = com.mg4.control.automation.AbrpStore.accounts(ctx)
+            if (comptes.isEmpty() && a.type != RuleAction.Type.ABRP_STOP) return Toast.makeText(ctx, s(R.string.abrp_no_accounts), Toast.LENGTH_LONG).show()
+            valeurs(s(R.string.abrp_rule_action), comptes.map { s(R.string.abrp_rule_start_fmt, it.name) to it.id } + (s(R.string.abrp_rule_stop) to STOP_ABRP),
+                if (a.type == RuleAction.Type.ABRP_STOP) STOP_ABRP else a.text) { v ->
+                ok(if (v == STOP_ABRP) RuleAction(RuleAction.Type.ABRP_STOP) else RuleAction(RuleAction.Type.ABRP_START, text = v))
+            }
+        }
+        // Actions Android (2026-11-09) : accueil, retour, fermer une appli, page des paramètres.
+        val ACCUEIL = "#home"; val RETOUR = "#back"; val FERMER = "#close"; val PAGE = "#settings"
+        val quoiAndroid = listOf(s(R.string.rule_android_home) to ACCUEIL, s(R.string.rule_android_back) to RETOUR,
+            s(R.string.rule_android_close_app) to FERMER, s(R.string.rule_android_settings) to PAGE)
+        fun androidQuoi(a: RuleAction, v: String) {
+            when (v) {
+                ACCUEIL -> ok(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_HOME))
+                RETOUR -> ok(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_BACK))
+                FERMER -> {
+                    // Les applis de la voiture, d'Android et MG4Control ne sont pas proposées.
+                    val apps = com.mg4.control.automation.AndroidControls.closableApps(ctx)
+                    if (apps.isEmpty()) Toast.makeText(ctx, s(R.string.rule_close_app_none), Toast.LENGTH_LONG).show()
+                    else valeurs(s(R.string.rule_close_app_title), apps, a.text.takeIf { a.type == RuleAction.Type.CLOSE_APP }) { p ->
+                        ok(RuleAction(RuleAction.Type.CLOSE_APP, text = p))
+                    }
+                }
+                else -> valeurs(s(R.string.rule_settings_page_title),
+                    AndroidActions.SETTINGS_PAGES.keys.map { mots.settingsPage(it) to it },
+                    a.value.takeIf { a.type == RuleAction.Type.OPEN_SETTINGS }) { p ->
+                    ok(RuleAction(RuleAction.Type.OPEN_SETTINGS, value = p))
+                }
+            }
+        }
+        fun android(a: RuleAction) {
+            val deja = when (a.type) {
+                RuleAction.Type.ANDROID_KEY -> if (a.value == AndroidActions.KEY_BACK) RETOUR else ACCUEIL
+                RuleAction.Type.CLOSE_APP -> FERMER
+                RuleAction.Type.OPEN_SETTINGS -> PAGE
+                else -> null
+            }
+            valeurs(s(R.string.rule_act_android), quoiAndroid, deja) { v -> androidQuoi(a, v) }
+        }
+        fun repeter(a: RuleAction) = RuleValueDialogs.nombre(ctx, s(R.string.rule_repeat_title), null, a.count ?: 2, 2, RuleRun.MAX_REPEAT,
+            texte = { "×$it" }) { n -> ok(a.copy(type = RuleAction.Type.REPEAT, count = n)) }
+
+        val sujets = sujets(catalogue, ok, quoiRegle, ::automatisationQuoi)
+        fun ouvrir(su: Sujet, a: RuleAction) {
+            if (su.modes.size == 1) return su.modes[0].lancer(a)
+            valeurs(su.nom, su.modes.indices.map { su.modes[it].libelle to it },
+                su.modes.indexOfFirst { it.choisi(a) }.takeIf { it >= 0 }) { i -> su.modes[i].lancer(a) }
+        }
+        // Modifier : l'étape du mode de son sujet, le mode actuel marqué ; sinon le choix d'avant.
+        val sujetActuel = actuelle?.let { a -> sujets.firstOrNull { su -> su.modes.any { it.choisi(a) } } }
+
+        when (actuelle?.type) {
+            RuleAction.Type.SET, RuleAction.Type.SHORTCUT, RuleAction.Type.MEDIA, RuleAction.Type.PROFILE,
+            RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE, RuleAction.Type.RULE_STOP -> when {
+                sujetActuel != null -> ouvrir(sujetActuel, actuelle)
+                actuelle.type == RuleAction.Type.SET -> choisirReglage(actuelle, ok)
+                actuelle.type == RuleAction.Type.PROFILE -> profil(actuelle)
+                actuelle.type == RuleAction.Type.SHORTCUT || actuelle.type == RuleAction.Type.MEDIA ->
+                    raccourcis(actuelle, null, R.string.rule_choose_shortcut)
+                else -> automatisation(actuelle)
+            }
+            RuleAction.Type.WAIT -> attente(actuelle)
+            RuleAction.Type.WAIT_UNTIL -> attenteQue(actuelle)
+            RuleAction.Type.NOTIFY -> message(actuelle)
+            RuleAction.Type.CONFIRM -> question(actuelle)
+            RuleAction.Type.PLAY_SOUND -> son(actuelle)
+            RuleAction.Type.OPEN_APP -> appli(actuelle)
+            RuleAction.Type.CUSTOM_SHORTCUT -> perso(actuelle)
+            RuleAction.Type.SET_VARIABLE -> definir(actuelle)
+            RuleAction.Type.SAVE_VALUE -> memoriser(actuelle)
+            RuleAction.Type.VARIABLE_ADD -> definir(actuelle)
+            RuleAction.Type.SPEAK -> parler(actuelle)
+            RuleAction.Type.NAVIGATE -> naviguer(actuelle)
+            RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP -> abrp(actuelle)
+            RuleAction.Type.REPEAT -> repeter(actuelle)
+            RuleAction.Type.ANDROID_KEY -> android(actuelle)
+            RuleAction.Type.CLOSE_APP -> androidQuoi(actuelle, FERMER)
+            RuleAction.Type.OPEN_SETTINGS -> androidQuoi(actuelle, PAGE)
+            RuleAction.Type.IF, RuleAction.Type.STOP -> {}
+            null -> {
+                // Une tuile par sujet, rangée dans sa catégorie ; le mode se choisit au toucher.
+                val autres = buildList<Pair<Int, () -> Unit>> {
+                    add(R.string.rule_act_sound to { son(RuleAction()) })
+                    // « Lire un texte à voix haute » n'est plus proposé (2026-11-12) : la voiture n'a pas de moteur
+                    // vocal Android ; une action existante reste lisible, modifiable et exécutée (voix SAIC).
+                    add(R.string.rule_act_notify to { message(RuleAction()) })
+                    add(R.string.rule_act_app to { appli(RuleAction()) })
+                    add(R.string.rule_act_navigate to { naviguer(RuleAction()) })
+                    add(R.string.rule_act_custom to { perso(RuleAction()) })
+                    if (com.mg4.control.automation.AbrpStore.available) add(R.string.abrp_rule_action to { abrp(RuleAction()) })
+                    add(R.string.rule_act_variable to { definir(RuleAction()) })
+                    add(R.string.rule_act_save_value to { memoriser(RuleAction()) })
+                    add(R.string.rule_act_wait to { attente(RuleAction()) })
+                    add(R.string.rule_act_wait_until to { attenteQue(RuleAction()) })
+                    add(R.string.rule_act_confirm to { question(RuleAction()) })
+                    if (profondeur < PROFONDEUR_MAX - 1) {
+                        add(R.string.rule_act_if to {
+                            ok(RuleAction(RuleAction.Type.IF, condition = RuleCondition(RuleCondition.Type.ALL, children = emptyList()),
+                                then = emptyList(), otherwise = emptyList()))
+                        })
+                        add(R.string.rule_act_repeat to { repeter(RuleAction(then = emptyList())) })
+                    }
+                    add(R.string.rule_act_stop to { ok(RuleAction(RuleAction.Type.STOP)) })
+                }
+                val tuiles = sujets.map { su ->
+                    Entree(su.nom, su.cat, su.cle, { ouvrir(su, RuleAction()) },
+                        sous = if (su.modes.size > 1) s(R.string.rule_act_modes_fmt, su.modes.size) else null, motsCles = su.recherche)
+                } + quoiAndroid.map { (libelle, v) ->
+                    Entree(libelle, Cat.SCREEN_APPS, "android:$v", { androidQuoi(RuleAction(), v) })
+                } + autres.map { (res, action) ->
+                    Entree(s(res), catAction(res), resources.getResourceEntryName(res), action)
+                }
+                entrees(R.string.rule_choose_action, tuiles, recents = "act")
+            }
+        }
+    }
+
+    /**
+     * Les sujets du choix des actions (2026-11-12) : un réglage de la voiture (« Régler sur… ») et
+     * les raccourcis qui agissent sur la même chose (bascule, cycle, pas à pas) ne font qu'une tuile.
+     * Seuls les modes que ce firmware sait faire sont proposés ; un sujet sans mode n'apparaît pas.
+     */
+    private fun sujets(
+        catalogue: List<ShortcutCatalog.Item>, ok: (RuleAction) -> Unit,
+        quoiRegle: List<Pair<String, String>>, automatisationQuoi: (RuleAction, String) -> Unit,
+    ): List<Sujet> {
+        val reglables = clesReglage().toSet()
+        val dispo = catalogue.associateBy { it.action }
+        // Le raccourci « Paramètres Android » : la page précise des paramètres le couvre.
+        val pris = mutableSetOf(ShortcutAction.ANDROID_SETTINGS)
+        val bascule = s(R.string.rule_act_mode_toggle)
+        val cycle = s(R.string.rule_act_mode_cycle)
+        val plus = s(R.string.rule_act_mode_up)
+        val moins = s(R.string.rule_act_mode_down)
+        val out = mutableListOf<Sujet>()
+
+        fun regler(k: String, libelle: String = s(R.string.rule_act_mode_set)) = if (k !in reglables) null
+            else ModeAct(libelle, "", { it.type == RuleAction.Type.SET && it.key == k }) { a -> reglerCle(a, k, ok) }
+        fun lancer(sc: ShortcutAction, libelle: String? = null): ModeAct? = dispo[sc]?.let { item ->
+            pris += sc
+            ModeAct(libelle ?: item.label, item.label, { it.type == RuleAction.Type.SHORTCUT && it.shortcut == sc.name }) {
+                ok(RuleAction(RuleAction.Type.SHORTCUT, shortcut = sc.name))
+            }
+        }
+        fun sujet(nom: String, cat: Cat, cle: String, vararg modes: ModeAct?, mots: String = "") {
+            val m = modes.filterNotNull()
+            if (m.isNotEmpty()) out += Sujet(nom, cat, cle, m, mots)
+        }
+        fun reglage(k: String, cat: Cat, vararg raccourcis: ModeAct?) = sujet(nomReglage(k), cat, "set:$k", regler(k), *raccourcis)
+        fun seul(sc: ShortcutAction, cat: Cat) { dispo[sc]?.let { sujet(it.label, cat, "sc:${sc.name}", lancer(sc)) } }
+        fun media(v: String, libelle: Int) = ModeAct(s(libelle), "", { it.type == RuleAction.Type.MEDIA && it.value == v }) {
+            ok(RuleAction(RuleAction.Type.MEDIA, value = v))
+        }
+
+        // Voiture
+        sujet(s(R.string.rule_act_windows), Cat.CAR, "sub:windows",
+            lancer(ShortcutAction.WINDOWS_OPEN_ALL), lancer(ShortcutAction.WINDOWS_CLOSE_ALL))
+        val profils = ProfileManager(ctx).getAll()
+        sujet(s(R.string.rule_subject_profile), Cat.CAR, "sub:profile", *(profils.map { p ->
+            ModeAct(s(R.string.rule_act_profile_fmt, p.name), p.name, { it.type == RuleAction.Type.PROFILE && it.profileId == p.id }) {
+                ok(RuleAction(RuleAction.Type.PROFILE, profileId = p.id))
+            }
+        } + lancer(ShortcutAction.PROFILE_CYCLE) + lancer(ShortcutAction.PROFILE_PICKER)).toTypedArray())
+        seul(ShortcutAction.VEHICLE_POWER_OFF, Cat.CAR)
+        // Conduite
+        reglage(ExternalApi.SET_DRIVE_MODE, Cat.DRIVING, lancer(ShortcutAction.DRIVE_MODE_CYCLE, cycle))
+        reglage(ExternalApi.SET_REGEN, Cat.DRIVING, lancer(ShortcutAction.REGEN_CYCLE, cycle))
+        reglage(RuleKeys.ONE_PEDAL, Cat.DRIVING, lancer(ShortcutAction.ONE_PEDAL, bascule))
+        reglage(RuleKeys.ENERGY_SAVING, Cat.DRIVING, lancer(ShortcutAction.ENERGY_SAVING_TOGGLE, bascule))
+        // Batterie et charge
+        reglage(RuleKeys.BATTERY_HEAT, Cat.BATTERY, lancer(ShortcutAction.BATTERY_HEAT_TOGGLE, bascule))
+        reglage(RuleKeys.CHARGE_LIMIT, Cat.BATTERY)
+        seul(ShortcutAction.CHARGE_POPUP, Cat.BATTERY)
+        // Climatisation
+        reglage(ExternalApi.SET_HVAC_POWER, Cat.CLIMATE, lancer(ShortcutAction.HVAC_TOGGLE, bascule))
+        reglage(ExternalApi.SET_HVAC_AC, Cat.CLIMATE, lancer(ShortcutAction.HVAC_AC_TOGGLE, bascule))
+        reglage(ExternalApi.SET_HVAC_AUTO, Cat.CLIMATE)
+        reglage(RuleKeys.HVAC_ECO, Cat.CLIMATE)
+        reglage(ExternalApi.SET_HVAC_TEMP, Cat.CLIMATE, lancer(ShortcutAction.HVAC_TEMP_UP, plus), lancer(ShortcutAction.HVAC_TEMP_DOWN, moins))
+        reglage(ExternalApi.SET_HVAC_FAN, Cat.CLIMATE, lancer(ShortcutAction.HVAC_FAN_UP, plus), lancer(ShortcutAction.HVAC_FAN_DOWN, moins))
+        reglage(RuleKeys.AIR_FLOW, Cat.CLIMATE)
+        reglage(RuleKeys.AUTO_VOLUME, Cat.CLIMATE, lancer(ShortcutAction.HVAC_AUTO_VOLUME_CYCLE, cycle))
+        reglage(ExternalApi.SET_HVAC_RECIRC, Cat.CLIMATE, lancer(ShortcutAction.HVAC_RECIRC_CYCLE, cycle))
+        reglage(ExternalApi.SET_DEFROST_FRONT, Cat.CLIMATE, lancer(ShortcutAction.DEFROST_FRONT_TOGGLE, bascule))
+        reglage(ExternalApi.SET_DEFROST_REAR, Cat.CLIMATE, lancer(ShortcutAction.DEFROST_REAR_TOGGLE, bascule))
+        seul(ShortcutAction.HVAC_POPUP, Cat.CLIMATE)
+        seul(ShortcutAction.PRE_CLIMATE, Cat.CLIMATE)
+        // Confort
+        reglage(ExternalApi.SET_SEAT_HEAT_LEFT, Cat.COMFORT, lancer(ShortcutAction.SEAT_HEAT_LEFT_CYCLE, cycle))
+        reglage(ExternalApi.SET_SEAT_HEAT_RIGHT, Cat.COMFORT, lancer(ShortcutAction.SEAT_HEAT_RIGHT_CYCLE, cycle))
+        reglage(ExternalApi.SET_STEERING_HEAT, Cat.COMFORT, lancer(ShortcutAction.STEERING_HEAT_TOGGLE, bascule))
+        // Aides à la conduite
+        reglage(RuleKeys.AEB, Cat.ADAS, lancer(ShortcutAction.AEB_CYCLE, cycle))
+        reglage(RuleKeys.TSR, Cat.ADAS, lancer(ShortcutAction.TSR_TOGGLE, bascule))
+        reglage(RuleKeys.ESC, Cat.ADAS, lancer(ShortcutAction.ESC_TOGGLE, bascule))
+        reglage(RuleKeys.DROWSINESS, Cat.ADAS, lancer(ShortcutAction.DROWSINESS_TOGGLE, bascule))
+        seul(ShortcutAction.DROWSINESS_SEN_CYCLE, Cat.ADAS)
+        reglage(RuleKeys.OVERSPEED_ALARM, Cat.ADAS, lancer(ShortcutAction.OVERSPEED_ALARM, bascule))
+        reglage(RuleKeys.SPEED_LIMIT_TONE, Cat.ADAS, lancer(ShortcutAction.SPEED_LIMIT_TONE, bascule))
+        seul(ShortcutAction.SOUND_WARNING, Cat.ADAS)
+        reglage(RuleKeys.AUTO_HIGH_BEAM, Cat.ADAS, lancer(ShortcutAction.AUTO_HIGH_BEAM_TOGGLE, bascule))
+        seul(ShortcutAction.ADAS_CYCLE, Cat.ADAS)
+        // Média et son
+        sujet(s(R.string.rule_subject_playback), Cat.MEDIA, "sub:playback", media(RuleLogic.MEDIA_PLAY, R.string.rule_act_media_play),
+            media(RuleLogic.MEDIA_PAUSE, R.string.rule_act_media_pause), lancer(ShortcutAction.MEDIA_PLAY_PAUSE, bascule))
+        seul(ShortcutAction.MEDIA_NEXT, Cat.MEDIA)
+        seul(ShortcutAction.MEDIA_PREVIOUS, Cat.MEDIA)
+        seul(ShortcutAction.AUDIO_SOURCE_CYCLE, Cat.MEDIA)
+        // Écran et son
+        reglage(RuleKeys.BRIGHTNESS, Cat.SCREEN_SOUND, lancer(ShortcutAction.BRIGHTNESS_UP, plus), lancer(ShortcutAction.BRIGHTNESS_DOWN, moins))
+        reglage(RuleKeys.VOLUME, Cat.SCREEN_SOUND, regler(RuleKeys.VOLUME_STEP, nomReglage(RuleKeys.VOLUME_STEP)),
+            lancer(ShortcutAction.VOLUME_UP, plus), lancer(ShortcutAction.VOLUME_DOWN, moins))
+        // Écran et applis
+        seul(ShortcutAction.QUICK_SETTINGS, Cat.SCREEN_APPS)
+        // Connexions
+        reglage(RuleKeys.WIFI, Cat.CONNECTIONS)
+        reglage(RuleKeys.BLUETOOTH, Cat.CONNECTIONS)
+        reglage(RuleKeys.HOTSPOT, Cat.CONNECTIONS)
+        seul(ShortcutAction.PROJECTION, Cat.CONNECTIONS)
+        // Raccourcis : une autre automatisation, puis tout raccourci pas encore rangé (un nouveau, un jour).
+        sujet(s(R.string.rule_act_rule), Cat.SHORTCUTS, "rule_act_rule", *quoiRegle.map { (libelle, quoi) ->
+            val type = when (quoi) { "run" -> RuleAction.Type.RUN_RULE; "stop" -> RuleAction.Type.RULE_STOP; else -> RuleAction.Type.RULE_ENABLE }
+            ModeAct(libelle, "", { it.type == type && (type != RuleAction.Type.RULE_ENABLE || it.value == quoi) }) { a -> automatisationQuoi(a, quoi) }
+        }.toTypedArray())
+        catalogue.filter { it.action !in pris }.forEach { seul(it.action, Cat.SHORTCUTS) }
+        return out
+    }
+
+    // ── Sons (2026-11-06) ────────────────────────────────────────────────────
+
+    /**
+     * « Jouer un son » : le bip intégré, un son importé ici (depuis la clé USB, sans passer par la
+     * page Sons), ou un son de la page Sons ; puis son volume (bip, son importé).
+     */
+    private fun choisirSon(a: RuleAction, ok: (RuleAction) -> Unit) {
+        val importes = com.mg4.control.automation.RuleSounds.all(ctx)
+        val page = com.mg4.control.automation.SoundAutomationSettings.slots(ctx)
+        val IMPORT = "#import"
+        val GERER = "#gerer"
+        val choix = buildList {
+            add(s(R.string.rule_sound_beep) to RuleLogic.BEEP)
+            importes.forEach { add(it.title to RuleLogic.RULE_SOUND + it.id) }
+            page.forEachIndexed { i, so -> if (so.hasFile) add(s(R.string.rule_sound_page_fmt, so.title?.takeIf { it.isNotBlank() } ?: "${i + 1}") to "page:$i") }
+            add(s(R.string.rule_sound_import) to IMPORT)
+            if (importes.isNotEmpty()) add(s(R.string.rule_sound_delete) to GERER)
+        }
+        val deja = when {
+            a.type != RuleAction.Type.PLAY_SOUND -> null
+            a.key != null -> a.key
+            else -> a.value?.let { "page:$it" }
+        }
+        valeurs(s(R.string.rule_choose_sound), choix, deja) { v ->
+            when {
+                v == IMPORT -> importerSon { n -> volumeSon(RuleAction(RuleAction.Type.PLAY_SOUND, key = RuleLogic.RULE_SOUND + n.id, text = n.title), ok) }
+                v == GERER -> supprimerSon()
+                v == RuleLogic.BEEP -> RuleValueDialogs.nombre(ctx, s(R.string.rule_sound_beep_volume), null,
+                    (a.count.takeIf { a.key == RuleLogic.BEEP } ?: 70), 10, 100, texte = { "$it %" }, pas = { x, sens -> x + sens * 10 }) { pct ->
+                    ok(RuleAction(RuleAction.Type.PLAY_SOUND, key = RuleLogic.BEEP, count = pct))
+                }
+                v.startsWith(RuleLogic.RULE_SOUND) -> {
+                    val son = importes.firstOrNull { RuleLogic.RULE_SOUND + it.id == v } ?: return@valeurs
+                    volumeSon(RuleAction(RuleAction.Type.PLAY_SOUND, key = v, text = son.title, count = a.count.takeIf { a.key == v }), ok)
+                }
+                else -> {
+                    val i = v.removePrefix("page:").toInt()
+                    ok(RuleAction(RuleAction.Type.PLAY_SOUND, value = "$i", text = page[i].title?.takeIf { it.isNotBlank() } ?: "${i + 1}"))
+                }
+            }
+        }
+    }
+
+    /** Volume de la voiture pendant un son importé : 0 = inchangé. */
+    private fun volumeSon(a: RuleAction, ok: (RuleAction) -> Unit) {
+        val max = MG4Hardware.getMediaVolumeMax().takeIf { it > 0 } ?: 40
+        RuleValueDialogs.nombre(ctx, s(R.string.rule_sound_volume), null, a.count ?: 0, 0, max,
+            texte = { if (it == 0) s(R.string.rule_sound_volume_unchanged) else "$it" }) { v ->
+            ok(a.copy(count = v.takeIf { it > 0 }))
+        }
+    }
+
+    /** Import depuis la clé USB, comme la page Sons (fichiers audio de 30 s au plus). */
+    private fun importerSon(ok: (com.mg4.control.model.RuleSound) -> Unit) {
+        if (com.mg4.control.automation.RuleSounds.all(ctx).size >= com.mg4.control.automation.RuleSounds.MAX)
+            return Toast.makeText(ctx, s(R.string.rule_sound_full, com.mg4.control.automation.RuleSounds.MAX), Toast.LENGTH_LONG).show()
+        val titre = s(R.string.rule_sound_import_title)
+        Toast.makeText(ctx, R.string.sound_import_searching, Toast.LENGTH_SHORT).show()
+        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val r = com.mg4.control.automation.SoundImport.chercher()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                when {
+                    r.cles == 0 -> AppDialog.confirmer(ctx, titre, s(R.string.sound_import_no_usb), oui = s(android.R.string.ok))
+                    r.fichiers.isEmpty() -> AppDialog.confirmer(ctx, titre, s(R.string.sound_import_none), oui = s(android.R.string.ok))
+                    else -> AppDialog.choisir(ctx, titre, r.fichiers.map {
+                        AppDialog.Choix(libelle = it.file.name, pastille = String.format(java.util.Locale.US, "%.1f s", it.durationMs / 1000.0),
+                            fondPastille = ctx.getColor(R.color.dash_accent_dim), textePastille = ctx.getColor(R.color.dash_accent))
+                    }, annuler = s(android.R.string.cancel),
+                        sousTitre = if (r.tropLongs > 0) s(R.string.sound_import_subtitle_skipped, r.tropLongs) else s(R.string.sound_import_subtitle),
+                        icone = R.drawable.ic_source_usb) { rang ->
+                        val f = r.fichiers[rang]
+                        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            val n = com.mg4.control.automation.RuleSounds.importer(ctx, f)
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                if (!isAdded) return@withContext
+                                Toast.makeText(ctx, if (n != null) s(R.string.sound_import_done, f.file.name) else s(R.string.sound_import_failed),
+                                    Toast.LENGTH_LONG).show()
+                                n?.let(ok)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun supprimerSon() {
+        val l = com.mg4.control.automation.RuleSounds.all(ctx)
+        valeurs(s(R.string.rule_sound_delete), l.map { it.title to it.id }, null) { id ->
+            val son = l.firstOrNull { it.id == id } ?: return@valeurs
+            AppDialog.confirmer(ctx, titre = s(R.string.rule_delete_confirm_fmt, son.title), ton = AppDialog.Ton.DANGER,
+                oui = s(R.string.rule_delete), non = s(R.string.profile_cancel),
+                onOui = { com.mg4.control.automation.RuleSounds.delete(ctx, id) })
+        }
+    }
+
+    /** Les réglages de la voiture (et d'Android) qu'une action peut écrire, et la façon de choisir leur valeur. */
+    private fun choisirReglage(a: RuleAction, ok: (RuleAction) -> Unit) {
+        valeurs(s(R.string.rule_choose_setting), clesReglage().map { k -> nomReglage(k) to k }, a.key,
+            rangement = ::catReglage, recents = "set") { k -> reglerCle(a, k, ok) }
+    }
+
+    private fun nomReglage(k: String): String = AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k
+
+    /** Les réglages qu'une action peut écrire sur cette voiture. */
+    private fun clesReglage(): List<String> {
+        val clim = MG4Hardware.hasClimateControl()
+        return buildList {
+            add(ExternalApi.SET_DRIVE_MODE)
+            add(ExternalApi.SET_REGEN)
+            add(RuleKeys.ONE_PEDAL)
+            add(RuleKeys.ENERGY_SAVING)
+            add(ExternalApi.SET_SEAT_HEAT_LEFT)
+            add(ExternalApi.SET_SEAT_HEAT_RIGHT)
+            add(ExternalApi.SET_STEERING_HEAT)
+            if (clim) {
+                add(ExternalApi.SET_HVAC_POWER)
+                add(ExternalApi.SET_HVAC_AC)
+                add(ExternalApi.SET_HVAC_AUTO)
+                add(RuleKeys.HVAC_ECO)
+                add(ExternalApi.SET_HVAC_TEMP)
+                add(ExternalApi.SET_HVAC_FAN)
+                add(RuleKeys.AIR_FLOW)
+                add(RuleKeys.AUTO_VOLUME)
+                add(ExternalApi.SET_HVAC_RECIRC)
+                add(ExternalApi.SET_DEFROST_FRONT)
+                add(ExternalApi.SET_DEFROST_REAR)
+            }
+            if (MG4Hardware.hasBrightnessControl()) add(RuleKeys.BRIGHTNESS)
+            add(RuleKeys.VOLUME)
+            add(RuleKeys.VOLUME_STEP)
+            add(RuleKeys.AEB)
+            add(RuleKeys.TSR)
+            if (MG4Hardware.hasDrowsinessAndEsc()) { add(RuleKeys.ESC); add(RuleKeys.DROWSINESS) }
+            add(RuleKeys.OVERSPEED_ALARM)
+            add(RuleKeys.SPEED_LIMIT_TONE)
+            if (MG4Hardware.hasAutoHighBeam()) add(RuleKeys.AUTO_HIGH_BEAM)
+            if (MG4Hardware.hasBatteryHeating()) add(RuleKeys.BATTERY_HEAT)
+            add(RuleKeys.CHARGE_LIMIT)
+            add(RuleKeys.WIFI)
+            add(RuleKeys.BLUETOOTH)
+            add(RuleKeys.HOTSPOT)
+        }
+    }
+
+    /** Le réglage [k] choisi : sa valeur, fixe ou celle d'une variable (dès qu'il en existe une, 2026-11-06). */
+    private fun reglerCle(a: RuleAction, k: String, ok: (RuleAction) -> Unit) {
+        if (RuleVariables.all(ctx).isEmpty()) return choisirReglageValeur(a, k, ok)
+        val deVariable = a.key == k && RuleLogic.variableRef(a.value) != null
+        valeurs(nomReglage(k), listOf(s(R.string.rule_value_fixed) to "fixe", s(R.string.rule_value_from_var) to "var"),
+            if (deVariable) "var" else "fixe") { quoi ->
+            if (quoi == "var") choisirVariable(RuleLogic.variableRef(a.value)) { v ->
+                ok(RuleAction(RuleAction.Type.SET, key = k, value = "$" + v))
+            } else choisirReglageValeur(a, k, ok)
+        }
+    }
+
+    /** La valeur fixe d'un réglage [k], selon son genre (liste, nombre, oui/non). */
+    private fun choisirReglageValeur(a: RuleAction, k: String, ok: (RuleAction) -> Unit) {
+        run {
+            val nom = AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k
+            val meme = a.value.takeIf { a.key == k && RuleLogic.variableRef(a.value) == null }
+            fun fini(v: String) = ok(RuleAction(RuleAction.Type.SET, key = k, value = v))
+            fun nombre(min: Int, max: Int, defaut: Int, unite: String = "", pas: Int = 1) =
+                RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: defaut, min, max,
+                    texte = { "$it$unite" }, pas = { v, sens -> v + sens * pas }) { fini("$it") }
+            val ouiNon = listOf(s(R.string.segment_yes) to "1", s(R.string.segment_no) to "0")
+            when (k) {
+                ExternalApi.SET_DRIVE_MODE -> valeurs(nom, DriveMode.entries.map { mots.driveMode(it) to it.name }, meme, ok = ::fini)
+                ExternalApi.SET_REGEN -> valeurs(nom, RegenLevel.entries.map { mots.regen(it) to it.name }, meme, ok = ::fini)
+                ExternalApi.SET_SEAT_HEAT_LEFT, ExternalApi.SET_SEAT_HEAT_RIGHT ->
+                    valeurs(nom, listOf(s(R.string.rule_seat_off) to "0", "1" to "1", "2" to "2", "3" to "3"), meme, ok = ::fini)
+                ExternalApi.SET_HVAC_TEMP -> nombre(16, 30, 21, " °C")
+                ExternalApi.SET_HVAC_FAN -> nombre(1, 7, 3)
+                RuleKeys.AIR_FLOW -> nombre(0, 6, 1)
+                RuleKeys.AUTO_VOLUME -> valeurs(nom, listOf(s(R.string.rule_level_high) to "0", s(R.string.rule_level_medium) to "1",
+                    s(R.string.rule_level_low) to "2"), meme, ok = ::fini)
+                RuleKeys.BRIGHTNESS -> nombre(0, 100, 50, " %", 5)
+                RuleKeys.VOLUME -> nombre(0, MG4Hardware.getMediaVolumeMax().takeIf { it > 0 } ?: 40, 10)
+                RuleKeys.VOLUME_STEP -> RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: 2, -10, 10,
+                    texte = { if (it > 0) "+$it" else "$it" }) { fini("$it") }
+                RuleKeys.CHARGE_LIMIT -> nombre(40, 100, 80, " %", 10)
+                ExternalApi.SET_HVAC_RECIRC -> valeurs(nom, listOf("INNER", "OUTSIDE", "AUTO").map { v ->
+                    (AndroidRuleWords.recircRes(v)?.let { s(it) } ?: v) to v }, meme, ok = ::fini)
+                else -> valeurs(nom, ouiNon, meme, ok = ::fini)
+            }
+        }
+    }
+
+    // ── Options ──────────────────────────────────────────────────────────────
+
+    private fun options(box: LinearLayout) {
+        fun rangee(libelle: Int): LinearLayout {
+            val r = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = lp(haut = 12f)
+            }
+            r.addView(texteVue(s(libelle), 19f, R.color.text_primary).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            box.addView(r)
+            return r
+        }
+
+        val enCours = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundResource(R.drawable.bg_dialog_segments)
+            val p = dp(4f)
+            setPadding(p, p, p, p)
+            layoutParams = LinearLayout.LayoutParams(dp(LARGEUR_SEGMENTS_DP), dp(60f))
+        }
+        val modes = listOf(CustomRule.IfRunning.IGNORE, CustomRule.IfRunning.RESTART)
+        AppDialog.segments(enCours, listOf(s(R.string.rule_opt_ignore), s(R.string.rule_opt_restart)),
+            modes.indexOf(regle.ifRunning).coerceAtLeast(0)) { rang -> regle = regle.copy(ifRunning = modes[rang]) }
+        rangee(R.string.rule_opt_if_running).addView(enCours)
+
+        val pause = texteVue(
+            if (regle.cooldownMinutes <= 0) s(R.string.rule_opt_cooldown_none) else s(R.string.rule_minutes_fmt, regle.cooldownMinutes),
+            19f, R.color.dash_accent, gras = true).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(LARGEUR_SEGMENTS_DP), dp(60f))
+            gravity = Gravity.CENTER
+            setBackgroundResource(R.drawable.bg_dialog_tile)
+            setOnClickListener {
+                RuleValueDialogs.nombre(ctx, s(R.string.rule_opt_cooldown), s(R.string.rule_opt_cooldown_hint), regle.cooldownMinutes, 0, 240,
+                    texte = { if (it == 0) s(R.string.rule_opt_cooldown_none) else s(R.string.rule_minutes_fmt, it) },
+                    pas = { v, sens -> v + sens * (if (sens > 0 && v < 10 || sens < 0 && v <= 10) 1 else 5) }) { m ->
+                    maj { it.copy(cooldownMinutes = m) }
+                }
+            }
+        }
+        rangee(R.string.rule_opt_cooldown).addView(pause)
+
+        val ready = SegmentSwitch(ctx).apply {
+            isChecked = regle.onlyWhenReady
+            setOnCheckedChangeListener { _, on -> regle = regle.copy(onlyWhenReady = on) }
+        }
+        rangee(R.string.rule_opt_ready).addView(ready)
+    }
+}

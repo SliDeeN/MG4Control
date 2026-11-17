@@ -7,6 +7,9 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import androidx.appcompat.app.AppCompatDelegate
 import com.mg4.control.MainActivity
+import com.mg4.control.ui.widget.setCategoryTabActive
+import com.mg4.control.util.DistanceSetting
+import com.mg4.control.util.NavSide
 import com.mg4.control.util.ThemeHelper
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -29,7 +32,6 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.BuildConfig
@@ -68,9 +70,7 @@ import com.mg4.control.model.ClusterConfigs
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.model.ClusterModule
-import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
-import com.mg4.control.model.AverageUnit
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ConsumptionUnit
 import com.mg4.control.model.DistanceUnit
@@ -84,11 +84,19 @@ import kotlinx.coroutines.withContext
 
 class SettingsFragment : Fragment() {
 
+    /** « Enregistrer… » du diagnostic : la fenêtre ouverte, et le sélecteur de dossier qui lui répond. */
+    private var exportDialog: ExportDialog? = null
+    private val choisirDossier = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { arbre ->
+        exportDialog?.surDossier(arbre)
+    }
+
     private val githubUrl = "https://github.com/SliDeeN/MG4Control"
     private val gitlabUrl = "https://gitlab.com/SliDeeN/mg4control"
 
     /** Index, dans le rail, de l'onglet ouvert — sauvegardé pour survivre à un recreate(). */
     private var selectedCategory = 0
+        set(v) { field = v; ongletRetenu = v }
 
     /** Aperçu du combiné (carte Écran conducteur) : animé seulement quand l'écran est au premier plan. */
     private var apercuCombine: ClusterSettingsPreview? = null
@@ -103,6 +111,8 @@ class SettingsFragment : Fragment() {
 
     companion object {
         private const val STATE_CATEGORY = "settings_category"
+        /** Sous-onglet rouvert en revenant sur Réglages, le temps de la session (2026-11-07). */
+        private var ongletRetenu = 0
 
         /**
          * Argument : ouvrir l'écran sur le choix du firmware (onglet Infos, pastilles en vue).
@@ -136,7 +146,10 @@ class SettingsFragment : Fragment() {
             "es" to view.findViewById(R.id.btn_lang_es),
             "pt" to view.findViewById(R.id.btn_lang_pt),
             "it" to view.findViewById(R.id.btn_lang_it),
-            "tr" to view.findViewById(R.id.btn_lang_tr)
+            "tr" to view.findViewById(R.id.btn_lang_tr),
+            "pl" to view.findViewById(R.id.btn_lang_pl),
+            "nb" to view.findViewById(R.id.btn_lang_nb),
+            "cs" to view.findViewById(R.id.btn_lang_cs)
         )
 
         fun updateLangButtons(lang: String) {
@@ -218,6 +231,80 @@ class SettingsFragment : Fragment() {
         btnThemeAuto.setOnClickListener  { applyThemeMode("auto")  }
         btnThemeDark.setOnClickListener  { applyThemeMode("dark")  }
         btnThemeLight.setOnClickListener { applyThemeMode("light") }
+
+        // ── Côté du menu : Auto / Gauche / Droite (2026-11-02) ──────────────
+        // L'activité se recrée pour reposer le menu ; le sous-onglet ouvert est conservé.
+        val navSideBtns = listOf(
+            NavSide.Mode.AUTO  to view.findViewById<MaterialButton>(R.id.btn_nav_side_auto),
+            NavSide.Mode.LEFT  to view.findViewById(R.id.btn_nav_side_left),
+            NavSide.Mode.RIGHT to view.findViewById(R.id.btn_nav_side_right)
+        )
+        val navSide = NavSide.mode(requireContext())
+        navSideBtns.forEach { (mode, btn) ->
+            val active = mode == navSide
+            btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
+            btn.setTextColor(if (active) textActive else textInactive)
+            btn.strokeColor = ColorStateList.valueOf(
+                if (active) accentColor else requireContext().getColor(R.color.dash_border)
+            )
+            btn.setOnClickListener {
+                if (mode == NavSide.mode(requireContext())) return@setOnClickListener
+                NavSide.setMode(requireContext(), mode)
+                AppLogger.i("MG4_SETTINGS", "Côté du menu → ${mode.key}")
+                requireActivity().recreate()
+            }
+        }
+        view.findViewById<TextView>(R.id.tv_nav_side_desc).text = getString(R.string.settings_nav_side_desc,
+            getString(when (NavSide.detected(requireContext())) {
+                com.mg4.control.hardware.DriverSide.Side.LEFT -> R.string.settings_nav_side_detected_left
+                com.mg4.control.hardware.DriverSide.Side.RIGHT -> R.string.settings_nav_side_detected_right
+                null -> R.string.settings_nav_side_detected_unknown
+            }))
+
+        // ── Unité de distance : Auto / km / miles (2026-11-10) ──────────────
+        // Réglage général (Statistiques, écran conducteur, bulles), qui remplace la ligne
+        // « Distance » de l'écran conducteur et en reprend le choix. Rien à recréer : chaque écran
+        // relit l'unité quand il se dessine.
+        val distBtns: List<Pair<DistanceUnit?, MaterialButton>> = listOf(
+            null to view.findViewById(R.id.btn_distance_auto),
+            DistanceUnit.KM to view.findViewById(R.id.btn_distance_km),
+            DistanceUnit.MILES to view.findViewById(R.id.btn_distance_mi),
+        )
+        // La carte de l'écran conducteur se règle plus bas : elle se branche ici une fois posée.
+        var rafraichirCombine: () -> Unit = {}
+        fun peindreDistance() {
+            val ctx = context ?: return
+            val choix = DistanceSetting.choice(ctx)
+            distBtns.forEach { (d, btn) ->
+                val active = d == choix
+                btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
+                btn.setTextColor(if (active) textActive else textInactive)
+                btn.strokeColor = ColorStateList.valueOf(
+                    if (active) accentColor else ctx.getColor(R.color.dash_border)
+                )
+            }
+            // « Auto (miles) » : ce que la voiture dit, dès qu'on l'a lu.
+            distBtns[0].second.text = VehicleDistanceUnit.connue()?.let {
+                getString(R.string.cluster_distance_auto_value, getString(
+                    if (it == DistanceUnit.MILES) R.string.cluster_distance_miles else R.string.cluster_distance_km))
+            } ?: getString(R.string.cluster_distance_auto)
+        }
+        peindreDistance()
+        distBtns.forEach { (d, btn) ->
+            btn.setOnClickListener {
+                DistanceSetting.set(requireContext(), d)
+                AppLogger.i("MG4_SETTINGS", "Unité de distance → ${d?.key ?: DistanceUnit.AUTO}")
+                peindreDistance()
+                rafraichirCombine()
+            }
+        }
+        // L'unité de la voiture, lue hors du fil principal (binder) : le bouton Auto la montre,
+        // et l'aperçu du combiné la suit si Auto est choisi.
+        Thread {
+            val avant = VehicleDistanceUnit.connue()
+            val lue = VehicleDistanceUnit.actualiser()
+            if (lue != avant) view.post { if (isAdded) { peindreDistance(); rafraichirCombine() } }
+        }.start()
 
         // ── Taille du texte : Standard / Grand / Très grand ─────────────────
         // Appliquée par LocaleHelper au contexte de l'activité : il faut la recréer pour que les
@@ -357,30 +444,13 @@ class SettingsFragment : Fragment() {
             ConsumptionUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_unit_wh),
             ConsumptionUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_unit_kwh),
         )
-        // Distance : Auto (comme la voiture, `null`), km ou miles pour tout le module (2026-10-23).
-        val btnDistAuto = view.findViewById<MaterialButton>(R.id.btn_cluster_dist_auto)
-        val distBtns: List<Pair<DistanceUnit?, MaterialButton>> = listOf(
-            null to btnDistAuto,
-            DistanceUnit.KM to view.findViewById(R.id.btn_cluster_dist_km),
-            DistanceUnit.MILES to view.findViewById(R.id.btn_cluster_dist_mi),
-        )
         // Style des modules (issue #153) : dynamique ou discret.
         val styleBtns: List<Pair<ClusterGaugeStyle, MaterialButton>> = listOf(
             ClusterGaugeStyle.DYNAMIC to view.findViewById(R.id.btn_cluster_style_dynamic),
             ClusterGaugeStyle.DISCREET to view.findViewById(R.id.btn_cluster_style_discreet),
         )
-        // Unité de la moyenne du trajet, à part de celle de la jauge (2026-10-17).
-        val avgBtns: List<Pair<AverageUnit, MaterialButton>> = listOf(
-            AverageUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_avg_wh),
-            AverageUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_avg_kwh),
-            AverageUnit.KM_PER_KWH to view.findViewById(R.id.btn_cluster_avg_km),
-        )
-        // Pastille en haut à gauche : mode de conduite, profil actif ou rien (issue #152).
-        val pillBtns: List<Pair<ClusterPill, MaterialButton>> = listOf(
-            ClusterPill.DRIVE_MODE to view.findViewById(R.id.btn_cluster_pill_mode),
-            ClusterPill.PROFILE to view.findViewById(R.id.btn_cluster_pill_profile),
-            ClusterPill.NONE to view.findViewById(R.id.btn_cluster_pill_none),
-        )
+        // La pastille et l'unité de la moyenne du trajet se règlent sur leur case, dans la
+        // personnalisation avancée (issue #229) : leurs lignes ont quitté la carte.
         // Puissance maxi de la jauge (issue #165) : Auto (`null`, apprise) ou une puissance choisie.
         val powerBtns: List<Pair<Int?, MaterialButton>> = listOf(
             null to view.findViewById(R.id.btn_cluster_power_auto),
@@ -395,11 +465,8 @@ class SettingsFragment : Fragment() {
         val etiqNav = etiquette(R.id.tv_cluster_label_nav, R.string.settings_cluster_row_nav)
         val etiqMedia = etiquette(R.id.tv_cluster_label_media, R.string.settings_cluster_row_media)
         val etiqStyle = etiquette(R.id.tv_cluster_label_style, R.string.settings_cluster_row_style)
-        val etiqPill = etiquette(R.id.tv_cluster_label_pill, R.string.settings_cluster_row_pill)
         val etiqPower = etiquette(R.id.tv_cluster_label_power, R.string.settings_cluster_row_power)
-        val etiqDistance = etiquette(R.id.tv_cluster_label_distance, R.string.settings_cluster_row_distance)
         val etiqGauge = etiquette(R.id.tv_cluster_label_gauge, R.string.settings_cluster_row_gauge)
-        val etiqAverage = etiquette(R.id.tv_cluster_label_average, R.string.settings_cluster_row_average)
 
         selectionCombine = emptySet()
         var profils: List<DrivingProfile> = emptyList()
@@ -460,7 +527,7 @@ class SettingsFragment : Fragment() {
             // L'aperçu montre le premier profil sélectionné.
             apercu.reglages = premier
             apercu.profilMontre = noms.firstOrNull()
-            if (actif && isResumed) apercu.demarrer() else if (!actif) apercu.arreter()
+            if (actif && isResumed && pageInterfaceVisible()) apercu.demarrer() else if (!actif) apercu.arreter()
             apercu.rafraichir()
 
             val refresh = choisis.map { ClusterModuleSettings.refreshMs(it) }
@@ -477,23 +544,14 @@ class SettingsFragment : Fragment() {
                 clusterBtns.filter { it.first == ClusterTab.NAVIGATION }.map { it.second to it.third })
             ligne(etiqMedia, choisis.map { ClusterModuleSettings.moduleFor(it, ClusterTab.MEDIA) },
                 clusterBtns.filter { it.first == ClusterTab.MEDIA }.map { it.second to it.third })
-            val voiture = VehicleDistanceUnit.connue()
-            val distance = ClusterModuleSettings.distanceUnit(premier, voiture)
-            ligne(etiqDistance, choisis.map { ClusterModuleSettings.distanceChoice(it) }, distBtns)
-            // « Auto (miles) » : ce que la voiture dit, dès qu'on l'a lu.
-            btnDistAuto.text = voiture?.let {
-                getString(R.string.cluster_distance_auto_value, getString(
-                    if (it == DistanceUnit.MILES) R.string.cluster_distance_miles else R.string.cluster_distance_km))
-            } ?: getString(R.string.cluster_distance_auto)
+            // Distance : le réglage général (Réglages › Interface) depuis le 2026-11-10.
+            val distance = DistanceSetting.unit(requireContext())
             // Les unités se lisent dans la distance choisie : « Wh/mi », « mi/kWh »…
             unitBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
-            avgBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
             ligne(etiqGauge, choisis.map { ClusterModuleSettings.consumptionUnit(it) }, unitBtns)
-            ligne(etiqPill, choisis.map { ClusterModuleSettings.pill(it) }, pillBtns)
             ligne(etiqPower, choisis.map { ClusterModuleSettings.powerMaxChoice(it) }, powerBtns)
             tvPowerDesc.text = getString(R.string.settings_cluster_power_desc, ClusterModuleSettings.learnedPowerKw(ctx))
             ligne(etiqStyle, choisis.map { ClusterModuleSettings.style(it) }, styleBtns)
-            ligne(etiqAverage, choisis.map { ClusterModuleSettings.averageUnit(it) }, avgBtns)
             ongletsApercu.forEach { (o, btn) -> peindre(btn, o == apercu.onglet) }
         }
         /** Rangées de cinq puces, refaites à chaque retour sur l'écran : un profil a pu changer. */
@@ -555,21 +613,7 @@ class SettingsFragment : Fragment() {
                 updateClusterCard()
             }
         }
-        distBtns.forEach { (d, btn) ->
-            btn.setOnClickListener {
-                modifier("Distance des modules du combiné → ${d?.key ?: DistanceUnit.AUTO}") {
-                    it.copy(distance = d?.key ?: DistanceUnit.AUTO)
-                }
-                updateClusterCard()
-            }
-        }
-        // L'unité de la voiture, lue hors du fil principal (binder) : le bouton Auto la montre,
-        // et l'aperçu la suit si Auto est choisi.
-        if (ClusterModuleSettings.isSupported()) Thread {
-            val avant = VehicleDistanceUnit.connue()
-            val lue = VehicleDistanceUnit.actualiser()
-            if (lue != avant) view.post { if (isAdded) updateClusterCard() }
-        }.start()
+        rafraichirCombine = { updateClusterCard() }
         unitBtns.forEach { (u, btn) ->
             btn.setOnClickListener {
                 modifier("Unité de consommation du combiné → ${u.label}") { it.copy(unit = u.key) }
@@ -582,17 +626,14 @@ class SettingsFragment : Fragment() {
                 updateClusterCard()
             }
         }
-        avgBtns.forEach { (u, btn) ->
-            btn.setOnClickListener {
-                modifier("Unité de la moyenne du trajet → ${u.label}") { it.copy(average = u.key) }
-                updateClusterCard()
-            }
-        }
-        pillBtns.forEach { (p, btn) ->
-            btn.setOnClickListener {
-                modifier("Pastille du combiné → ${p.key}") { it.copy(pill = p.key) }
-                updateClusterCard()
-            }
+        // Personnalisation avancée (issue #229) : un popup, sur les réglages du premier profil
+        // sélectionné ; « Enregistrer » les écrit pour tous les profils sélectionnés.
+        view.findViewById<View>(R.id.btn_cluster_layout).setOnClickListener {
+            val depart = reglagesChoisis().first()
+            ClusterLayoutEditor(requireContext(), depart, apercu.profilMontre, tvProfilsInfo.text, apercu.onglet) { disposition, style ->
+                modifier("Écran conducteur, personnalisation avancée") { it.copy(layout = disposition, style = style) }
+                if (isAdded) updateClusterCard()
+            }.ouvrir()
         }
         powerBtns.forEach { (kw, btn) ->
             btn.setOnClickListener {
@@ -668,6 +709,26 @@ class SettingsFragment : Fragment() {
                 apiSwitchProgrammatic = false
                 AppLogger.i(ExternalApi.LOG_TAG, "API externe ACTIVÉE par l'utilisateur (confirmée)")
             }
+        }
+
+        // ── Garder l'A/C coupé quand la température change (issue #208), désactivé par défaut ──
+        view.findViewById<View>(R.id.card_hvac_keep_ac).visibility =
+            if (MG4Hardware.hasClimateControl()) View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_keep_ac).apply {
+            isChecked = com.mg4.control.automation.AcKeepOff.isOn(requireContext())
+            setOnCheckedChangeListener { _, checked -> com.mg4.control.automation.AcKeepOff.setOn(requireContext(), checked) }
+        }
+
+        // ── Applis en plein écran (issue #248), désactivé par défaut ──
+        setupImmersive(view)
+
+        // ── Relancer la détection du téléphone branché (issue #251), désactivé par défaut ──
+        view.findViewById<View>(R.id.card_projection_kick).visibility =
+            if (runCatching { requireContext().packageManager.getPackageInfo("com.allgo.rui", 0) }.isSuccess)
+                View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_projection_kick).apply {
+            isChecked = com.mg4.control.service.ProjectionKick.isOn(requireContext())
+            setOnCheckedChangeListener { _, checked -> com.mg4.control.service.ProjectionKick.setOn(requireContext(), checked) }
         }
 
         // ── Ce que règle AUTO (issue #160) : coché = la voiture choisit (défaut) ──
@@ -903,24 +964,22 @@ class SettingsFragment : Fragment() {
             com.mg4.control.util.AndroidSettings.open(requireContext())
         }
 
-        // ── Bouton Fermer ─────────────────────────────────────────────────────
-        view.findViewById<MaterialButton>(R.id.btn_close_settings).setOnClickListener {
-            findNavController().popBackStack(R.id.dashboardFragment, false)
-        }
-
         // En dernier : le rail masque un onglet dont la page n'a plus rien de visible, il doit
         // donc être câblé APRÈS toutes les décisions de visibilité ci-dessus (build offline,
         // firmware sans extinction véhicule…), sinon le décompte serait faux.
         setupFirmwareChips(view)
         setupDataUsage(view)
-        bindCategoryRail(view, savedInstanceState, accentDim, inactiveColor, accentColor, textActive, textInactive)
+        bindCategoryRail(view, savedInstanceState)
     }
 
     override fun onResume() {
         super.onResume()
         majCarteCombine?.invoke()
-        if (combineDeplie) apercuCombine?.demarrer()
+        if (combineDeplie && pageInterfaceVisible()) apercuCombine?.demarrer()
     }
+
+    /** L'aperçu de l'écran conducteur ne tourne que sur l'onglet Interface (2026-11-14). */
+    private fun pageInterfaceVisible(): Boolean = view?.findViewById<View>(R.id.page_set_ui)?.visibility == View.VISIBLE
 
     override fun onPause() {
         apercuCombine?.arreter()
@@ -940,7 +999,7 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Rail de gauche : une catégorie visible à la fois — même motif que l'éditeur de profil.
+     * Sous-onglets en pastilles : une catégorie visible à la fois — même motif que l'éditeur de profil.
      *
      * Le bouton Diagnostic reste dans l'arbre même sur une page masquée : [MainActivity] peut donc
      * continuer à le révéler en direct après les 5 clics sur le logo, quel que soit l'onglet ouvert.
@@ -948,10 +1007,7 @@ class SettingsFragment : Fragment() {
      * L'onglet ouvert survit à un `recreate()` : langue, thème et taille du texte recréent
      * l'activité, et retomber à chaque fois sur le premier onglet obligeait à y retourner.
      */
-    private fun bindCategoryRail(
-        view: View, savedInstanceState: Bundle?,
-        accentDim: Int, inactive: Int, accent: Int, textOn: Int, textOff: Int
-    ) {
+    private fun bindCategoryRail(view: View, savedInstanceState: Bundle?) {
         val tabs = listOf(
             view.findViewById<MaterialButton>(R.id.btn_set_cat_lang)     to view.findViewById<ViewGroup>(R.id.page_set_lang),
             view.findViewById<MaterialButton>(R.id.btn_set_cat_ui)       to view.findViewById<ViewGroup>(R.id.page_set_ui),
@@ -974,16 +1030,17 @@ class SettingsFragment : Fragment() {
             tabs.forEach { (btn, page) ->
                 val on = page === target
                 page.visibility = if (on) View.VISIBLE else View.GONE
-                btn.backgroundTintList = ColorStateList.valueOf(if (on) accentDim else inactive)
-                btn.setTextColor(if (on) textOn else textOff)
-                btn.strokeColor = ColorStateList.valueOf(
-                    if (on) accent else requireContext().getColor(R.color.dash_border))
+                btn.setCategoryTabActive(on)
             }
             scroll?.scrollTo(0, 0)   // changer d'onglet en gardant le scroll précédent désoriente
+            // Aperçu de l'écran conducteur : arrêté hors de l'onglet Interface — son trajet simulé
+            // tournait sur le fil principal tant que Réglages restait ouvert (2026-11-14).
+            if (target.id == R.id.page_set_ui && combineDeplie && isResumed) apercuCombine?.demarrer()
+            else apercuCombine?.arreter()
         }
         usable.forEach { (btn, page) -> btn.setOnClickListener { select(page) } }
         // Un onglet mémorisé peut ne plus être disponible (page vidée entre-temps) : repli sur le premier.
-        val restored = savedInstanceState?.getInt(STATE_CATEGORY, -1)?.let { tabs.getOrNull(it) }
+        val restored = tabs.getOrNull(savedInstanceState?.getInt(STATE_CATEGORY, -1) ?: ongletRetenu)
         // Arrivée depuis « Firmware non reconnu » : droit sur l'onglet où il se choisit. À la
         // première création seulement — après le choix l'activité se recrée, et c'est alors
         // l'onglet mémorisé qui compte.
@@ -1002,6 +1059,78 @@ class SettingsFragment : Fragment() {
 
 
     // ── Feedback "application à jour" sur le bouton ──────────────────────────
+
+    /**
+     * Applis en plein écran (issue #248) : interrupteur, résumé des applis choisies et leur mode,
+     * bouton vers la fenêtre de choix. En pause tant qu'un MG4Dash qui ne fusionne pas est installé.
+     */
+    private fun setupImmersive(view: View) {
+        val ctx = requireContext()
+        val resume = view.findViewById<TextView>(R.id.tv_immersive_summary)
+        val bouton = view.findViewById<MaterialButton>(R.id.btn_immersive_choose)
+        view.findViewById<View>(R.id.tv_immersive_outdated).visibility =
+            if (com.mg4.control.service.ImmersiveApps.mg4Dash(ctx) == com.mg4.control.service.ImmersiveApps.Mg4Dash.OUTDATED)
+                View.VISIBLE else View.GONE
+        fun maj() {
+            val choix = com.mg4.control.service.ImmersiveApps.selection(ctx)
+            val pm = ctx.packageManager
+            resume.text = choix.mapNotNull { (paquet, mode) ->
+                val nom = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(paquet, 0)).toString() }.getOrNull()
+                    ?: return@mapNotNull null
+                "$nom (" + getString(when (mode) {
+                    com.mg4.control.model.ImmersiveMode.STATUS -> R.string.immersive_mode_status
+                    com.mg4.control.model.ImmersiveMode.NAVIGATION -> R.string.immersive_mode_nav
+                    com.mg4.control.model.ImmersiveMode.FULL -> R.string.immersive_mode_full
+                }) + ")"
+            }.joinToString(", ").ifEmpty { getString(R.string.immersive_apps_none) }
+            bouton.text = getString(R.string.immersive_choose, choix.size)
+        }
+        maj()
+        // Le côté de la barre de la voiture suit le volant ; illisible, elle est à gauche.
+        val droite = NavSide.detected(ctx) == com.mg4.control.hardware.DriverSide.Side.RIGHT
+        val astuce = view.findViewById<TextView>(R.id.tv_immersive_tip).apply {
+            setText(if (droite) R.string.immersive_reminder_right else R.string.immersive_reminder_left)
+        }
+        fun majAstuce(on: Boolean) { astuce.visibility = if (on) View.VISIBLE else View.GONE }
+        val inter = view.findViewById<Switch>(R.id.switch_immersive)
+        inter.isChecked = com.mg4.control.service.ImmersiveApps.isOn(ctx)
+        majAstuce(inter.isChecked)
+        // À chaque activation : avertissement (conflits possibles) et astuce du glissement. Refus
+        // ou fenêtre fermée : l'interrupteur revient sur OFF sans rien écrire.
+        var silence = false
+        inter.setOnCheckedChangeListener { _, checked ->
+            if (silence) return@setOnCheckedChangeListener
+            if (!checked) {
+                com.mg4.control.service.ImmersiveApps.setOn(ctx, false)
+                majAstuce(false)
+                return@setOnCheckedChangeListener
+            }
+            val label = getString(R.string.immersive_tip_label)
+            val texte = android.text.SpannableStringBuilder(getString(R.string.immersive_confirm_msg))
+                .append("\n\n")
+            val debut = texte.length
+            texte.append(label)
+            texte.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), debut, texte.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            texte.append(" — ").append(getString(if (droite) R.string.immersive_tip_right else R.string.immersive_tip_left))
+            AppDialog.confirmer(
+                ctx,
+                titre = getString(R.string.immersive_title),
+                message = texte,
+                ton = AppDialog.Ton.ALERTE,
+                oui = getString(R.string.immersive_confirm_ok),
+                non = getString(R.string.profile_cancel),
+                onOui = {
+                    com.mg4.control.service.ImmersiveApps.setOn(ctx, true)
+                    if (isAdded) majAstuce(true)
+                },
+                onNon = {
+                    if (isAdded) { silence = true; inter.isChecked = false; silence = false }
+                },
+            )
+        }
+        bouton.setOnClickListener { ImmersiveAppsDialog.show(ctx) { if (isAdded) maj() } }
+    }
 
     private fun showUpToDate(btn: MaterialButton, originalText: String) {
         val ctx = requireContext()
@@ -1078,6 +1207,7 @@ class SettingsFragment : Fragment() {
         // Sonde type de batterie : décide du curseur de limite du pop-up de charge sur A9
         // (Standard LFP sans, Confort NMC avec — même firmware SWI69).
         com.mg4.control.hardware.BatteryTypeConfig.journaliser()
+        com.mg4.control.hardware.DriverSide.journaliser()
         // Énergie par tranche de 1 % apprise pendant les charges vues (issue #156).
         com.mg4.control.service.ChargeMonitor.journaliserApprentissage(ctx)
 
@@ -1119,16 +1249,17 @@ class SettingsFragment : Fragment() {
 
         val dialog = AppDialog.afficher(ctx, vue, 1320f)
 
-        // Rapport court (30 dernières lignes) pour le presse-papier ; rapport complet pour le fichier.
+        // Le journal n'apparaît qu'une fois : tout pour le fichier, les 400 dernières lignes pour le
+        // presse-papier (ce qu'il contenait avant 2026-11-12 — le presse-papier passe par un
+        // échange entre processus limité à ~1 Mo).
         fun buildReport(fullLog: Boolean) = buildString {
             if (crashLog != null) { appendLine(crashLog); appendLine() }
             appendLine(tvReport.text)
             appendLine()
-            if (fullLog) {
-                val toutes = AppLogger.entries
-                appendLine("─── AppLogger (${toutes.size} entrées) ───")
-                toutes.forEach { e -> appendLine("${e.time} [${e.level.name[0]}] ${e.tag}: ${e.msg}") }
-            } else appendLine(tvLogs.text)
+            val toutes = AppLogger.entries
+            val gardees = if (fullLog) toutes else toutes.takeLast(400)
+            appendLine("─── AppLogger (${gardees.size} / ${toutes.size} entrées) ───")
+            gardees.forEach { e -> appendLine("${e.time} [${e.level.name[0]}] ${e.tag}: ${e.msg}") }
         }
 
         // « Copier » — copie tout sans fermer la fenêtre
@@ -1138,9 +1269,20 @@ class SettingsFragment : Fragment() {
             cm.setPrimaryClip(ClipData.newPlainText("MG4Control Diagnostic", buildReport(false)))
             btnCopier.text = getString(R.string.diag_copied)
         }
-        // « Télécharger » — écrit le rapport complet dans le dossier Download de la voiture
+        // « Enregistrer… » (maquette B du 2026-11-03) : le rapport complet, à l'endroit choisi —
+        // Téléchargements, clé USB ou autre dossier, comme l'export des Statistiques. Le rapport
+        // est pris au moment de l'appui : il lit les vues de la fenêtre.
         vue.findViewById<View>(R.id.diag_download).setOnClickListener {
-            downloadDiagnostic(ctx, buildReport(true))
+            val rapport = buildReport(true)
+            val ts = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+            exportDialog = ExportDialog(ctx,
+                titre = getString(R.string.diag_save_title),
+                sousTitre = getString(R.string.diag_save_subtitle),
+                bouton = getString(R.string.diag_save_go),
+                titreFait = getString(R.string.diag_saved),
+                fichiers = { listOf("MG4Control_diag_$ts.txt" to rapport) },
+                parcourir = { choisirDossier.launch(null) },
+            ).also { it.ouvrir() }
         }
         // « Effacer le crash » — supprime le fichier et ferme la fenêtre
         vue.findViewById<View>(R.id.diag_clear_crash).apply {
@@ -1166,21 +1308,6 @@ class SettingsFragment : Fragment() {
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report
             }
-        }
-    }
-
-    /** Écrit le rapport de diagnostic dans le dossier Download de la voiture (fichier .txt horodaté). */
-    private fun downloadDiagnostic(ctx: Context, report: String) {
-        try {
-            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!dir.exists()) dir.mkdirs()
-            val ts = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
-                .format(java.util.Date())
-            val file = File(dir, "MG4Control_diag_$ts.txt")
-            file.writeText(report)
-            Toast.makeText(ctx, getString(R.string.diag_downloaded, file.absolutePath), Toast.LENGTH_LONG).show()
-        } catch (e: Exception) {
-            Toast.makeText(ctx, getString(R.string.diag_download_failed, e.message ?: "?"), Toast.LENGTH_LONG).show()
         }
     }
 

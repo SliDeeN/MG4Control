@@ -47,4 +47,10 @@
         android:name="com.mg4.control.ui.AutomationFragment"
         android:label="@string/nav_automation" />
 
+    <!-- Éditeur de Mes automatisations (issue #201, étape 2) — plein écran, empilé sur l'onglet -->
+    <fragment
+        android:id="@+id/customRuleEditFragment"
+        android:name="com.mg4.control.ui.CustomRuleEditFragment"
+        android:label="@string/rule_page_title" />
+
 </navigation>

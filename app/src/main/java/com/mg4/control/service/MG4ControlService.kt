@@ -43,9 +43,11 @@ import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.profile.ReadyProfilePolicy
+import com.mg4.control.shortcut.DriveModeCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateNotifier
+import com.mg4.control.shortcut.OnePedalReturn
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.shortcut.ToggleTracker
 import com.mg4.control.util.FirmwareInfo
@@ -77,7 +79,7 @@ class MG4ControlService : Service() {
             ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN,
             ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN,
             ShortcutAction.ADAS_CYCLE,
-            ShortcutAction.REGEN_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
+            ShortcutAction.REGEN_CYCLE, ShortcutAction.DRIVE_MODE_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
             ShortcutAction.SEAT_HEAT_RIGHT_CYCLE, ShortcutAction.STEERING_HEAT_TOGGLE,
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
             ShortcutAction.HVAC_RECIRC_CYCLE, ShortcutAction.HVAC_AUTO_VOLUME_CYCLE,
@@ -192,7 +194,14 @@ class MG4ControlService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Issue #208 : relevé de l'A/C, seulement si l'option est active.
+        com.mg4.control.automation.AcKeepOff.demarrer(this)
         AppLogger.i(TAG, "onCreate")
+        // Issue #251 : relance de la détection du téléphone branché (démarrage et réveil), si l'option est active.
+        ProjectionKick.start(this)
+        // Issue #248 : applis en plein écran, remises dans policy_control (fusion avec MG4Dash).
+        ImmersiveApps.refresh(this, "démarrage")
+        ImmersiveApps.watch(this)
         // Relu ici aussi : démarré avant le déverrouillage, MG4App a pu trouver le réglage illisible.
         FirmwareInfo.initWithContext(applicationContext)
         // AVANT startForeground : la notification annonce le Mode Garage, elle doit donc être
@@ -225,6 +234,8 @@ class MG4ControlService : Service() {
         // Sons d'automatisation (issue #161) : rien tant que l'option est coupée ; sinon le son
         // du démarrage de MG4Control, puis les événements choisis.
         com.mg4.control.automation.SoundAutomation.start(applicationContext)
+        // Mes automatisations (issue #201) : aucun relevé tant qu'aucune règle active n'en a besoin.
+        com.mg4.control.automation.CustomRules.start(applicationContext)
         // Boutons flottants : rien tant qu'aucun bouton n'est créé.
         FloatingButtonsOverlay.refresh(applicationContext)
         // Barre clim pendant Android Auto / CarPlay : surveille la projection, pose la zone au besoin.
@@ -338,6 +349,8 @@ class MG4ControlService : Service() {
         skinChangeReceiver = null
         externalApiReceiver?.let { unregisterReceiver(it) } // issue #79
         externalApiReceiver = null
+        ProjectionKick.stop(this)            // issue #251
+        ImmersiveApps.unwatch(this)          // issue #248
         ClusterModuleOverlay.stop()
     }
 
@@ -349,9 +362,11 @@ class MG4ControlService : Service() {
         // simple appel tiers relancerait l'application du profil par défaut à chaque commande.
         if (intent?.action == ACTION_GARAGE_CHANGED) {
             getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification())
-            // Les boutons flottants et la zone clim d'Android Auto partent (ou reviennent) tout de suite.
+            // Les boutons flottants, la zone clim d'Android Auto et les modules de l'écran
+            // conducteur partent (ou reviennent) tout de suite.
             FloatingButtonsOverlay.refresh(this)
             ProjectionHvacZone.refresh(this)
+            ClusterModuleOverlay.refresh(this, "mode Garage")
             return START_STICKY
         }
         if (handleAdvancedShortcutIntent(intent)) return START_STICKY
@@ -488,169 +503,17 @@ class MG4ControlService : Service() {
         val value = intent.getStringExtra(ExternalApi.EXTRA_VALUE).orEmpty()
         AppLogger.i(ExternalApi.LOG_TAG, "SET $key=$value")
 
+        // Bloquant (les commandes clim avancent d'un cran à la fois) : hors du fil principal.
         CoroutineScope(Dispatchers.IO).launch {
-            // NEXT/PREV/TOGGLE sont résolus en valeur concrète AVANT le dispatch : le cycle
-            // emprunte ensuite exactement le même chemin d'écriture qu'une consigne explicite,
-            // donc les mêmes validations, le même clampage et le même verrou de vitesse.
-            val dir = ExternalApi.cycleDirection(value)
-            val v   = if (dir == null) value else resolveCycle(key, dir)
-            if (v == null) {
-                AppLogger.w(ExternalApi.LOG_TAG,
-                    "CYCLE $key=$value refusé — clé non cyclable ou état courant illisible")
-                return@launch
-            }
-            if (dir != null) AppLogger.i(ExternalApi.LOG_TAG, "CYCLE $key : $value → $v")
-
-            // Toutes ces écritures passent par MG4Hardware, donc par VehicleWriteGate : refusées
-            // en roulant sans que l'API ait à s'en préoccuper.
-            val ok = when (key) {
-                ExternalApi.SET_DRIVE_MODE -> DriveMode.entries
-                    .firstOrNull { it.name.equals(v, true) }
-                    ?.let { MG4Hardware.setDriveMode(it); true } ?: false
-                ExternalApi.SET_REGEN -> RegenLevel.entries
-                    .firstOrNull { it.name.equals(v, true) }
-                    ?.let { MG4Hardware.setRegenLevel(it); true } ?: false
-                ExternalApi.SET_SEAT_HEAT_LEFT ->
-                    v.toIntOrNull()?.takeIf { it in 0..3 }
-                        ?.let { MG4Hardware.setSeatHeatLeft(it); true } ?: false
-                ExternalApi.SET_SEAT_HEAT_RIGHT ->
-                    v.toIntOrNull()?.takeIf { it in 0..3 }
-                        ?.let { MG4Hardware.setSeatHeatRight(it); true } ?: false
-                ExternalApi.SET_STEERING_HEAT -> {
-                    val on = v.equals("true", true) || v == "1"
-                    MG4Hardware.setSteeringHeat(on); true
-                }
-                ExternalApi.SET_PROFILE -> { applyProfileByName(v); true }
-                else -> setClimateFromApi(key, v)
-            }
-            if (!ok) AppLogger.w(ExternalApi.LOG_TAG, "SET refusé — clé ou valeur invalide ($key=$v)")
+            VehicleCommands.set(applicationContext, key, value, ExternalApi.LOG_TAG)
         }
         return true
     }
 
-    /**
-     * Traduit NEXT/PREV en valeur concrète pour [key], en partant de l'état LU sur le véhicule.
-     * [dir] vaut +1 ou -1. Retourne null quand la clé n'est pas cyclable ou que son état courant
-     * est illisible — et dans ce cas on n'écrit RIEN.
-     *
-     * ⚠️ Ne jamais « supposer » un point de départ pour sauver l'appel : sur un siège réellement
-     * à 3 dont la propriété est muette, partir de 0 ferait descendre la valeur alors que
-     * l'utilisateur appuie pour monter. Un refus journalisé est diagnosticable, pas ça.
-     *
-     * Le cycle boucle (max → min) : c'est indispensable sur un bouton de volant, qui n'a pas de
-     * sens « descendre ». Appelée depuis le contexte IO de [handleExternalApiIntent].
-     */
-    private fun resolveCycle(key: String, dir: Int): String? {
-        if (key !in ExternalApi.CYCLABLE_KEYS) return null
-
-        fun step(cur: Int, min: Int, max: Int): String =
-            ExternalApi.cycleStep(cur, min, max, dir).toString()
-        fun flip(cur: Boolean?): String? = cur?.let { if (it) "0" else "1" }
-
-        when (key) {
-            ExternalApi.SET_SEAT_HEAT_LEFT  ->
-                return MG4Hardware.getSeatHeatLeftOrNull()?.let { step(it, 0, 3) }
-            ExternalApi.SET_SEAT_HEAT_RIGHT ->
-                return MG4Hardware.getSeatHeatRightOrNull()?.let { step(it, 0, 3) }
-            ExternalApi.SET_STEERING_HEAT   ->
-                return flip(MG4Hardware.getSteeringHeatOrNull())
-        }
-
-        // Reste : la clim. Un SEUL getClimateState() — c'est une lecture binder, pas un champ.
-        if (!MG4Hardware.hasClimateControl()) return null
-        val st = MG4Hardware.getClimateState() ?: return null
-        return when (key) {
-            ExternalApi.SET_HVAC_POWER    -> flip(st.powerOn)
-            ExternalApi.SET_HVAC_AC       -> flip(st.acOn)
-            ExternalApi.SET_HVAC_AUTO     -> flip(if (st.reglages().enAuto) true else st.autoOn)
-            ExternalApi.SET_DEFROST_FRONT -> flip(st.defrostFront)
-            ExternalApi.SET_DEFROST_REAR  -> flip(st.defrostRear)
-            // Bornes lues sur le véhicule, jamais codées en dur : elles varient d'un firmware
-            // à l'autre, et c'est sur elles que le cycle reboucle.
-            ExternalApi.SET_HVAC_TEMP     -> st.tempC?.let { step(it, st.tempMin, st.tempMax) }
-            // En AUTO le niveau annoncé (15) n'est pas un cran : on part du dernier réglé à la main.
-            ExternalApi.SET_HVAC_FAN      -> (st.reglages().ventilationReelle ?: st.lastManualFan)
-                ?.let { step(it, st.fanMin, st.fanMax) }
-            ExternalApi.SET_HVAC_RECIRC   -> st.loopMode?.let { step(it, 0, 2) }
-            else -> null
-        }
-    }
-
-    /**
-     * Clés `SET` de climatisation. Retourne false si [key] n'en est pas une — l'appelant
-     * s'en sert pour distinguer « clé inconnue » de « valeur invalide ».
-     *
-     * ⚠️ Bloquant : les commandes clim SAIC sont des bascules qui avancent d'un cran à la fois,
-     * donc plusieurs secondes possibles. Appelée depuis le contexte IO de [handleExternalApiIntent].
-     *
-     * Consigne et ventilation sont clampées aux **bornes réelles du véhicule**, pas à des
-     * valeurs codées en dur : elles diffèrent d'un firmware à l'autre.
-     */
-    private fun setClimateFromApi(key: String, value: String): Boolean {
-        val hvacKeys = setOf(
-            ExternalApi.SET_HVAC_POWER, ExternalApi.SET_HVAC_AC, ExternalApi.SET_HVAC_AUTO,
-            ExternalApi.SET_HVAC_TEMP, ExternalApi.SET_HVAC_FAN, ExternalApi.SET_HVAC_RECIRC,
-            ExternalApi.SET_DEFROST_FRONT, ExternalApi.SET_DEFROST_REAR
-        )
-        if (key !in hvacKeys) return false
-        if (!MG4Hardware.hasClimateControl()) {
-            AppLogger.w(ExternalApi.LOG_TAG, "SET $key ignoré — clim non pilotable sur ce firmware")
-            return true   // clé connue : ce n'est pas une erreur de syntaxe
-        }
-        val on = value.equals("true", true) || value == "1"
-        return when (key) {
-            ExternalApi.SET_HVAC_POWER    -> { MG4Hardware.setClimatePower(on); true }
-            ExternalApi.SET_HVAC_AC       -> { MG4Hardware.setClimateAc(on); true }
-            ExternalApi.SET_HVAC_AUTO     -> { MG4Hardware.setClimateAuto(on); true }
-            ExternalApi.SET_DEFROST_FRONT -> { MG4Hardware.setClimateDefrostFront(on); true }
-            ExternalApi.SET_DEFROST_REAR  -> { MG4Hardware.setClimateDefrostRear(on); true }
-            ExternalApi.SET_HVAC_RECIRC   -> {
-                val mode = when (value.uppercase()) {
-                    "INNER", "0"   -> MG4Hardware.LoopMode.INNER
-                    "OUTSIDE", "1" -> MG4Hardware.LoopMode.OUTSIDE
-                    "AUTO", "2"    -> MG4Hardware.LoopMode.AUTO
-                    else           -> return true.also {
-                        AppLogger.w(ExternalApi.LOG_TAG, "SET $key : valeur invalide '$value'")
-                    }
-                }
-                MG4Hardware.setClimateLoopMode(mode); true
-            }
-            ExternalApi.SET_HVAC_TEMP, ExternalApi.SET_HVAC_FAN -> {
-                val n = value.toIntOrNull() ?: return true.also {
-                    AppLogger.w(ExternalApi.LOG_TAG, "SET $key : valeur non numérique '$value'")
-                }
-                val state = MG4Hardware.getClimateState() ?: return true.also {
-                    AppLogger.w(ExternalApi.LOG_TAG, "SET $key : état clim illisible")
-                }
-                if (key == ExternalApi.SET_HVAC_TEMP)
-                    MG4Hardware.setClimateTemp(n.coerceIn(state.tempMin, state.tempMax))
-                else
-                    MG4Hardware.setClimateFan(n.coerceIn(state.fanMin, state.fanMax))
-                true
-            }
-            else -> false
-        }
-    }
-
     /** Applique un profil désigné par son NOM (insensible à la casse) ou son id. */
     private fun applyProfileByName(nameOrId: String?) {
-        val wanted = nameOrId?.trim().orEmpty()
-        if (wanted.isEmpty()) {
-            AppLogger.w(ExternalApi.LOG_TAG, "APPLY_PROFILE sans nom de profil")
-            return
-        }
         CoroutineScope(Dispatchers.IO).launch {
-            val pm = ProfileManager(applicationContext)
-            val profile = pm.getById(wanted)
-                ?: pm.getAll().firstOrNull { it.name.equals(wanted, ignoreCase = true) }
-            if (profile == null) {
-                AppLogger.w(ExternalApi.LOG_TAG, "profil introuvable : '$wanted'")
-                return@launch
-            }
-            AppLogger.i(ExternalApi.LOG_TAG, "application du profil '${profile.name}'")
-            ProfileApplier.apply(profile, autoStart = true) { ok ->
-                AppLogger.i(ExternalApi.LOG_TAG, "profil '${profile.name}' — ok=$ok")
-            }
+            VehicleCommands.applyProfile(applicationContext, nameOrId, ExternalApi.LOG_TAG)
         }
     }
 
@@ -861,6 +724,22 @@ class MG4ControlService : Service() {
                 MG4Hardware.setRegenLevel(suivant)
             }
 
+            ShortcutAction.DRIVE_MODE_CYCLE -> {
+                // Relu à chaque appui, comme la régénération : le réglage vit dans un autre écran.
+                // Mode illisible ou hors du cycle : le premier mode du cycle.
+                val ordre   = DriveModeCycle.order(this)
+                val actuel  = MG4Hardware.getDriveMode()
+                val suivant = DriveModeCycle.next(ordre, actuel) ?: return
+                AppLogger.i(TAG, "SHORTCUT mode de conduite : ${actuel?.label ?: "?"} → ${suivant.label} " +
+                    "(cycle ${ordre.joinToString("/") { it.label }})")
+                MG4Hardware.setDriveMode(suivant)
+                val loc = LocaleHelper.applyLocale(this)
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(loc, loc.getString(R.string.shortcut_drive_mode_toast, loc.getString(libelleMode(suivant))),
+                        Toast.LENGTH_SHORT).show()
+                }
+            }
+
             ShortcutAction.ADAS_CYCLE -> {
                 val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
                 // Mêmes valeurs par défaut que l'écran de configuration (Off / ACC). Elles y
@@ -953,7 +832,10 @@ class MG4ControlService : Service() {
                 // On CLAMPE, jamais de bouclage : repasser de 100 % au plancher d'une seule
                 // pression, de nuit, serait le pire moment pour une surprise. Le plancher vient
                 // du matériel — le redéfinir ici le ferait diverger.
-                val cible = (actuel + pas).coerceIn(MG4Hardware.BRIGHTNESS_MIN_PERCENT, 100)
+                val min = MG4Hardware.brightnessMinPercent()
+                // « − » ne remonte jamais un écran déjà sous le plancher (réglé ailleurs plus bas).
+                val cible = if (pas < 0 && actuel <= min) actuel
+                            else (actuel + pas).coerceIn(min, 100)
                 AppLogger.i(TAG, "SHORTCUT luminosité : $actuel% → $cible%")
                 if (cible != actuel) MG4Hardware.setScreenBrightnessPercent(cible)
             }
@@ -1099,6 +981,13 @@ class MG4ControlService : Service() {
             return
         }
 
+        // RUN_RULE (Mes automatisations) : l'automatisation de l'emplacement, ou celle de la bulle.
+        if (action == ShortcutAction.RUN_RULE) {
+            val id = customId ?: prefs.getString("shortcut_${pressKey}_rule_id", null)
+            com.mg4.control.automation.CustomRules.runManual(this@MG4ControlService, id, "raccourci $pressKey")
+            return
+        }
+
         // PROFILE_PICKER : overlay flottant au-dessus du launcher — un second appui le referme
         // (issue #137), comme le pop-up HVAC.
         if (action == ShortcutAction.PROFILE_PICKER) {
@@ -1115,6 +1004,12 @@ class MG4ControlService : Service() {
         // CHARGE_POPUP : même famille — rouvre le pop-up de charge, ou le referme.
         if (action == ShortcutAction.CHARGE_POPUP) {
             ChargePopupOverlay.toggle(this@MG4ControlService)
+            return
+        }
+
+        // QUICK_SETTINGS (issue #197) : même famille — un second appui referme la fenêtre.
+        if (action == ShortcutAction.QUICK_SETTINGS) {
+            QuickSettingsOverlay.toggle(this@MG4ControlService)
             return
         }
 
@@ -1228,7 +1123,8 @@ class MG4ControlService : Service() {
                     startActivity(intent)
                 }
                 ShortcutAction.OPEN_CUSTOM_APP -> {
-                    val pkg = prefs.getString("shortcut_${pressKey}_custom_app", null)
+                    // Bouton flottant : l'appli de la bulle (2026-11-17) ; sinon celle de l'emplacement.
+                    val pkg = customId ?: prefs.getString("shortcut_${pressKey}_custom_app", null)
                     if (pkg != null) {
                         val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
                         if (launchIntent != null) {
@@ -1268,7 +1164,7 @@ class MG4ControlService : Service() {
     /** État lu sur le véhicule, `null` s'il est illisible (ou si la lecture échoue). */
     private fun readToggle(action: ShortcutAction): Boolean? = runCatching {
         when (action) {
-            ShortcutAction.ONE_PEDAL -> MG4Hardware.getRegenLevel()?.let { it == RegenLevel.ONE_PEDAL }
+            ShortcutAction.ONE_PEDAL -> MG4Hardware.isOnePedalOn()
             ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.isEnergySavingOn()
             ShortcutAction.TSR_TOGGLE           -> MG4Hardware.isTsrOn()
             ShortcutAction.SOUND_WARNING        -> MG4Hardware.isSoundWarningOn()
@@ -1281,12 +1177,16 @@ class MG4ControlService : Service() {
     private fun writeToggle(action: ShortcutAction, on: Boolean) {
         when (action) {
             ShortcutAction.ONE_PEDAL -> {
-                // One Pedal coupé : retour au niveau de régénération choisi dans les Raccourcis.
-                val niveau = if (on) RegenLevel.ONE_PEDAL else RegenLevel.fromValue(
-                    getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
-                        .getInt("shortcut_one_pedal_fallback", RegenLevel.HIGH.value)
-                )
-                MG4Hardware.setRegenLevel(niveau)
+                // Issue #226 (2026-11-08) : par défaut, couper le One Pedal suffit — la voiture remet
+                // d'elle-même le niveau d'avant (vérifié en voiture) ; sinon le niveau choisi dans
+                // Raccourcis › 1 Pédale.
+                val impose = if (on) null else OnePedalReturn.levelFor(
+                    getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE).getInt(OnePedalReturn.KEY, OnePedalReturn.PREVIOUS))
+                when {
+                    on -> MG4Hardware.setRegenLevel(RegenLevel.ONE_PEDAL)
+                    impose != null -> MG4Hardware.setRegenLevel(impose)
+                    else -> MG4Hardware.setOnePedal(false)
+                }
             }
             ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(on)
             ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(on)
@@ -1801,5 +1701,14 @@ class MG4ControlService : Service() {
             .setContentText(etat)
             .setSmallIcon(R.mipmap.ic_launcher)
             .build()
+    }
+
+    /** Nom d'un mode, le même que sur l'écran Conduite. */
+    private fun libelleMode(m: DriveMode): Int = when (m) {
+        DriveMode.ECO    -> R.string.drive_eco
+        DriveMode.NORMAL -> R.string.drive_normal
+        DriveMode.SPORT  -> R.string.drive_sport
+        DriveMode.SNOW   -> R.string.drive_snow
+        DriveMode.CUSTOM -> R.string.drive_custom
     }
 }

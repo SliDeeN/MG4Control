@@ -73,3 +73,38 @@ android.permission.STATUS_BAR_SERVICE
 # service/CustomShortcutRunner.kt). Ne lance que ce que l'utilisateur a choisi lui-même dans la
 # fenêtre « Raccourci perso » ; les cibles système sont refusées par CustomShortcuts.problem.
 android.permission.ACCESS_SHORTCUTS
+# --- position (2.7.0, les DEUX variantes) ---
+# Accordées d'office à l'identité système (android.uid.system). Lecture seule de la position de
+# la voiture, envoyée nulle part ailleurs que là où l'utilisateur l'a demandé :
+# - Mes automatisations : déclencheurs et conditions « lieu », heures du soleil
+#   (automation/RuleServices.kt) ;
+# - Luminosité auto : lever / coucher du soleil (automation/AutoBrightness.kt) ;
+# - Statistiques : altitude et distance du graphique de trajet (hardware/StatsCollector.kt) ;
+# - ABRP (#188, variante online seulement, option désactivée par défaut) : position envoyée au
+#   compte ABRP de l'utilisateur (automation/AbrpStream.kt).
+android.permission.ACCESS_FINE_LOCATION
+android.permission.ACCESS_COARSE_LOCATION
+# --- radios pilotées par Mes automatisations (2.7.0, les DEUX variantes, #201) ---
+# Actions « Wi-Fi », « Bluetooth » et « Partage de connexion » allumer / couper, lancées
+# seulement par une automatisation que l'utilisateur a créée (automation/RuleServices.kt).
+# Rien de plus que l'état allumé / éteint ; aucune commande au véhicule.
+# ACCESS_WIFI_STATE / CHANGE_WIFI_STATE (normal) : WifiManager.isWifiEnabled / setWifiEnabled.
+android.permission.ACCESS_WIFI_STATE
+android.permission.CHANGE_WIFI_STATE
+# BLUETOOTH_ADMIN (normal) : BluetoothAdapter.enable / disable.
+android.permission.BLUETOOTH_ADMIN
+# TETHER_PRIVILEGED (signature|privileged, obtenue en android.uid.system) : startTethering /
+# stopTethering du point d'accès Wi-Fi.
+android.permission.TETHER_PRIVILEGED
+# --- fichiers sur le stockage partagé (2.7.0, les DEUX variantes) ---
+# Limitées aux dossiers de l'appli et à ce que l'utilisateur choisit :
+# - sauvegarde des profils (profile/ProfileBackupManager.kt, dossier MG4Control) ;
+# - sons des automatisations (#161, automation/SoundImport.kt, dossier MG4Control/sounds) ;
+# - export CSV des Statistiques dans Téléchargements ou un autre dossier (#206, stats/StatsExport.kt).
+android.permission.READ_EXTERNAL_STORAGE
+android.permission.WRITE_EXTERNAL_STORAGE
+# MANAGE_DOCUMENTS (signature|privileged, obtenue avec la clé plateforme) : export des
+# Statistiques sur la clé USB (#206). L'écriture directe à sa racine est refusée par Android ;
+# l'appli passe par le fournisseur de documents (DocumentsContract), sans sélecteur, uniquement
+# pour écrire ses fichiers CSV dans le dossier MG4Control de la clé.
+android.permission.MANAGE_DOCUMENTS

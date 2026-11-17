@@ -44,8 +44,8 @@ object AutoBrightnessSettings {
     /** Vrai quand un réglage à la main a suspendu l'automatisme jusqu'au prochain READY. */
     const val KEY_PAUSED       = "autobri_paused"
 
-    /** Le plancher de l'écran lui-même : en dessous, on risquerait de l'éteindre. */
-    const val MIN_PERCENT = MG4Hardware.BRIGHTNESS_MIN_PERCENT
+    /** Le plancher de l'écran lui-même, selon le firmware (0 % ancien SDK, 5 % A9). */
+    fun minPercent(): Int = MG4Hardware.brightnessMinPercent()
     const val MAX_PERCENT = 100
     const val STEP_PERCENT = 5
 
@@ -85,5 +85,5 @@ object AutoBrightnessSettings {
         )
     }
 
-    fun clamp(percent: Int): Int = percent.coerceIn(MIN_PERCENT, MAX_PERCENT)
+    fun clamp(percent: Int): Int = percent.coerceIn(minPercent(), MAX_PERCENT)
 }

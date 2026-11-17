@@ -1,4 +1,4 @@
-![image info](mg4control_github_banner.svg)
+![image info](branding/mg4control-banner-blue.png)
 
 [![Security](https://github.com/SliDeeN/MG4Control/actions/workflows/security.yml/badge.svg)](https://github.com/SliDeeN/MG4Control/actions/workflows/security.yml)
 [![Release](https://github.com/SliDeeN/MG4Control/actions/workflows/release.yml/badge.svg)](https://github.com/SliDeeN/MG4Control/actions/workflows/release.yml)
@@ -15,8 +15,1707 @@ You enjoy MG4Control and want to support its development ?
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/slideen)
 ---
 
-<details open>
-<summary><strong>🇫🇷 Français</strong></summary>
+<details>
+<summary><strong>🇬🇧 English version</strong></summary>
+
+## Table of Contents
+1. [Overview](#overview)
+2. [Features](#features)
+3. [Compatibility](#compatibility)
+4. [Architecture](#architecture)
+5. [Project Structure](#project-structure)
+6. [Hardware Layers](#hardware-layers)
+7. [Profile System](#profile-system)
+8. [User Interface](#user-interface)
+9. [External API](#external-api-keymapper-tasker)
+10. [Build & Installation](#build--installation)
+11. [Required Permissions](#required-permissions)
+12. [Licence](#licence-1)
+
+---
+
+## Overview
+
+**MG4Control** is a system-level application designed for Android Automotive OS, intended to run on the head unit of MG4 electric vehicles equipped with the **SAIC MT2712** SoC. It provides direct, unified access to driving settings that are unavailable — or poorly accessible — through the stock manufacturer interface.
+
+The app communicates with the vehicle through the proprietary SAIC SDK, accessing Android Automotive services (`CarPropertyManager`, `CarHvacManager`) as well as low-level services exposed by the vehicle's firmware.
+
+> **Important:** This application requires system privileges (`sharedUserId="android.uid.system"`) and must be signed with the ROM's platform key. It cannot run on a standard unlocked device.
+
+> ⚠️ **Warning**
+>
+> **MG4Control is an independent community project. It is in no way affiliated with, endorsed by, or supported by MG Motor, SAIC Motor, or any of their subsidiaries.**
+> Use this application entirely at your own risk. Incorrect settings may affect vehicle behaviour. Proceed with caution.
+
+---
+
+## Features
+
+### Driving Settings
+- **Drive mode**: ECO / NORMAL / SPORT / SNOW / CUSTOM
+- **Regenerative braking**: Off / Low / Medium / High / Adaptive / One Pedal
+
+#### Custom drive mode
+Three settings the vehicle only exposes in that mode: **power** (Eco / Normal / Sport),
+**steering** and **pedal force** (Comfort / Normal / Sport). Available on all six firmwares
+through three distinct routes — `VehiclePropertyManager` signals on SWI133,
+`VehicleSettingManager` methods on SWI68/165, and `CarVehicleSettingClient` methods on A9.
+
+Present in two places, with a different reveal rule:
+
+| Screen | The card appears when |
+|---|---|
+| Dashboard, Driving tab | the **car** is in Custom mode, including when it was set from the stock screen |
+| Profile editor, Driving tab | the **profile** being edited has Custom as its mode |
+
+On the Dashboard, a row whose state the vehicle does not report disappears: the command exists on
+every firmware, but nothing guarantees the trim carries the hardware.
+
+> ⚠️ **Warning**
+>
+> The three settings do not share one scale, and the pedal is a trap: **Normal is 0 there**, not
+> the middle value. Power is 1/2/3 on SWI133/68/165 but 2/3/4 on A9, where the car reuses the
+> drive-mode scale. The app therefore never handles those numbers — it passes a 0/1/2 index and
+> the conversion lives in `MG4Hardware`.
+
+In a profile they are only written when its drive mode is Custom, and a profile saved before this
+feature writes nothing until it has been reopened and saved.
+
+#### Intelligent battery heating
+The stock option hidden in the battery widget ("Energy consumption" tab) heats the battery while
+driving: fast charging gets better but range drops, and once switched on it never switches itself
+off. MG4Control puts it ON/OFF on the Dashboard (Driving tab, with the time left before the
+automatic switch-off), as a shortcut, and offers to switch it off automatically (see Automation).
+One vehicle property, `DRVNG_PTC_HEAT`, on all six firmwares: through the `VehiclePropertyManager`
+on SWI133, like SystemUI, directly elsewhere.
+
+> ℹ️ **Note**
+>
+> The state reads the same way on all six firmwares: 0 = on, 1 = off (1 is written to switch it
+> on, 2 to switch it off). On A9, the property is read and written in area 0, as the stock app
+> does: before 2.6.10, MG4Control read the state upside down there and the command had no effect
+> (#186). As on the stock screen, the option can also be changed while driving. The Diagnostic
+> probe (`MG4_BATHEAT`) logs the raw value.
+### Safety
+- **ESC**: ON / OFF
+- **Drowsiness warning**: ON / OFF, with Low / Standard / High sensitivity
+- **Forward collision warning (AEB)**: ON / OFF, Alert only or Alert + Braking, sensitivity
+- **Lane keeping assist (ELK)**: Alert / Assist / Emergency keeping, sensitivity, plus the audible
+  warning and vibration on SWI132
+
+> ⚠️ **Warning**
+>
+> Turning the ESC off also turns the forward collision system off — the vehicle enforces that.
+> Both return to ON at every start-up. Inside a profile, ESC and drowsiness are written **only if
+> that profile configures them**: a profile created before these settings existed leaves them alone.
+
+### Comfort
+- **Heated steering wheel**: On / Off
+- **Heated seats (left & right)**: Off / Level 1 / 2 / 3
+- **Climate control**: temperature setpoint, fan speed, power, A/C, AUTO, recirculation
+  (inner / outside / auto), front and rear defrost
+- **Climate ECO mode**: On / Off — on the Dashboard, in profiles (On / Off / Unchanged) and in the
+  HVAC pop-up, next to A/C
+- **Airflow in AUTO** (#178): Low / Medium / High, the setting of the stock climate app — on the
+  Dashboard, in profiles (applied just before AUTO starts), as an "Airflow in AUTO: cycle" shortcut
+  and in the HVAC pop-up. If the car doesn't report this setting, a message says so
+- **What AUTO controls** (#160, *Settings → Advanced*): in AUTO, the car sets the fan, the air
+  direction and the recirculation. Untick the air direction and/or the recirculation to keep
+  yours: MG4Control puts them back right after AUTO starts. When you leave AUTO from MG4Control,
+  the previous air direction and recirculation come back, unless they were changed in the meantime
+- **Keep the A/C off** (#208, *Settings → Advanced*, off by default): the car turns the A/C back
+  on whenever the setpoint changes, even after you switched it off by hand. The option switches it
+  off again straight away, whether the setpoint came from MG4Control or, on trial, from the stock
+  screen — never in AUTO, with front defrost or with the climate off. Profiles re-read the A/C at the
+  end and switch it off again if it came back
+- **Automatic high beam**: On / Off
+- **Screen brightness**: 0 to 100 % on SWI133, SWI68 and SWI165 — 0 is also the stock screen's
+  minimum, and the screen stays lit —, 5 to 100 % on the A9 firmwares
+
+### ADAS (Advanced Driver Assistance)
+- **SWI133**: Off / Speed Limiter / Auto / ACC / ICA + overspeed alert / speed limit change alert
+- **SWI68**: Disable / ACC / TJA + audible warning On / Off
+- **SWI69 / SWI131**: Forward Collision Warning (AEB) — On / Off + mode Alert only / Alert + Emergency Braking
+- **SWI165**: Disable / ACC / TJA + Forward Collision Warning (AEB) On/Off + Alert / Alert+Braking mode + audible warning
+
+### Physical Button Shortcuts
+
+Everything is set in the Shortcuts tab, **Hardware buttons** sub-tab: one card per key, with its
+**Short**, **Long** and **Double** presses. Two paths live side by side, without you having to pick
+one:
+
+- **Left and right ★ buttons**, short or long press, set for all profiles — they rely on the
+  broadcast the vehicle emits: if the stock launcher already uses that button, the launcher wins.
+- **Advanced capture** — any physical key, on the steering wheel **as well as on the panel below
+  the screen**, and the ★ buttons as soon as they get a double press or a per-profile setting. It
+  goes through an **accessibility service** the user enables themselves in Android: MG4Control then
+  sees the key **before** the launcher and can consume it.
+
+A banner at the top of the page says whether advanced capture is on, off, or whether the service
+still has to be enabled. **Add a button** waits for a key press in the car (the left joystick stays
+reserved for driver assistance). A card's ⋮ menu **renames** the key — a name is suggested from its
+Android code (Home, Back, Volume +…) —, restores its original name or removes an added key. The
+**Enable** switch, at the end of the row of pills, only affects the steering-wheel keys.
+
+A long press fires **as soon as the 500 ms threshold is reached**, without waiting for the release:
+the action always happens at the same moment, while the key is still held. A double press has a
+cost worth knowing — on a key carrying one, the short press can no longer fire on release, it waits
+another 300 ms to make sure no second press follows. Keys without a double press pay nothing.
+
+> ⚠️ **Warning**
+>
+> A key registered as an advanced shortcut is claimed **as a whole**. Intercepting a long press
+> means consuming the press as it starts, when it is still unknown whether it will be short, long
+> or double. Press types left unassigned therefore do *not* fall back to the launcher: they simply
+> do nothing.
+
+Available actions — those depending on the firmware do not show up on the others:
+
+| Category | Actions |
+|---|---|
+| Driving | One Pedal · Custom Regeneration Cycle · Drive mode cycle · Energy saving · Battery heating ON/OFF |
+| Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
+| Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Airflow in AUTO (cycle) · Automatic high beam ON/OFF · Brightness ± · HVAC pop-up |
+| Windows | Open all windows · Close all windows |
+| Media | Play / Pause · Next track · Previous track · Volume + · Volume - · Audio source cycle |
+| App and vehicle | Apply a profile · Profile picker · Profile cycle · Charging pop-up · Car keeper · Android Auto / CarPlay · Open MG4Control · Launch an app · Custom shortcut · Run an automation · Quick settings pop-up · Android settings · Power the car off |
+
+Comfort and safety actions **re-read the state from the vehicle on every press** instead of
+remembering their own: the user also acts from the stock screen, so a remembered state would drift
+immediately. An unreadable state means doing nothing — nothing is ever written blind.
+
+The **One Pedal**, **Energy saving**, **Traffic signs (TSR)**, **Overspeed alert**, **Speed limit
+change alert** and **Sound** toggles also re-read the real state: a One Pedal switched on by the
+start-up profile is switched off on the very first press. Where that state cannot be read
+reliably, they fall back on their last command and alternate as before; only the forward
+collision A/B cycle still follows a remembered state.
+
+Tapping a press opens the choice of its action (a search field appears beyond nine choices); the
+app, profile or automation it targets is then picked from a grid of tiles.
+
+#### Profile-scoped shortcuts
+An advanced shortcut carries a key, a press type, an action — and a **profile**, "All profiles" by
+default. The same key and press type can therefore carry several shortcuts, one per profile: under
+*Sport* the button does one thing, under *Winter* another.
+
+Resolution on press happens in two steps, in this order:
+1. a shortcut reserved for the **active profile**;
+2. otherwise the one marked **All profiles**;
+3. otherwise nothing.
+
+Case 3 is worth knowing: the key is still **consumed**, like any press type left unassigned on a
+claimed key — it does not fall back to the launcher.
+
+The **active profile** is the last one applied, whatever the source: startup, ignition, Bluetooth,
+temperature automation or a manual choice. It is stored, so it survives a service restart.
+
+> ℹ️ **Note**
+>
+> It is the last profile **applied**, not the actual state of the vehicle: a setting changed by
+> hand from the Dashboard does not invalidate it. The alternative — comparing the vehicle state
+> against every profile — would cost a dozen vehicle reads on every key press, for an ambiguous
+> result as soon as two profiles look alike.
+
+At the top of the page, **"Settings for:"** picks the profile whose keys you are setting
+(advanced capture on); a press with nothing of its own for that profile shows "Like all: …", the
+action set for all profiles.
+
+The action settings — **One Pedal return**, **ADAS cycle notches**, **regeneration cycle**,
+**mode cycle**, **profile cycle**, **source cycle**, **Quick settings** — each get their own pill,
+which appears as soon as the action is assigned to a key or a floating button.
+
+**One Pedal** (#226): the first press turns One Pedal on, the second turns it off. By default
+("As before"), MG4Control only turns One Pedal off and the car brings back the regeneration level
+it had before by itself; the *1 Pedal* pill lets you pick a fixed level instead — Low, Medium,
+High or Adaptive. A level chosen in an earlier version goes back to "As before", and Off is no
+longer offered. One Pedal's state is read from the regeneration level **or** from the One Pedal
+setting itself, for the shortcut, the bubbles and the automations.
+
+The regeneration cycle is composed on its page: tapping a mode appends it **at the end of the
+cycle**, tapping it again removes it, and the order of your taps is the order of the cycle. The five
+modes on offer are Low, Medium, High, Adaptive and One Pedal. You can clear everything and start
+over; nothing is stored until *Save*, which stays greyed out below two modes — under that, the
+shortcut would have nothing left to walk through after the first press. The setting is **global** —
+the same sequence for every button triggering the action — and with no setting at all, the original
+behaviour stands unchanged (Low → Medium → High → Adaptive).
+
+#### HVAC pop-up
+The **HVAC pop-up** action opens the climate controls on top of the current screen — including
+when Android Auto or CarPlay fills the screen and hides the stock climate bar. The steering
+wheel's right joystick moves no focus there: up/down set the temperature, left/right the fan
+speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). At fan level 1,
+pressing left turns the climate off ("OFF"); while it is off, left does nothing, and right **turns
+it back on as it was before** — at the same level or in AUTO, like changing the temperature does:
+the app sends the power-on command instead of writing a level. The "Climate: fan +" shortcut
+follows the same rule. A hint in the header
+recalls these gestures, or warns that the joystick is inactive until the accessibility service is
+enabled — the window then still works by touch. Chosen by touch: A/C, recirculation, air direction
+and, on equipped firmwares (SWI133, SWI68, SWI165), the heated steering wheel and each seat's
+level, one colour per level (green, orange, red). The window closes on a second press of the
+shortcut, with its cross, or by itself after the pop-up delay.
+
+The **AUTO** button: a tap turns it on or off; held for 1 s, by touch or with the centre click, it
+steps the **airflow in AUTO** one notch — Low → Medium → High → Low — without turning AUTO on or
+off. Three notches under "AUTO" always show that airflow, even with AUTO off. An **ECO** tile sits
+next to A/C.
+
+**During Android Auto / CarPlay**, the car blocks its climate panel: with the *Climate area during
+Android Auto / CarPlay* option (*Settings → Interface*, off by default, suspended in Garage mode),
+tapping the climate area of the top bar opens this pop-up instead.
+
+#### Quick settings pop-up
+The **Quick settings pop-up** action (#197) opens, on top of the screen, a grid of tiles chosen on
+the *Quick settings* page — 8 at most, ordered with the handle: lane departure and its
+sensitivity, cruise / limiter (ACC, TJA or ICA and the limiter, mutually exclusive on the car, make
+a single tile), forward collision, traffic signs, overspeed alert, automatic high beam,
+regeneration (One Pedal included), drive mode, energy saving, battery heating, A/C,
+recirculation, defrosters, seats, heated steering wheel, brightness. By default: lane departure,
+cruise / limiter, regeneration, battery heating and drive mode. A two-value tile toggles with
+one tap (⇄ mark, teal; a Yes / No tile that is on takes the accent colour); the others open their
+values in a **bubble attached to the tile** (above, or below when there is no room), and chips on
+the *Quick settings* page choose which values it offers (at least two, all by default). The choice
+goes to the car straight away, then is read back. The right joystick moves between the tiles and
+the close button, and works the bubble (left / right, centre click to apply, up / down to close
+it); a long press on the key that opened it closes it. A setting the car only
+accepts when stopped is greyed out while driving. The pop-up closes with its cross, with a second
+press on the shortcut, or by itself after the pop-up delay, restarted on every touch.
+
+#### Profile cycle
+The **Profile cycle** action steps through the profiles, in an order composed on its page (at
+least two profiles; without it, every profile in the order of their list). On each press the
+shortcut targets the profile that follows the active one and shows its name; it applies it one
+second later, then confirms it on screen. Two quick presses therefore skip a profile without
+applying it. If the speed lock refuses the write, nothing changes.
+
+#### Drive mode cycle
+The **Drive mode cycle** action (#207) only walks through the modes chosen on the *Mode cycle*
+page, in the order you tap them: Eco, Normal, Sport, Snow and Custom, on every firmware (at least
+two; without a setting, Eco → Normal → Sport). From a mode outside the cycle, or an unreadable one,
+the press goes to the first. The change is allowed while driving, as with the stock button, and
+"Mode …" is shown.
+
+#### Audio source cycle
+The **Audio source cycle** action switches to the next source of a cycle composed on the
+*Source cycle* page, as tiles: radio, Bluetooth, USB, online, CarPlay / Android Auto (at least
+two sources; without it, radio then Bluetooth). On each press, *Source: …* shows and the car
+switches to it one second later; two quick presses therefore skip a source. There is no "change
+source" command: the app asks the target source to play, which brings it to the front, without
+pausing anything. Availability is not checked: a source with nothing to play stays silent, and
+the next press moves on, because the cycle starts again from the last source chosen, not from
+the one playing.
+
+- **SWI133, SWI68, SWI165**: through the SAIC media service, source by source.
+- **SWI69, SWI131, SWI132**: Bluetooth goes through the SAIC Media app, like the original source
+  key — that app switches the car's audio output to Bluetooth before starting playback. USB
+  targets the player of the port the stick is plugged into (one player per port). "Online" is
+  not offered: that source does not exist on these firmwares.
+- **CarPlay / Android Auto**: through the original AllGo receiver; if it has no phone, the app
+  tries wireless Android Auto through DiAuto-MG4.
+
+#### Android Auto / CarPlay and Android settings
+- **Android Auto / CarPlay**: one press opens Android Auto or CarPlay depending on the connected
+  phone — MG4Control asks the car's projection service —, a second press goes back to the previous
+  screen. Without a phone, a message says so. If a phone is plugged in by cable but no projection
+  starts, the shortcut restarts its detection ("Phone plugged in: trying to detect it again…") and opens Android Auto
+  or CarPlay as soon as it is recognised.
+- **Phone plugged in before start-up** (#251): an iPhone or Android phone plugged in before the
+  head unit starts was seen by neither CarPlay nor Android Auto. Option in *Settings → Advanced*,
+  "Android Auto · CarPlay" card (off by default, hidden without the car's AllGo projection
+  service): 15 s after start-up, 10 s after the screen wakes from a real sleep, and as soon as the
+  option is turned on with a phone plugged in, if no projection is open, MG4Control announces the
+  cable-connected phone to the car again, as if it had just been plugged in; with no session 15 s
+  later, it resets the USB port and tries once more. At start-up and wake-up, a phone not visible
+  yet is looked for every 4 s for one minute, as AA Kick does. Wired CarPlay swaps the USB roles: an
+  iPhone that leaves the USB list after the announcement has started CarPlay, so MG4Control waits
+  for its session (up to 30 s) instead of resetting the port, and the shortcut opens CarPlay as soon
+  as it arrives. An AllGo service that does not answer yet no longer stops anything. An Android
+  phone is left to AA Kick when that app is installed (at start-up and wake-up). Nothing happens in
+  Garage mode. Diagnostic lines: `MG4_PROJ`.
+- **Android settings**: opens the Android settings screen, which the car's launcher does not offer —
+  the Android or the Android Automotive one depending on the firmware; if neither opens, a message
+  says so. Also a button in *Settings → Info*. Idea taken from **sensoyg**'s fork.
+
+#### Car keeper: pre-conditioning, dog mode, surveillance
+The **Car keeper** shortcut (#130, #180) keeps the car **on and locked** while you are away. Its
+window always starts on "Now" and is set by touch (the joystick keeps its usual functions); the
+car must be in P, checked before anything else.
+
+- **Pre-conditioning** — *Now*: the climate runs for 15 min, 30 min, 1 h or 2 h. *At a time*:
+  first cycle, cycle length, number of cycles (5 at most) and pause between them; the climate stays
+  off while waiting. Temperature and fan level are chosen in the window, the A/C always runs
+  (cooling or heating).
+- **Dog mode** (*Now* only): climate for 2 h, screen never dimmed, showing in large type a
+  reassuring message for passers-by, the setpoint, the outside temperature, the running time and
+  the battery. A warning reminds you to check regularly that the mode is still running.
+- **Surveillance mode**: a dashcam app is needed
+  ([MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App) or
+  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) — without one, *Start* is greyed out,
+  unless *Surveillance without a camera* is turned on (off by default, after a warning that no
+  video will be recorded: warning screen and A/C off only). The
+  car stays on and locked, **climate off** (about 0.2 kW), for up to 2 h; the screen shows a fixed
+  red "CAMERA SURVEILLANCE" warning, with a **REC** badge in the top-right corner and the recorded
+  time (grey and frozen while the car's own camera takes over).
+
+**Recording by the camera app** (#180): with a controllable version of MG4-360-Camera-App,
+MG4Control starts continuous recording as soon as you press *Start* (surveillance duration plus the
+countdown, 120 min at most) and stops it however surveillance ends. The *Car keeper* page has a
+**Surveillance camera** card: the detected app (checked again each time the tab is shown), the
+*Start recording automatically* switch (on by default), the location (the app's own: a
+"surveillance" folder on the USB drive when one is plugged in, otherwise internal storage) and
+*Test USB drive*, with the free space and an estimated recording time. In the window, a line says
+the app will record and the space on the drive; otherwise a banner warns above the buttons:
+automatic recording off, an app MG4Control can't control, or a version too old — recording is then
+started by hand in the app. A recording failure doesn't stop the surveillance. The state sent back
+by the app is only used for display. Any camera app can plug in by declaring, for
+`com.mg4.control.action.SHORTCUT`, two actions `<prefix>.action.START_CONTINUOUS` and
+`STOP_CONTINUOUS` (full contract in
+[MG4-360-Camera-App issue #96](https://github.com/jamakr4/MG4-360-Camera-App/issues/96)).
+
+On these three screens, the status line also gives the power drawn from the battery, in watts (#210).
+
+Before the countdown, a **reminder** tells you to keep the key with you and gives the three ways to
+unlock the car: the small button on a front door handle, the key (lock, then unlock, even if the
+car is already locked) and the iSmart app. "Don't remind me again" turns it off; the *Reminder
+before leaving* switch on the *Car keeper* page turns it back on.
+
+Get out with the key: after an adjustable countdown, **MG4Control locks the doors itself** —
+locking with the key would switch the car off. Before getting out, switch the lights and wipers to
+OFF **yourself**: the app doesn't do it (the countdown screen reminds you). At the end, the climate goes back to its previous
+settings and the car switches off. Everything stops if the car is unlocked (it then stays on), if
+it moves, or below an adjustable battery level. A full-frame follow-up screen shows the time left,
+the current cycle and the lock state, with blue or orange particles depending on whether the
+climate is cooling or heating; while waiting, the screen stays normal, dims (the default) or turns
+off — *Also apply to surveillance* (No by default) lets the surveillance screen follow that choice,
+and *Off* turns it fully black. The floating buttons disappear from the countdown until the end of the program. On SWI133, SWI68 and SWI165, a card on the driver display also shows the countdown, the time
+left and the setpoint, or the surveillance in progress. The settings (lock delay 10–60 s, battery
+threshold 10–40 %, screen, cluster card, reminder before leaving) are on the *Car keeper* page of the Shortcuts tab.
+
+> ⚠️ **Warning**
+>
+> Never leave a child alone in the car. Dog mode does not replace supervision: a battery that is too
+> low, locking with the key or a fault would stop the climate.
+
+The idea of locking from the screen while leaving the car on comes from the "Keep climate on"
+feature of [MG4Dash](https://github.com/Skittle6938/MG4Dash).
+
+#### Floating buttons
+Up to **6 bubbles** on top of every app (Shortcuts tab, *Floating buttons* page): a tap triggers the
+shortcut, a long press moves the bubble. Each bubble uses one of the steering-wheel shortcut
+actions, with a title (the shortcut's name by default), a size, a text size and optional bold text,
+and a colour: blue by default, general or for that bubble only, from nine swatches or the hue
+picker. A bubble is edited inside its own card on the page.
+A toggle shows filled when it is on; a value (temperature, fan, regeneration…) shows briefly after
+the press, and a halo confirms the tap. A bubble can also sit anywhere in the **black bar at the
+top** of the screen (#222). **Each profile has its own bubbles**, which can be copied to other profiles, and
+the page's switch belongs to the chosen profile. They hide in
+reverse, in Garage mode and while Car keeper is running.
+
+- **Information bubbles** (#236): instead of a title, a bubble can show a value read from the car —
+  battery, range, outside temperature, speed, climate setpoint, drive mode, regeneration, profile,
+  volume, time, **altitude** (#254)… —, as *Value*, *Label + value* or *Icon + value*. On tap: run the action, or nothing
+  (display only; a long press still moves the bubble). A yes / no value colours it like a toggle;
+  the time and the speed are read every second, the rest every 5 s, "—" when the value is unreadable
+- **Each bubble's look** (#230, #222): background opacity (0 to 100 %), dark, tinted, light or
+  black background, **width** *Automatic* or *Fixed* (60 to 240 dp, so the bubble no longer
+  changes width with its value), border or none, and **dimming when idle** (40 % after 5 s without a touch; a touch runs the action
+  and makes it sharp again). *Copy the look of…* takes another bubble's, from this profile or
+  another one, and *Apply to all bubbles* spreads it over the profile. An active toggle stays at
+  least 60 % opaque; under 35 %, the text gets an outline
+
+#### Custom shortcuts
+Shortcuts tab, *Custom shortcuts* page (#172, 20 at most), with a **Test** button. A custom
+shortcut can:
+- open an app;
+- run one of its functions: its Android shortcuts, or the ones its developer exposes to MG4Control
+  through the `com.mg4.control.action.SHORTCUT` action;
+- send a broadcast (with extras);
+- open a link;
+- call a webhook, over HTTPS only (online version).
+
+It can then be assigned to the steering-wheel buttons, advanced shortcuts and floating buttons.
+System targets (`android.`, `com.android.`, `com.saicmotor.`, `com.mg4.control.`) and `intent:`
+links are refused, and a webhook's address is masked in the log.
+
+### Automation
+Six sub-tabs as pills: **Profiles**, **Climate**, **Screen**, **When leaving**, **Sounds** and
+**My automations** (below).
+
+- **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
+  apply, direct execution or confirmation banner
+- **Apply a profile from the battery level**: when the charge drops below a threshold set with a
+  slider (5–60 %), at start-up or while driving; once per episode, re-armed at every start or after
+  charging; direct execution or confirmation banner
+- **Confirmation banner**: the question is asked at the bottom of the screen, without hiding
+  navigation — the reading and its threshold, the proposed profile, NO and YES. It is answered by
+  touch or with the steering wheel's right joystick (YES preselected); on NO, or once the pop-up
+  delay has run out, nothing is applied
+- **Automatic brightness at start-up**: when the car goes READY, the screen takes a brightness
+  chosen from the lights and/or the weather — at least one source, lights only by default.
+  **Lights only** (no mobile data, no GPS; the only mode of the offline version): two adjustable
+  levels, lights off (80 % by default) and lights on (20 %); the sliders go down to 0 % (5 % on
+  the A9 firmwares).
+  **Weather** (tick box, as it uses a little data): a four-point adjustable curve (night, dusk,
+  overcast, full sun) maps the outdoor light to a brightness. The car does not measure light, so
+  it is estimated from the sun height (GPS position + time, computed offline) and the
+  [Open-Meteo](https://open-meteo.com) sunshine forecast on a 25-point grid around the car (an
+  area of about 60 × 60 km: while driving, the weather where you are), cached for 3 days and
+  refreshed every 8 h at most or when leaving the area (~10 KB per request), position rounded to
+  ~10 km. With the lights as well, side lights on (garage, tunnel, night): Night point of the
+  curve. "Adjust brightness while driving" option: also readjusts at every lights change (tunnel)
+  and, with the weather, as soon as the estimated light drifts 10 points; adjusting by hand pauses
+  it until the next start. Changes fade over one second. "Test now" button
+- **Battery heating switch-off**: switches intelligent battery heating off after a time set with a
+  slider (5 to 120 min, 30 by default). The countdown starts when the option is switched on,
+  driving or parked — stock screen, SystemUI "low temperature" window, MG4Control or shortcut —,
+  or at start-up if it was already on, and only applies to the current trip. A message is shown
+  when it switches off
+- **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
+  setpoint, fan level, air direction (*Air* row: face, feet, windscreen, rear screen, or
+  Unchanged — #177), automatic mode and recirculation. The air direction is set last; with the
+  automatic fan, the chosen air direction and recirculation are set again right after AUTO starts,
+  then checked
+- **Media when leaving the car** (formerly volume drop): as you leave, media volume goes down to the
+  level set with a slider — it is never raised when already lower — or, if you prefer, the media is
+  **paused**; playback then only resumes if MG4Control was the one that paused it. On all six
+  firmwares. Where the car reports its doors (SWI133, SWI132) the trigger is
+  a front door opening, with selectable doors and restore on close; elsewhere, no door sensor
+  being reachable, **leaving READY state** is used instead and the restore, when asked for,
+  happens on the way back to READY. With the option off, these settings stay readable but greyed
+  out
+- **Sounds** (#161): your own sounds, imported from a USB stick (MP3, M4A, AAC, OGG, WAV or FLAC,
+  30 s at most; the file is copied, so the stick can be removed), played at chosen moments —
+  MG4Control start-up, entering or leaving READY, shifting to P or D, front door opened (SWI133 and
+  SWI132), profile applied. As many sounds as moments, each moment belonging to one sound only. The
+  media volume is set for the length of the sound, then given back, and the previous audio source is
+  restored (#190). A trigger during playback is ignored; sounds can be kept to some profiles
+- Each automation opens unfolded when it is on, unfolds when switched on and folds when switched
+  off; in between, its chevron — or its title — folds or unfolds the settings freely
+
+#### Automatic power window closing
+Card built like the other automations: enable switch next to the description, settings unfolded
+with the chevron (the card opens unfolded when the option is on).
+
+- **Close on leaving the car** — car in P and closing armed: when the car leaves READY state
+  (seat belt unfastened and driver door opened, or car switched off), every window closes after
+  the chosen delay; going back to READY before the end cancels it. Arming is configurable (speed reached and/or time
+  switched on, either or both), the delay ranges from 0 to 30 s, and an optional warning beep,
+  with adjustable volume, can accompany the countdown. With the option off, these settings stay
+  readable but greyed out.
+- **Travel time** — only the driver's window has a sensor and its stock automatic travel; the
+  other three get a pulse of adjustable length (5 s by default).
+- **Advanced: per-window calibration** — measures each window's real travel, more accurate than
+  the general time; measurements are kept if the option is switched off.
+
+Travel time and calibration stay adjustable with the option off: the "open / close all windows"
+shortcuts use them too.
+
+> ⚠️ **Warning**
+>
+> Travels commanded by the app have no anti-pinch protection, except on the driver's window.
+> Keep clear of the windows during a closing sequence, especially an automatic one, which starts
+> once you are already outside.
+
+#### My automations
+Your own **When / And if / Then** rules (#201), in a full-screen, single-column editor in the style
+of Home Assistant. The automations above stay separate, as they are.
+
+> ℹ️ **Note**
+>
+> Experimental: not every trigger, condition and action has been tried in the car yet. Your
+> feedback is welcome.
+
+- **When**: a vehicle sensor switching to true, to false or both ways, going above or below a
+  threshold, becoming, no longer being or changing — each **for** the time you choose ("Right away"
+  by default) —, a time, every X minutes, sunrise or sunset
+  (± offset), screen start-up, going READY or leaving READY, shifting to P or D, front door opened
+  or front doors closed (where the car reports it), charging, plug, lock, phone connected or
+  disconnected, active profile changing, manual run…
+- **And if**: *All* / *At least one* / *None* groups, nested three levels deep — time, days,
+  season, random, variables, places (GPS) and some sixty vehicle and Android values
+  (regeneration, ADAS, climate, seats, lock, brightness, volume, Wi-Fi, Bluetooth, Android Auto /
+  CarPlay, media, call, sun up, altitude…)
+- **Then**: vehicle and climate settings (also to a variable's value, `$NAME`), brightness,
+  volume, media (including play and pause), windows, sound (beep with its volume, or your own
+  sounds imported from a USB drive, 12 at most, at the chosen volume), open an app, custom
+  shortcut, run, enable or stop another automation, remember a value in a variable, add or
+  subtract, wait, wait until, If / Else, Repeat, Yes / No question in a banner, navigation,
+  Android actions (home, back, close an app, open a settings page), live data to ABRP; Wi-Fi,
+  Bluetooth and hotspot on trial. "Speak a text aloud" is no longer offered (the car has no Android
+  speech engine); an existing action goes through the car's own voice on SWI133 and SWI132
+- **Options**: what to do when it is triggered again before it has finished (let it finish or
+  restart), debounce, only in READY
+
+Every choice is made in a step window, with Back and a tappable path; a long list opens large,
+with categories, search and "Recent". Triggers, conditions and actions are picked the same way: **one
+tile per option**, filed in its category, then **its mode on tap** — "Climate" is a single tile,
+offering *Set to…* or *Toggle*; a sensor offers its modes and the shortcuts that belong to it under
+their own names (*The car goes READY*, *Charge starts*…). Search shows only the tiles, and also
+finds them by the words of their modes ("charge starts" finds *Charging*). Values are set with − and + buttons, without a keyboard.
+Nothing is stored until *Save*, and *Test* runs the version on screen. **Templates** give a
+starting point, including switching the heated steering wheel or a seat off after a while (#173)
+and brightness from the sun (#198). The page keeps 30 rules at most, a master switch, the history
+of the last 20 runs with their log, variables (renamed everywhere at once, changed or deleted) and
+places (renamed, resized, moved to the current position or deleted); JSON export and import
+(Downloads, USB drive or another folder — an imported rule arrives switched off). A rule can also
+be run from a key or a bubble (*Run an automation*); under its *Button, bubble or automation* trigger,
+the editor says what starts it. Two pills on the card count its **runs** and its **refusals** (in
+orange), *Test* left out; the last run reads "2 actions succeeded, 0 failed", and the history
+gives each action's real result (done, sent or failed, with the reason). The **import keeps the
+links** between automations, places, profiles, sounds, shortcuts and ABRP accounts: a window lists
+what was linked automatically or by name, and lets you choose a replacement for what is missing
+(or *Later*). Every ⋮ menu offers **Copy** and **Cut**;
+*Paste* only shows where the item fits (section type, nesting depth) and refuses an automation that
+would start itself. A rule's card sums up what an If / Else block does ("if X → A; else → B"); the
+*All / At least one / None* selector reads "Conditions met:" and only shows from two conditions.
+
+**Live data to ABRP** (#188, online version only): the *ABRP: live data* action sends A Better
+Route Planner the battery level, power, speed, charging state and, if you allow it, the position,
+for a chosen account; the same action, set to *Stop sending*, turns it off. Accounts are managed in *My automations ›
+ABRP accounts*: typed on screen, or imported from the `mg4control_abrp.txt` file on a USB drive (a
+commented template file is provided, with the API key per account or shared). Adjustable cadence
+while driving, charging and parked. MG4Control's shared key is limited by ABRP to 2 sends per second
+for all users together: a warning says so while it is selected and points to a free personal key.
+The **ABRP by profile** template follows the active profile.
+
+The car is only read (every 2 s) when an active rule needs it, and a rule only fires on a clear
+"true": an unreadable value triggers nothing, and "becomes true" requires having seen "false"
+first. Writes go through the same speed lock as the rest of the app; the position comes from the
+T-Box's `fused` provider, then GPS. Garage mode suspends every rule.
+
+### Profile Management
+- Save up to **10 custom profiles** (5 before 2.6.9)
+- Instant one-tap profile application
+- Automatic default profile application **on vehicle startup**
+- **Bluetooth pairing**: a profile can be tied to a device and applied when it connects
+- **Automatic backup into the vehicle's storage**: it survives uninstalling the app, and on
+  reinstall a window lists the profiles found and offers to restore them
+- Trigger precedence: manual → temperature → Bluetooth → default profile
+
+### Statistics
+A main-menu entry, **off by default**: until it is turned on, nothing is recorded. Everything stays
+in the car, in a private file of the app; nothing is sent anywhere unless you export it. Three
+sub-tabs:
+
+- **General**: summary over 30 days or the whole history — distance, consumption, energy used,
+  recovered and charged, cost. Settings: kWh price for slow and fast charging (up to 100,000, for
+  every currency), currency, the car's battery (51, 64 or 77 kWh) and its **state of health**
+  (SOH), short-trip filter, retention (30 days to 1 year, 3 months by default) and "Delete all",
+  next to **Export**
+- **Trips**: each trip with its duration, distance, consumption, energy breakdown and, unfolded,
+  its **consumption graph**; a **Profile** row filters the trips
+- **Charging**: energy charged, cost and AC / DC sessions, including charges made while the head
+  unit was asleep
+
+Trips and charges are listed 50 at a time, with *Show 50 more* and *Show all*.
+
+**Per profile** (#206): each trip is split by the active profile. Changing profile on the way makes
+it a **"Mixed"** trip, whose detail gives the split; a stretch shorter than 0.5 km merges into its
+neighbour. Filtered on a profile, the tab only counts that profile's share ("24 km of 61 km").
+Charges are not filtered.
+
+**Consumption graph**: bars along the trip, coloured by consumption (below 14, 14 to 22, above
+22 kWh/100 km), regeneration below zero. Their width is chosen when drawing — 120 bars at most,
+never under 200 m: 15 bars of 200 m for 3 km, 2.5 km bars for 300 km. Two buttons, **Speed** and
+**Elevation**, each add a band below the bars, never two scales on the same graph; the choice
+applies to every trip. The energy comes from the power integrated every second (the counters, in
+tenths of a kWh, are too coarse at that scale); one point is kept per 10 s reading, with the GPS
+altitude (about 5 KB per hour). A trip recorded before 2.7.0 has no graph.
+
+**CSV export** (#206): *Export* writes three spreadsheet-ready files — trips, charges and trip
+stretches per profile — to Downloads/MG4Control, a USB drive (MG4Control folder) or a folder of your
+choice. The last destination is remembered, a file with the same name is replaced, and each file is
+flushed to the storage before "Saved" is shown. The `odometer_km` column gives the car's total
+mileage at the end of the trip (empty for a trip recorded before this version).
+
+Where the figures come from:
+
+| Measure | Source |
+|---|---|
+| Trip boundaries | Ignition — the car's energy counters restart from zero at the same moment |
+| Distance | Integration of the speed every second while driving (falling back on the 10 s readings when a value is missing); the odometer, which only publishes whole kilometres, is the safeguard |
+| Trip energy, SWI133 and SWI132 | The car's counters, in tenths of a kWh: total, climate, accessories, regeneration |
+| Trip energy, other firmwares | Their counters stay at zero: battery voltage × current, read every second while driving. The breakdown is limited to "Motor" and "Climate control and others", in whole kWh |
+| Charge energy, AC | Percentage gained × capacity used: usable capacity of the chosen battery × state of health |
+| Charge energy, DC | Measured during the charge (voltage × current); the part not seen is estimated from a table learnt per 1% band (see *Fast charges*) |
+| Charge type and power | Type read from the car (AC or DC); power measured if the head unit is awake during the charge, otherwise computed (energy ÷ duration) and labelled as such |
+
+Rules worth knowing:
+- **Overnight charge**: the head unit sleeps during the charge and nothing is read. On wake-up, the
+  percentage is compared with the last reading and the charge is **reconstructed**. It can be
+  **completed** — plug type, start and end times, with − and + buttons — to get its average power
+- **Trip cost**: it follows the **average price of the energy actually charged** over the period,
+  not the home tariff — otherwise a fast-charger top-up would vanish from the cost. A charge's
+  tariff is **corrected** from its detail; the average price and trip costs follow
+- **Consumption over a period**: computed on the totals, not by averaging trips — otherwise a 2 km
+  trip would weigh as much as a 200 km one
+- **Displayed precision**: when a consumption's uncertainty exceeds 10% (short trip, counter in
+  tenths of a kWh), it is shown with "≈" and no decimal
+- **Short trips**: filter off by default; when on, a trip shorter than the chosen distance (1 km by
+  default, 0.1 to 50 km) is not recorded
+- **Battery and state of health**: the state of health is set from 50 to 100% in 0.5% steps, with
+  the − and + buttons (hold them to scroll), and the capacity used shows below. 100% by default: a
+  dealer or an OBD app can measure it. Changing either recalculates the charges recorded from the
+  percentage — a measured energy doesn't change; until the battery has been confirmed, the Charging
+  tab reminds you
+- **Fast charges**: the displayed percentage doesn't track the energy going in (from 62.8 to 70.1%,
+  5.0 kWh measured at the battery, while the percentage difference only accounted for 4.2). A DC
+  charge's energy is therefore **measured** during the charge, read every 2 s, whether the charging
+  pop-up is on or not. The head unit turns off when the car is locked: the part not seen — the end,
+  or the start if the screen came back on in the middle of a charge — is estimated from a **table
+  learnt per 1% band**, fed by every band seen in full (a band is used from two measurements, the
+  most recent ones weigh more, an implausible measurement is rejected). A charge never seen is
+  estimated band by band, or from the percentage while the table is empty. The charge's details say
+  where its energy comes from: *measured during the charge*, *partly measured*, *estimated from
+  previous charges* or *estimated from the battery level*. AC charges, long and mostly done with the
+  screen off, are still computed from the percentage
+- **Power cuts**: the ongoing trip is saved after each reading, and a trip cut short by the head
+  unit switching off is closed at the next start-up. The history is written to a temporary file
+  then renamed: a power cut never truncates it
+- **Clock**: a head unit woken up by charging may restart on its factory clock (2019); readings
+  dated before 2025 are discarded
+
+### Driver display
+An option in *Settings → Interface*, **off by default**, wherever SAIC's cluster app is installed
+(**SWI133, SWI68, SWI165**, and any other firmware that has it, #231): an
+MG4Control module shows in the centre of the instrument cluster, behind the wheel, instead of the
+original page of the Navigation and Music tabs.
+
+The cluster is a separate computer. Only a **260 × 260 px** square in its centre comes from the
+head unit: SAIC draws it there with a system app (`clusterprojection`), on Android's second display
+(no. 1, 800 × 480). MG4Control lays its window exactly over that square, with that app's background
+to blend in, as soon as the app starts — without waiting for READY. On the **A9** firmwares (SWI69,
+SWI131, SWI132), that app does not exist and the cluster draws everything itself: nothing can show
+there, and the card does not appear in the settings.
+
+| Module | Gauge | Large figure | Footer |
+|---|---|---|---|
+| **Consumption** | Graduated ring, logarithmic scale up to 3,000 Wh/km (300 kWh/100 km) | Wh/km or kWh/100 km while driving; kW drawn when stationary (below 5 km/h); when regenerating, a negative consumption in blue (25 kW recovered at 60 km/h: −41.7 kWh/100 km), the kW recovered below 5 km/h | Trip average · energy recovered |
+| **Power** | Graduated arc from 60 kW recovered (left) to 320 kW (right), logarithmic scale | Whole kW while driving (one decimal when stationary), negative when regenerating; below, in large type, the instant consumption, negative and blue when regenerating | Trip average, alone and centred — the battery is already on the cluster |
+
+- **One module per tab**: None, Consumption or Power for the Navigation tab, and likewise for the
+  Music tab. The module follows the tab shown on the cluster (`IPK_CLUSTER_TAB_BTN_STS`); trip
+  computer, tyre pressure and settings are drawn by the cluster itself and keep their page
+- **Style**: *Dynamic* (the ring or the arc, and the counting figure) or *Discreet*, for those who
+  find scrolling figures distracting: a thin graduated bar, fixed figures under the ticks. Power:
+  zero marked, regeneration on the left in blue, power on the right in light grey. Consumption: a
+  short regeneration zone on the left, then the scale; an "avg" triangle marks the trip average,
+  and the bar is green below it, orange above. Same scales as the dynamic style, same information
+  slots; the bar follows over two seconds, without jitter, whatever the refresh rate
+- **Advanced customisation** (#229): a pop-up with an animated preview on the left; tap a slot or
+  the gauge to set it, long-press it to move it. **The gauge** sits at the top, middle or bottom; **up
+  to 4 pieces of information** surround it (two rows of two): profile, drive mode, average, energy
+  recovered, distance, energy used, power, battery, range, temperature, time, altitude and the
+  bubbles' other values. Each slot: *Value*, *Label + value*, *Icon + value* or *Badge* (profile and mode — the last
+  applied profile, in capitals, in the colour of its drive mode), three sizes, full width when the
+  neighbour is free, and its own unit (the average in Wh/km, kWh/100 km or km/kWh; the power in kW or
+  horsepower). A row with no information disappears on the cluster and the gauge grows. For the
+  gauge: thickness, consumption and regeneration colours, trip-average marker, kW under the
+  consumption, consumption under the kW — the options follow the gauge chosen in the preview, which
+  reopens on the last one chosen —, and **power gauge in kW or horsepower** (round marks: 25, 50, 100,
+  200 hp…). With nothing set, the previous layout: the profile badge at the top, average and
+  regeneration at the bottom
+- **Units**: the **gauge** unit, Wh/km (default) or kWh/100 km, with one decimal below 100 — the
+  ring does not move from one unit to the other, its graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km,
+  or 0 · 10 · 20 · 50 · 100 · 300 kWh/100 km) follow the unit — and, separately, the **trip
+  average** unit, in its slot: Wh/km, kWh/100 km or km/kWh (by default, the gauge unit)
+- **Tightened power scale**: logarithmic, so the arc moves while driving — 20 kW fill a quarter of it,
+  50 kW 44%, 100 kW 63%; on the regeneration side, 10 kW make 36%. Graduations 20 · 50 · 100 · 200 · 320
+  and 10 · 30 · 60. The fill stops cleanly at zero, without spilling over to the other side
+- **Colours**: orange for consumption, blue for regeneration, whatever the value
+- **Advanced**: the **refresh rate** of power, speed and gauge, from 0.1 to 1 s (1 s by default;
+  shorter is more responsive, but the figure moves more), and the **animation length**, from 0.2 to
+  2 s (0.8 s by default). The drive mode and the profile are read every 10 s
+- **The figure counts** from one value to the next (100, 101… 300) instead of jumping, and the
+  gauge glides along, over the animation length set; a change of unit (Wh/km → kW when stationary)
+  jumps straight away
+- **Trip average**: net energy (regeneration deducted) ÷ distance integrated since entering READY,
+  shown from 200 m. It is computed on the spot rather than taken from the Statistics tab, which can
+  be turned off
+- **While charging**, the **charge module** replaces the gauge on the tabs that have one, as soon as
+  a charge is detected, AC or fast: in large type the time left to the limit, below it the level to
+  a tenth and the end time, the battery bar with the limit mark, then power, energy and duration.
+  The badge's lightning bolt pulses and a highlight runs along the bar up to the limit; when done,
+  everything freezes and turns green ("Charge complete"). When unplugged or in READY, the gauge
+  comes back
+- **Settings card**: on the left, a **preview** — the real gauge on a simulated trip, following
+  every setting, for the Navigation or Music tab; on the right, the settings in three groups
+  (Modules, Appearance, Units), then "Advanced", folded under its summary
+- **Per profile**: at the top of the card, "Settings for:" shows the profiles as chips, with
+  multiple selection; each change applies to all the selected ones, and the whole card follows the
+  active profile. A new profile starts with the module off
+- **Distance**: the general *Distance unit* setting (see *Settings*). In miles, the whole module
+  switches: gauge in Wh/mi or kWh/100 mi, average in Wh/mi, kWh/100 mi or mi/kWh
+- **Max power** (#165): Auto (the default), 125, 150, 180 or 320 kW, per profile. Auto learns from
+  the peaks actually reached: the scale goes up as soon as it is exceeded and comes down one step
+  after five trips that stayed well below. The ticks stay whole numbers
+- **Car keeper**: during pre-conditioning or surveillance, a card shows the countdown, the time left
+  and the setpoint (switch on the *Car keeper* page)
+- **Put back if it disappears**: at ignition, in READY or when the cluster screen wakes up, the
+  module is put back in place if it is gone
+
+### Charging pop-up
+An option in *Settings → Interface*, **off by default** since 2.6.10, on every firmware: as soon as a charge
+starts, AC or fast, a full-frame pop-up opens on the head unit — including when the app starts in
+the middle of a charge. It has no countdown: it closes with its cross, when the car goes to READY,
+or with the **Charging pop-up** shortcut, which also reopens it (with the option off, the shortcut
+says where to turn it on). A charger pause of less than 10 minutes remains the same charge.
+
+- **Left**: the battery to a tenth, the level bar, then the estimated end time in large type and
+  the time left to the limit
+- **Middle**: the curve of power (blue area) and level (green line) **since the start of the
+  charge**, not since the pop-up opened — the app logs the charge in the background, one point every
+  5 s (a gap if the screen turns off). The kW axis goes up to the highest power reached, the limit
+  is a grey dotted line, and a green dotted line joins the current level to the limit at the end
+  time given by the car
+- **Right**: power (and the maximum reached), energy added, range gained — the change in the car's
+  estimated range since the start —, estimated cost and duration
+
+**Charge limit**: the battery bar works as a slider, from 40 to 100% in steps of 10; the targeted
+step turns bold, and the limit goes to the car on release (`BMS_CHRG_TRGT_SOC`, the property the
+original screen writes). Below the current level, the pop-up warns that the charge will stop; if the
+car hasn't taken the new limit after 20 s, it says so. On the **A9** firmwares (SWI69, SWI131,
+SWI132), the limit can only be set when the car allows it, following its own charging app's rule
+(battery type read at `0x21704244`, codes 7 and 9): not with an LFP battery (MG4 Standard), which
+charges to 100%. The bar then shows the level only, a padlock explains why, and the end time aims
+for full.
+
+**Price of this charge**: the cost follows the AC or DC tariff from the Statistics tab; the pencil
+opens a keyboard-free editor — − and + buttons, selectable step, cost recalculated live, the old one
+struck through. *Default tariff* goes back to the Statistics tariff; the corrected price follows the
+charge into the Statistics tab.
+
+### Settings
+Screen organised into **four tabs**:
+- **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish, Polish,
+  Norwegian (Bokmål, #239) and Czech (#257) — on first launch, MG4Control takes the car's language
+  if it is translated (pop-ups shown before the app is first opened too), otherwise it asks in a
+  window with ten large tiles, two rows of five
+- **Interface**: screen shown at startup, appearance (auto / dark / light), text size (standard /
+  large / extra large), **full screen** (status and navigation bars hidden, off by default),
+  **pop-up closing delay** (1 to 60 s, 10 by default), **charging pop-up** (off by default),
+  **climate area during Android Auto / CarPlay** (off by default), **menu side** (Auto — it follows
+  the steering wheel side —, Left or Right), **distance unit** (Auto — the car's —, km or miles,
+  for the statistics, the driver display and the information bubbles; the CSV export stays in km),
+  **module on the driver display** (see above)
+- **Advanced**: **Garage mode** (see below), return to the default profile each time the car
+  enters READY (option, off by default), **what AUTO controls**, **keep the A/C off**, **phone
+  re-detection for Android Auto / CarPlay** (see the shortcuts), **full-screen apps** (see below),
+  **emergency shortcut** (hold the
+  right joystick's centre click for 5 s: MG4Control opens, even in Garage mode; on by default,
+  through the accessibility service), update check at launch, **update alert on the vehicle
+  screen**, **beta channel**, power the car off while keeping the screen on, block driving settings
+  above a given speed, **external API** (see the dedicated section)
+- **Info**: update check, APK cleanup, **data usage** (today, current week, current month, last 30
+  days), "About" dialog (app version, firmware, QR codes), **Android settings** button, firmware
+  indicator, and a Diagnostic button revealed by 5 taps on the logo — its "Save…" offers
+  Downloads/MG4Control, a USB drive or a folder of your choice
+
+#### Full-screen apps (#248)
+*Settings → Advanced*, under the "Android Auto · CarPlay" card, off by default. Choose apps (Waze,
+ABRP…) for which the car's **top bar**, **side bar** or both are hidden: for each app, *Normal*,
+*Banner*, *Bar* or *All* (the window has a search field, by name or package). Android Auto,
+CarPlay, launchers and MG4Control are never offered. Each time the switch is turned on, a warning
+says the feature changes an Android setting shared by every app and may conflict with a custom
+launcher or another app that also manages full screen; it gives the tip, repeated under the switch:
+**swipe from the edge of the screen** (left, or right with right-hand drive; from the top for the
+top bar) to bring the bar back for a few seconds.
+
+Under the hood: Android 9's `Settings.Global "policy_control"` (`immersive.full`, `.status`,
+`.navigation`), shared with [MG4Dash](https://github.com/Skittle6938/MG4Dash) under a **common
+rule** written with its developer — the same Kotlin function in both apps (`ImmersivePolicy`).
+Each owner keeps what it asked for in its own Global key (`mg4control_immersive`,
+`mg4dash_immersive`…), the shared `immersive_managed` key remembers what they wrote, and an owner
+only ever removes what nobody claims any more; foreign sections and values are kept. MG4Dash
+**1.7.3 beta 24** (versionCode 292) or later is required: with an older version, the option is
+paused and MG4Control only removes its own entries. A pass runs at start-up, on every change, and
+when MG4Dash is installed, updated or removed. Diagnostic lines: `MG4_IMMERSIF`.
+
+### Pop-ups and windows
+Since 2.6.8, everything shown in a window shares the same look: rounded cards, large buttons, and
+no more keyboard input.
+
+**On top of the car's screen**, whatever app is running:
+
+| Item | Layout |
+|---|---|
+| Profile picker | Full frame: one card per profile (drive mode in colour, current profile marked "Active"), brightness (Night / Medium / Day and a slider), Open MG4Control, Car keeper, Power the car off |
+| HVAC pop-up | Full frame: heating, temperature and fan speed on the joystick, AUTO and its airflow, A/C, ECO and recirculation |
+| Quick settings pop-up | Full frame: the chosen tiles, the values of the tapped tile in a bubble attached to it |
+| Car keeper | Start window (Now / At a time, dog mode, surveillance), then a full-frame follow-up screen |
+| Charging pop-up | Full frame: level and charge limit, curve since the start, end time, power, energy, range gained, cost, duration |
+| Automation confirmation | Banner at the bottom of the screen: reading, threshold, proposed profile, NO / YES — or the Yes / No question of one of your automations |
+| Update available | Banner: versions, Later / Skip this version / Install update |
+| Vehicle power-off | Banner: Cancel / Power off — or "Cannot power off" outside P |
+
+The picker and the HVAC pop-up are driven with the **steering wheel's right joystick**
+(accessibility service required); a hint in their header recalls the gestures, or warns that the
+joystick is inactive. A banner neither hides nor dims anything: whatever is touched elsewhere goes to
+the app underneath. Everything closes by itself after the **pop-up delay** (*Settings → Interface*),
+except the charging pop-up, which stays until its cross or READY; on a banner, the countdown is
+written on the button that means "no" — the one the delay triggers.
+
+The **shortcut that opens a pop-up closes it**: a second press closes the profile picker just like
+the end of the delay (in a Bluetooth conflict, the first profile offered is applied), and the HVAC
+and charging pop-ups likewise. When that shortcut is a long press on a right-joystick key, a short press on that
+key still navigates — on release —, and a press held up to the threshold closes the window without
+navigating: on the HVAC pop-up, closing changes neither the temperature nor the fan speed.
+
+The **profile picker opens on the active profile**: the joystick starts from its card, and the row
+scrolls to show it when it is beyond the fifth profile. In a Bluetooth conflict, it starts from the
+first card, the one the delay applies.
+
+**Inside the app**:
+- **confirmations** all look alike — an icon, a title, a text, one or two buttons — and their
+  colour tells the nature of the action: blue for an ordinary action, orange for a warning, red for
+  whatever deletes or powers off;
+- an **app** or a **profile** is picked from a scrolling grid of tiles;
+- an **advanced shortcut** is edited in two side-by-side lists;
+- the **times** and the **tariff** of a charge (Statistics tab), like the **price** of the charge in
+  progress (charging pop-up), are set with − and + buttons, without a keyboard — the car's one covers half the screen. Minutes go in steps of five, the
+  tariff step is selectable, and holding a button repeats the step.
+
+### Garage mode
+A single switch puts MG4Control **fully to sleep**, without uninstalling or reconfiguring
+anything. It answers a concrete case: leaving the car at a workshop without a technician seeing
+settings change on their own at ignition, or a steering-wheel button doing something unexpected.
+
+What the mode suspends are the **autonomous** behaviours — the ones nobody asked for at that
+moment:
+
+| Suspended | Detail |
+|---|---|
+| Classic shortcuts | The key goes back to the launcher |
+| Advanced shortcuts | Claimed keys are **released**: the accessibility service consumes nothing |
+| Profile at startup and at ignition | Bluetooth resolution included |
+| Temperature automations | Profile and climate alike |
+| Media when leaving the car | |
+| My automations | No rule runs, even started from a key |
+| Floating buttons | Removed from the screen as soon as it is turned on |
+| Driver display | Modules removed from the cluster |
+| External API | Third-party commands are refused |
+| Update alert on the vehicle screen | |
+
+What it does not touch: the app itself. Opening MG4Control and applying a profile by hand still
+works — that is a user action, not a behaviour observable by someone who is only driving.
+
+**Nothing is erased.** Switching it back off restores everything as it was: profiles, shortcuts
+and automations.
+
+The persistent notification reads "Garage mode — asleep" while it is on: without that marker, a
+forgotten mode would show up as "nothing works any more" with no explanation whatsoever.
+
+> ℹ️ **Note**
+>
+> Garage mode **replaces** the old "the default profile is applied automatically at launch"
+> switch, of which it is the complete version. Anyone who had unchecked it is carried over into
+> Garage mode on first launch: stopping the app from acting was the intent.
+
+### Update alert on the vehicle screen
+An update is no longer found only by opening MG4Control: a banner appears **at the bottom of the
+screen, over the infotainment**, like the profile confirmation one, showing the installed version
+against the new one. Four choices:
+
+| Button | Effect |
+|---|---|
+| **Install update** | Opens MG4Control on the usual update dialog, without repeating the network request |
+| **Skip this version** | That version is no longer offered, here or at app launch |
+| **Later** | Closes the banner: nothing is remembered, the alert will come back |
+| **Stop telling me** | Turns this banner off. The dialog at MG4Control launch stays |
+
+With no answer, the banner closes by itself after the pop-up delay, which means "later". It neither
+dims nor blocks anything: the rest of the screen stays usable.
+
+Four safeguards, because nobody triggers this path:
+- the check runs **20 s after ignition** — at the moment itself the car's data link is not up yet;
+- **six hours minimum** between network requests, the car being on a data plan;
+- **nothing shows while driving** (same lock as the profile picker);
+- a version already offered is not offered again in the same session — and it is only marked as
+  offered if the banner **actually appeared**.
+
+The long-standing "check for updates at launch" switch also turns this banner off: it is a setting
+users read as global, and it is.
+
+**Release notes in the app's language** (#191): the GitHub release carries the English text, then
+one folded section per language, opened by an invisible `<!-- lang:xx -->` marker. The app only
+shows the section of its language, and English when that language has no section.
+
+**Direct install**: once the APK is downloaded and its signature checked, MG4Control installs it
+itself — no more trip through the Downloads folder or the Android installer —, through a
+`PackageInstaller` session with the internal `INSTALL_INTERNAL` flag, as DiAuto-MG4 does. The app
+then restarts by itself and reopens if it was on screen. An older version is refused; if the install
+fails, a message says so and the old path is still available.
+
+### Profiles
+- Profiles in a **three-column grid**, with apply, set as default, edit and delete; the applied
+  profile is marked "Active" straight away
+- **⋮ menu on each card**: *Duplicate* ("<name> Copy", placed right after the original, settings
+  copied without the paired phone), *Rename* and *Delete*
+- **Profile order**: a long press on a card lifts it; drag it into place, in all four directions
+  (the grid scrolls by itself near its edges, a banner shows the position) and the order is saved on release.
+  This order is the picker's, the "Profile cycle" page buttons' and the default cycle's; in a
+  Bluetooth conflict it is the priority — the first of the conflicting profiles is applied when the
+  delay runs out
+- **Full-screen editor** organised into three categories: Driving, Safety, Comfort
+- **One switch per category**, at the top of each tab: switched off, the tab folds away and the
+  profile writes nothing there — a profile can cover safety only, or comfort only. At least one is
+  needed to save; existing profiles keep their three categories on
+- The profile name and the "default profile" setting stay visible across the three tabs
+- **Regeneration unchanged**: a switch on the Regeneration section of the Driving tab; when off,
+  the profile touches neither the regeneration level nor one-pedal driving, the level buttons grey
+  out, and both the list and the picker show it ("Regen unchanged"). Existing profiles keep their
+  regeneration
+- Heated steering wheel and seats have an **apply** switch: unchecked, the profile leaves the
+  setting alone instead of turning it off
+- **Automatic high beam**: same switch, unchecked by default — existing profiles leave it alone
+- **Air conditioning**: an optional block in the Comfort tab, unchecked by default, carrying the
+  Dashboard's own controls — on/off, A/C, auto fan, setpoint, fan speed, recirculation, defrosters,
+  plus **ECO** and the **airflow in AUTO** (On / Off / Unchanged and Low / Medium / High /
+  Unchanged; existing profiles leave them alone)
+- **Per profile too**: the floating buttons and the driver display settings
+
+#### The profile's climate block
+Unchecked, the profile does not touch the climate: that is the long-standing behaviour, and the
+one every stored profile keeps. Checked, it applies what it carries at startup, at ignition, and
+on every manual application.
+
+Three rules apply, and they come from the vehicle rather than the interface:
+
+| Rule | Consequence |
+|---|---|
+| Climate off | Nothing else is written — a setpoint sent to a stopped climate turns it back on with some firmwares |
+| AUTO mode | The fan speed is not applied: setting it would leave auto mode |
+| "Unchanged" | Recirculation and defrosters are left alone — without that value, a profile that says nothing about them would turn them off |
+
+The sliders are bounded for input (15–33 °C, 1–11), but the **real** limits are read from the
+vehicle when applying and the setpoint is clamped to them: they differ between A9 and the other
+firmwares.
+
+> ℹ️ **Note**
+>
+> **The profile wins over the A/C automation.** If the profile applied since the app started
+> carries a climate block, the temperature automation does nothing and logs it. Without this rule
+> both would write over each other at ignition, in an order nothing guarantees. At start-up, when a
+> saved profile sets the climate, the automation waits for the start-up profile to be applied —
+> about ten seconds at most — before deciding: the previous trip's profile does not count.
+
+### Unknown firmware (UNKNOWN)
+- Warning window at startup when the firmware is not recognised, showing the version read from the
+  car
+- The user can close the app or continue
+- "Continue" opens *Settings → Info* directly, where the firmware chips are tappable to force a
+  compatibility mode
+- The forced choice is persisted in SharedPreferences, survives app restarts and applies from
+  start-up, service included
+- Distributor firmwares are recognised on their own: **DBI68 = SWI68**, **DBI133 = SWI133** (the
+  Turkish DBI68 firmware was validated thanks to **sensoyg**)
+
+---
+
+## Compatibility
+
+| Item | Value |
+|------|-------|
+| Target vehicle | MG4 Electric (SAIC) |
+| OS | Android Automotive 9+ (API 28+) |
+| SoC | SAIC MT2712 |
+| Screen resolution | 1280 × 480 (forced landscape) |
+| Firmware SWI133 | Compatible ✅ |
+| Firmware SWI131 | Compatible ✅ |
+| Firmware SWI132 | Compatible ✅ |
+| Firmware SWI68 | Compatible ✅ |
+| Firmware SWI69 | Compatible ✅ |
+| Firmware SWI165 | Compatible ✅ |
+| Firmware DBI68 (distributor) | Recognised as SWI68 ✅ |
+| Firmware DBI133 (distributor) | Recognised as SWI133 |
+| Firmware SWI173 (Asian market) | Recognised as SWI131 (#175) |
+| UNKNOWN firmware | Forced SWI133/SWI132/SWI68/SWI69/SWI131/SWI165 mode available ⚠️ |
+
+The driver display module needs SAIC's cluster app: SWI133, SWI68, SWI165, and any other firmware
+that has it (#231; see
+[Driver display](#driver-display)). The charging pop-up works everywhere; on the A9 firmwares, its
+charge limit can only be set when the battery allows it (not with LFP — see
+[Charging pop-up](#charging-pop-up)).
+
+---
+
+## Architecture
+
+### Overview
+
+```
+┌──────────────────────────────────────────────────────┐
+│                      UI LAYER                         │
+│  MainActivity ─── NavController ─── Fragment Host    │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐ │
+│  │  Dashboard  │  │   Profiles   │  │  Settings   │ │
+│  └─────────────┘  └──────────────┘  └─────────────┘ │
+└──────────────────────────────────────────────────────┘
+                         │
+┌──────────────────────────────────────────────────────┐
+│                  BUSINESS LOGIC                       │
+│  ProfileManager  ─  ProfileApplier  ─  FirmwareInfo  │
+└──────────────────────────────────────────────────────┘
+                         │
+┌──────────────────────────────────────────────────────┐
+│           HARDWARE ABSTRACTION (MG4Hardware)          │
+│  Katman1 (Car API) → Katman2 (Binder) → Katman4      │
+│                      (ADAS / SWI133 / SWI68)          │
+└──────────────────────────────────────────────────────┘
+                         │
+┌──────────────────────────────────────────────────────┐
+│               SYSTEM SERVICES & BOOT                  │
+│       MG4ControlService  ─────  BootReceiver         │
+└──────────────────────────────────────────────────────┘
+```
+
+### Startup Sequence
+
+```
+Vehicle boot
+       │
+       ▼
+BootReceiver.onReceive()
+       │
+       ▼
+MG4ControlService.onCreate()
+  └─ MG4Hardware.init()
+  └─ Katman1 / Katman4 service discovery
+  └─ Apply default profile (if enabled)
+       │
+       ▼
+MainActivity (UI)
+  └─ Firmware detection (SWI133 / SWI68)
+  └─ Top bar setup
+  └─ Navigate to DashboardFragment
+```
+
+---
+
+## Project Structure
+
+```
+MG4Control/
+├── app/src/main/
+│   ├── java/com/mg4/control/
+│   │   ├── MG4App.kt                  # Application — night mode, locale, crash log
+│   │   ├── MainActivity.kt            # Main activity, top bar, navigation
+│   │   │
+│   │   ├── model/
+│   │   │   ├── DrivingProfile.kt      # Profile data model
+│   │   │   ├── DriveMode.kt           # Drive mode enum (ECO/NORMAL/SPORT/SNOW/CUSTOM)
+│   │   │   ├── RegenLevel.kt          # Regen level enum + default shortcut cycle order
+│   │   │   ├── StatsTracker.kt        # Statistics: trips and charges (pure state machine, tested)
+│   │   │   ├── StatsSummary.kt        # Statistics: aggregates of a period (cost, consumption)
+│   │   │   ├── PowerIntegrator.kt     # Energy from voltage × current (firmwares without counters)
+│   │   │   ├── ClusterGauge.kt        # Driver display: gauge scales, square placement, trip average
+│   │   │   ├── ClusterLayout.kt       # Driver display: layout (gauge + 4 slots), information, units, horsepower
+│   │   │   ├── BubbleInfo.kt          # Information bubbles: values offered and their formatting
+│   │   │   ├── ClusterTab.kt          # Driver display: the cluster's tabs
+│   │   │   ├── ChargeModule.kt        # Cluster charge module: target, time left, energy
+│   │   │   ├── ChargePopupModel.kt    # Charging pop-up: limit, curve scale, charge log
+│   │   │   ├── PreClimatePlan.kt      # Car keeper: cycles, endings, climate snapshot and restore
+│   │   │   ├── FloatingButtons.kt     # Floating buttons: list, sizes, position (+ FloatingSet, FloatingButtonStyle)
+│   │   │   ├── CustomShortcut.kt      # Custom shortcuts: types, validation, refused targets
+│   │   │   ├── SoundAutomationRules.kt # Sounds: moments, audio source to restore
+│   │   │   ├── PowerScale.kt          # Driver display: learned power scale
+│   │   │   ├── Projection.kt          # Android Auto / CarPlay: which phone, which app
+│   │   │   ├── UsbPhone.kt            # Phone on USB: Apple / Android / AOAP, timing rules (#251)
+│   │   │   ├── ImmersivePolicy.kt     # Full-screen apps: common rule with MG4Dash for policy_control (#248)
+│   │   │   ├── ImmersiveCleanup.kt    # Full-screen apps: removes only our entries in front of an old MG4Dash
+│   │   │   ├── ChargeEnergyLearning.kt # Charge energy: table learnt per 1% band, source kept
+│   │   │   ├── TripSegments.kt        # Trip split by profile, "Mixed", a profile's share
+│   │   │   ├── TripCurve.kt           # Trip graph: recorded points, bars chosen when drawing
+│   │   │   ├── StatsCsv.kt            # CSV export: trips, charges, stretches per profile
+│   │   │   ├── QuickSettings.kt       # Quick settings pop-up: chosen tiles
+│   │   │   ├── DashcamRemoteModel.kt  # Camera app: contract, detection, REC clock, space on the drive
+│   │   │   ├── AbrpTelemetry.kt       # ABRP: reading sent and cadence
+│   │   │   ├── BubbleColors.kt        # Floating buttons: colour swatches, text contrast
+│   │   │   ├── PowerSmoother.kt       # Car keeper: smoothed power drawn from the battery
+│   │   │   ├── CustomRule.kt          # My automations: model (+ CustomRuleLogic, CustomRuleText, CustomRuleTemplates)
+│   │   │   └── ProfileBackup.kt       # Vehicle backup format
+│   │   │
+│   │   ├── profile/
+│   │   │   ├── ActiveProfile.kt       # Last applied profile (profile-scoped shortcuts)
+│   │   │   ├── ProfileManager.kt      # Profile CRUD (SharedPreferences + Gson)
+│   │   │   ├── ProfileApplier.kt      # Applies settings to the vehicle (async)
+│   │   │   └── ProfileBackupManager.kt# Backup / restore in vehicle storage
+│   │   │
+│   │   ├── hardware/
+│   │   │   ├── MG4Hardware.kt         # Hardware abstraction (4 layers)
+│   │   │   ├── SaicVoice.kt           # The car's voice (SAIC engine com.saicmotor.voicetts)
+│   │   │   ├── StatsCollector.kt      # Statistics readings (only when turned on)
+│   │   │   ├── ClusterTabReader.kt    # Tab shown on the cluster
+│   │   │   ├── BatteryTypeConfig.kt   # Battery type (A9): charge limit adjustable or not
+│   │   │   ├── ChargeProbe.kt         # Charging diagnostic probe (MG4_CHARGE log)
+│   │   │   ├── DriverSide.kt          # Steering wheel side read from the car (menu side)
+│   │   │   ├── UsbPhoneKick.kt        # Phone re-detection: USB announcement and port reset (#251)
+│   │   │   └── VehicleWriteGate.kt    # Speed lock, enforced inside the write primitives
+│   │   │
+│   │   ├── stats/
+│   │   │   ├── StatsStore.kt          # Statistics history: file, purged on read
+│   │   │   └── StatsExport.kt         # Writing exports: Downloads, USB drive, chosen folder
+│   │   │
+│   │   ├── accessibility/
+│   │   │   ├── KeyCaptureService.kt   # Accessibility service — sees keys before the launcher
+│   │   │   ├── AccessibilityServiceList.kt # Is the service enabled? (long and short name forms)
+│   │   │   └── AdvancedShortcuts.kt   # Storage for (key, press type) → action
+│   │   │
+│   │   ├── shortcut/
+│   │   │   ├── RegenCycle.kt          # User-composed regeneration cycle sequence
+│   │   │   ├── DriveModeCycle.kt      # Modes kept in the drive mode cycle
+│   │   │   ├── OnePedalReturn.kt      # One Pedal second press: "As before" or a fixed level
+│   │   │   └── ShortcutAction.kt      # Action catalogue, shared by both systems
+│   │   │
+│   │   ├── bluetooth/
+│   │   │   └── BluetoothProfileManager.kt # Profile applied when a device connects
+│   │   │
+│   │   ├── api/
+│   │   │   ├── ExternalApi.kt         # External API contract (actions, keys, locks)
+│   │   │   ├── ExternalApiReceiver.kt # Third-party intent reception
+│   │   │   └── StateProvider.kt       # State reading (ContentProvider)
+│   │   │
+│   │   ├── automation/
+│   │   │   ├── AutomationSettings.kt        # Profile from temperature
+│   │   │   ├── AutomationDecision.kt        # Pure decision (testable off-device)
+│   │   │   ├── ClimateAutomationSettings.kt # A/C triggering
+│   │   │   ├── SoundAutomation.kt           # Sounds: playback, volume and audio source given back
+│   │   │   ├── SoundAutomationSettings.kt   # Sounds: files, moments, profiles
+│   │   │   ├── CustomRules.kt              # My automations: engine, readings, triggers
+│   │   │   ├── CustomRuleStore.kt          # My automations: saved rules (30 at most)
+│   │   │   ├── RuleServices.kt             # My automations: writes, Android, position
+│   │   │   ├── AbrpStore.kt                # ABRP accounts, API key, template file import
+│   │   │   ├── AbrpStream.kt               # Continuous sending to ABRP (cadence, summarised log)
+│   │   │   ├── AcKeepOff.kt                # Keep the A/C off when the setpoint changes
+│   │   │   └── ClimateAutomationDecision.kt
+│   │   │
+│   │   ├── ui/
+│   │   │   ├── DashboardFragment.kt   # Main screen (3 sub-tabs)
+│   │   │   ├── ProfileFragment.kt     # Profile list
+│   │   │   ├── ProfileEditFragment.kt # Full-screen editor (3 sub-tabs)
+│   │   │   ├── SettingsFragment.kt    # Settings (4 sub-tabs)
+│   │   │   ├── ShortcutsFragment.kt   # Shortcuts: hardware buttons and setting pages
+│   │   │   ├── AutomationFragment.kt  # Automations
+│   │   │   ├── WheelButtonsPage.kt    # Hardware buttons: one card per key, Short / Long / Double
+│   │   │   ├── QuickSettingsPage.kt   # Quick settings page: choice and order of the tiles
+│   │   │   ├── CustomRulesPage.kt     # My automations: list, history, variables, places
+│   │   │   ├── AbrpDialogs.kt         # ABRP accounts: list, account window, template file
+│   │   │   ├── DashcamUi.kt           # Texts of the camera app's USB drive test
+│   │   │   ├── FlowRow.kt             # Wrapping row (Quick settings chips, ABRP)
+│   │   │   ├── CustomRuleEditFragment.kt # When / And if / Then editor (single column)
+│   │   │   ├── Assistant.kt           # The editor's step window (Back, path, large window)
+│   │   │   ├── RuleValueDialogs.kt    # A rule's values, without a keyboard
+│   │   │   ├── TripCurveView.kt       # A trip's consumption graph
+│   │   │   ├── ExportDialog.kt        # Destination of an export (+ ImportDialog)
+│   │   │   ├── BubbleColorViews.kt    # Bubble colour: swatches and hue picker
+│   │   │   ├── StatsFragment.kt       # Statistics (3 sub-tabs)
+│   │   │   ├── ProfileAdapter.kt      # Profile RecyclerView adapter
+│   │   │   ├── AppDialog.kt           # App windows: confirmation, choice grid, lists, − / + buttons
+│   │   │   ├── ImmersiveAppsDialog.kt # Full-screen apps: Normal / Banner / Bar / All per app
+│   │   │   ├── RestoreProfilesDialog.kt # "Restore profiles?" — lists the profiles found
+│   │   │   ├── StatsDialogs.kt        # Complete a charge, fix a tariff (no keyboard)
+│   │   │   ├── ClusterSettingsPreview.kt # Driver display preview in the settings (simulated trip)
+│   │   │   ├── ClusterLayoutEditor.kt # Driver display: advanced customisation (preview, slots, drag and drop)
+│   │   │   ├── widget/ClusterBlocks.kt # Driver display: values of the information slots
+│   │   │   ├── InfoIcons.kt           # Information icons (slots and bubbles)
+│   │   │   ├── RuleLaunchers.kt       # My automations: what starts an on-demand rule
+│   │   │   ├── ClusterTabDialog.kt    # Diagnostic: tab shown on the cluster
+│   │   │   ├── widget/ClusterGaugeView.kt # Driver display module (ring, arc or discreet bar; charge)
+│   │   │   ├── widget/ChargeCurveView.kt # Charging pop-up curve
+│   │   │   ├── widget/ChargeLimitSliderView.kt # Battery bar, charge-limit slider
+│   │   │   ├── widget/SegmentSwitch.kt # "No | Yes" segmented switch
+│   │   │   ├── widget/RailButton.kt   # Menu entries and sub-tab pills
+│   │   │   ├── ConsoleFragment.kt     # Real-time debug log viewer
+│   │   │   ├── DriveRegenFragment.kt  # Legacy (unused in v2)
+│   │   │   ├── ClimateFragment.kt     # Legacy (unused in v2)
+│   │   │   └── AdasFragment.kt        # Legacy (unused in v2)
+│   │   │
+│   │   ├── service/
+│   │   │   ├── MG4ControlService.kt   # Foreground service (boot, shortcuts, external API)
+│   │   │   ├── OverlayKit.kt          # Base of pop-ups and banners: scale, backgrounds, room on screen
+│   │   │   ├── OverlayNavigation.kt   # Right-joystick navigation inside a pop-up
+│   │   │   ├── ProfilePickerOverlay.kt# Profile picker (full-frame pop-up)
+│   │   │   ├── HvacPopupOverlay.kt    # HVAC pop-up (+ HvacPopupSkin.kt, its painting)
+│   │   │   ├── ProfileConfirmOverlay.kt # YES/NO banner for automations
+│   │   │   ├── VehiclePowerOffOverlay.kt # Power-off confirmation banner
+│   │   │   ├── UpdateOverlay.kt      # "Update available" banner on the vehicle screen
+│   │   │   ├── ChargeMonitor.kt       # Background charge tracking (pop-up and statistics)
+│   │   │   ├── ChargePopupOverlay.kt  # Charging pop-up (full frame)
+│   │   │   ├── PreClimate.kt          # Car keeper: program, locking, stops (+ window and follow-up screen)
+│   │   │   ├── DashcamRemote.kt       # Surveillance: camera app START / STOP, REC state, drive test
+│   │   │   ├── FloatingButtonsOverlay.kt # Bubbles on top of every app (+ FloatingButtonState, FloatingHalo)
+│   │   │   ├── CustomShortcutRunner.kt # Runs a custom shortcut
+│   │   │   ├── QuickSettingsOverlay.kt # Quick settings pop-up (+ QuickTiles, reading and writing the tiles)
+│   │   │   ├── VehicleCommands.kt     # Writes shared by the external API and the automations
+│   │   │   ├── ProjectionShortcut.kt  # Android Auto / CarPlay shortcut (+ ProjectionHvacZone, climate area)
+│   │   │   ├── ProjectionKick.kt      # Phone re-detection at start-up, wake-up and from the shortcut (#251)
+│   │   │   ├── ImmersiveApps.kt       # Full-screen apps: choice, passes, watching MG4Dash (#248)
+│   │   │   └── ClusterModuleOverlay.kt # Module window on the cluster display, readings and tab
+│   │   │
+│   │   ├── receiver/
+│   │   │   ├── BootReceiver.kt        # System boot receiver
+│   │   │   └── PackageReplacedReceiver.kt # Restart after an update
+│   │   │
+│   │   ├── util/
+│   │   │   ├── FirmwareInfo.kt        # Firmware detection + forced mode
+│   │   │   ├── ClusterModuleSettings.kt # Driver display: on/off, module per tab, style, layout, units, refresh, animation
+│   │   │   ├── DistanceSetting.kt     # General distance unit: Auto / km / miles
+│   │   │   ├── ChargePopupSettings.kt # Charging pop-up: on or off
+│   │   │   ├── AndroidSettings.kt     # Opens the Android settings (button and shortcut)
+│   │   │   ├── FloatingButtonSettings.kt # Floating buttons, per profile (+ FloatingProfiles)
+│   │   │   ├── CustomShortcutSettings.kt # Saved custom shortcuts
+│   │   │   ├── PreClimateSettings.kt  # Car keeper: page settings and last choices
+│   │   │   ├── GarageMode.kt          # Garage mode — puts every automatism to sleep
+│   │   │   ├── NavSide.kt             # Menu side: Auto / Left / Right
+│   │   │   ├── ButtonLines.kt         # Button labels on two lines, otherwise "…"
+│   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
+│   │   │   ├── LocaleHelper.kt        # Language management (10 languages) and text size
+│   │   │   ├── DashcamApp.kt          # Car keeper: camera app controllable, outdated or missing
+│   │   │   ├── ThemeHelper.kt         # Auto / dark / light theme
+│   │   │   └── DataUsage.kt           # Data usage (Ethernet interface)
+│   │   │
+│   │   ├── update/
+│   │   │   ├── UpdateChecker.kt       # GitHub release check (stable and beta)
+│   │   │   ├── UpdateDialogManager.kt # Update dialog + DownloadManager
+│   │   │   ├── UpdateNotifier.kt     # When to announce an update on the vehicle screen
+│   │   │   ├── UpdateInfo.kt          # Description of an available version
+│   │   │   ├── ApkSecurity.kt         # Signature check of the downloaded APK
+│   │   │   ├── ApkInstaller.kt        # Installation
+│   │   │   ├── SilentInstaller.kt     # Install without confirmation (PackageInstaller session)
+│   │   │   ├── InstallResultReceiver.kt # Install result
+│   │   │   └── ApkCleanup.kt          # Old APK cleanup
+│   │   │
+│   │   └── debug/
+│   │       ├── AppLogger.kt           # In-memory log ring buffer
+│   │       ├── CrashLogger.kt         # Crash trace written to disk
+│   │       └── DataUsageProbe.kt      # Network diagnostic probe
+│   │
+│   ├── res/
+│   │   ├── layout/                    # Screens, dialogs and list items
+│   │   ├── navigation/nav_graph.xml   # Dashboard → Profiles / Settings / Shortcuts / …
+│   │   ├── values/strings.xml         # French strings (+ values-en, -de, -es, -it, -pt, -tr)
+│   │   ├── values/colors.xml          # Light palette
+│   │   └── values-night/colors.xml    # Dark palette (same token names)
+│   │
+│   └── AndroidManifest.xml
+│
+└── mockup/
+    └── index.html                     # Interactive HTML mockup (1280×480)
+```
+
+---
+
+## Hardware Layers
+
+`MG4Hardware` is organized into **4 access layers**, from highest to lowest level, with automatic fallback on failure.
+
+### Katman1 — Android Automotive Car API
+Primary layer. Uses official Android Automotive APIs:
+- `CarPropertyManager` → drive modes, regeneration, one-pedal
+- `CarHvacManager` → seat heating, steering wheel heating
+
+The connection is initialized via reflection on `Car.createCar()` with multiple overloads tried in sequence. Pending actions are queued and executed once the service is ready, with exponential backoff retry (2 s → 60 s).
+
+### Katman2 — Raw Binder (fallback)
+Falls back to `ServiceManager.getService("vehiclesetting")` with direct `binderTransact()` calls. Usually blocked by SELinux in production builds.
+
+### Katman4 — ADAS Services (firmware-specific)
+Dedicated layer for ADAS functions, dynamically loaded according to the detected firmware generation:
+
+| Firmware | Service | Mechanism |
+|----------|---------|-----------|
+| **SWI133** | `VehiclePropertyManager` | Loaded from the launcher APK via `ClassLoader` + reflection on `mIVehiclePropertyService`. Uses `getMixProperty()` / `setMixProperty()` |
+| **SWI68** | `VehicleSettingManager` | Static singleton loaded via reflection. Uses `setAccTjaMode()` / `setLaneKeepingWarningSound()` |
+| **SWI69 / SWI131** | `VehicleSettingManager` | Same singleton as SWI68. Uses `setFcwState()` / `getFcwState()` / `setFcwAutoBrakeMode()` / `setFcwSensitivity()` for AEB. Values confirmed empirically on real hardware: `setFcwState(1)` = DISABLE, `setFcwState(2)` = ENABLE. |
+| **SWI165** | `VehicleSettingManager` | Same SDK as SWI68 (`com.saicmotor.sdk.vehiclesettings`). ADAS via `setAccTjaMode()`. AEB via `setAutoEmergencyBraking(1/2)` as the main toggle + `setFcwAlarmMode(1/2)` + `setFcwAutoBrakeMode(1/2)`. Values: 1=OFF, 2=ON. |
+
+### Firmware Detection
+
+```kotlin
+// util/FirmwareInfo.kt
+val gen = FirmwareInfo.getGeneration()  // Reads ro.build.mt2712.version
+// → Gen.SWI133 | Gen.SWI68 | Gen.UNKNOWN
+```
+
+The result is cached and used throughout the app to branch firmware-specific code paths.
+
+---
+
+## Profile System
+
+### `DrivingProfile` Model
+
+```kotlin
+data class DrivingProfile(
+    val id: String,             // Unique UUID
+    val name: String,           // Display name
+    val driveMode: DriveMode,   // ECO / NORMAL / SPORT / SNOW / CUSTOM
+    val regenLevel: RegenLevel, // OFF / LOW / MEDIUM / HIGH / ADAPTIVE / ONE_PEDAL
+    val steeringHeat: Boolean,
+    val seatHeatLeft: Int,      // 0–3
+    val seatHeatRight: Int,     // 0–3
+    // Whether heating is applied at all, decoupled from its value: null or true = apply
+    val steeringHeatEnabled: Boolean?,
+    val seatHeatEnabled: Boolean?,
+    val regenEnabled: Boolean?, // Regeneration: null or true = apply, false = unchanged
+    // ADAS
+    val overspeedAlarm: Boolean,
+    val speedLimitTone: Boolean,
+    val adasMode: Int,          // 0=Off 1=Limiter 2=Auto 3=ACC 4=ICA
+    val soundWarning: Boolean,
+    val swi68AdasMode: Int,     // Swi68Mode.OFF / ACC / TJA
+    val swi132LimiterConfigured: Boolean,
+    val swi132SasMode: Int,     // 0=Off 2=Manual 3=Smart
+    // Forward collision
+    val aebEnabled: Boolean,
+    val aebMode: Int,           // 1=Alert 2=Alert+Braking
+    val aebSensitivity: Int,    // 0=unset 1=Low 2=Standard 3=High
+    // Lane keeping
+    val elkMode: Int,           // 0=unset 1=OFF 2=Alert 3=Assist 5=Emergency
+    val elkSensitivity: Int,
+    val lasAudibleWarning: Boolean,
+    val lasVibrationReminder: Boolean,
+    // Misc
+    val energySaving: Boolean,
+    val tsrEnabled: Boolean,
+    val isDefault: Boolean,
+    // ESC / drowsiness: null = unset, the profile leaves them alone
+    val escEnabled: Boolean?,
+    val drowsinessEnabled: Boolean?,
+    val drowsinessSensitivity: Int?,  // 1=Low 2=Standard 3=High
+    val autoHighBeam: Boolean?,       // Automatic high beam; null = the profile leaves it alone
+    val btDeviceMac: String?          // Paired Bluetooth device
+)
+```
+
+> **Why these fields are nullable:** Gson does not call the Kotlin constructor. A declared default
+> of `= true` would therefore **not** apply to already-saved profiles — the field is missing from
+> the JSON, the JVM writes `false`, and the ESC would end up disabled on every old profile. `null`
+> means "profile older than this feature", and the accessors decide what to do.
+
+### Persistence
+
+Profiles are serialized to JSON via **Gson** and stored in `SharedPreferences`. Maximum **10 profiles** per device
+(`ProfileManager.MAX_PROFILES`). Beyond five, the picker scrolls its cards and the "Profile cycle" page moves to two
+rows of five. A version older than 2.6.9 reads and applies all ten, but creates no more and only restores five from
+the vehicle backup.
+
+### Applying a Profile
+
+`ProfileApplier.apply()` executes hardware calls in the following order on `Dispatchers.IO`:
+1. Drive mode (fast — binder call)
+2. Regen level (fast — binder call)
+3. Heated steering wheel (~2 s — state confirmation polling)
+4. Left seat heating (~7 s — toggle polling)
+5. Right seat heating (~7 s — toggle polling)
+6. Wait for Katman4, then firmware ADAS, forward collision, ESC and drowsiness, lane keeping,
+   automatic high beam
+
+Safety settings are **skipped when the profile does not configure them**, rather than written to a
+default: the ESC write is a toggle driven by a prior read, so aiming for "ON" from a doubtful read
+would disable it.
+
+---
+
+## User Interface
+
+### Navigation
+Since 2.7.0, the **main menu** is a column on the left: the MG4Control logo, which brings you back
+to the dashboard (five quick taps reveal the Diagnostic), then Profiles, Shortcuts, Automation,
+Statistics and Settings. A second press on the entry on screen returns to the dashboard. *Settings
+→ Interface → Menu side* moves it to the right: **Auto** (default) follows the steering wheel side
+read from the car (`0x2170421e`, byte 0; the last side read is used at the next start), **Left** and
+**Right** force it.
+
+The app uses a **NavController** with **8 destinations**:
+
+```
+DashboardFragment (start)
+    ├──► ProfileFragment ──► ProfileEditFragment  (create / edit, full screen)
+    ├──► ShortcutsFragment
+    ├──► AutomationFragment ──► CustomRuleEditFragment  (My automations editor)
+    ├──► StatsFragment
+    └──► SettingsFragment
+```
+
+### Sub-tabs
+Six screens share the same pattern: a row of **pills** at the top picks the sub-tab (it scrolls when
+it overflows, and moves to the right with the menu), the content scrolls below, and whatever belongs
+to no sub-tab stays in a persistent header (profile name, master switch) or footer (Cancel / Save).
+
+| Screen | Sub-tabs |
+|---|---|
+| Dashboard | Driving · Safety · Comfort |
+| Profile editor | Driving · Safety · Comfort |
+| Shortcuts | Hardware buttons · 1 Pedal · ADAS · Regen cycle · Mode cycle · Profile cycle · Source cycle · Car keeper · Quick settings · Floating buttons · Custom shortcuts — an action's page only shows when it is assigned |
+| Automation | Profiles · Climate · Screen · When leaving · Sounds · My automations |
+| Statistics | General · Trips · Charging |
+| Settings | Languages · Interface · Advanced · Info |
+
+A tab whose page has no visible section left on the current firmware is **hidden** — better no tab
+than a tab opening an empty page. Every screen reopens the last sub-tab shown, for the session.
+
+### Sizing
+Sizes taken from DiAuto-MG4, tuned for readability while driving: titles **22sp**, text
+**18–19sp**, buttons **64dp** high, "No | Yes" segmented switches **64dp / 21sp**, sub-tab pills
+**62dp / 21sp**, cards with a **24dp** radius, main menu **184dp**. A button label goes on two lines
+when there is room, otherwise it ends with "…" (`util/ButtonLines`), depending on the language and
+the text size.
+
+### Windows and pop-ups
+- **App windows** — `ui/AppDialog`: a rounded card with no chrome, at the width it is given (an
+  Android dialog's default width is too narrow for a car screen). `confirmer` for a simple
+  confirmation, with a neutral, warning or danger tone; `choisir` for a grid of tiles; `options`
+  for a single-choice list; `segments` for a segmented choice; `repeter` for a − or + button that
+  repeats while held. Every new yes / no in the app goes through `AppDialog.confirmer`.
+- **Pop-ups and banners** — `service/OverlayKit`: their layouts are written for a base card
+  (1108 × 392 dp) and inflated with a corrected density, to take the same share of the screen
+  everywhere. If the window granted is smaller than expected, the card is shrunk as a whole and the
+  `MG4_OVERLAY` log gives the room found. Tints are set in code: these layouts are inflated outside
+  the activity, without the AppCompat factory.
+
+### Color Palette
+
+The app follows the light or dark theme. Light values live in `res/values/colors.xml`, dark ones in
+`res/values-night/colors.xml` — **same token names on both sides**, which is the only rule to
+follow when adding a colour.
+
+| Token | Light | Dark | Usage |
+|-------|-------|------|-------|
+| `dash_bg` | `#F2F5FA` | `#0C111B` | App background |
+| `dash_card` | `#FFFFFF` | `#151E2C` | Cards |
+| `dash_section` | `#EEF2F8` | `#1B2636` | Inner sections |
+| `dash_border` | `#D5DEEA` | `#2A384B` | Borders and dividers |
+| `dash_btn` | `#EEF2F8` | `#1B2636` | Inactive button background |
+| `dash_text_lo` | `#7A8699` | `#7F8DA3` | Section headers |
+| `dash_accent` | `#1F5FC4` | `#A6C8FF` | Active selection (blue) |
+| `dash_accent_dim` | `#DCE8FB` | `#22344F` | Active selection background |
+| `dash_eco` | `#16A34A` | `#22C55E` | ECO mode (green) |
+| `dash_warn` | `#D97706` | `#F59E0B` | Warning (amber) |
+| `dash_danger` | `#E11D48` | `#F43F5E` | Delete / danger actions |
+| `text_primary` | `#101826` | `#F1F5FC` | Primary text |
+| `text_secondary` | `#556274` | `#A8B6CA` | Secondary text |
+
+Every `*_dim` colour is the background paired with its vivid counterpart: `dash_eco_dim`,
+`dash_warn_dim` and `dash_danger_dim` follow the same principle as `dash_accent_dim`.
+
+> **Naming pitfall:** `bg_dark` is `#F2F5FA` in the light theme. The name dates back to when the
+> app only had a dark theme; it means the general background, not a dark colour.
+
+---
+
+## External API (KeyMapper, Tasker…)
+
+Lets a third-party app trigger MG4Control functions (issue #79).
+
+> **Disabled by default.** Turn it on in *Settings → Advanced settings → "External API"*, with an
+> explicit confirmation. While disabled, every incoming command is refused and logged. Once
+> enabled, **any installed app** can send these intents: they are protected by no permission,
+> because KeyMapper and Tasker ship from the Play Store and can never hold a `signature` one.
+
+### Direct actions — one intent action per command
+
+No extras required. This is the form usable from **KeyMapper**, whose intent editor only offers
+the type (*Broadcast receiver*) and the action string.
+
+| Action | Effect |
+|---|---|
+| `com.mg4.control.action.ONE_PEDAL` | Toggle One Pedal; when turned off, the previous level or the chosen one |
+| `com.mg4.control.action.ENERGY_SAVING_TOGGLE` | Energy saving |
+| `com.mg4.control.action.PROFILE_PICKER` | Show the on-screen profile picker |
+| `com.mg4.control.action.OPEN_APP` | Open MG4Control |
+
+These are **toggles**: each send flips the state, there is no "set to ON".
+
+> **Deliberately out of the API.** `VEHICLE_POWER_OFF`, `ADAS_CYCLE`, `AEB_CYCLE`, `TSR_TOGGLE`,
+> `OVERSPEED_ALARM`, `SPEED_LIMIT_TONE` and `SOUND_WARNING` are **not** exposed: they affect active
+> safety or shut the vehicle down. The refusal also covers `EXECUTE` — removing them from the direct
+> actions alone would have protected nothing. They remain available from the app and the steering
+> wheel shortcuts.
+
+**In KeyMapper**: add an action → *Intent* (version 2.3.0 minimum) → type **Broadcast receiver** →
+paste the string into the *Action* field.
+
+### `EXECUTE` — for Tasker, adb, scripts
+
+`com.mg4.control.action.EXECUTE` with a string extra `action` holding **the name of any shortcut
+action**, except the ones listed above as out of the API. That covers far more than the four direct
+actions: `REGEN_CYCLE`, `SEAT_HEAT_LEFT_CYCLE`, `HVAC_RECIRC_CYCLE`, `BRIGHTNESS_UP`… — the exact
+names are the ones in `shortcut/ShortcutAction.kt`.
+
+Two of them need an extra, and therefore cannot exist as a direct action:
+
+- `APPLY_PROFILE` — requires a `profile` extra: the profile name, case-insensitive
+- `OPEN_CUSTOM_APP` — opens the app configured in the shortcuts screen
+
+```bash
+adb shell am broadcast -a com.mg4.control.action.EXECUTE \
+  --es action APPLY_PROFILE --es profile "Home commute"
+```
+
+### `SET` — write a value directly
+
+`com.mg4.control.action.SET` with the `key` and `value` extras:
+
+| `key` | accepted `value` |
+|---|---|
+| `drive_mode` | `ECO` `NORMAL` `SPORT` `SNOW` `CUSTOM` |
+| `regen` | `OFF` `LOW` `MEDIUM` `HIGH` `ADAPTIVE` `ONE_PEDAL` |
+| `seat_heat_left` | `0` to `3` |
+| `seat_heat_right` | `0` to `3` |
+| `steering_heat` | `0`/`1` or `false`/`true` |
+| `profile` | profile name |
+| `hvac_power` | `0`/`1` — climate on/off |
+| `ac` | `0`/`1` — A/C compressor |
+| `hvac_auto` | `0`/`1` — automatic mode |
+| `hvac_temp` | °C, clamped to the vehicle's real bounds |
+| `hvac_fan` | fan level, clamped to the real bounds |
+| `hvac_recirc` | `INNER` `OUTSIDE` `AUTO` (or `0` `1` `2`) |
+| `defrost_front` | `0`/`1` |
+| `defrost_rear` | `0`/`1` |
+
+The `hvac_*` and `defrost_*` keys are ignored when the firmware exposes no climate control.
+Setpoint and fan are clamped to bounds **read from the vehicle**, which differ across firmwares.
+These are hardware toggles that step one notch at a time: expect a few seconds before the final
+state is reached.
+
+```bash
+adb shell am broadcast -a com.mg4.control.action.SET --es key drive_mode --es value SPORT
+```
+
+#### `NEXT` / `PREV` / `TOGGLE` — cycling without knowing the state
+
+Instead of a setpoint, `value` accepts **`NEXT`** (next notch), **`PREV`** (previous notch) or
+**`TOGGLE`** (an alias of `NEXT`, easier to read on a boolean). The new value is computed from the
+state read on the vehicle, so a single steering-wheel button can mean "seat heat +1". The cycle
+**wraps around**: past the maximum, the next notch returns to the minimum.
+
+```bash
+adb shell am broadcast -a com.mg4.control.action.SET --es key seat_heat_left --es value NEXT
+adb shell am broadcast -a com.mg4.control.action.SET --es key ac --es value TOGGLE
+```
+
+Cyclable keys: `seat_heat_left`, `seat_heat_right`, `steering_heat`, `hvac_power`, `ac`,
+`hvac_auto`, `hvac_temp`, `hvac_fan`, `hvac_recirc`, `defrost_front`, `defrost_rear`.
+
+`drive_mode`, `regen` and `profile` are **deliberately excluded**: the drive-mode enum is not
+filtered per firmware (cycling could select a mode the car does not have), regen availability
+depends on the current state (no level at all in Snow mode, One Pedal only while Energy Saving is
+on), and there is no notion of a "current profile".
+
+When the current state cannot be read, the command is **refused without writing anything** rather
+than assuming a starting point — a guessed origin would move the value down while you press to
+move it up. Refusals are logged (`adb logcat -s MG4_API`).
+
+### Reading state — ContentProvider
+
+`content://com.mg4.control.state/state` (or `com.mg4.control.offline.state` for the offline
+variant — the authority follows the applicationId). A **single**-row cursor:
+
+`drive_mode`, `regen`, `seat_heat_left`, `seat_heat_right`, `steering_heat`, `speed_kmh`,
+`outside_temp_c`, `tsr`, `energy_saving`, `aeb_enabled`, `firmware`, `profiles` (names separated
+by `|`), `default_profile`.
+
+An unreadable value is `null`, never `0` — a zero would be indistinguishable from "seat off" or
+"vehicle stopped". Tasker can query a ContentProvider, KeyMapper cannot.
+
+Unlike broadcasts, a provider knows its caller: every read is logged by package name, and the
+`external_api_allowlist` preference (comma-separated packages, empty = all allowed) is actually
+enforced.
+
+### Security and diagnostics
+
+The **speed lock** (*Settings → "Block driving settings above a given speed"*) also covers the API,
+since it sits in the write primitives. Note that it is itself **disabled by default** — if you have
+not enabled it, no speed limit applies to external commands. Comfort settings (seats, steering
+wheel heating) are never affected.
+
+Every command, accepted or refused, is traced under the **`MG4_API`** tag (visible via the
+Diagnostic button). To test the app independently of KeyMapper:
+
+```bash
+adb shell am broadcast -a com.mg4.control.action.PROFILE_PICKER
+```
+
+Complete silence = stale APK or service not running. `REFUS … API externe désactivée` = the
+Settings toggle was never confirmed.
+
+---
+
+## Build & Installation
+
+You can download the latest version of MG4Control directly from the releases page: https://github.com/SliDeeN/MG4Control/releases
+All you need is a USB drive and access to the AAOS settings to install the APK.
+
+
+You can also compile the project yourself:
+
+### Prerequisites
+- Android Studio Hedgehog (2023.1) or later
+- JDK 17+
+- Android SDK API 34
+
+### Debug Build
+
+```bash
+# Using Android Studio's bundled JDK
+JAVA_HOME="/path/to/Android Studio/jbr" ./gradlew assembleDebug
+```
+
+Output APK location:
+```
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Installing on the Vehicle
+
+The application must be signed with the ROM's system key. On a development system:
+
+```bash
+adb push app-debug.apk /sdcard/
+adb shell pm install -r --system /sdcard/app-debug.apk
+```
+
+> On a production ROM, the APK must be included in the system build or installed through an OEM-specific mechanism.
+
+---
+
+## Required Permissions
+
+| Permission | Reason |
+|-----------|--------|
+| `FOREGROUND_SERVICE` | Persistent foreground service for auto-apply |
+| `WAKE_LOCK` | Prevents sleep during settings application |
+| `RECEIVE_BOOT_COMPLETED` | Auto-start on vehicle boot |
+| `CAR_POWERTRAIN` | Drive mode and regeneration control |
+| `CONTROL_CAR_CLIMATE` | Seat and steering wheel heating control |
+| `CAR_VENDOR_EXTENSION` | SAIC proprietary extensions |
+| `CAR_ENERGY` | Battery / powertrain information |
+| `INTERNET` | Update check (GitHub API) |
+| `DOWNLOAD_WITHOUT_NOTIFICATION` | Silent download of the update APK |
+| `WRITE_EXTERNAL_STORAGE` | Saving the APK into the Downloads folder |
+
+---
+
+## Licence
+
+| Versions | Licence |
+|---|---|
+| up to and including **2.6.5** | MIT — [`LICENSE.MIT`](LICENSE.MIT) |
+| from **2.6.6** onwards | **GNU GPL v3** or later — [`COPYING`](COPYING) |
+
+Already published versions stay under MIT: a granted licence cannot be revoked. From 2.6.6, any
+modified version you redistribute must also be released under the GPL, **source code included**.
+
+The MIT notice is retained for the code published under that regime before the switch, third-party
+contributions included. Details in [`LICENCE.md`](LICENCE.md).
+
+Weather data for automatic brightness: [Open-Meteo.com](https://open-meteo.com), licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+</details>
+
+<details>
+<summary><strong>🇫🇷 Version française</strong></summary>
 
 ## Table des matières
 1. [Présentation](#présentation)
@@ -42,7 +1741,8 @@ L'application communique avec le véhicule via le SDK propriétaire SAIC, en acc
 
 > **Important :** Cette application nécessite des privilèges système (`sharedUserId="android.uid.system"`) et doit être signée avec la clé de la ROM. Elle ne peut pas fonctionner sur un appareil standard débloqué.
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > **MG4Control est un projet communautaire indépendant. Il n'est en aucun cas affilié, approuvé ou soutenu par MG Motor, SAIC Motor ou l'une de leurs filiales.**
 > L'utilisation de cette application se fait entièrement à vos risques. Des réglages incorrects peuvent affecter le comportement du véhicule. Procédez avec précaution.
 
@@ -70,7 +1770,8 @@ Présents à deux endroits, avec une règle d'apparition différente :
 Sur le Dashboard, une ligne dont le véhicule ne rend pas l'état disparaît : la commande existe sur
 tous les firmwares, mais rien ne garantit que la finition porte l'équipement.
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Les trois réglages n'ont pas la même échelle côté véhicule, et la pédale est un piège :
 > **Normal y vaut 0**, pas la valeur du milieu. La puissance vaut 1/2/3 en SWI133/68/165 mais
 > 2/3/4 sur A9, où la voiture réutilise l'échelle des modes de conduite. L'application ne
@@ -88,7 +1789,8 @@ Conduite, avec le temps restant avant la coupure automatique), en raccourci, et 
 couper automatiquement (voir Automatisation). Une seule propriété véhicule, `DRVNG_PTC_HEAT`, sur
 les six firmwares : par le `VehiclePropertyManager` en SWI133, comme SystemUI, directement ailleurs.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > L'état se lit de la même façon sur les six firmwares : 0 = activé, 1 = désactivé (on écrit
 > 1 pour activer, 2 pour désactiver). Sur A9, la propriété se lit et s'écrit en zone 0, comme
 > le fait l'application d'origine : avant la 2.6.10, MG4Control y lisait l'état à l'envers et la
@@ -101,7 +1803,8 @@ les six firmwares : par le `VehiclePropertyManager` en SWI133, comme SystemUI, d
 - **Assistant de sortie de voie (ELK)** : Alerte / Aider / Maintien d'urgence, sensibilité, et sur
   SWI132 l'alerte sonore et la vibration
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Couper l'ESC coupe aussi l'anti-collision avant — c'est le véhicule qui l'impose. Les deux
 > reviennent sur ON à chaque démarrage. Dans un profil, ESC et somnolence ne sont écrits **que si
 > le profil les configure** : un profil créé avant ces réglages n'y touche pas.
@@ -122,8 +1825,13 @@ les six firmwares : par le `VehiclePropertyManager` en SWI133, comme SystemUI, d
   garder les vôtres : MG4Control les remet juste après l'entrée en AUTO. En quittant AUTO depuis
   MG4Control, le sens de l'air et la recirculation d'avant reviennent, sauf s'ils ont été changés
   entre-temps
+- **Garder l'A/C coupé** (#208, *Réglages → Avancé*, désactivé par défaut) : la voiture rallume
+  l'A/C dès que la consigne change, même coupé à la main. L'option le recoupe aussitôt, que la
+  consigne vienne de MG4Control ou, à l'essai, de l'écran d'origine — jamais en AUTO, en dégivrage
+  avant ni clim éteinte. Les profils, eux, relisent l'A/C à la fin et le recoupent s'il est revenu
 - **Gestion automatique des feux de route** : On / Off
-- **Luminosité de l'écran**
+- **Luminosité de l'écran** : de 0 à 100 % sur SWI133, SWI68 et SWI165 — 0 est aussi le minimum de
+  l'écran d'origine, qui reste allumé —, de 5 à 100 % sur les firmwares A9
 
 ### ADAS (Assistance à la conduite)
 - **SWI133** : Off / Limiteur / Auto / ACC / ICA + alertes excès de vitesse / changement de limite
@@ -133,15 +1841,24 @@ les six firmwares : par le `VehiclePropertyManager` en SWI133, comme SystemUI, d
 
 ### Raccourcis sur boutons physiques
 
-Deux systèmes coexistent, réglés dans le même écran :
+Tout se règle dans l'onglet Raccourcis, sous-onglet **Boutons physiques** : une carte par touche,
+avec ses appuis **Court**, **Long** et **Double**. Deux chemins y cohabitent, sans qu'on ait à les
+choisir :
 
-- **Raccourcis classiques** — boutons ★ gauche et droit, en appui simple ou long. Ils reposent sur
-  le broadcast émis par le véhicule : si le launcher officiel utilise déjà le bouton, il reste
+- **Boutons ★ gauche et droit**, en appui court ou long, réglés pour tous les profils — ils reposent
+  sur le broadcast émis par le véhicule : si le launcher officiel utilise déjà le bouton, il reste
   prioritaire.
-- **Raccourcis avancés** — n'importe quelle touche physique, au volant **comme sur la façade
-  sous l'écran**, en appui **court, long ou double**, via un **service d'accessibilité** que
-  l'utilisateur active lui-même dans Android. MG4Control voit alors la touche **avant** le
-  launcher et peut la consommer.
+- **Capture avancée** — n'importe quelle touche physique, au volant **comme sur la façade sous
+  l'écran**, et les boutons ★ dès qu'ils reçoivent un double appui ou un réglage par profil. Elle
+  passe par un **service d'accessibilité** que l'utilisateur active lui-même dans Android :
+  MG4Control voit alors la touche **avant** le launcher et peut la consommer.
+
+Un bandeau en haut de la page dit si la capture avancée est active, inactive ou si le service reste
+à activer. **Ajouter un bouton** attend l'appui d'une touche de la voiture (le joystick gauche reste
+réservé à l'aide à la conduite). Le menu ⋮ d'une carte **renomme** la touche — un nom est proposé
+d'après son code Android (Accueil, Retour, Volume +…) —, lui rend son nom d'origine ou retire une
+touche ajoutée. L'interrupteur **Activer**, au bout de la rangée de pastilles, ne concerne que les
+touches du volant.
 
 L'appui long part **dès le seuil de 500 ms atteint**, sans attendre le relâchement : l'action se
 déclenche toujours au même moment, la touche encore enfoncée. Le double appui, lui, a un coût à
@@ -149,7 +1866,8 @@ connaître — sur une touche qui en porte un, l'appui court ne peut plus partir
 attend 300 ms de plus pour s'assurer qu'aucun second appui n'arrive. Les touches sans double appui
 ne paient rien.
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Une touche enregistrée en raccourci avancé est réclamée **en bloc**. Pour intercepter un appui
 > long il faut consommer l'appui dès son début, or à cet instant on ignore encore s'il sera court,
 > long ou double. Les types d'appui laissés libres ne retombent donc pas sur le launcher : ils ne
@@ -159,12 +1877,12 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 
 | Catégorie | Actions |
 |---|---|
-| Conduite | 1 Pédale · Cycle Régénération Personnalisé · Éco. énergie · Chauffage de la batterie ON/OFF |
+| Conduite | 1 Pédale · Cycle Régénération Personnalisé · Cycle des modes de conduite · Éco. énergie · Chauffage de la batterie ON/OFF |
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
 | Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Débit en AUTO (cycle) · Feux de route automatiques ON/OFF · Luminosité ± · Pop-up HVAC |
 | Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
 | Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - · Cycle de sources audio |
-| Application et véhicule | Lancer un profil · Sélecteur de profils · Cycle de profils · Pop-up de charge · Garde-voiture · Android Auto / CarPlay · Ouvrir MG4Control · Lancer une application · Raccourci perso · Paramètres Android · Éteindre la voiture |
+| Application et véhicule | Lancer un profil · Sélecteur de profils · Cycle de profils · Pop-up de charge · Garde-voiture · Android Auto / CarPlay · Ouvrir MG4Control · Lancer une application · Raccourci perso · Lancer une automatisation · Pop-up Réglages rapides · Paramètres Android · Éteindre la voiture |
 
 Les actions de confort et de sécurité **relisent l'état sur le véhicule à chaque pression** au lieu
 de mémoriser le leur : l'utilisateur agit aussi depuis l'écran d'origine, un état gardé en mémoire
@@ -176,12 +1894,8 @@ le profil au démarrage est coupé dès le premier appui. Là où cet état ne s
 elles retombent sur leur dernière consigne et alternent comme avant ; seul le cycle anticollision
 A/B suit encore un état mémorisé.
 
-La liste des raccourcis avancés affiche pour chaque ligne le **bouton** (nom et code), le **type
-d'appui**, la **fonction**, puis *Modifier* et *Supprimer*. Réattribuer un bouton déjà utilisé sur
-le même type d'appui demande confirmation et nomme la fonction qui va être remplacée. *Modifier*
-ouvre une fenêtre à deux listes côte à côte — la fonction et le profil —, chacune ouverte sur le
-choix en cours ; l'application ou le profil visé par un raccourci se choisit dans une grille de
-tuiles.
+Toucher un appui ouvre le choix de sa fonction (une recherche apparaît au-delà de neuf choix) ;
+l'application, le profil ou l'automatisation visés se choisissent ensuite dans une grille de tuiles.
 
 #### Raccourcis associés à un profil
 Un raccourci avancé porte une touche, un type d'appui, une fonction — et un **profil**, « Tous les
@@ -194,26 +1908,35 @@ La résolution à l'appui se fait en deux crans, dans cet ordre :
 3. sinon rien.
 
 Le cas 3 mérite d'être connu : la touche reste **consommée**, comme n'importe quel type d'appui
-laissé libre sur une touche réclamée — elle ne retombe pas sur le launcher. La liste le signale
-sur les groupes qui n'ont aucune ligne « Tous les profils ».
+laissé libre sur une touche réclamée — elle ne retombe pas sur le launcher.
 
 Le **profil actif** est le dernier appliqué, quelle qu'en soit la source : démarrage, contact,
 Bluetooth, automatisation température ou choix manuel. Il est enregistré, donc il survit à un
 redémarrage du service.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > C'est le dernier profil **appliqué**, pas l'état réel du véhicule : un réglage changé à la main
 > depuis le Dashboard ne l'invalide pas. L'alternative — comparer l'état du véhicule à chaque
 > profil — coûterait une dizaine de lectures véhicule à chaque appui, pour un résultat ambigu dès
 > que deux profils se ressemblent.
 
-La liste des raccourcis est **groupée par touche + type d'appui**, « Tous les profils » en tête de
-chaque groupe : l'ordre d'affichage est celui de la résolution.
+En haut de la page, **« Réglage pour : »** choisit le profil dont on règle les touches (capture
+avancée active) ; un appui qui n'a rien de propre à ce profil affiche « Comme tous : … », la
+fonction réglée pour tous les profils.
 
-Les trois réglages d'action — **repli du mode 1 Pédale**, **crans du cycle ADAS** et **cycle de
-régénération** — ont chacun leur page, révélée dans le rail de gauche dès que la fonction est
-attribuée à un bouton. Peu importe par quelle voie : emplacement classique, raccourci avancé, ou
-fonction simplement sélectionnée dans le formulaire avancé, avant même la création du raccourci.
+Les réglages d'action — **retour du mode 1 Pédale**, **crans du cycle ADAS**, **cycle de
+régénération**, **cycle des modes**, **cycle de profils**, **cycle de sources**, **Réglages
+rapides** — ont chacun leur pastille, qui apparaît dès que la fonction est attribuée à une touche
+ou à un bouton flottant.
+
+**1 Pédale** (#226) : le premier appui active le One Pedal, le second le coupe. Par défaut
+(« Comme avant »), MG4Control ne fait que couper le One Pedal et la voiture remet d'elle-même le
+niveau de régénération qu'elle avait avant ; la pastille *1 Pédale* permet de choisir à la place un
+niveau fixe — Faible, Moyen, Fort ou Adaptatif. Un niveau choisi dans une version précédente repasse
+sur « Comme avant », et Off n'est plus proposé. L'état du One Pedal est lu sur le niveau de
+régénération **ou** sur le réglage One Pedal lui-même, pour le raccourci, les bulles et les
+automatisations.
 
 Le cycle de régénération se compose sur sa page : toucher un mode l'ajoute **en fin de cycle**,
 le toucher à nouveau le retire, et l'ordre des appuis est celui du cycle. Les cinq modes proposés
@@ -248,12 +1971,37 @@ tuile **ECO** se touche à côté de l'A/C.
 pendant Android Auto / CarPlay* (*Réglages → Interface*, désactivée par défaut, suspendue en Mode
 Garage), toucher la zone clim de la barre du haut ouvre ce pop-up à la place.
 
+#### Pop-up Réglages rapides
+L'action **Pop-up Réglages rapides** (#197) ouvre par-dessus l'écran une grille de tuiles choisies
+sur la page *Réglages rapides* — 8 au plus, rangées à la poignée : sortie de voie et sa sensibilité,
+régulateur / limiteur (ACC, TJA ou ICA et limiteur, exclusifs côté voiture, ne font qu'une tuile),
+anti-collision, panneaux, alerte survitesse, feux de route automatiques, récupération (1 Pédale
+comprise), mode de conduite, économie d'énergie, chauffage de la batterie, A/C, recirculation,
+dégivrages, sièges, volant chauffant, luminosité. Par défaut : sortie de voie, régulateur /
+limiteur, récupération, chauffage de la batterie et mode de conduite. Une tuile à deux valeurs
+bascule d'un toucher (marque ⇄, couleur turquoise ; une tuile Oui / Non allumée prend la couleur
+d'accent) ; les autres ouvrent leurs valeurs dans une **bulle accrochée à la tuile** (au-dessus, ou
+dessous faute de place), et des puces de la page *Réglages rapides* choisissent quelles valeurs elle
+propose (deux au moins, toutes par défaut). Le choix part aussitôt à la voiture, puis est relu. Le
+joystick droit passe d'une tuile à l'autre et à la croix, et règle la bulle (gauche / droite, clic
+central pour appliquer, haut / bas pour la refermer) ; un appui long sur la touche qui l'a ouvert le
+referme. Un réglage que la voiture
+n'accepte qu'à l'arrêt est grisé en roulant. Le pop-up se ferme par sa croix, par un second appui
+sur le raccourci ou seul après le délai des pop-ups, relancé à chaque toucher.
+
 #### Cycle de profils
 L'action **Cycle de profils** fait défiler les profils, dans un ordre composé sur sa page (au
 moins deux profils ; sans réglage, tous les profils dans l'ordre de leur liste). À chaque appui le
 raccourci vise le profil qui suit le profil actif et affiche son nom ; il l'applique une seconde
 plus tard, puis le confirme à l'écran. Deux appuis rapprochés sautent donc un profil sans
 l'appliquer. Si le verrou de vitesse refuse l'écriture, rien ne change.
+
+#### Cycle des modes de conduite
+L'action **Cycle des modes de conduite** (#207) ne parcourt que les modes choisis sur la page *Cycle
+des modes*, dans l'ordre des touchers : Éco, Normal, Sport, Neige et Personnalisé, sur tous les
+firmwares (au moins deux ; sans réglage, Éco → Normal → Sport). Depuis un mode hors du cycle, ou
+illisible, l'appui mène au premier. Le changement est permis en roulant, comme avec le bouton
+d'origine, et « Mode … » s'affiche.
 
 #### Cycle de sources audio
 L'action **Cycle de sources audio** passe à la source suivante d'un cycle composé sur la page
@@ -266,7 +2014,7 @@ vérifiée : une source sans rien à jouer reste muette, et l'appui suivant pass
 car le cycle repart de la dernière source choisie, pas de celle qui joue.
 
 - **SWI133, SWI68, SWI165** : par le service média SAIC, source par source.
-- **SWI69, SWI131, SWI132** : le Bluetooth passe par l'appli Média SAIC, comme la touche de
+- **SWI69, SWI131, SWI132** : le Bluetooth passe par l'application Média SAIC, comme la touche de
   source d'origine — c'est elle qui fait passer la sortie audio de la voiture en Bluetooth avant
   de lancer la lecture. L'USB vise le lecteur du port où la clé est branchée (un lecteur par
   port). « En ligne » n'est pas proposé : cette source n'existe pas sur ces firmwares.
@@ -276,14 +2024,31 @@ car le cycle repart de la dernière source choisie, pas de celle qui joue.
 #### Android Auto / CarPlay et Paramètres Android
 - **Android Auto / CarPlay** : un appui ouvre Android Auto ou CarPlay selon le téléphone branché —
   MG4Control le demande au service de projection de la voiture —, un second ramène à l'écran
-  précédent. Sans téléphone, un message le dit.
+  précédent. Sans téléphone, un message le dit. Si un téléphone est branché par câble sans
+  qu'aucune projection ne démarre, le raccourci relance sa détection (« Téléphone branché : nouvelle
+  tentative de détection… ») puis ouvre Android Auto ou CarPlay dès qu'il est reconnu.
+- **Téléphone branché avant le démarrage** (#251) : un iPhone ou un téléphone Android branché avant
+  le démarrage de l'écran n'était vu ni par CarPlay ni par Android Auto. Option dans *Réglages →
+  Avancé*, carte « Android Auto · CarPlay » (désactivée par défaut, masquée sans le service de
+  projection AllGo de la voiture) : 15 s après le démarrage, 10 s après le réveil de l'écran après
+  une vraie mise en veille, et dès l'activation de l'option avec un téléphone branché, si aucune
+  projection n'est ouverte, MG4Control signale de nouveau le téléphone branché à la voiture, comme
+  s'il venait d'être branché ; sans session 15 s plus tard, il réinitialise la prise USB et
+  recommence une fois. Au démarrage et au réveil, un téléphone pas encore visible est cherché toutes
+  les 4 s pendant une minute, comme le fait AA Kick. Le CarPlay filaire inverse les rôles USB : un
+  iPhone qui quitte la liste USB après l'annonce a lancé CarPlay, MG4Control attend donc sa session
+  (jusqu'à 30 s) au lieu de réinitialiser la prise, et le raccourci ouvre CarPlay dès qu'elle
+  arrive. Un service AllGo qui ne répond pas encore n'arrête plus rien. Un téléphone Android est
+  laissé à AA Kick quand cette application est installée (au démarrage et au réveil). Rien ne se
+  passe en Mode Garage. Lignes du Diagnostic : `MG4_PROJ`.
 - **Paramètres Android** : ouvre l'écran des paramètres d'Android, que le launcher de la voiture ne
   propose pas — celui d'Android ou d'Android Automotive selon le firmware ; si aucun ne s'ouvre, un
   message le dit. Aussi en bouton dans *Réglages → Infos*. Idée reprise du fork de **sensoyg**.
 
 #### Garde-voiture : pré-climatisation, mode chien, surveillance
 Le raccourci **Garde-voiture** (#130, #180) garde la voiture **allumée et verrouillée** pendant
-votre absence. Sa fenêtre démarre toujours sur « Maintenant » ; la voiture doit être en P.
+votre absence. Sa fenêtre démarre toujours sur « Maintenant » et se règle au toucher (le joystick
+garde ses fonctions habituelles) ; la voiture doit être en P, vérifié avant toute chose.
 
 - **Pré-climatisation** — *Maintenant* : la clim tourne 15 min, 30 min, 1 h ou 2 h. *À une
   heure* : premier cycle, durée d'un cycle, nombre de cycles (5 au plus) et pause entre deux ; la
@@ -292,11 +2057,31 @@ votre absence. Sa fenêtre démarre toujours sur « Maintenant » ; la voiture d
 - **Mode chien** (*Maintenant* seulement) : clim pendant 2 h, écran jamais atténué, avec en grand
   un message rassurant pour les passants, la consigne, la température extérieure, la durée et la
   batterie. Un avertissement rappelle de vérifier régulièrement que le mode tourne toujours.
-- **Mode Surveillance** : proposé seulement si une application caméra 360°
+- **Mode Surveillance** : il faut une application dashcam
   ([MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App) ou
-  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) est installée. La voiture reste allumée
-  et verrouillée pour que les caméras filment, **clim coupée** (environ 0,2 kW), jusqu'à 2 h ;
-  l'écran affiche un avertissement rouge fixe « SURVEILLANCE CAMÉRA ».
+  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) — sans elle, *Démarrer* est grisé, sauf
+  si *Surveillance sans caméra* est activée (désactivée par défaut, après un avertissement : aucune
+  vidéo n'est enregistrée, seulement l'écran d'avertissement et la clim coupée). La
+  voiture reste allumée et verrouillée, **clim coupée** (environ 0,2 kW), jusqu'à 2 h ; l'écran
+  affiche un avertissement rouge fixe « SURVEILLANCE CAMÉRA », avec une pastille **REC** en haut à
+  droite et la durée filmée (grise et figée quand la caméra d'origine de la voiture prend la main).
+
+**Enregistrement par l'application caméra** (#180) : avec une version pilotable de MG4-360-Camera-App,
+MG4Control lance l'enregistrement continu dès *Démarrer* (durée de la surveillance plus le décompte,
+120 min au plus) et l'arrête à toutes les fins. La page *Garde-voiture* a une carte **Caméra de
+surveillance** : l'application détectée (relue à chaque affichage de l'onglet), l'interrupteur *Lancer
+l'enregistrement automatiquement* (activé par défaut), l'emplacement (celui de l'application : un dossier
+« surveillance » sur la clé USB si elle est branchée, sinon en mémoire interne) et *Tester la clé
+USB*, avec l'espace libre et une durée d'enregistrement estimée. Dans la fenêtre, une ligne dit que
+l'application filmera et la place sur la clé ; sinon un bandeau prévient au-dessus des boutons :
+enregistrement automatique coupé, application que MG4Control ne sait pas piloter, ou version trop
+ancienne — l'enregistrement se lance alors à la main dans l'application. Un échec d'enregistrement
+n'arrête pas la surveillance. L'état renvoyé par l'application ne sert qu'à l'affichage. Toute application
+caméra peut s'y brancher en déclarant pour `com.mg4.control.action.SHORTCUT` deux actions
+`<préfixe>.action.START_CONTINUOUS` et `STOP_CONTINUOUS` (contrat détaillé dans
+[l'issue #96 de MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App/issues/96)).
+
+Sur ces trois écrans, la ligne d'état donne aussi la puissance tirée de la batterie, en watts (#210).
 
 Avant le décompte, un **rappel** dit de garder la clé sur soi et donne les trois façons de
 déverrouiller la voiture : le petit bouton d'une poignée de porte avant, la clé (verrouiller puis
@@ -310,12 +2095,14 @@ la voiture s'éteint. Tout s'arrête si la voiture est déverrouillée (elle res
 elle roule, ou sous un niveau de batterie réglable. Un écran de suivi plein cadre montre le temps
 restant, le cycle en cours et l'état du verrouillage, avec des particules bleues ou orange selon
 que la clim refroidit ou chauffe ; pendant l'attente, l'écran reste normal, s'atténue (par défaut)
-ou s'éteint. Les boutons flottants disparaissent du décompte jusqu'à la fin du programme. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte,
+ou s'éteint — *Appliquer aussi à la surveillance* (Non par défaut) fait suivre ce choix à l'écran de
+surveillance, et *Éteint* le rend entièrement noir. Les boutons flottants disparaissent du décompte jusqu'à la fin du programme. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte,
 le temps restant et la consigne, ou la surveillance en cours. Les réglages (délai de verrouillage
 10–60 s, seuil de batterie 10–40 %, écran, fiche du combiné, rappel avant le départ) sont sur la page *Garde-voiture* de
 l'onglet Raccourcis.
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Ne laissez jamais un enfant seul dans la voiture. Le mode chien ne remplace pas une
 > surveillance : une batterie trop faible, un verrouillage à la clé ou un incident couperaient la
 > clim.
@@ -327,11 +2114,27 @@ climate on » de [MG4Dash](https://github.com/Skittle6938/MG4Dash).
 Jusqu'à **6 bulles** posées par-dessus toutes les applications (onglet Raccourcis, page *Boutons
 flottants*) : un toucher déclenche le raccourci, un appui long déplace la bulle. Chaque bulle
 reprend une action des raccourcis du volant, avec un titre (le nom du raccourci par défaut), une
-taille, une taille de texte et du gras au choix. Une bascule s'affiche pleine quand elle est
+taille, une taille de texte et du gras au choix, et une couleur : bleue par défaut, générale ou
+propre à la bulle, parmi neuf pastilles ou au sélecteur de teinte. Une bulle se modifie dans sa
+propre carte de la page. Une bascule s'affiche pleine quand elle est
 activée ; une valeur (température, ventilation, régénération…) s'affiche un instant après l'appui,
-et un halo confirme le toucher. Une bulle peut aussi se loger dans la **barre noire du haut** de
-l'écran. **Chaque profil a ses propres bulles**, copiables vers d'autres profils. Elles se cachent
+et un halo confirme le toucher. Une bulle peut aussi se loger n'importe où dans la **barre noire du
+haut** de l'écran (#222). **Chaque profil a ses propres bulles**, copiables vers d'autres profils, et
+l'interrupteur de la page vaut pour le profil choisi. Elles se cachent
 en marche arrière, en Mode Garage et pendant le Garde-voiture.
+
+- **Bulles d'information** (#236) : au lieu d'un titre, une bulle peut afficher une valeur lue sur
+  la voiture — batterie, autonomie, température extérieure, vitesse, consigne de clim, mode de
+  conduite, régénération, profil, volume, heure, **altitude** (#254)… —, en *Valeur*, *Libellé + valeur* ou *Icône +
+  valeur*. Au toucher : lancer l'action, ou rien (affichage seul ; l'appui long déplace toujours la
+  bulle). Une valeur oui / non la colore comme une bascule ; l'heure et la vitesse sont relues chaque
+  seconde, le reste toutes les 5 s, « — » quand la valeur est illisible
+- **Apparence de chaque bulle** (#230, #222) : opacité du fond (0 à 100 %), fond sombre, teinté,
+  clair ou noir, **largeur** *Automatique* ou *Fixe* (60 à 240 dp, la bulle ne change plus de
+  largeur avec sa valeur), bordure ou non, et **atténuation au repos** (40 % après 5 s sans toucher ; un toucher lance
+  l'action et la rend nette). *Copier l'apparence de…* reprend celle d'une autre bulle, de ce profil
+  ou d'un autre, et *Appliquer à toutes les bulles* l'étend au profil. Une bascule active reste
+  opaque à 60 % au moins ; sous 35 %, le texte prend un contour
 
 #### Raccourcis perso
 Onglet Raccourcis, page *Raccourcis perso* (#172, 20 au plus), avec un bouton **Tester**. Un
@@ -348,6 +2151,9 @@ cibles système (`android.`, `com.android.`, `com.saicmotor.`, `com.mg4.control.
 `intent:` sont refusés, et l'adresse d'un webhook est masquée dans le journal.
 
 ### Automatisation
+Six sous-onglets en pastilles : **Profils**, **Climatisation**, **Écran**, **En quittant**, **Sons**
+et **Mes automatisations** (ci-dessous).
+
 - **Application d'un profil selon la température extérieure** : seuil, sens
   (inférieure/supérieure), profil à appliquer, exécution directe ou bandeau de confirmation
 - **Application d'un profil selon la batterie** : quand le niveau passe sous un seuil réglable au
@@ -359,7 +2165,8 @@ cibles système (`android.`, `com.android.`, `com.saicmotor.`, `com.mg4.control.
 - **Luminosité automatique au démarrage** : au passage en READY, l'écran prend une luminosité
   choisie d'après les feux et/ou la météo — au moins une source, les feux seuls par défaut.
   **Feux seuls** (ni données mobiles, ni GPS ; seul mode de la version hors ligne) : deux
-  luminosités réglables, feux éteints (80 % par défaut) et feux allumés (20 %).
+  luminosités réglables, feux éteints (80 % par défaut) et feux allumés (20 %) ; les curseurs
+  descendent à 0 % (5 % sur les firmwares A9).
   **Météo** (case à cocher, elle consomme un peu de données) : une courbe à quatre points réglables
   (nuit, crépuscule, temps couvert, plein soleil) associe la luminosité à la lumière extérieure.
   La voiture ne mesurant pas la lumière, elle est estimée d'après la hauteur du soleil (position
@@ -398,7 +2205,8 @@ cibles système (`android.`, `com.android.`, `com.saicmotor.`, `com.mg4.control.
   est remise (#190). Un déclenchement pendant la lecture est ignoré ; les sons peuvent être
   réservés à certains profils
 - Chaque automatisation s'ouvre dépliée si elle est active, se déplie quand on l'active et se
-  replie quand on la coupe ; entre-temps, son chevron déplie ou replie librement le paramétrage
+  replie quand on la coupe ; entre-temps, son chevron — ou son titre — déplie ou replie librement le
+  paramétrage
 
 #### Fermeture automatique des vitres électriques
 Carte construite comme les autres automatisations : interrupteur d'activation à côté de la
@@ -418,10 +2226,85 @@ description, réglages dépliés au chevron (carte ouverte d'office quand l'opti
 Durée de course et calibrage restent réglables option coupée : ils servent aussi aux raccourcis
 « ouvrir / fermer toutes les vitres ».
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Les courses commandées par l'application n'ont pas l'anti-pincement du véhicule, sauf sur la
 > vitre conducteur. Personne près des vitres pendant une fermeture, et en particulier pendant une
 > fermeture automatique, qui part alors que vous êtes déjà dehors.
+
+#### Mes automatisations
+Vos propres règles **Quand / Et si / Alors** (#201), dans un éditeur plein écran sur une seule
+colonne, façon Home Assistant. Les automatisations ci-dessus restent à part, telles quelles.
+
+> ℹ️ **Note**
+>
+> Expérimental : chaque déclencheur, condition et action n'a pas encore été essayé en voiture.
+> Vos retours sont les bienvenus.
+
+- **Quand** : un capteur du véhicule qui bascule vers vrai, vers faux ou dans les deux sens, qui
+  passe au-dessus ou en dessous d'un seuil, qui devient, n'est plus ou change — chacun **pendant**
+  la durée de votre choix (« Tout de suite » par défaut) —, une heure, toutes les X minutes, lever ou coucher du soleil (± décalage), démarrage de l'écran, passage en READY ou sortie
+  de READY, passage en P ou en D, porte avant ouverte ou portes avant refermées (là où la voiture le
+  signale), charge, prise, verrouillage, téléphone connecté ou déconnecté, changement de profil
+  actif, lancement manuel…
+- **Et si** : groupes *Toutes* / *Au moins une* / *Aucune*, imbriqués sur trois niveaux — heure,
+  jours, saison, hasard, variables, lieux (GPS) et une soixantaine de valeurs du véhicule et
+  d'Android (récupération, ADAS, clim, sièges, verrouillage, luminosité, volume, Wi-Fi, Bluetooth,
+  Android Auto / CarPlay, média, appel, soleil levé, altitude…)
+- **Alors** : réglages du véhicule et de la clim (aussi à la valeur d'une variable, `$NOM`),
+  luminosité, volume, média (dont lecture et pause), vitres, son (bip avec son volume, ou vos sons
+  importés d'une clé USB, 12 au plus, au volume choisi), ouvrir une application, raccourci perso, lancer,
+  activer ou arrêter une autre automatisation, retenir une valeur dans une variable, ajouter ou
+  retirer, attendre, attendre que, Si / Sinon, Répéter, question Oui / Non en bandeau, navigation,
+  actions Android (retour à l'accueil, retour, fermer une application, ouvrir une page des paramètres),
+  données en direct vers ABRP ; Wi-Fi, Bluetooth et point d'accès à l'essai. « Lire un texte à voix
+  haute » n'est plus proposé (la voiture n'a pas de moteur vocal Android) ; une action existante
+  passe par la voix de la voiture sur SWI133 et SWI132
+- **Options** : que faire si elle est redéclenchée avant d'avoir fini (laisser finir ou
+  recommencer), anti-rebond, seulement en READY
+
+Chaque choix se fait dans une fenêtre à étapes, avec Retour et un chemin touchable ; une longue
+liste s'ouvre en grand, avec catégories, recherche et « Récents ». Déclencheurs, conditions et
+actions se choisissent de la même façon : **une tuile par option**, rangée dans sa catégorie, puis
+**son mode au toucher** — « Clim » est une seule tuile, qui propose *Régler sur…* ou *Bascule* ; un
+capteur propose ses modes et les raccourcis qui en relèvent sous leur nom (*La voiture passe en
+READY*, *Début de charge*…). La recherche ne montre que les tuiles, et les trouve aussi par les mots
+de leurs modes (« début de charge » trouve *En charge*). Les valeurs se règlent aux
+boutons − et +, sans clavier. Rien n'est enregistré avant *Enregistrer*, et *Tester* lance la
+version affichée. Des **modèles** servent de départ, dont l'arrêt du volant ou d'un siège chauffant
+après un temps (#173) et la luminosité selon le soleil (#198). La page garde 30 règles au plus, un
+interrupteur général, l'historique des 20 dernières exécutions avec leur journal, les variables
+(renommées partout d'un coup, modifiées ou supprimées) et les lieux (renommés, agrandis, déplacés à
+la position actuelle ou supprimés) ; export et import en JSON (Téléchargements, clé USB ou autre
+dossier — une règle importée arrive coupée). Une règle se lance aussi depuis une touche ou une bulle
+(*Lancer une automatisation*) ; sous son déclencheur *Bouton, bulle ou automatisation*, l'éditeur dit
+ce qui la lance. Deux pastilles sur la carte comptent ses **lancements** et ses **refus** (en
+orange), hors *Tester* ; la dernière exécution se lit « 2 actions réussies, 0 en échec », et
+l'historique donne le vrai résultat de chaque action (faite, envoyée ou en échec, avec la raison).
+L'**import garde les liens** entre automatisations, lieux, profils, sons, raccourcis et comptes
+ABRP : une fenêtre liste ce qui a été relié automatiquement ou par son nom, et fait choisir un
+remplaçant pour ce qui manque (ou *Plus tard*). Chaque menu ⋮ propose **Copier** et **Couper** ; *Coller* n'apparaît
+que là où l'élément a sa place (type de section, profondeur) et refuse une automatisation qui se
+lancerait elle-même. La carte d'une règle résume ce que fait un bloc Si / Sinon (« si X → A ;
+sinon → B ») ; le sélecteur *Toutes / Au moins une / Aucune* s'intitule « Conditions remplies : » et
+n'apparaît qu'à partir de deux conditions.
+
+**Données en direct vers ABRP** (#188, version en ligne seulement) : l'action *ABRP : données en
+direct* envoie à A Better Route Planner le niveau de batterie, la puissance, la vitesse, l'état de
+charge et, si vous l'acceptez, la position, pour un compte choisi ; la même action, réglée sur
+*Arrêter l'envoi*, le coupe.
+Les comptes se gèrent dans *Mes automatisations › Comptes ABRP* : saisis à l'écran, ou importés du
+fichier `mg4control_abrp.txt` d'une clé USB (un fichier modèle commenté est fourni, avec la clé API
+par compte ou commune). Cadence réglable en roulant, en charge et à l'arrêt. La clé partagée de
+MG4Control est limitée par ABRP à 2 envois par seconde pour tous les utilisateurs réunis : un
+avertissement le rappelle tant qu'elle est choisie et renvoie vers une clé personnelle gratuite. Le
+modèle **ABRP selon le profil** suit le profil actif.
+
+La voiture n'est relevée (toutes les 2 s) que si une règle active en a besoin, et une règle ne part
+que sur un « vrai » franc : une valeur illisible ne déclenche rien, et « devient vrai » exige
+d'avoir vu « faux » d'abord. Les écritures passent par le même verrou de vitesse que le reste de
+l'application ; la position vient du fournisseur `fused` de la T-Box, puis du GPS. Le Mode Garage
+suspend toutes les règles.
 
 ### Gestion de profils
 - Sauvegarde jusqu'à **10 profils** personnalisés (5 avant la 2.6.9)
@@ -434,25 +2317,49 @@ Durée de course et calibrage restent réglables option coupée : ils servent au
 - Précédence entre déclencheurs : manuel → température → Bluetooth → profil par défaut
 
 ### Statistiques
-Onglet de la barre du haut, **désactivé par défaut** : tant qu'il n'est pas activé, rien n'est
+Entrée du menu principal, **désactivée par défaut** : tant qu'elle n'est pas activée, rien n'est
 relevé. Tout reste dans la voiture, dans un fichier privé de l'application ; rien n'est envoyé
-ailleurs. Trois sous-onglets sur le rail habituel :
+ailleurs, sauf export demandé. Trois sous-onglets :
 
 - **Général** : résumé sur 30 jours ou sur tout l'historique — distance, consommation, énergie
   consommée, récupérée et rechargée, coût. Réglages : prix du kWh en charge lente et en charge rapide
   (jusqu'à 100 000, pour toutes les monnaies), monnaie, batterie de la voiture (51, 64 ou 77 kWh)
   et son **état de santé** (SOH), filtre des petits trajets, durée de conservation (30 jours à 1 an, 3 mois par défaut) et
-  « Tout supprimer »
-- **Trajets** : chaque trajet avec sa durée, sa distance, sa consommation et le détail de l'énergie
+  « Tout supprimer », à côté d'**Exporter**
+- **Trajets** : chaque trajet avec sa durée, sa distance, sa consommation, le détail de l'énergie
+  et, déplié, son **graphique de consommation** ; une rangée **Profil** filtre les trajets
 - **Recharge** : énergie rechargée, coût et sessions AC / DC, y compris les charges faites pendant
   que le boîtier dormait
+
+Trajets et recharges s'affichent par 50, avec *Afficher 50 de plus* et *Tout afficher*.
+
+**Par profil** (#206) : chaque trajet est découpé selon le profil actif. Un changement de profil
+en route en fait un trajet **« Mixte »**, dont le détail donne la répartition ; une portion de
+moins de 0,5 km se fond dans sa voisine. Filtré sur un profil, l'onglet ne compte que la part de ce
+profil (« 24 km sur 61 km »). Les recharges ne sont pas filtrées.
+
+**Graphique de consommation** : des barres le long du trajet, colorées selon la consommation (sous
+14, de 14 à 22, au-delà de 22 kWh/100 km), la récupération sous zéro. Leur largeur est choisie à
+l'affichage — 120 barres au plus, jamais moins de 200 m : 15 barres de 200 m pour 3 km, des barres
+de 2,5 km pour 300 km. Deux boutons, **Vitesse** et **Dénivelé**, ajoutent chacun une bande sous
+les barres, jamais deux échelles sur le même graphique ; le choix vaut pour tous les trajets.
+L'énergie vient de la puissance intégrée à la seconde (les compteurs au dixième de kWh sont trop
+grossiers à cette échelle) ; un point est gardé par relevé de 10 s, avec l'altitude GPS (environ
+5 Ko par heure). Un trajet d'avant la 2.7.0 n'a pas de graphique.
+
+**Export CSV** (#206) : *Exporter* écrit trois fichiers prêts pour un tableur — trajets, recharges
+et portions de trajet par profil — dans Téléchargements/MG4Control, sur une clé USB (dossier
+MG4Control) ou dans un dossier au choix. La dernière destination est retenue, un fichier du même nom
+est remplacé, et chaque fichier est écrit jusqu'au support avant d'annoncer « Enregistré ». La
+colonne `odometer_km` donne le kilométrage total de la voiture à la fin du trajet (vide pour un trajet
+enregistré avant cette version).
 
 D'où viennent les chiffres :
 
 | Mesure | Source |
 |---|---|
 | Bornes d'un trajet | Le contact — les compteurs d'énergie de la voiture repartent de zéro au même moment |
-| Distance | Intégration de la vitesse, relevée toutes les 10 s en roulant ; l'odomètre, qui ne publie que le kilomètre entier, sert de garde-fou |
+| Distance | Intégration de la vitesse à la seconde en roulant (repli sur les relevés de 10 s si une valeur manque) ; l'odomètre, qui ne publie que le kilomètre entier, sert de garde-fou |
 | Énergie d'un trajet, SWI133 et SWI132 | Compteurs de la voiture, au dixième de kWh : total, climatisation, accessoires, récupération |
 | Énergie d'un trajet, autres firmwares | Leurs compteurs restent à zéro : tension × courant de la batterie, relevés chaque seconde en roulant. Le détail se limite à « Moteur » et « Climatisation et autres », au kWh entier |
 | Énergie d'une charge, alternatif | Écart de pourcentage × capacité retenue : capacité utile de la batterie choisie × état de santé |
@@ -475,7 +2382,7 @@ Règles à connaître :
   choisie (1 km par défaut, de 0,1 à 50 km) n'est pas enregistré
 - **Batterie et état de santé** : l'état de santé se règle de 50 à 100 % par pas de 0,5 %, aux
   boutons − et + (maintenus, ils défilent), et la capacité retenue s'affiche dessous. 100 % par
-  défaut : un concessionnaire ou une appli OBD peut le mesurer. Changer l'un ou l'autre recalcule
+  défaut : un concessionnaire ou une application OBD peut le mesurer. Changer l'un ou l'autre recalcule
   les recharges enregistrées d'après le pourcentage — une énergie mesurée ne bouge pas ; tant que la
   batterie n'a pas été confirmée, l'onglet Recharge le rappelle
 - **Charges rapides** : le pourcentage affiché ne suit pas l'énergie entrée (de 62,8 à 70,1 %,
@@ -497,8 +2404,8 @@ Règles à connaître :
   relevés datés d'avant 2025 sont écartés
 
 ### Écran conducteur
-Option de *Réglages → Interface*, **désactivée par défaut**, sur **SWI133, SWI68 et SWI165**
-seulement : un module MG4Control s'affiche au centre du combiné, derrière le volant, à la place de
+Option de *Réglages → Interface*, **désactivée par défaut**, partout où l'application SAIC du
+combiné est installée (**SWI133, SWI68, SWI165**, et tout autre firmware qui l'a, #231) : un module MG4Control s'affiche au centre du combiné, derrière le volant, à la place de
 la page d'origine des onglets Navigation et Musique.
 
 Le combiné est un calculateur à part. Seul un carré de **260 × 260 px**, au centre, vient de
@@ -522,16 +2429,26 @@ dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas 
   crans. Puissance : le zéro marqué, la récupération à gauche en bleu, la puissance à droite en gris
   clair. Consommation : une courte zone de récupération à gauche, puis l'échelle ; un triangle
   « moy. » marque la moyenne du trajet, et la barre est verte en dessous, orange au-dessus. Mêmes
-  échelles que le style dynamique, même pastille, même moyenne en bas ; la barre suit en deux
+  échelles que le style dynamique, mêmes cases d'information ; la barre suit en deux
   secondes, sans trembler, quelle que soit l'actualisation
-- **Pastille** en haut à gauche : *Profil* (par défaut) — le dernier profil appliqué, en capitales,
-  dans la couleur du mode de conduite **du profil** (celle de la voiture s'il ne règle pas la
-  conduite) —, *Mode de conduite*, ou *Aucune*. Jamais plus large que celle du mode le plus long :
-  un nom plus long finit en ellipse
+- **Personnalisation avancée** (#229) : un popup avec un aperçu animé à gauche ; on touche une
+  case ou la jauge pour la régler, on la presse longuement pour la déplacer. **La jauge** se place en
+  haut, au milieu ou en bas ; **jusqu'à 4 informations** l'entourent (deux rangées de deux) : profil,
+  mode de conduite, moyenne, énergie récupérée, distance, énergie consommée, puissance, batterie,
+  autonomie, température, heure, altitude et les autres valeurs des bulles. Chaque case : *Valeur*,
+  *Libellé + valeur*, *Icône + valeur* ou *Pastille* (profil et mode — le dernier profil appliqué, en
+  capitales, dans la couleur de son mode de conduite), trois tailles, toute la largeur si la voisine
+  est libre, et son unité (la moyenne en Wh/km, kWh/100 km ou km/kWh ; la puissance en kW ou en
+  chevaux). Une rangée sans information disparaît sur le combiné et la jauge s'agrandit. Pour la
+  jauge : épaisseur, couleurs de la consommation et de la récupération, repère de la moyenne du
+  trajet, kW sous la consommation, consommation sous les kW — les options suivent la jauge choisie
+  dans l'aperçu, qui se rouvre sur la dernière choisie —, et **jauge de puissance en kW ou en
+  chevaux** (graduations rondes : 25, 50, 100, 200 ch…). Sans réglage, la disposition d'avant :
+  pastille du profil en haut, moyenne et récupération en bas
 - **Unités** : celle de la **jauge**, Wh/km (par défaut) ou kWh/100 km, avec une décimale sous 100 —
   l'anneau ne bouge pas d'une unité à l'autre, ses graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km,
   ou 0 · 10 · 20 · 50 · 100 · 300 kWh/100 km) suivent l'unité — et, à part, celle de la **moyenne du
-  trajet** : Wh/km, kWh/100 km ou km/kWh (par défaut, celle de la jauge)
+  trajet**, dans sa case : Wh/km, kWh/100 km ou km/kWh (par défaut, celle de la jauge)
 - **Échelle de puissance resserrée** : logarithmique, pour que l'arc bouge en roulant — 20 kW en
   remplissent un quart, 50 kW 44 %, 100 kW 63 % ; côté récupération, 10 kW font 36 %. Graduations
   20 · 50 · 100 · 200 · 320 et 10 · 30 · 60. Le remplissage s'arrête net au zéro, sans déborder de
@@ -559,7 +2476,7 @@ dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas 
 - **Par profil** : en haut de la carte, « Réglage de : » montre les profils en puces, à sélection
   multiple ; chaque changement s'applique à tous ceux sélectionnés, et toute la carte suit le
   profil actif. Un nouveau profil démarre avec le module coupé
-- **Distance** : Auto (par défaut, l'unité réglée sur la voiture), km ou miles. En miles, tout le
+- **Distance** : le réglage général *Unité de distance* (cf. *Réglages*). En miles, tout le
   module bascule : jauge en Wh/mi ou kWh/100 mi, moyenne en Wh/mi, kWh/100 mi ou mi/kWh
 - **Puissance maxi** (#165) : Auto (par défaut), 125, 150, 180 ou 320 kW, par profil. Auto apprend
   des pointes réellement atteintes : l'échelle monte dès qu'elle est dépassée et redescend d'un
@@ -603,16 +2520,22 @@ Statistiques.
 
 ### Réglages
 Écran organisé en **quatre onglets** :
-- **Langues** : français, anglais, allemand, espagnol, italien, portugais, turc — au premier
-  lancement, MG4Control prend la langue de la voiture si elle est traduite (les pop-ups affichés
-  avant la première ouverture aussi), sinon il la demande dans une fenêtre à sept grandes tuiles
+- **Langues** : français, anglais, allemand, espagnol, italien, portugais, turc, polonais,
+  norvégien (bokmål, #239) et tchèque (#257) — au premier lancement, MG4Control prend la langue de la
+  voiture si elle est traduite (les pop-ups affichés avant la première ouverture aussi), sinon il la
+  demande dans une fenêtre à dix grandes tuiles, deux rangées de cinq
 - **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair), taille du texte
   (standard / grand / très grand), **plein écran** (barres d'état et de navigation masquées,
   désactivé par défaut), **délai avant la fermeture des pop-ups** (1 à 60 s, 10 par défaut),
   **pop-up de charge** (désactivé par défaut), **zone clim pendant Android Auto / CarPlay**
-  (désactivée par défaut), **module sur l'écran conducteur** (SWI133, SWI68, SWI165 — cf. ci-dessus)
+  (désactivée par défaut), **côté du menu** (Auto — il suit le côté du volant —, Gauche ou Droite),
+  **unité de distance** (Auto — celle de la voiture —, km ou miles, pour les statistiques, l'écran
+  conducteur et les bulles d'information ; l'export CSV reste en km), **module sur l'écran
+  conducteur** (cf. ci-dessus)
 - **Réglages avancés** : **Mode Garage** (cf. ci-dessous), retour au profil par défaut à chaque
-  passage en READY (option, décochée), **ce que règle AUTO**, **raccourci de secours** (clic central
+  passage en READY (option, décochée), **ce que règle AUTO**, **garder l'A/C coupé**, **nouvelle
+  détection du téléphone pour Android Auto / CarPlay** (cf. raccourcis), **applications en plein
+  écran** (cf. ci-dessous), **raccourci de secours** (clic central
   du joystick droit tenu 5 s : MG4Control s'ouvre, même en Mode Garage ; activé par défaut, par le
   service d'accessibilité), vérification des mises à jour au lancement, **alerte de mise à jour sur
   l'écran du véhicule**, **canal bêta**, extinction du véhicule écran allumé, blocage des réglages
@@ -620,7 +2543,30 @@ Statistiques.
 - **Infos** : vérification des mises à jour, nettoyage des APK, **consommation de données**
   (aujourd'hui, semaine en cours, mois courant, 30 derniers jours), dialog « À propos » (version de
   l'app, firmware, QR codes), bouton **Paramètres Android**, indicateur de firmware, et bouton
-  Diagnostic révélé par 5 clics sur le logo
+  Diagnostic révélé par 5 clics sur le logo — son « Enregistrer… » propose Téléchargements/MG4Control,
+  une clé USB ou un dossier au choix
+
+#### Applications en plein écran (#248)
+*Réglages → Avancé*, sous la carte « Android Auto · CarPlay », désactivée par défaut. Choisissez
+des applications (Waze, ABRP…) pour lesquelles le **bandeau du haut**, la **barre latérale** de la
+voiture ou les deux sont cachés : pour chaque application, *Normal*, *Bandeau*, *Barre* ou *Tout*
+(la fenêtre a une recherche, par nom ou par paquet). Android Auto, CarPlay, les lanceurs et
+MG4Control ne sont jamais proposés. À chaque activation, un avertissement rappelle que la fonction
+modifie un réglage d'Android partagé par toutes les applications et peut entrer en conflit avec un
+lanceur personnalisé ou une autre application qui gère aussi le plein écran ; il donne l'astuce,
+reprise sous l'interrupteur : **glisser depuis le bord de l'écran** (gauche, ou droit si le volant
+est à droite ; depuis le haut pour le bandeau) fait revenir la barre quelques secondes.
+
+Sous le capot : le réglage `Settings.Global "policy_control"` d'Android 9 (`immersive.full`,
+`.status`, `.navigation`), partagé avec [MG4Dash](https://github.com/Skittle6938/MG4Dash) selon une
+**règle commune** écrite avec son développeur — la même fonction Kotlin dans les deux applications
+(`ImmersivePolicy`). Chaque propriétaire garde ce qu'il a demandé dans sa propre clé Global
+(`mg4control_immersive`, `mg4dash_immersive`…), la clé commune `immersive_managed` retient ce qu'ils
+ont écrit, et un propriétaire ne retire que ce que plus personne ne réclame ; les sections et
+valeurs étrangères sont gardées. Il faut MG4Dash **1.7.3 beta 24** (versionCode 292) ou plus
+récent : avec une version plus ancienne, l'option est en pause et MG4Control ne retire que ses
+propres entrées. Un passage a lieu au démarrage, à chaque changement, et quand MG4Dash est
+installé, mis à jour ou désinstallé. Lignes du Diagnostic : `MG4_IMMERSIF`.
 
 ### Pop-ups et fenêtres
 Depuis la 2.6.8, tout ce qui s'affiche en fenêtre partage la même présentation : cartes arrondies,
@@ -632,9 +2578,10 @@ gros boutons, et plus aucune saisie au clavier.
 |---|---|
 | Sélecteur de profils | Plein cadre : une carte par profil (mode de conduite en couleur, profil en cours marqué « Actif »), luminosité (Nuit / Moyen / Jour et curseur), Ouvrir MG4Control, Garde-voiture, Éteindre la voiture |
 | Pop-up HVAC | Plein cadre : chauffages, température et ventilation au joystick, AUTO et son débit, A/C, ECO et recirculation |
+| Pop-up Réglages rapides | Plein cadre : les tuiles choisies, les valeurs de la tuile touchée dans une bulle accrochée à elle |
 | Garde-voiture | Fenêtre de lancement (Maintenant / À une heure, mode chien, surveillance), puis écran de suivi plein cadre |
 | Pop-up de charge | Plein cadre : niveau et limite de charge, courbe depuis le début, heure de fin, puissance, énergie, autonomie gagnée, coût, durée |
-| Confirmation d'une automatisation | Bandeau en bas de l'écran : mesure, seuil, profil proposé, NON / OUI |
+| Confirmation d'une automatisation | Bandeau en bas de l'écran : mesure, seuil, profil proposé, NON / OUI — ou la question Oui / Non d'une de vos automatisations |
 | Mise à jour disponible | Bandeau : versions, Plus tard / Ignorer cette version / Installer la MAJ |
 | Extinction du véhicule | Bandeau : Annuler / Éteindre — ou « Extinction impossible » hors de P |
 
@@ -681,7 +2628,9 @@ sur le moment :
 | Profil au démarrage et au contact | Y compris la résolution Bluetooth |
 | Automatisations par température | Profil comme climatisation |
 | Média en quittant la voiture | |
+| Mes automatisations | Aucune règle ne part, même lancée par une touche |
 | Boutons flottants | Retirés de l'écran dès l'activation |
+| Écran conducteur | Modules retirés du combiné |
 | API externe | Les commandes tierces sont refusées |
 | Alerte de mise à jour sur l'écran du véhicule | |
 
@@ -695,7 +2644,8 @@ raccourcis et automatisations compris.
 La notification persistante affiche « Mode Garage — en veille » tant qu'il est actif : sans ce
 repère, un mode oublié se manifesterait par « plus rien ne marche » sans la moindre explication.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > Le Mode Garage **remplace** l'ancien interrupteur « le profil par défaut s'applique
 > automatiquement au lancement », dont il est la version complète. Qui l'avait décoché est repris
 > en Mode Garage activé à la première ouverture : couper l'application était bien l'intention.
@@ -731,10 +2681,19 @@ anglais, puis une section repliée par langue, ouverte par une marque invisible
 `<!-- lang:xx -->`. L'application n'affiche que la section de sa langue, et l'anglais si cette
 langue n'a pas de section.
 
+**Installation sans détour** : une fois l'APK téléchargé et sa signature vérifiée, MG4Control
+l'installe lui-même — plus de passage par le dossier Téléchargements ni par l'installeur Android —,
+par une session `PackageInstaller` avec le drapeau interne `INSTALL_INTERNAL`, comme DiAuto-MG4.
+L'application se relance ensuite d'elle-même et se rouvre si elle était à l'écran. Une version plus
+ancienne est refusée ; en cas d'échec, un message le dit et l'ancienne voie reste possible.
+
 ### Profils
-- Liste des profils avec application, définition par défaut, modification, suppression
-- **Ordre des profils** : un appui long sur une carte de la liste la soulève ; on la fait glisser à
-  sa place (la liste défile seule près de ses bords, un bandeau indique la position) et l'ordre est
+- Profils en **grille de trois colonnes**, avec application, définition par défaut, modification,
+  suppression ; le profil appliqué est marqué « Actif » tout de suite
+- **Menu ⋮ de chaque carte** : *Dupliquer* (« <nom> Copie », placé juste après l'original, réglages
+  copiés sans le téléphone associé), *Renommer* et *Supprimer*
+- **Ordre des profils** : un appui long sur une carte la soulève ; on la fait glisser à sa place,
+  dans les quatre directions (la grille défile seule près de ses bords, un bandeau indique la position) et l'ordre est
   enregistré au relâcher. Cet ordre est celui du sélecteur, des boutons de la page « Cycle profils »
   et du cycle par défaut ; en conflit Bluetooth, c'est la priorité — le premier des profils en
   conflit s'applique à la fin du délai
@@ -774,7 +2733,8 @@ Les curseurs sont bornés à la saisie (15–33 °C, 1–11), mais les **vraies*
 véhicule au moment d'appliquer et la consigne y est clampée : elles diffèrent entre A9 et les
 autres firmwares.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > **Le profil est prioritaire sur l'automatisation A/C.** Si le profil appliqué depuis le démarrage
 > de l'application porte un bloc climatisation, l'automatisation par température ne fait rien et le
 > journalise. Sans cette règle les deux s'écriraient dessus au contact, dans un ordre que rien ne
@@ -811,9 +2771,11 @@ autres firmwares.
 | Firmware SWI165 | Compatible ✅ |
 | Firmware DBI68 (distributeur) | Reconnu comme SWI68 ✅ |
 | Firmware DBI133 (distributeur) | Reconnu comme SWI133 |
+| Firmware SWI173 (marché asiatique) | Reconnu comme SWI131 (#175) |
 | Firmware UNKNOWN | Mode forcé SWI133/SWI132/SWI68/SWI69/SWI131/SWI165 disponible ⚠️ |
 
-Le module sur l'écran conducteur est réservé à SWI133, SWI68 et SWI165 (cf.
+Le module sur l'écran conducteur demande l'application SAIC du combiné : SWI133, SWI68, SWI165, et tout
+autre firmware qui l'a (#231 ; cf.
 [Écran conducteur](#écran-conducteur)). Le pop-up de charge fonctionne partout ; sur les A9, sa
 limite de charge ne se règle que si la batterie le permet (pas en LFP — cf.
 [Pop-up de charge](#pop-up-de-charge)).
@@ -892,6 +2854,8 @@ MG4Control/
 │   │   │   ├── StatsSummary.kt        # Statistiques : agrégats d'une période (coût, consommation)
 │   │   │   ├── PowerIntegrator.kt     # Énergie par tension × courant (firmwares sans compteurs)
 │   │   │   ├── ClusterGauge.kt        # Écran conducteur : échelles des jauges, place du carré, moyenne du trajet
+│   │   │   ├── ClusterLayout.kt       # Écran conducteur : disposition (jauge + 4 cases), informations, unités, chevaux
+│   │   │   ├── BubbleInfo.kt          # Bulles d'information : valeurs proposées et leur mise en forme
 │   │   │   ├── ClusterTab.kt          # Écran conducteur : onglets du combiné
 │   │   │   ├── ChargeModule.kt        # Module de charge du combiné : cible, temps restant, énergie
 │   │   │   ├── ChargePopupModel.kt    # Pop-up de charge : limite, échelle de la courbe, relevés de la charge
@@ -900,8 +2864,20 @@ MG4Control/
 │   │   │   ├── CustomShortcut.kt      # Raccourcis perso : types, validation, cibles refusées
 │   │   │   ├── SoundAutomationRules.kt # Sons : moments, source audio à remettre
 │   │   │   ├── PowerScale.kt          # Écran conducteur : fin d'échelle de puissance apprise
-│   │   │   ├── Projection.kt          # Android Auto / CarPlay : quel téléphone, quelle appli
+│   │   │   ├── Projection.kt          # Android Auto / CarPlay : quel téléphone, quelle application
+│   │   │   ├── UsbPhone.kt            # Téléphone en USB : Apple / Android / AOAP, règles de temps (#251)
+│   │   │   ├── ImmersivePolicy.kt     # Applications en plein écran : règle commune avec MG4Dash pour policy_control (#248)
+│   │   │   ├── ImmersiveCleanup.kt    # Applications en plein écran : ne retire que nos entrées devant un ancien MG4Dash
 │   │   │   ├── ChargeEnergyLearning.kt # Énergie des charges : table apprise par tranche de 1 %, source retenue
+│   │   │   ├── TripSegments.kt        # Trajet découpé par profil, « Mixte », part d'un profil
+│   │   │   ├── TripCurve.kt           # Graphique d'un trajet : points relevés, barres choisies à l'affichage
+│   │   │   ├── StatsCsv.kt            # Export CSV : trajets, recharges, portions par profil
+│   │   │   ├── QuickSettings.kt       # Pop-up Réglages rapides : tuiles choisies
+│   │   │   ├── DashcamRemoteModel.kt  # Application caméra : contrat, détection, compteur REC, place sur la clé
+│   │   │   ├── AbrpTelemetry.kt       # ABRP : relevé envoyé et cadence
+│   │   │   ├── BubbleColors.kt        # Boutons flottants : pastilles de couleur, contraste du texte
+│   │   │   ├── PowerSmoother.kt       # Garde-voiture : puissance tirée de la batterie, lissée
+│   │   │   ├── CustomRule.kt          # Mes automatisations : modèle (+ CustomRuleLogic, CustomRuleText, CustomRuleTemplates)
 │   │   │   └── ProfileBackup.kt       # Format de la sauvegarde véhicule
 │   │   │
 │   │   ├── profile/
@@ -912,14 +2888,18 @@ MG4Control/
 │   │   │
 │   │   ├── hardware/
 │   │   │   ├── MG4Hardware.kt         # Abstraction matérielle (4 couches)
+│   │   │   ├── SaicVoice.kt           # Voix de la voiture (moteur SAIC com.saicmotor.voicetts)
 │   │   │   ├── StatsCollector.kt      # Relevés des statistiques (seulement si elles sont activées)
 │   │   │   ├── ClusterTabReader.kt    # Onglet affiché sur le combiné
 │   │   │   ├── BatteryTypeConfig.kt   # Type de batterie (A9) : limite de charge réglable ou non
 │   │   │   ├── ChargeProbe.kt         # Sonde de diagnostic de la charge (journal MG4_CHARGE)
+│   │   │   ├── DriverSide.kt          # Côté du volant lu sur la voiture (côté du menu)
+│   │   │   ├── UsbPhoneKick.kt        # Nouvelle détection du téléphone : annonce USB et remise à zéro de la prise (#251)
 │   │   │   └── VehicleWriteGate.kt    # Verrou de vitesse posé dans les primitives d'écriture
 │   │   │
 │   │   ├── stats/
-│   │   │   └── StatsStore.kt          # Historique des statistiques : fichier, purge à la lecture
+│   │   │   ├── StatsStore.kt          # Historique des statistiques : fichier, purge à la lecture
+│   │   │   └── StatsExport.kt         # Écriture des exports : Téléchargements, clé USB, dossier choisi
 │   │   │
 │   │   ├── accessibility/
 │   │   │   ├── KeyCaptureService.kt   # Service d'accessibilité — voit les touches avant le launcher
@@ -928,6 +2908,8 @@ MG4Control/
 │   │   │
 │   │   ├── shortcut/
 │   │   │   ├── RegenCycle.kt          # Séquence du cycle de régénération choisie par l'utilisateur
+│   │   │   ├── DriveModeCycle.kt      # Modes retenus du cycle des modes de conduite
+│   │   │   ├── OnePedalReturn.kt      # 1 Pédale au second appui : « Comme avant » ou niveau fixe
 │   │   │   └── ShortcutAction.kt      # Catalogue des actions, partagé par les deux systèmes
 │   │   │
 │   │   ├── bluetooth/
@@ -944,25 +2926,50 @@ MG4Control/
 │   │   │   ├── ClimateAutomationSettings.kt # Déclenchement A/C
 │   │   │   ├── SoundAutomation.kt           # Sons : lecture, volume et source audio rendus
 │   │   │   ├── SoundAutomationSettings.kt   # Sons : fichiers, moments, profils
+│   │   │   ├── CustomRules.kt              # Mes automatisations : moteur, relevés, déclencheurs
+│   │   │   ├── CustomRuleStore.kt          # Mes automatisations : règles enregistrées (30 au plus)
+│   │   │   ├── RuleServices.kt             # Mes automatisations : écritures, Android, position
+│   │   │   ├── AbrpStore.kt                # Comptes ABRP, clé API, import du fichier modèle
+│   │   │   ├── AbrpStream.kt               # Envoi continu vers ABRP (cadence, journal résumé)
+│   │   │   ├── AcKeepOff.kt                # Garder l'A/C coupé quand la consigne change
 │   │   │   └── ClimateAutomationDecision.kt
 │   │   │
 │   │   ├── ui/
-│   │   │   ├── DashboardFragment.kt   # Écran principal (rail 3 catégories)
+│   │   │   ├── DashboardFragment.kt   # Écran principal (3 sous-onglets)
 │   │   │   ├── ProfileFragment.kt     # Liste des profils
-│   │   │   ├── ProfileEditFragment.kt # Éditeur plein écran (rail 3 catégories)
-│   │   │   ├── SettingsFragment.kt    # Réglages (rail 4 onglets)
-│   │   │   ├── ShortcutsFragment.kt   # Raccourcis classiques + avancés + liste
+│   │   │   ├── ProfileEditFragment.kt # Éditeur plein écran (3 sous-onglets)
+│   │   │   ├── SettingsFragment.kt    # Réglages (4 sous-onglets)
+│   │   │   ├── ShortcutsFragment.kt   # Raccourcis : boutons physiques et pages de réglage
 │   │   │   ├── AutomationFragment.kt  # Automatisations
-│   │   │   ├── StatsFragment.kt       # Statistiques (rail 3 onglets)
+│   │   │   ├── WheelButtonsPage.kt    # Boutons physiques : une carte par touche, Court / Long / Double
+│   │   │   ├── QuickSettingsPage.kt   # Page Réglages rapides : choix et ordre des tuiles
+│   │   │   ├── CustomRulesPage.kt     # Mes automatisations : liste, historique, variables, lieux
+│   │   │   ├── AbrpDialogs.kt         # Comptes ABRP : liste, fenêtre d'un compte, fichier modèle
+│   │   │   ├── DashcamUi.kt           # Textes du test de la clé USB de l'application caméra
+│   │   │   ├── FlowRow.kt             # Rangée qui passe à la ligne (puces des Réglages rapides, ABRP)
+│   │   │   ├── CustomRuleEditFragment.kt # Éditeur Quand / Et si / Alors (une colonne)
+│   │   │   ├── Assistant.kt           # Fenêtre à étapes de l'éditeur (Retour, chemin, grande fenêtre)
+│   │   │   ├── RuleValueDialogs.kt    # Valeurs d'une règle, sans clavier
+│   │   │   ├── TripCurveView.kt       # Graphique de consommation d'un trajet
+│   │   │   ├── ExportDialog.kt        # Choix de la destination d'un export (+ ImportDialog)
+│   │   │   ├── BubbleColorViews.kt    # Couleur des bulles : pastilles et sélecteur de teinte
+│   │   │   ├── StatsFragment.kt       # Statistiques (3 sous-onglets)
 │   │   │   ├── ProfileAdapter.kt      # Adaptateur RecyclerView profils
 │   │   │   ├── AppDialog.kt           # Fenêtres de l'app : confirmation, grille de choix, listes, boutons − / +
+│   │   │   ├── ImmersiveAppsDialog.kt # Applications en plein écran : Normal / Bandeau / Barre / Tout par application
 │   │   │   ├── RestoreProfilesDialog.kt # « Restaurer les profils ? » — liste des profils retrouvés
 │   │   │   ├── StatsDialogs.kt        # Compléter une recharge, corriger un tarif (sans clavier)
 │   │   │   ├── ClusterSettingsPreview.kt # Aperçu de l'écran conducteur dans les réglages (trajet simulé)
+│   │   │   ├── ClusterLayoutEditor.kt # Écran conducteur : personnalisation avancée (aperçu, cases, glisser-déposer)
+│   │   │   ├── widget/ClusterBlocks.kt # Écran conducteur : valeurs des cases d'information
+│   │   │   ├── InfoIcons.kt           # Pictogrammes des informations (cases et bulles)
+│   │   │   ├── RuleLaunchers.kt       # Mes automatisations : ce qui lance une règle à la demande
 │   │   │   ├── ClusterTabDialog.kt    # Diagnostic : onglet affiché sur le combiné
 │   │   │   ├── widget/ClusterGaugeView.kt # Module de l'écran conducteur (anneau, arc ou barre discrète ; charge)
 │   │   │   ├── widget/ChargeCurveView.kt # Courbe du pop-up de charge
 │   │   │   ├── widget/ChargeLimitSliderView.kt # Barre de batterie, curseur de la limite de charge
+│   │   │   ├── widget/SegmentSwitch.kt # Interrupteur « Non | Oui » en segments
+│   │   │   ├── widget/RailButton.kt   # Entrées du menu et pastilles de sous-onglet
 │   │   │   ├── ConsoleFragment.kt     # Journal de debug en temps réel
 │   │   │   ├── DriveRegenFragment.kt  # Héritage (non utilisé en v2)
 │   │   │   ├── ClimateFragment.kt     # Héritage (non utilisé en v2)
@@ -980,25 +2987,35 @@ MG4Control/
 │   │   │   ├── ChargeMonitor.kt       # Suivi de charge en arrière-plan (pop-up et statistiques)
 │   │   │   ├── ChargePopupOverlay.kt  # Pop-up de charge (plein cadre)
 │   │   │   ├── PreClimate.kt          # Garde-voiture : programme, verrouillage, arrêts (+ fenêtre et écran de suivi)
+│   │   │   ├── DashcamRemote.kt       # Surveillance : START / STOP de l'application caméra, état REC, test de la clé
 │   │   │   ├── FloatingButtonsOverlay.kt # Bulles par-dessus les applications (+ FloatingButtonState, FloatingHalo)
 │   │   │   ├── CustomShortcutRunner.kt # Exécution d'un raccourci perso
+│   │   │   ├── QuickSettingsOverlay.kt # Pop-up Réglages rapides (+ QuickTiles, lecture et écriture des tuiles)
+│   │   │   ├── VehicleCommands.kt     # Écritures partagées par l'API externe et les automatisations
 │   │   │   ├── ProjectionShortcut.kt  # Raccourci Android Auto / CarPlay (+ ProjectionHvacZone, zone clim)
+│   │   │   ├── ProjectionKick.kt      # Nouvelle détection du téléphone : démarrage, réveil, raccourci (#251)
+│   │   │   ├── ImmersiveApps.kt       # Applications en plein écran : choix, passages, suivi de MG4Dash (#248)
 │   │   │   └── ClusterModuleOverlay.kt # Fenêtre du module sur l'écran du combiné, relevés et onglet
 │   │   │
 │   │   ├── receiver/
-│   │   │   └── BootReceiver.kt        # Récepteur de démarrage système
+│   │   │   ├── BootReceiver.kt        # Récepteur de démarrage système
+│   │   │   └── PackageReplacedReceiver.kt # Relance après une mise à jour
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Détection firmware + mode forcé
-│   │   │   ├── ClusterModuleSettings.kt # Écran conducteur : activation, module par onglet, style, pastille, unités, actualisation, animation
+│   │   │   ├── ClusterModuleSettings.kt # Écran conducteur : activation, module par onglet, style, disposition, unités, actualisation, animation
+│   │   │   ├── DistanceSetting.kt     # Unité de distance générale : Auto / km / miles
 │   │   │   ├── ChargePopupSettings.kt # Pop-up de charge : activé ou non
 │   │   │   ├── AndroidSettings.kt     # Ouverture des paramètres Android (bouton et raccourci)
 │   │   │   ├── FloatingButtonSettings.kt # Boutons flottants, par profil (+ FloatingProfiles)
 │   │   │   ├── CustomShortcutSettings.kt # Raccourcis perso enregistrés
 │   │   │   ├── PreClimateSettings.kt  # Garde-voiture : réglages de la page et derniers choix
 │   │   │   ├── GarageMode.kt          # Mode Garage — met tous les automatismes en veille
+│   │   │   ├── NavSide.kt             # Côté du menu : Auto / Gauche / Droite
+│   │   │   ├── ButtonLines.kt         # Libellés de bouton sur deux lignes, sinon « … »
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
-│   │   │   ├── LocaleHelper.kt        # Gestion de la langue (7 langues) et de la taille du texte
+│   │   │   ├── LocaleHelper.kt        # Gestion de la langue (10 langues) et de la taille du texte
+│   │   │   ├── DashcamApp.kt          # Garde-voiture : application caméra pilotable, ancienne ou absente
 │   │   │   ├── ThemeHelper.kt         # Thème auto / sombre / clair
 │   │   │   └── DataUsage.kt           # Consommation de données (interface Ethernet)
 │   │   │
@@ -1009,6 +3026,8 @@ MG4Control/
 │   │   │   ├── UpdateInfo.kt          # Description d'une version disponible
 │   │   │   ├── ApkSecurity.kt         # Contrôle de signature de l'APK téléchargé
 │   │   │   ├── ApkInstaller.kt        # Installation
+│   │   │   ├── SilentInstaller.kt     # Installation sans confirmation (session PackageInstaller)
+│   │   │   ├── InstallResultReceiver.kt # Résultat de l'installation
 │   │   │   └── ApkCleanup.kt          # Nettoyage des anciens APK
 │   │   │
 │   │   └── debug/
@@ -1019,7 +3038,7 @@ MG4Control/
 │   ├── res/
 │   │   ├── layout/                    # Écrans, dialogs et items de liste
 │   │   ├── navigation/nav_graph.xml   # Dashboard → Profils / Réglages / Raccourcis / …
-│   │   ├── values/strings.xml         # Chaînes FR (+ values-en, -de, -es, -it, -pt)
+│   │   ├── values/strings.xml         # Chaînes FR (+ values-en, -de, -es, -it, -pt, -tr)
 │   │   ├── values/colors.xml          # Palette claire
 │   │   └── values-night/colors.xml    # Palette sombre (mêmes noms de token)
 │   │
@@ -1153,39 +3172,49 @@ partir d'une lecture douteuse le désactiverait.
 ## Interface utilisateur
 
 ### Navigation
-L'application utilise un **NavController** avec **7 destinations** :
+Depuis la 2.7.0, le **menu principal** est une colonne à gauche : le logo MG4Control, qui ramène au
+tableau de bord (cinq appuis rapides révèlent le Diagnostic), puis Profils, Raccourcis,
+Automatisation, Statistiques et Réglages. Un second appui sur l'entrée affichée revient au tableau
+de bord. *Réglages → Interface → Côté du menu* le passe à droite : **Auto** (par défaut) suit le côté
+du volant lu sur la voiture (`0x2170421e`, octet 0 ; le dernier côté lu sert au démarrage suivant),
+**Gauche** et **Droite** le forcent.
+
+L'application utilise un **NavController** avec **8 destinations** :
 
 ```
 DashboardFragment (départ)
     ├──► ProfileFragment ──► ProfileEditFragment  (création / édition, plein écran)
-    ├──► AutomationFragment
     ├──► ShortcutsFragment
+    ├──► AutomationFragment ──► CustomRuleEditFragment  (éditeur de Mes automatisations)
     ├──► StatsFragment
     └──► SettingsFragment
 ```
 
-La barre du haut présente les onglets dans cet ordre : Profils, Automatisation, Raccourcis,
-Statistiques, Réglages. Ses boutons fonctionnent en bascule : un second appui revient au dashboard.
+### Sous-onglets
+Six écrans partagent le même motif : une rangée de **pastilles** en haut choisit le sous-onglet (elle
+défile si elle déborde, et passe à droite avec le menu), le contenu défile dessous, et ce qui
+n'appartient à aucun sous-onglet reste dans un bandeau persistant (nom du profil, interrupteur
+maître) ou en pied de page (Annuler / Enregistrer).
 
-### Rail de catégories
-Quatre écrans partagent le même motif : un **rail vertical à gauche** sélectionne une catégorie,
-le contenu défile à droite, et ce qui n'appartient à aucune catégorie reste dans un bandeau
-persistant (nom du profil, interrupteur maître) ou en pied de page (Annuler / Enregistrer / Fermer).
-
-| Écran | Onglets |
+| Écran | Sous-onglets |
 |---|---|
 | Dashboard | Conduite · Sécurité · Confort |
 | Éditeur de profil | Conduite · Sécurité · Confort |
+| Raccourcis | Boutons physiques · 1 Pédale · ADAS · Cycle regen · Cycle des modes · Cycle profils · Cycle sources · Garde-voiture · Réglages rapides · Boutons flottants · Raccourcis perso — la page d'une fonction n'apparaît que si elle est attribuée |
+| Automatisation | Profils · Climatisation · Écran · En quittant · Sons · Mes automatisations |
+| Statistiques | Général · Trajets · Recharge |
 | Réglages | Langues · Interface · Réglages avancés · Infos |
-| Raccourcis | Classiques · Avancés · Liste |
 
 Un onglet dont la page n'a plus aucune section visible sur le firmware courant est **masqué** —
-mieux vaut pas d'onglet qu'un onglet qui ouvre une page vide.
+mieux vaut pas d'onglet qu'un onglet qui ouvre une page vide. Chaque écran rouvre le dernier
+sous-onglet affiché, le temps de la session.
 
 ### Dimensionnement
-Valeurs communes aux écrans refondus, calées sur la lisibilité au volant : titres **20sp**,
-en-têtes de section **13sp**, libellés et boutons **16sp**, hauteur de bouton **52dp**, onglets du
-rail **64dp**, rail **180dp**, padding de carte **14dp**.
+Tailles reprises de DiAuto-MG4, calées sur la lisibilité au volant : titres **22sp**, textes
+**18–19sp**, boutons **64dp** de haut, interrupteurs « Non | Oui » en segments **64dp / 21sp**,
+pastilles de sous-onglet **62dp / 21sp**, cartes au rayon **24dp**, menu principal **184dp**. Un
+libellé de bouton passe sur deux lignes s'il y a la place, sinon il finit par « … » (`util/ButtonLines`),
+selon la langue et la taille du texte.
 
 ### Fenêtres et pop-ups
 - **Fenêtres de l'application** — `ui/AppDialog` : une carte arrondie sans décor, à la largeur
@@ -1208,24 +3237,24 @@ des deux côtés**, c'est la seule règle à respecter en ajoutant une couleur.
 
 | Token | Clair | Sombre | Usage |
 |-------|-------|--------|-------|
-| `dash_bg` | `#F2F2F7` | `#0C0C0E` | Fond général |
-| `dash_card` | `#FFFFFF` | `#141416` | Cartes |
-| `dash_section` | `#F2F2F7` | `#1C1C1F` | Sections internes |
-| `dash_border` | `#D1D1D6` | `#2A2A2E` | Bordures et séparateurs |
-| `dash_btn` | `#E5E5EA` | `#222226` | Fond de bouton inactif |
-| `dash_text_lo` | `#8E8E93` | `#52525B` | En-têtes de section |
-| `dash_accent` | `#0284C7` | `#38BDF8` | Sélection active (bleu) |
-| `dash_accent_dim` | `#E0F2FE` | `#0C4A6E` | Fond de la sélection active |
+| `dash_bg` | `#F2F5FA` | `#0C111B` | Fond général |
+| `dash_card` | `#FFFFFF` | `#151E2C` | Cartes |
+| `dash_section` | `#EEF2F8` | `#1B2636` | Sections internes |
+| `dash_border` | `#D5DEEA` | `#2A384B` | Bordures et séparateurs |
+| `dash_btn` | `#EEF2F8` | `#1B2636` | Fond de bouton inactif |
+| `dash_text_lo` | `#7A8699` | `#7F8DA3` | En-têtes de section |
+| `dash_accent` | `#1F5FC4` | `#A6C8FF` | Sélection active (bleu) |
+| `dash_accent_dim` | `#DCE8FB` | `#22344F` | Fond de la sélection active |
 | `dash_eco` | `#16A34A` | `#22C55E` | Mode ECO (vert) |
 | `dash_warn` | `#D97706` | `#F59E0B` | Avertissement (orange) |
 | `dash_danger` | `#E11D48` | `#F43F5E` | Suppression / danger |
-| `text_primary` | `#1C1C1E` | `#FFFFFF` | Texte principal |
-| `text_secondary` | `#6C6C70` | `#B0B0B0` | Texte secondaire |
+| `text_primary` | `#101826` | `#F1F5FC` | Texte principal |
+| `text_secondary` | `#556274` | `#A8B6CA` | Texte secondaire |
 
 Chaque couleur `*_dim` est le fond associé à sa couleur vive : `dash_eco_dim`, `dash_warn_dim` et
 `dash_danger_dim` suivent le même principe que `dash_accent_dim`.
 
-> **Piège de nommage :** `bg_dark` vaut `#FFFFFF` en thème clair. Le nom date d'une époque où
+> **Piège de nommage :** `bg_dark` vaut `#F2F5FA` en thème clair. Le nom date d'une époque où
 > l'application n'avait qu'un thème sombre ; il désigne le fond général, pas une couleur foncée.
 
 ---
@@ -1247,7 +3276,7 @@ propose que le type (*Broadcast receiver*) et la chaîne d'action.
 
 | Action | Effet |
 |---|---|
-| `com.mg4.control.action.ONE_PEDAL` | Bascule 1 pédale ↔ niveau de repli |
+| `com.mg4.control.action.ONE_PEDAL` | Bascule 1 Pédale ; au retour, le niveau d'avant ou le niveau choisi |
 | `com.mg4.control.action.ENERGY_SAVING_TOGGLE` | Économie d'énergie |
 | `com.mg4.control.action.PROFILE_PICKER` | Ouvre le sélecteur de profil à l'écran |
 | `com.mg4.control.action.OPEN_APP` | Ouvre MG4Control |
@@ -1445,1416 +3474,27 @@ Données météo de la luminosité automatique : [Open-Meteo.com](https://open-m
 
 ---
 
-<details open>
-<summary><strong>🇬🇧 English</strong></summary>
-
-## Table of Contents
-1. [Overview](#overview)
-2. [Features](#features)
-3. [Compatibility](#compatibility)
-4. [Architecture](#architecture)
-5. [Project Structure](#project-structure)
-6. [Hardware Layers](#hardware-layers)
-7. [Profile System](#profile-system)
-8. [User Interface](#user-interface)
-9. [External API](#external-api-keymapper-tasker)
-10. [Build & Installation](#build--installation)
-11. [Required Permissions](#required-permissions)
-12. [Licence](#licence-1)
-
----
-
-## Overview
-
-**MG4Control** is a system-level application designed for Android Automotive OS, intended to run on the head unit of MG4 electric vehicles equipped with the **SAIC MT2712** SoC. It provides direct, unified access to driving settings that are unavailable — or poorly accessible — through the stock manufacturer interface.
-
-The app communicates with the vehicle through the proprietary SAIC SDK, accessing Android Automotive services (`CarPropertyManager`, `CarHvacManager`) as well as low-level services exposed by the vehicle's firmware.
-
-> **Important:** This application requires system privileges (`sharedUserId="android.uid.system"`) and must be signed with the ROM's platform key. It cannot run on a standard unlocked device.
-
-> [!WARNING]
-> **MG4Control is an independent community project. It is in no way affiliated with, endorsed by, or supported by MG Motor, SAIC Motor, or any of their subsidiaries.**
-> Use this application entirely at your own risk. Incorrect settings may affect vehicle behaviour. Proceed with caution.
-
----
-
-## Features
-
-### Driving Settings
-- **Drive mode**: ECO / NORMAL / SPORT / SNOW / CUSTOM
-- **Regenerative braking**: Off / Low / Medium / High / Adaptive / One Pedal
-
-#### Custom drive mode
-Three settings the vehicle only exposes in that mode: **power** (Eco / Normal / Sport),
-**steering** and **pedal force** (Comfort / Normal / Sport). Available on all six firmwares
-through three distinct routes — `VehiclePropertyManager` signals on SWI133,
-`VehicleSettingManager` methods on SWI68/165, and `CarVehicleSettingClient` methods on A9.
-
-Present in two places, with a different reveal rule:
-
-| Screen | The card appears when |
-|---|---|
-| Dashboard, Driving tab | the **car** is in Custom mode, including when it was set from the stock screen |
-| Profile editor, Driving tab | the **profile** being edited has Custom as its mode |
-
-On the Dashboard, a row whose state the vehicle does not report disappears: the command exists on
-every firmware, but nothing guarantees the trim carries the hardware.
-
-> [!WARNING]
-> The three settings do not share one scale, and the pedal is a trap: **Normal is 0 there**, not
-> the middle value. Power is 1/2/3 on SWI133/68/165 but 2/3/4 on A9, where the car reuses the
-> drive-mode scale. The app therefore never handles those numbers — it passes a 0/1/2 index and
-> the conversion lives in `MG4Hardware`.
-
-In a profile they are only written when its drive mode is Custom, and a profile saved before this
-feature writes nothing until it has been reopened and saved.
-
-#### Intelligent battery heating
-The stock option hidden in the battery widget ("Energy consumption" tab) heats the battery while
-driving: fast charging gets better but range drops, and once switched on it never switches itself
-off. MG4Control puts it ON/OFF on the Dashboard (Driving tab, with the time left before the
-automatic switch-off), as a shortcut, and offers to switch it off automatically (see Automation).
-One vehicle property, `DRVNG_PTC_HEAT`, on all six firmwares: through the `VehiclePropertyManager`
-on SWI133, like SystemUI, directly elsewhere.
-
-> [!NOTE]
-> The state reads the same way on all six firmwares: 0 = on, 1 = off (1 is written to switch it
-> on, 2 to switch it off). On A9, the property is read and written in area 0, as the stock app
-> does: before 2.6.10, MG4Control read the state upside down there and the command had no effect
-> (#186). As on the stock screen, the option can also be changed while driving. The Diagnostic
-> probe (`MG4_BATHEAT`) logs the raw value.
-### Safety
-- **ESC**: ON / OFF
-- **Drowsiness warning**: ON / OFF, with Low / Standard / High sensitivity
-- **Forward collision warning (AEB)**: ON / OFF, Alert only or Alert + Braking, sensitivity
-- **Lane keeping assist (ELK)**: Alert / Assist / Emergency keeping, sensitivity, plus the audible
-  warning and vibration on SWI132
-
-> [!WARNING]
-> Turning the ESC off also turns the forward collision system off — the vehicle enforces that.
-> Both return to ON at every start-up. Inside a profile, ESC and drowsiness are written **only if
-> that profile configures them**: a profile created before these settings existed leaves them alone.
-
-### Comfort
-- **Heated steering wheel**: On / Off
-- **Heated seats (left & right)**: Off / Level 1 / 2 / 3
-- **Climate control**: temperature setpoint, fan speed, power, A/C, AUTO, recirculation
-  (inner / outside / auto), front and rear defrost
-- **Climate ECO mode**: On / Off — on the Dashboard, in profiles (On / Off / Unchanged) and in the
-  HVAC pop-up, next to A/C
-- **Airflow in AUTO** (#178): Low / Medium / High, the setting of the stock climate app — on the
-  Dashboard, in profiles (applied just before AUTO starts), as an "Airflow in AUTO: cycle" shortcut
-  and in the HVAC pop-up. If the car doesn't report this setting, a message says so
-- **What AUTO controls** (#160, *Settings → Advanced*): in AUTO, the car sets the fan, the air
-  direction and the recirculation. Untick the air direction and/or the recirculation to keep
-  yours: MG4Control puts them back right after AUTO starts. When you leave AUTO from MG4Control,
-  the previous air direction and recirculation come back, unless they were changed in the meantime
-- **Automatic high beam**: On / Off
-- **Screen brightness**
-
-### ADAS (Advanced Driver Assistance)
-- **SWI133**: Off / Speed Limiter / Auto / ACC / ICA + overspeed alert / speed limit change alert
-- **SWI68**: Disable / ACC / TJA + audible warning On / Off
-- **SWI69 / SWI131**: Forward Collision Warning (AEB) — On / Off + mode Alert only / Alert + Emergency Braking
-- **SWI165**: Disable / ACC / TJA + Forward Collision Warning (AEB) On/Off + Alert / Alert+Braking mode + audible warning
-
-### Physical Button Shortcuts
-
-Two systems live side by side, configured from the same screen:
-
-- **Classic shortcuts** — the left and right ★ buttons, short or long press. They rely on the
-  broadcast the vehicle emits: if the stock launcher already uses that button, the launcher wins.
-- **Advanced shortcuts** — any physical key, on the steering wheel **as well as on the panel
-  below the screen**, as a **short, long or double** press, through an **accessibility service**
-  the user enables themselves in Android. MG4Control then sees the key **before** the launcher and
-  can consume it.
-
-A long press fires **as soon as the 500 ms threshold is reached**, without waiting for the release:
-the action always happens at the same moment, while the key is still held. A double press has a
-cost worth knowing — on a key carrying one, the short press can no longer fire on release, it waits
-another 300 ms to make sure no second press follows. Keys without a double press pay nothing.
-
-> [!WARNING]
-> A key registered as an advanced shortcut is claimed **as a whole**. Intercepting a long press
-> means consuming the press as it starts, when it is still unknown whether it will be short, long
-> or double. Press types left unassigned therefore do *not* fall back to the launcher: they simply
-> do nothing.
-
-Available actions — those depending on the firmware do not show up on the others:
-
-| Category | Actions |
-|---|---|
-| Driving | One Pedal · Custom Regeneration Cycle · Energy saving · Battery heating ON/OFF |
-| Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
-| Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Airflow in AUTO (cycle) · Automatic high beam ON/OFF · Brightness ± · HVAC pop-up |
-| Windows | Open all windows · Close all windows |
-| Media | Play / Pause · Next track · Previous track · Volume + · Volume - · Audio source cycle |
-| App and vehicle | Apply a profile · Profile picker · Profile cycle · Charging pop-up · Car keeper · Android Auto / CarPlay · Open MG4Control · Launch an app · Custom shortcut · Android settings · Power the car off |
-
-Comfort and safety actions **re-read the state from the vehicle on every press** instead of
-remembering their own: the user also acts from the stock screen, so a remembered state would drift
-immediately. An unreadable state means doing nothing — nothing is ever written blind.
-
-The **One Pedal**, **Energy saving**, **Traffic signs (TSR)**, **Overspeed alert**, **Speed limit
-change alert** and **Sound** toggles also re-read the real state: a One Pedal switched on by the
-start-up profile is switched off on the very first press. Where that state cannot be read
-reliably, they fall back on their last command and alternate as before; only the forward
-collision A/B cycle still follows a remembered state.
-
-Each row of the advanced list shows the **button** (name and code), the **press type**, the
-**action**, then *Edit* and *Delete*. Reassigning a button already used with the same press type
-asks for confirmation and names the action about to be replaced. *Edit* opens a window with two
-side-by-side lists — the action and the profile — each opened on the current choice; the app or
-profile a shortcut targets is picked from a grid of tiles.
-
-#### Profile-scoped shortcuts
-An advanced shortcut carries a key, a press type, an action — and a **profile**, "All profiles" by
-default. The same key and press type can therefore carry several shortcuts, one per profile: under
-*Sport* the button does one thing, under *Winter* another.
-
-Resolution on press happens in two steps, in this order:
-1. a shortcut reserved for the **active profile**;
-2. otherwise the one marked **All profiles**;
-3. otherwise nothing.
-
-Case 3 is worth knowing: the key is still **consumed**, like any press type left unassigned on a
-claimed key — it does not fall back to the launcher. The list flags this on groups that have no
-"All profiles" row.
-
-The **active profile** is the last one applied, whatever the source: startup, ignition, Bluetooth,
-temperature automation or a manual choice. It is stored, so it survives a service restart.
-
-> [!NOTE]
-> It is the last profile **applied**, not the actual state of the vehicle: a setting changed by
-> hand from the Dashboard does not invalidate it. The alternative — comparing the vehicle state
-> against every profile — would cost a dozen vehicle reads on every key press, for an ambiguous
-> result as soon as two profiles look alike.
-
-The shortcut list is **grouped by key + press type**, "All profiles" first in each group: the
-display order is the resolution order.
-
-The three action settings — **One Pedal fallback**, **ADAS cycle notches** and the **regeneration
-cycle** — each get their own page, revealed in the left rail as soon as the action is assigned to a
-button. However it was assigned: a classic slot, an advanced shortcut, or an action merely selected
-in the advanced form, before the shortcut even exists.
-
-The regeneration cycle is composed on its page: tapping a mode appends it **at the end of the
-cycle**, tapping it again removes it, and the order of your taps is the order of the cycle. The five
-modes on offer are Low, Medium, High, Adaptive and One Pedal. You can clear everything and start
-over; nothing is stored until *Save*, which stays greyed out below two modes — under that, the
-shortcut would have nothing left to walk through after the first press. The setting is **global** —
-the same sequence for every button triggering the action — and with no setting at all, the original
-behaviour stands unchanged (Low → Medium → High → Adaptive).
-
-#### HVAC pop-up
-The **HVAC pop-up** action opens the climate controls on top of the current screen — including
-when Android Auto or CarPlay fills the screen and hides the stock climate bar. The steering
-wheel's right joystick moves no focus there: up/down set the temperature, left/right the fan
-speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). At fan level 1,
-pressing left turns the climate off ("OFF"); while it is off, left does nothing, and right **turns
-it back on as it was before** — at the same level or in AUTO, like changing the temperature does:
-the app sends the power-on command instead of writing a level. The "Climate: fan +" shortcut
-follows the same rule. A hint in the header
-recalls these gestures, or warns that the joystick is inactive until the accessibility service is
-enabled — the window then still works by touch. Chosen by touch: A/C, recirculation, air direction
-and, on equipped firmwares (SWI133, SWI68, SWI165), the heated steering wheel and each seat's
-level, one colour per level (green, orange, red). The window closes on a second press of the
-shortcut, with its cross, or by itself after the pop-up delay.
-
-The **AUTO** button: a tap turns it on or off; held for 1 s, by touch or with the centre click, it
-steps the **airflow in AUTO** one notch — Low → Medium → High → Low — without turning AUTO on or
-off. Three notches under "AUTO" always show that airflow, even with AUTO off. An **ECO** tile sits
-next to A/C.
-
-**During Android Auto / CarPlay**, the car blocks its climate panel: with the *Climate area during
-Android Auto / CarPlay* option (*Settings → Interface*, off by default, suspended in Garage mode),
-tapping the climate area of the top bar opens this pop-up instead.
-
-#### Profile cycle
-The **Profile cycle** action steps through the profiles, in an order composed on its page (at
-least two profiles; without it, every profile in the order of their list). On each press the
-shortcut targets the profile that follows the active one and shows its name; it applies it one
-second later, then confirms it on screen. Two quick presses therefore skip a profile without
-applying it. If the speed lock refuses the write, nothing changes.
-
-#### Audio source cycle
-The **Audio source cycle** action switches to the next source of a cycle composed on the
-*Source cycle* page, as tiles: radio, Bluetooth, USB, online, CarPlay / Android Auto (at least
-two sources; without it, radio then Bluetooth). On each press, *Source: …* shows and the car
-switches to it one second later; two quick presses therefore skip a source. There is no "change
-source" command: the app asks the target source to play, which brings it to the front, without
-pausing anything. Availability is not checked: a source with nothing to play stays silent, and
-the next press moves on, because the cycle starts again from the last source chosen, not from
-the one playing.
-
-- **SWI133, SWI68, SWI165**: through the SAIC media service, source by source.
-- **SWI69, SWI131, SWI132**: Bluetooth goes through the SAIC Media app, like the original source
-  key — that app switches the car's audio output to Bluetooth before starting playback. USB
-  targets the player of the port the stick is plugged into (one player per port). "Online" is
-  not offered: that source does not exist on these firmwares.
-- **CarPlay / Android Auto**: through the original AllGo receiver; if it has no phone, the app
-  tries wireless Android Auto through DiAuto-MG4.
-
-#### Android Auto / CarPlay and Android settings
-- **Android Auto / CarPlay**: one press opens Android Auto or CarPlay depending on the connected
-  phone — MG4Control asks the car's projection service —, a second press goes back to the previous
-  screen. Without a phone, a message says so.
-- **Android settings**: opens the Android settings screen, which the car's launcher does not offer —
-  the Android or the Android Automotive one depending on the firmware; if neither opens, a message
-  says so. Also a button in *Settings → Info*. Idea taken from **sensoyg**'s fork.
-
-#### Car keeper: pre-conditioning, dog mode, surveillance
-The **Car keeper** shortcut (#130, #180) keeps the car **on and locked** while you are away. Its
-window always starts on "Now"; the car must be in P.
-
-- **Pre-conditioning** — *Now*: the climate runs for 15 min, 30 min, 1 h or 2 h. *At a time*:
-  first cycle, cycle length, number of cycles (5 at most) and pause between them; the climate stays
-  off while waiting. Temperature and fan level are chosen in the window, the A/C always runs
-  (cooling or heating).
-- **Dog mode** (*Now* only): climate for 2 h, screen never dimmed, showing in large type a
-  reassuring message for passers-by, the setpoint, the outside temperature, the running time and
-  the battery. A warning reminds you to check regularly that the mode is still running.
-- **Surveillance mode**: only offered when a 360° camera app
-  ([MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App) or
-  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) is installed. The car stays on and locked
-  so the cameras can record, **climate off** (about 0.2 kW), for up to 2 h; the screen shows a fixed
-  red "CAMERA SURVEILLANCE" warning.
-
-Before the countdown, a **reminder** tells you to keep the key with you and gives the three ways to
-unlock the car: the small button on a front door handle, the key (lock, then unlock, even if the
-car is already locked) and the iSmart app. "Don't remind me again" turns it off; the *Reminder
-before leaving* switch on the *Car keeper* page turns it back on.
-
-Get out with the key: after an adjustable countdown, **MG4Control locks the doors itself** —
-locking with the key would switch the car off. Before getting out, switch the lights and wipers to
-OFF **yourself**: the app doesn't do it (the countdown screen reminds you). At the end, the climate goes back to its previous
-settings and the car switches off. Everything stops if the car is unlocked (it then stays on), if
-it moves, or below an adjustable battery level. A full-frame follow-up screen shows the time left,
-the current cycle and the lock state, with blue or orange particles depending on whether the
-climate is cooling or heating; while waiting, the screen stays normal, dims (the default) or turns
-off. The floating buttons disappear from the countdown until the end of the program. On SWI133, SWI68 and SWI165, a card on the driver display also shows the countdown, the time
-left and the setpoint, or the surveillance in progress. The settings (lock delay 10–60 s, battery
-threshold 10–40 %, screen, cluster card, reminder before leaving) are on the *Car keeper* page of the Shortcuts tab.
-
-> [!WARNING]
-> Never leave a child alone in the car. Dog mode does not replace supervision: a battery that is too
-> low, locking with the key or a fault would stop the climate.
-
-The idea of locking from the screen while leaving the car on comes from the "Keep climate on"
-feature of [MG4Dash](https://github.com/Skittle6938/MG4Dash).
-
-#### Floating buttons
-Up to **6 bubbles** on top of every app (Shortcuts tab, *Floating buttons* page): a tap triggers the
-shortcut, a long press moves the bubble. Each bubble uses one of the steering-wheel shortcut
-actions, with a title (the shortcut's name by default), a size, a text size and optional bold text.
-A toggle shows filled when it is on; a value (temperature, fan, regeneration…) shows briefly after
-the press, and a halo confirms the tap. A bubble can also sit in the **black bar at the top** of the
-screen. **Each profile has its own bubbles**, which can be copied to other profiles. They hide in
-reverse, in Garage mode and while Car keeper is running.
-
-#### Custom shortcuts
-Shortcuts tab, *Custom shortcuts* page (#172, 20 at most), with a **Test** button. A custom
-shortcut can:
-- open an app;
-- run one of its functions: its Android shortcuts, or the ones its developer exposes to MG4Control
-  through the `com.mg4.control.action.SHORTCUT` action;
-- send a broadcast (with extras);
-- open a link;
-- call a webhook, over HTTPS only (online version).
-
-It can then be assigned to the steering-wheel buttons, advanced shortcuts and floating buttons.
-System targets (`android.`, `com.android.`, `com.saicmotor.`, `com.mg4.control.`) and `intent:`
-links are refused, and a webhook's address is masked in the log.
-
-### Automation
-- **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
-  apply, direct execution or confirmation banner
-- **Apply a profile from the battery level**: when the charge drops below a threshold set with a
-  slider (5–60 %), at start-up or while driving; once per episode, re-armed at every start or after
-  charging; direct execution or confirmation banner
-- **Confirmation banner**: the question is asked at the bottom of the screen, without hiding
-  navigation — the reading and its threshold, the proposed profile, NO and YES. It is answered by
-  touch or with the steering wheel's right joystick (YES preselected); on NO, or once the pop-up
-  delay has run out, nothing is applied
-- **Automatic brightness at start-up**: when the car goes READY, the screen takes a brightness
-  chosen from the lights and/or the weather — at least one source, lights only by default.
-  **Lights only** (no mobile data, no GPS; the only mode of the offline version): two adjustable
-  levels, lights off (80 % by default) and lights on (20 %).
-  **Weather** (tick box, as it uses a little data): a four-point adjustable curve (night, dusk,
-  overcast, full sun) maps the outdoor light to a brightness. The car does not measure light, so
-  it is estimated from the sun height (GPS position + time, computed offline) and the
-  [Open-Meteo](https://open-meteo.com) sunshine forecast on a 25-point grid around the car (an
-  area of about 60 × 60 km: while driving, the weather where you are), cached for 3 days and
-  refreshed every 8 h at most or when leaving the area (~10 KB per request), position rounded to
-  ~10 km. With the lights as well, side lights on (garage, tunnel, night): Night point of the
-  curve. "Adjust brightness while driving" option: also readjusts at every lights change (tunnel)
-  and, with the weather, as soon as the estimated light drifts 10 points; adjusting by hand pauses
-  it until the next start. Changes fade over one second. "Test now" button
-- **Battery heating switch-off**: switches intelligent battery heating off after a time set with a
-  slider (5 to 120 min, 30 by default). The countdown starts when the option is switched on,
-  driving or parked — stock screen, SystemUI "low temperature" window, MG4Control or shortcut —,
-  or at start-up if it was already on, and only applies to the current trip. A message is shown
-  when it switches off
-- **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
-  setpoint, fan level, air direction (*Air* row: face, feet, windscreen, rear screen, or
-  Unchanged — #177), automatic mode and recirculation. The air direction is set last; with the
-  automatic fan, the chosen air direction and recirculation are set again right after AUTO starts,
-  then checked
-- **Media when leaving the car** (formerly volume drop): as you leave, media volume goes down to the
-  level set with a slider — it is never raised when already lower — or, if you prefer, the media is
-  **paused**; playback then only resumes if MG4Control was the one that paused it. On all six
-  firmwares. Where the car reports its doors (SWI133, SWI132) the trigger is
-  a front door opening, with selectable doors and restore on close; elsewhere, no door sensor
-  being reachable, **leaving READY state** is used instead and the restore, when asked for,
-  happens on the way back to READY. With the option off, these settings stay readable but greyed
-  out
-- **Sounds** (#161): your own sounds, imported from a USB stick (MP3, M4A, AAC, OGG, WAV or FLAC,
-  30 s at most; the file is copied, so the stick can be removed), played at chosen moments —
-  MG4Control start-up, entering or leaving READY, shifting to P or D, front door opened (SWI133 and
-  SWI132), profile applied. As many sounds as moments, each moment belonging to one sound only. The
-  media volume is set for the length of the sound, then given back, and the previous audio source is
-  restored (#190). A trigger during playback is ignored; sounds can be kept to some profiles
-- Each automation opens unfolded when it is on, unfolds when switched on and folds when switched
-  off; in between, its chevron folds or unfolds the settings freely
-
-#### Automatic power window closing
-Card built like the other automations: enable switch next to the description, settings unfolded
-with the chevron (the card opens unfolded when the option is on).
-
-- **Close on leaving the car** — car in P and closing armed: when the car leaves READY state
-  (seat belt unfastened and driver door opened, or car switched off), every window closes after
-  the chosen delay; going back to READY before the end cancels it. Arming is configurable (speed reached and/or time
-  switched on, either or both), the delay ranges from 0 to 30 s, and an optional warning beep,
-  with adjustable volume, can accompany the countdown. With the option off, these settings stay
-  readable but greyed out.
-- **Travel time** — only the driver's window has a sensor and its stock automatic travel; the
-  other three get a pulse of adjustable length (5 s by default).
-- **Advanced: per-window calibration** — measures each window's real travel, more accurate than
-  the general time; measurements are kept if the option is switched off.
-
-Travel time and calibration stay adjustable with the option off: the "open / close all windows"
-shortcuts use them too.
-
-> [!WARNING]
-> Travels commanded by the app have no anti-pinch protection, except on the driver's window.
-> Keep clear of the windows during a closing sequence, especially an automatic one, which starts
-> once you are already outside.
-
-### Profile Management
-- Save up to **10 custom profiles** (5 before 2.6.9)
-- Instant one-tap profile application
-- Automatic default profile application **on vehicle startup**
-- **Bluetooth pairing**: a profile can be tied to a device and applied when it connects
-- **Automatic backup into the vehicle's storage**: it survives uninstalling the app, and on
-  reinstall a window lists the profiles found and offers to restore them
-- Trigger precedence: manual → temperature → Bluetooth → default profile
-
-### Statistics
-A top-bar tab, **off by default**: until it is turned on, nothing is recorded. Everything stays in
-the car, in a private file of the app; nothing is sent anywhere. Three sub-tabs on the usual rail:
-
-- **General**: summary over 30 days or the whole history — distance, consumption, energy used,
-  recovered and charged, cost. Settings: kWh price for slow and fast charging (up to 100,000, for
-  every currency), currency, the car's battery (51, 64 or 77 kWh) and its **state of health**
-  (SOH), short-trip filter, retention (30 days to 1 year, 3 months by default) and "Delete all"
-- **Trips**: each trip with its duration, distance, consumption and energy breakdown
-- **Charging**: energy charged, cost and AC / DC sessions, including charges made while the head
-  unit was asleep
-
-Where the figures come from:
-
-| Measure | Source |
-|---|---|
-| Trip boundaries | Ignition — the car's energy counters restart from zero at the same moment |
-| Distance | Integration of the speed, read every 10 s while driving; the odometer, which only publishes whole kilometres, is the safeguard |
-| Trip energy, SWI133 and SWI132 | The car's counters, in tenths of a kWh: total, climate, accessories, regeneration |
-| Trip energy, other firmwares | Their counters stay at zero: battery voltage × current, read every second while driving. The breakdown is limited to "Motor" and "Climate control and others", in whole kWh |
-| Charge energy, AC | Percentage gained × capacity used: usable capacity of the chosen battery × state of health |
-| Charge energy, DC | Measured during the charge (voltage × current); the part not seen is estimated from a table learnt per 1% band (see *Fast charges*) |
-| Charge type and power | Type read from the car (AC or DC); power measured if the head unit is awake during the charge, otherwise computed (energy ÷ duration) and labelled as such |
-
-Rules worth knowing:
-- **Overnight charge**: the head unit sleeps during the charge and nothing is read. On wake-up, the
-  percentage is compared with the last reading and the charge is **reconstructed**. It can be
-  **completed** — plug type, start and end times, with − and + buttons — to get its average power
-- **Trip cost**: it follows the **average price of the energy actually charged** over the period,
-  not the home tariff — otherwise a fast-charger top-up would vanish from the cost. A charge's
-  tariff is **corrected** from its detail; the average price and trip costs follow
-- **Consumption over a period**: computed on the totals, not by averaging trips — otherwise a 2 km
-  trip would weigh as much as a 200 km one
-- **Displayed precision**: when a consumption's uncertainty exceeds 10% (short trip, counter in
-  tenths of a kWh), it is shown with "≈" and no decimal
-- **Short trips**: filter off by default; when on, a trip shorter than the chosen distance (1 km by
-  default, 0.1 to 50 km) is not recorded
-- **Battery and state of health**: the state of health is set from 50 to 100% in 0.5% steps, with
-  the − and + buttons (hold them to scroll), and the capacity used shows below. 100% by default: a
-  dealer or an OBD app can measure it. Changing either recalculates the charges recorded from the
-  percentage — a measured energy doesn't change; until the battery has been confirmed, the Charging
-  tab reminds you
-- **Fast charges**: the displayed percentage doesn't track the energy going in (from 62.8 to 70.1%,
-  5.0 kWh measured at the battery, while the percentage difference only accounted for 4.2). A DC
-  charge's energy is therefore **measured** during the charge, read every 2 s, whether the charging
-  pop-up is on or not. The head unit turns off when the car is locked: the part not seen — the end,
-  or the start if the screen came back on in the middle of a charge — is estimated from a **table
-  learnt per 1% band**, fed by every band seen in full (a band is used from two measurements, the
-  most recent ones weigh more, an implausible measurement is rejected). A charge never seen is
-  estimated band by band, or from the percentage while the table is empty. The charge's details say
-  where its energy comes from: *measured during the charge*, *partly measured*, *estimated from
-  previous charges* or *estimated from the battery level*. AC charges, long and mostly done with the
-  screen off, are still computed from the percentage
-- **Power cuts**: the ongoing trip is saved after each reading, and a trip cut short by the head
-  unit switching off is closed at the next start-up. The history is written to a temporary file
-  then renamed: a power cut never truncates it
-- **Clock**: a head unit woken up by charging may restart on its factory clock (2019); readings
-  dated before 2025 are discarded
-
-### Driver display
-An option in *Settings → Interface*, **off by default**, on **SWI133, SWI68 and SWI165** only: an
-MG4Control module shows in the centre of the instrument cluster, behind the wheel, instead of the
-original page of the Navigation and Music tabs.
-
-The cluster is a separate computer. Only a **260 × 260 px** square in its centre comes from the
-head unit: SAIC draws it there with a system app (`clusterprojection`), on Android's second display
-(no. 1, 800 × 480). MG4Control lays its window exactly over that square, with that app's background
-to blend in, as soon as the app starts — without waiting for READY. On the **A9** firmwares (SWI69,
-SWI131, SWI132), that app does not exist and the cluster draws everything itself: nothing can show
-there, and the card does not appear in the settings.
-
-| Module | Gauge | Large figure | Footer |
-|---|---|---|---|
-| **Consumption** | Graduated ring, logarithmic scale up to 3,000 Wh/km (300 kWh/100 km) | Wh/km or kWh/100 km while driving; kW drawn when stationary (below 5 km/h); when regenerating, a negative consumption in blue (25 kW recovered at 60 km/h: −41.7 kWh/100 km), the kW recovered below 5 km/h | Trip average · energy recovered |
-| **Power** | Graduated arc from 60 kW recovered (left) to 320 kW (right), logarithmic scale | Whole kW while driving (one decimal when stationary), negative when regenerating; below, in large type, the instant consumption, negative and blue when regenerating | Trip average, alone and centred — the battery is already on the cluster |
-
-- **One module per tab**: None, Consumption or Power for the Navigation tab, and likewise for the
-  Music tab. The module follows the tab shown on the cluster (`IPK_CLUSTER_TAB_BTN_STS`); trip
-  computer, tyre pressure and settings are drawn by the cluster itself and keep their page
-- **Style**: *Dynamic* (the ring or the arc, and the counting figure) or *Discreet*, for those who
-  find scrolling figures distracting: a thin graduated bar, fixed figures under the ticks. Power:
-  zero marked, regeneration on the left in blue, power on the right in light grey. Consumption: a
-  short regeneration zone on the left, then the scale; an "avg" triangle marks the trip average,
-  and the bar is green below it, orange above. Same scales as the dynamic style, same badge, same
-  average at the bottom; the bar follows over two seconds, without jitter, whatever the refresh rate
-- **Badge** at the top left: *Profile* (default) — the last applied profile, in capitals, in the
-  colour of **the profile's** drive mode (the car's if the profile doesn't set driving) —, *Drive
-  mode*, or *None*. Never wider than the longest drive mode's badge: a longer name ends with an
-  ellipsis
-- **Units**: the **gauge** unit, Wh/km (default) or kWh/100 km, with one decimal below 100 — the
-  ring does not move from one unit to the other, its graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km,
-  or 0 · 10 · 20 · 50 · 100 · 300 kWh/100 km) follow the unit — and, separately, the **trip
-  average** unit: Wh/km, kWh/100 km or km/kWh (by default, the gauge unit)
-- **Tightened power scale**: logarithmic, so the arc moves while driving — 20 kW fill a quarter of it,
-  50 kW 44%, 100 kW 63%; on the regeneration side, 10 kW make 36%. Graduations 20 · 50 · 100 · 200 · 320
-  and 10 · 30 · 60. The fill stops cleanly at zero, without spilling over to the other side
-- **Colours**: orange for consumption, blue for regeneration, whatever the value
-- **Advanced**: the **refresh rate** of power, speed and gauge, from 0.1 to 1 s (1 s by default;
-  shorter is more responsive, but the figure moves more), and the **animation length**, from 0.2 to
-  2 s (0.8 s by default). The drive mode and the profile are read every 10 s
-- **The figure counts** from one value to the next (100, 101… 300) instead of jumping, and the
-  gauge glides along, over the animation length set; a change of unit (Wh/km → kW when stationary)
-  jumps straight away
-- **Trip average**: net energy (regeneration deducted) ÷ distance integrated since entering READY,
-  shown from 200 m. It is computed on the spot rather than taken from the Statistics tab, which can
-  be turned off
-- **While charging**, the **charge module** replaces the gauge on the tabs that have one, as soon as
-  a charge is detected, AC or fast: in large type the time left to the limit, below it the level to
-  a tenth and the end time, the battery bar with the limit mark, then power, energy and duration.
-  The badge's lightning bolt pulses and a highlight runs along the bar up to the limit; when done,
-  everything freezes and turns green ("Charge complete"). When unplugged or in READY, the gauge
-  comes back
-- **Settings card**: on the left, a **preview** — the real gauge on a simulated trip, following
-  every setting, for the Navigation or Music tab; on the right, the settings in three groups
-  (Modules, Appearance, Units), then "Advanced", folded under its summary
-- **Per profile**: at the top of the card, "Settings for:" shows the profiles as chips, with
-  multiple selection; each change applies to all the selected ones, and the whole card follows the
-  active profile. A new profile starts with the module off
-- **Distance**: Auto (the default, the unit set in the car), km or miles. In miles, the whole module
-  switches: gauge in Wh/mi or kWh/100 mi, average in Wh/mi, kWh/100 mi or mi/kWh
-- **Max power** (#165): Auto (the default), 125, 150, 180 or 320 kW, per profile. Auto learns from
-  the peaks actually reached: the scale goes up as soon as it is exceeded and comes down one step
-  after five trips that stayed well below. The ticks stay whole numbers
-- **Car keeper**: during pre-conditioning or surveillance, a card shows the countdown, the time left
-  and the setpoint (switch on the *Car keeper* page)
-- **Put back if it disappears**: at ignition, in READY or when the cluster screen wakes up, the
-  module is put back in place if it is gone
-
-### Charging pop-up
-An option in *Settings → Interface*, **off by default** since 2.6.10, on every firmware: as soon as a charge
-starts, AC or fast, a full-frame pop-up opens on the head unit — including when the app starts in
-the middle of a charge. It has no countdown: it closes with its cross, when the car goes to READY,
-or with the **Charging pop-up** shortcut, which also reopens it (with the option off, the shortcut
-says where to turn it on). A charger pause of less than 10 minutes remains the same charge.
-
-- **Left**: the battery to a tenth, the level bar, then the estimated end time in large type and
-  the time left to the limit
-- **Middle**: the curve of power (blue area) and level (green line) **since the start of the
-  charge**, not since the pop-up opened — the app logs the charge in the background, one point every
-  5 s (a gap if the screen turns off). The kW axis goes up to the highest power reached, the limit
-  is a grey dotted line, and a green dotted line joins the current level to the limit at the end
-  time given by the car
-- **Right**: power (and the maximum reached), energy added, range gained — the change in the car's
-  estimated range since the start —, estimated cost and duration
-
-**Charge limit**: the battery bar works as a slider, from 40 to 100% in steps of 10; the targeted
-step turns bold, and the limit goes to the car on release (`BMS_CHRG_TRGT_SOC`, the property the
-original screen writes). Below the current level, the pop-up warns that the charge will stop; if the
-car hasn't taken the new limit after 20 s, it says so. On the **A9** firmwares (SWI69, SWI131,
-SWI132), the limit can only be set when the car allows it, following its own charging app's rule
-(battery type read at `0x21704244`, codes 7 and 9): not with an LFP battery (MG4 Standard), which
-charges to 100%. The bar then shows the level only, a padlock explains why, and the end time aims
-for full.
-
-**Price of this charge**: the cost follows the AC or DC tariff from the Statistics tab; the pencil
-opens a keyboard-free editor — − and + buttons, selectable step, cost recalculated live, the old one
-struck through. *Default tariff* goes back to the Statistics tariff; the corrected price follows the
-charge into the Statistics tab.
-
-### Settings
-Screen organised into **four tabs**:
-- **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish — on first launch,
-  MG4Control takes the car's language if it is translated (pop-ups shown before the app is first
-  opened too), otherwise it asks in a window with seven large tiles
-- **Interface**: screen shown at startup, appearance (auto / dark / light), text size (standard /
-  large / extra large), **full screen** (status and navigation bars hidden, off by default),
-  **pop-up closing delay** (1 to 60 s, 10 by default), **charging pop-up** (off by default),
-  **climate area during Android Auto / CarPlay** (off by default), **module on the driver display**
-  (SWI133, SWI68, SWI165 — see above)
-- **Advanced**: **Garage mode** (see below), return to the default profile each time the car
-  enters READY (option, off by default), **what AUTO controls**, **emergency shortcut** (hold the
-  right joystick's centre click for 5 s: MG4Control opens, even in Garage mode; on by default,
-  through the accessibility service), update check at launch, **update alert on the vehicle
-  screen**, **beta channel**, power the car off while keeping the screen on, block driving settings
-  above a given speed, **external API** (see the dedicated section)
-- **Info**: update check, APK cleanup, **data usage** (today, current week, current month, last 30
-  days), "About" dialog (app version, firmware, QR codes), **Android settings** button, firmware
-  indicator, and a Diagnostic button revealed by 5 taps on the logo
-
-### Pop-ups and windows
-Since 2.6.8, everything shown in a window shares the same look: rounded cards, large buttons, and
-no more keyboard input.
-
-**On top of the car's screen**, whatever app is running:
-
-| Item | Layout |
-|---|---|
-| Profile picker | Full frame: one card per profile (drive mode in colour, current profile marked "Active"), brightness (Night / Medium / Day and a slider), Open MG4Control, Car keeper, Power the car off |
-| HVAC pop-up | Full frame: heating, temperature and fan speed on the joystick, AUTO and its airflow, A/C, ECO and recirculation |
-| Car keeper | Start window (Now / At a time, dog mode, surveillance), then a full-frame follow-up screen |
-| Charging pop-up | Full frame: level and charge limit, curve since the start, end time, power, energy, range gained, cost, duration |
-| Automation confirmation | Banner at the bottom of the screen: reading, threshold, proposed profile, NO / YES |
-| Update available | Banner: versions, Later / Skip this version / Install update |
-| Vehicle power-off | Banner: Cancel / Power off — or "Cannot power off" outside P |
-
-The picker and the HVAC pop-up are driven with the **steering wheel's right joystick**
-(accessibility service required); a hint in their header recalls the gestures, or warns that the
-joystick is inactive. A banner neither hides nor dims anything: whatever is touched elsewhere goes to
-the app underneath. Everything closes by itself after the **pop-up delay** (*Settings → Interface*),
-except the charging pop-up, which stays until its cross or READY; on a banner, the countdown is
-written on the button that means "no" — the one the delay triggers.
-
-The **shortcut that opens a pop-up closes it**: a second press closes the profile picker just like
-the end of the delay (in a Bluetooth conflict, the first profile offered is applied), and the HVAC
-and charging pop-ups likewise. When that shortcut is a long press on a right-joystick key, a short press on that
-key still navigates — on release —, and a press held up to the threshold closes the window without
-navigating: on the HVAC pop-up, closing changes neither the temperature nor the fan speed.
-
-The **profile picker opens on the active profile**: the joystick starts from its card, and the row
-scrolls to show it when it is beyond the fifth profile. In a Bluetooth conflict, it starts from the
-first card, the one the delay applies.
-
-**Inside the app**:
-- **confirmations** all look alike — an icon, a title, a text, one or two buttons — and their
-  colour tells the nature of the action: blue for an ordinary action, orange for a warning, red for
-  whatever deletes or powers off;
-- an **app** or a **profile** is picked from a scrolling grid of tiles;
-- an **advanced shortcut** is edited in two side-by-side lists;
-- the **times** and the **tariff** of a charge (Statistics tab), like the **price** of the charge in
-  progress (charging pop-up), are set with − and + buttons, without a keyboard — the car's one covers half the screen. Minutes go in steps of five, the
-  tariff step is selectable, and holding a button repeats the step.
-
-### Garage mode
-A single switch puts MG4Control **fully to sleep**, without uninstalling or reconfiguring
-anything. It answers a concrete case: leaving the car at a workshop without a technician seeing
-settings change on their own at ignition, or a steering-wheel button doing something unexpected.
-
-What the mode suspends are the **autonomous** behaviours — the ones nobody asked for at that
-moment:
-
-| Suspended | Detail |
-|---|---|
-| Classic shortcuts | The key goes back to the launcher |
-| Advanced shortcuts | Claimed keys are **released**: the accessibility service consumes nothing |
-| Profile at startup and at ignition | Bluetooth resolution included |
-| Temperature automations | Profile and climate alike |
-| Media when leaving the car | |
-| Floating buttons | Removed from the screen as soon as it is turned on |
-| External API | Third-party commands are refused |
-| Update alert on the vehicle screen | |
-
-What it does not touch: the app itself. Opening MG4Control and applying a profile by hand still
-works — that is a user action, not a behaviour observable by someone who is only driving.
-
-**Nothing is erased.** Switching it back off restores everything as it was: profiles, shortcuts
-and automations.
-
-The persistent notification reads "Garage mode — asleep" while it is on: without that marker, a
-forgotten mode would show up as "nothing works any more" with no explanation whatsoever.
-
-> [!NOTE]
-> Garage mode **replaces** the old "the default profile is applied automatically at launch"
-> switch, of which it is the complete version. Anyone who had unchecked it is carried over into
-> Garage mode on first launch: stopping the app from acting was the intent.
-
-### Update alert on the vehicle screen
-An update is no longer found only by opening MG4Control: a banner appears **at the bottom of the
-screen, over the infotainment**, like the profile confirmation one, showing the installed version
-against the new one. Four choices:
-
-| Button | Effect |
-|---|---|
-| **Install update** | Opens MG4Control on the usual update dialog, without repeating the network request |
-| **Skip this version** | That version is no longer offered, here or at app launch |
-| **Later** | Closes the banner: nothing is remembered, the alert will come back |
-| **Stop telling me** | Turns this banner off. The dialog at MG4Control launch stays |
-
-With no answer, the banner closes by itself after the pop-up delay, which means "later". It neither
-dims nor blocks anything: the rest of the screen stays usable.
-
-Four safeguards, because nobody triggers this path:
-- the check runs **20 s after ignition** — at the moment itself the car's data link is not up yet;
-- **six hours minimum** between network requests, the car being on a data plan;
-- **nothing shows while driving** (same lock as the profile picker);
-- a version already offered is not offered again in the same session — and it is only marked as
-  offered if the banner **actually appeared**.
-
-The long-standing "check for updates at launch" switch also turns this banner off: it is a setting
-users read as global, and it is.
-
-**Release notes in the app's language** (#191): the GitHub release carries the English text, then
-one folded section per language, opened by an invisible `<!-- lang:xx -->` marker. The app only
-shows the section of its language, and English when that language has no section.
-
-### Profiles
-- Profile list with apply, set as default, edit and delete
-- **Profile order**: a long press on a card in the list lifts it; drag it into place (the list
-  scrolls by itself near its edges, a banner shows the position) and the order is saved on release.
-  This order is the picker's, the "Profile cycle" page buttons' and the default cycle's; in a
-  Bluetooth conflict it is the priority — the first of the conflicting profiles is applied when the
-  delay runs out
-- **Full-screen editor** organised into three categories: Driving, Safety, Comfort
-- **One switch per category**, at the top of each tab: switched off, the tab folds away and the
-  profile writes nothing there — a profile can cover safety only, or comfort only. At least one is
-  needed to save; existing profiles keep their three categories on
-- The profile name and the "default profile" setting stay visible across the three tabs
-- **Regeneration unchanged**: a switch on the Regeneration section of the Driving tab; when off,
-  the profile touches neither the regeneration level nor one-pedal driving, the level buttons grey
-  out, and both the list and the picker show it ("Regen unchanged"). Existing profiles keep their
-  regeneration
-- Heated steering wheel and seats have an **apply** switch: unchecked, the profile leaves the
-  setting alone instead of turning it off
-- **Automatic high beam**: same switch, unchecked by default — existing profiles leave it alone
-- **Air conditioning**: an optional block in the Comfort tab, unchecked by default, carrying the
-  Dashboard's own controls — on/off, A/C, auto fan, setpoint, fan speed, recirculation, defrosters,
-  plus **ECO** and the **airflow in AUTO** (On / Off / Unchanged and Low / Medium / High /
-  Unchanged; existing profiles leave them alone)
-- **Per profile too**: the floating buttons and the driver display settings
-
-#### The profile's climate block
-Unchecked, the profile does not touch the climate: that is the long-standing behaviour, and the
-one every stored profile keeps. Checked, it applies what it carries at startup, at ignition, and
-on every manual application.
-
-Three rules apply, and they come from the vehicle rather than the interface:
-
-| Rule | Consequence |
-|---|---|
-| Climate off | Nothing else is written — a setpoint sent to a stopped climate turns it back on with some firmwares |
-| AUTO mode | The fan speed is not applied: setting it would leave auto mode |
-| "Unchanged" | Recirculation and defrosters are left alone — without that value, a profile that says nothing about them would turn them off |
-
-The sliders are bounded for input (15–33 °C, 1–11), but the **real** limits are read from the
-vehicle when applying and the setpoint is clamped to them: they differ between A9 and the other
-firmwares.
-
-> [!NOTE]
-> **The profile wins over the A/C automation.** If the profile applied since the app started
-> carries a climate block, the temperature automation does nothing and logs it. Without this rule
-> both would write over each other at ignition, in an order nothing guarantees. At start-up, when a
-> saved profile sets the climate, the automation waits for the start-up profile to be applied —
-> about ten seconds at most — before deciding: the previous trip's profile does not count.
-
-### Unknown firmware (UNKNOWN)
-- Warning window at startup when the firmware is not recognised, showing the version read from the
-  car
-- The user can close the app or continue
-- "Continue" opens *Settings → Info* directly, where the firmware chips are tappable to force a
-  compatibility mode
-- The forced choice is persisted in SharedPreferences, survives app restarts and applies from
-  start-up, service included
-- Distributor firmwares are recognised on their own: **DBI68 = SWI68**, **DBI133 = SWI133** (the
-  Turkish DBI68 firmware was validated thanks to **sensoyg**)
-
----
-
-## Compatibility
-
-| Item | Value |
-|------|-------|
-| Target vehicle | MG4 Electric (SAIC) |
-| OS | Android Automotive 9+ (API 28+) |
-| SoC | SAIC MT2712 |
-| Screen resolution | 1280 × 480 (forced landscape) |
-| Firmware SWI133 | Compatible ✅ |
-| Firmware SWI131 | Compatible ✅ |
-| Firmware SWI132 | Compatible ✅ |
-| Firmware SWI68 | Compatible ✅ |
-| Firmware SWI69 | Compatible ✅ |
-| Firmware SWI165 | Compatible ✅ |
-| Firmware DBI68 (distributor) | Recognised as SWI68 ✅ |
-| Firmware DBI133 (distributor) | Recognised as SWI133 |
-| UNKNOWN firmware | Forced SWI133/SWI132/SWI68/SWI69/SWI131/SWI165 mode available ⚠️ |
-
-The driver display module is limited to SWI133, SWI68 and SWI165 (see
-[Driver display](#driver-display)). The charging pop-up works everywhere; on the A9 firmwares, its
-charge limit can only be set when the battery allows it (not with LFP — see
-[Charging pop-up](#charging-pop-up)).
-
----
-
-## Architecture
-
-### Overview
-
-```
-┌──────────────────────────────────────────────────────┐
-│                      UI LAYER                         │
-│  MainActivity ─── NavController ─── Fragment Host    │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐ │
-│  │  Dashboard  │  │   Profiles   │  │  Settings   │ │
-│  └─────────────┘  └──────────────┘  └─────────────┘ │
-└──────────────────────────────────────────────────────┘
-                         │
-┌──────────────────────────────────────────────────────┐
-│                  BUSINESS LOGIC                       │
-│  ProfileManager  ─  ProfileApplier  ─  FirmwareInfo  │
-└──────────────────────────────────────────────────────┘
-                         │
-┌──────────────────────────────────────────────────────┐
-│           HARDWARE ABSTRACTION (MG4Hardware)          │
-│  Katman1 (Car API) → Katman2 (Binder) → Katman4      │
-│                      (ADAS / SWI133 / SWI68)          │
-└──────────────────────────────────────────────────────┘
-                         │
-┌──────────────────────────────────────────────────────┐
-│               SYSTEM SERVICES & BOOT                  │
-│       MG4ControlService  ─────  BootReceiver         │
-└──────────────────────────────────────────────────────┘
-```
-
-### Startup Sequence
-
-```
-Vehicle boot
-       │
-       ▼
-BootReceiver.onReceive()
-       │
-       ▼
-MG4ControlService.onCreate()
-  └─ MG4Hardware.init()
-  └─ Katman1 / Katman4 service discovery
-  └─ Apply default profile (if enabled)
-       │
-       ▼
-MainActivity (UI)
-  └─ Firmware detection (SWI133 / SWI68)
-  └─ Top bar setup
-  └─ Navigate to DashboardFragment
-```
-
----
-
-## Project Structure
-
-```
-MG4Control/
-├── app/src/main/
-│   ├── java/com/mg4/control/
-│   │   ├── MG4App.kt                  # Application — night mode, locale, crash log
-│   │   ├── MainActivity.kt            # Main activity, top bar, navigation
-│   │   │
-│   │   ├── model/
-│   │   │   ├── DrivingProfile.kt      # Profile data model
-│   │   │   ├── DriveMode.kt           # Drive mode enum (ECO/NORMAL/SPORT/SNOW/CUSTOM)
-│   │   │   ├── RegenLevel.kt          # Regen level enum + default shortcut cycle order
-│   │   │   ├── StatsTracker.kt        # Statistics: trips and charges (pure state machine, tested)
-│   │   │   ├── StatsSummary.kt        # Statistics: aggregates of a period (cost, consumption)
-│   │   │   ├── PowerIntegrator.kt     # Energy from voltage × current (firmwares without counters)
-│   │   │   ├── ClusterGauge.kt        # Driver display: gauge scales, square placement, trip average
-│   │   │   ├── ClusterTab.kt          # Driver display: the cluster's tabs
-│   │   │   ├── ChargeModule.kt        # Cluster charge module: target, time left, energy
-│   │   │   ├── ChargePopupModel.kt    # Charging pop-up: limit, curve scale, charge log
-│   │   │   ├── PreClimatePlan.kt      # Car keeper: cycles, endings, climate snapshot and restore
-│   │   │   ├── FloatingButtons.kt     # Floating buttons: list, sizes, position (+ FloatingSet, FloatingButtonStyle)
-│   │   │   ├── CustomShortcut.kt      # Custom shortcuts: types, validation, refused targets
-│   │   │   ├── SoundAutomationRules.kt # Sounds: moments, audio source to restore
-│   │   │   ├── PowerScale.kt          # Driver display: learned power scale
-│   │   │   ├── Projection.kt          # Android Auto / CarPlay: which phone, which app
-│   │   │   ├── ChargeEnergyLearning.kt # Charge energy: table learnt per 1% band, source kept
-│   │   │   └── ProfileBackup.kt       # Vehicle backup format
-│   │   │
-│   │   ├── profile/
-│   │   │   ├── ActiveProfile.kt       # Last applied profile (profile-scoped shortcuts)
-│   │   │   ├── ProfileManager.kt      # Profile CRUD (SharedPreferences + Gson)
-│   │   │   ├── ProfileApplier.kt      # Applies settings to the vehicle (async)
-│   │   │   └── ProfileBackupManager.kt# Backup / restore in vehicle storage
-│   │   │
-│   │   ├── hardware/
-│   │   │   ├── MG4Hardware.kt         # Hardware abstraction (4 layers)
-│   │   │   ├── StatsCollector.kt      # Statistics readings (only when turned on)
-│   │   │   ├── ClusterTabReader.kt    # Tab shown on the cluster
-│   │   │   ├── BatteryTypeConfig.kt   # Battery type (A9): charge limit adjustable or not
-│   │   │   ├── ChargeProbe.kt         # Charging diagnostic probe (MG4_CHARGE log)
-│   │   │   └── VehicleWriteGate.kt    # Speed lock, enforced inside the write primitives
-│   │   │
-│   │   ├── stats/
-│   │   │   └── StatsStore.kt          # Statistics history: file, purged on read
-│   │   │
-│   │   ├── accessibility/
-│   │   │   ├── KeyCaptureService.kt   # Accessibility service — sees keys before the launcher
-│   │   │   ├── AccessibilityServiceList.kt # Is the service enabled? (long and short name forms)
-│   │   │   └── AdvancedShortcuts.kt   # Storage for (key, press type) → action
-│   │   │
-│   │   ├── shortcut/
-│   │   │   ├── RegenCycle.kt          # User-composed regeneration cycle sequence
-│   │   │   └── ShortcutAction.kt      # Action catalogue, shared by both systems
-│   │   │
-│   │   ├── bluetooth/
-│   │   │   └── BluetoothProfileManager.kt # Profile applied when a device connects
-│   │   │
-│   │   ├── api/
-│   │   │   ├── ExternalApi.kt         # External API contract (actions, keys, locks)
-│   │   │   ├── ExternalApiReceiver.kt # Third-party intent reception
-│   │   │   └── StateProvider.kt       # State reading (ContentProvider)
-│   │   │
-│   │   ├── automation/
-│   │   │   ├── AutomationSettings.kt        # Profile from temperature
-│   │   │   ├── AutomationDecision.kt        # Pure decision (testable off-device)
-│   │   │   ├── ClimateAutomationSettings.kt # A/C triggering
-│   │   │   ├── SoundAutomation.kt           # Sounds: playback, volume and audio source given back
-│   │   │   ├── SoundAutomationSettings.kt   # Sounds: files, moments, profiles
-│   │   │   └── ClimateAutomationDecision.kt
-│   │   │
-│   │   ├── ui/
-│   │   │   ├── DashboardFragment.kt   # Main screen (3-category rail)
-│   │   │   ├── ProfileFragment.kt     # Profile list
-│   │   │   ├── ProfileEditFragment.kt # Full-screen editor (3-category rail)
-│   │   │   ├── SettingsFragment.kt    # Settings (4-tab rail)
-│   │   │   ├── ShortcutsFragment.kt   # Classic + advanced shortcuts + list
-│   │   │   ├── AutomationFragment.kt  # Automations
-│   │   │   ├── StatsFragment.kt       # Statistics (3-tab rail)
-│   │   │   ├── ProfileAdapter.kt      # Profile RecyclerView adapter
-│   │   │   ├── AppDialog.kt           # App windows: confirmation, choice grid, lists, − / + buttons
-│   │   │   ├── RestoreProfilesDialog.kt # "Restore profiles?" — lists the profiles found
-│   │   │   ├── StatsDialogs.kt        # Complete a charge, fix a tariff (no keyboard)
-│   │   │   ├── ClusterSettingsPreview.kt # Driver display preview in the settings (simulated trip)
-│   │   │   ├── ClusterTabDialog.kt    # Diagnostic: tab shown on the cluster
-│   │   │   ├── widget/ClusterGaugeView.kt # Driver display module (ring, arc or discreet bar; charge)
-│   │   │   ├── widget/ChargeCurveView.kt # Charging pop-up curve
-│   │   │   ├── widget/ChargeLimitSliderView.kt # Battery bar, charge-limit slider
-│   │   │   ├── ConsoleFragment.kt     # Real-time debug log viewer
-│   │   │   ├── DriveRegenFragment.kt  # Legacy (unused in v2)
-│   │   │   ├── ClimateFragment.kt     # Legacy (unused in v2)
-│   │   │   └── AdasFragment.kt        # Legacy (unused in v2)
-│   │   │
-│   │   ├── service/
-│   │   │   ├── MG4ControlService.kt   # Foreground service (boot, shortcuts, external API)
-│   │   │   ├── OverlayKit.kt          # Base of pop-ups and banners: scale, backgrounds, room on screen
-│   │   │   ├── OverlayNavigation.kt   # Right-joystick navigation inside a pop-up
-│   │   │   ├── ProfilePickerOverlay.kt# Profile picker (full-frame pop-up)
-│   │   │   ├── HvacPopupOverlay.kt    # HVAC pop-up (+ HvacPopupSkin.kt, its painting)
-│   │   │   ├── ProfileConfirmOverlay.kt # YES/NO banner for automations
-│   │   │   ├── VehiclePowerOffOverlay.kt # Power-off confirmation banner
-│   │   │   ├── UpdateOverlay.kt      # "Update available" banner on the vehicle screen
-│   │   │   ├── ChargeMonitor.kt       # Background charge tracking (pop-up and statistics)
-│   │   │   ├── ChargePopupOverlay.kt  # Charging pop-up (full frame)
-│   │   │   ├── PreClimate.kt          # Car keeper: program, locking, stops (+ window and follow-up screen)
-│   │   │   ├── FloatingButtonsOverlay.kt # Bubbles on top of every app (+ FloatingButtonState, FloatingHalo)
-│   │   │   ├── CustomShortcutRunner.kt # Runs a custom shortcut
-│   │   │   ├── ProjectionShortcut.kt  # Android Auto / CarPlay shortcut (+ ProjectionHvacZone, climate area)
-│   │   │   └── ClusterModuleOverlay.kt # Module window on the cluster display, readings and tab
-│   │   │
-│   │   ├── receiver/
-│   │   │   └── BootReceiver.kt        # System boot receiver
-│   │   │
-│   │   ├── util/
-│   │   │   ├── FirmwareInfo.kt        # Firmware detection + forced mode
-│   │   │   ├── ClusterModuleSettings.kt # Driver display: on/off, module per tab, style, badge, units, refresh, animation
-│   │   │   ├── ChargePopupSettings.kt # Charging pop-up: on or off
-│   │   │   ├── AndroidSettings.kt     # Opens the Android settings (button and shortcut)
-│   │   │   ├── FloatingButtonSettings.kt # Floating buttons, per profile (+ FloatingProfiles)
-│   │   │   ├── CustomShortcutSettings.kt # Saved custom shortcuts
-│   │   │   ├── PreClimateSettings.kt  # Car keeper: page settings and last choices
-│   │   │   ├── GarageMode.kt          # Garage mode — puts every automatism to sleep
-│   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
-│   │   │   ├── LocaleHelper.kt        # Language management (7 languages) and text size
-│   │   │   ├── ThemeHelper.kt         # Auto / dark / light theme
-│   │   │   └── DataUsage.kt           # Data usage (Ethernet interface)
-│   │   │
-│   │   ├── update/
-│   │   │   ├── UpdateChecker.kt       # GitHub release check (stable and beta)
-│   │   │   ├── UpdateDialogManager.kt # Update dialog + DownloadManager
-│   │   │   ├── UpdateNotifier.kt     # When to announce an update on the vehicle screen
-│   │   │   ├── UpdateInfo.kt          # Description of an available version
-│   │   │   ├── ApkSecurity.kt         # Signature check of the downloaded APK
-│   │   │   ├── ApkInstaller.kt        # Installation
-│   │   │   └── ApkCleanup.kt          # Old APK cleanup
-│   │   │
-│   │   └── debug/
-│   │       ├── AppLogger.kt           # In-memory log ring buffer
-│   │       ├── CrashLogger.kt         # Crash trace written to disk
-│   │       └── DataUsageProbe.kt      # Network diagnostic probe
-│   │
-│   ├── res/
-│   │   ├── layout/                    # Screens, dialogs and list items
-│   │   ├── navigation/nav_graph.xml   # Dashboard → Profiles / Settings / Shortcuts / …
-│   │   ├── values/strings.xml         # French strings (+ values-en, -de, -es, -it, -pt)
-│   │   ├── values/colors.xml          # Light palette
-│   │   └── values-night/colors.xml    # Dark palette (same token names)
-│   │
-│   └── AndroidManifest.xml
-│
-└── mockup/
-    └── index.html                     # Interactive HTML mockup (1280×480)
-```
-
----
-
-## Hardware Layers
-
-`MG4Hardware` is organized into **4 access layers**, from highest to lowest level, with automatic fallback on failure.
-
-### Katman1 — Android Automotive Car API
-Primary layer. Uses official Android Automotive APIs:
-- `CarPropertyManager` → drive modes, regeneration, one-pedal
-- `CarHvacManager` → seat heating, steering wheel heating
-
-The connection is initialized via reflection on `Car.createCar()` with multiple overloads tried in sequence. Pending actions are queued and executed once the service is ready, with exponential backoff retry (2 s → 60 s).
-
-### Katman2 — Raw Binder (fallback)
-Falls back to `ServiceManager.getService("vehiclesetting")` with direct `binderTransact()` calls. Usually blocked by SELinux in production builds.
-
-### Katman4 — ADAS Services (firmware-specific)
-Dedicated layer for ADAS functions, dynamically loaded according to the detected firmware generation:
-
-| Firmware | Service | Mechanism |
-|----------|---------|-----------|
-| **SWI133** | `VehiclePropertyManager` | Loaded from the launcher APK via `ClassLoader` + reflection on `mIVehiclePropertyService`. Uses `getMixProperty()` / `setMixProperty()` |
-| **SWI68** | `VehicleSettingManager` | Static singleton loaded via reflection. Uses `setAccTjaMode()` / `setLaneKeepingWarningSound()` |
-| **SWI69 / SWI131** | `VehicleSettingManager` | Same singleton as SWI68. Uses `setFcwState()` / `getFcwState()` / `setFcwAutoBrakeMode()` / `setFcwSensitivity()` for AEB. Values confirmed empirically on real hardware: `setFcwState(1)` = DISABLE, `setFcwState(2)` = ENABLE. |
-| **SWI165** | `VehicleSettingManager` | Same SDK as SWI68 (`com.saicmotor.sdk.vehiclesettings`). ADAS via `setAccTjaMode()`. AEB via `setAutoEmergencyBraking(1/2)` as the main toggle + `setFcwAlarmMode(1/2)` + `setFcwAutoBrakeMode(1/2)`. Values: 1=OFF, 2=ON. |
-
-### Firmware Detection
-
-```kotlin
-// util/FirmwareInfo.kt
-val gen = FirmwareInfo.getGeneration()  // Reads ro.build.mt2712.version
-// → Gen.SWI133 | Gen.SWI68 | Gen.UNKNOWN
-```
-
-The result is cached and used throughout the app to branch firmware-specific code paths.
-
----
-
-## Profile System
-
-### `DrivingProfile` Model
-
-```kotlin
-data class DrivingProfile(
-    val id: String,             // Unique UUID
-    val name: String,           // Display name
-    val driveMode: DriveMode,   // ECO / NORMAL / SPORT / SNOW / CUSTOM
-    val regenLevel: RegenLevel, // OFF / LOW / MEDIUM / HIGH / ADAPTIVE / ONE_PEDAL
-    val steeringHeat: Boolean,
-    val seatHeatLeft: Int,      // 0–3
-    val seatHeatRight: Int,     // 0–3
-    // Whether heating is applied at all, decoupled from its value: null or true = apply
-    val steeringHeatEnabled: Boolean?,
-    val seatHeatEnabled: Boolean?,
-    val regenEnabled: Boolean?, // Regeneration: null or true = apply, false = unchanged
-    // ADAS
-    val overspeedAlarm: Boolean,
-    val speedLimitTone: Boolean,
-    val adasMode: Int,          // 0=Off 1=Limiter 2=Auto 3=ACC 4=ICA
-    val soundWarning: Boolean,
-    val swi68AdasMode: Int,     // Swi68Mode.OFF / ACC / TJA
-    val swi132LimiterConfigured: Boolean,
-    val swi132SasMode: Int,     // 0=Off 2=Manual 3=Smart
-    // Forward collision
-    val aebEnabled: Boolean,
-    val aebMode: Int,           // 1=Alert 2=Alert+Braking
-    val aebSensitivity: Int,    // 0=unset 1=Low 2=Standard 3=High
-    // Lane keeping
-    val elkMode: Int,           // 0=unset 1=OFF 2=Alert 3=Assist 5=Emergency
-    val elkSensitivity: Int,
-    val lasAudibleWarning: Boolean,
-    val lasVibrationReminder: Boolean,
-    // Misc
-    val energySaving: Boolean,
-    val tsrEnabled: Boolean,
-    val isDefault: Boolean,
-    // ESC / drowsiness: null = unset, the profile leaves them alone
-    val escEnabled: Boolean?,
-    val drowsinessEnabled: Boolean?,
-    val drowsinessSensitivity: Int?,  // 1=Low 2=Standard 3=High
-    val autoHighBeam: Boolean?,       // Automatic high beam; null = the profile leaves it alone
-    val btDeviceMac: String?          // Paired Bluetooth device
-)
-```
-
-> **Why these fields are nullable:** Gson does not call the Kotlin constructor. A declared default
-> of `= true` would therefore **not** apply to already-saved profiles — the field is missing from
-> the JSON, the JVM writes `false`, and the ESC would end up disabled on every old profile. `null`
-> means "profile older than this feature", and the accessors decide what to do.
-
-### Persistence
-
-Profiles are serialized to JSON via **Gson** and stored in `SharedPreferences`. Maximum **10 profiles** per device
-(`ProfileManager.MAX_PROFILES`). Beyond five, the picker scrolls its cards and the "Profile cycle" page moves to two
-rows of five. A version older than 2.6.9 reads and applies all ten, but creates no more and only restores five from
-the vehicle backup.
-
-### Applying a Profile
-
-`ProfileApplier.apply()` executes hardware calls in the following order on `Dispatchers.IO`:
-1. Drive mode (fast — binder call)
-2. Regen level (fast — binder call)
-3. Heated steering wheel (~2 s — state confirmation polling)
-4. Left seat heating (~7 s — toggle polling)
-5. Right seat heating (~7 s — toggle polling)
-6. Wait for Katman4, then firmware ADAS, forward collision, ESC and drowsiness, lane keeping,
-   automatic high beam
-
-Safety settings are **skipped when the profile does not configure them**, rather than written to a
-default: the ESC write is a toggle driven by a prior read, so aiming for "ON" from a doubtful read
-would disable it.
-
----
-
-## User Interface
-
-### Navigation
-The app uses a **NavController** with **7 destinations**:
-
-```
-DashboardFragment (start)
-    ├──► ProfileFragment ──► ProfileEditFragment  (create / edit, full screen)
-    ├──► AutomationFragment
-    ├──► ShortcutsFragment
-    ├──► StatsFragment
-    └──► SettingsFragment
-```
-
-The top bar shows the tabs in this order: Profiles, Automation, Shortcuts, Statistics, Settings.
-Its buttons act as toggles: a second press returns to the dashboard.
-
-### Category rail
-Four screens share the same pattern: a **vertical rail on the left** selects a category, the
-content scrolls on the right, and whatever belongs to no category stays in a persistent header
-(profile name, master switch) or footer (Cancel / Save / Close).
-
-| Screen | Tabs |
-|---|---|
-| Dashboard | Driving · Safety · Comfort |
-| Profile editor | Driving · Safety · Comfort |
-| Settings | Languages · Interface · Advanced · Info |
-| Shortcuts | Classic · Advanced · List |
-
-A tab whose page has no visible section left on the current firmware is **hidden** — better no tab
-than a tab opening an empty page.
-
-### Sizing
-Values shared by the reworked screens, tuned for readability while driving: titles **20sp**,
-section headers **13sp**, labels and buttons **16sp**, button height **52dp**, rail tabs **64dp**,
-rail width **180dp**, card padding **14dp**.
-
-### Windows and pop-ups
-- **App windows** — `ui/AppDialog`: a rounded card with no chrome, at the width it is given (an
-  Android dialog's default width is too narrow for a car screen). `confirmer` for a simple
-  confirmation, with a neutral, warning or danger tone; `choisir` for a grid of tiles; `options`
-  for a single-choice list; `segments` for a segmented choice; `repeter` for a − or + button that
-  repeats while held. Every new yes / no in the app goes through `AppDialog.confirmer`.
-- **Pop-ups and banners** — `service/OverlayKit`: their layouts are written for a base card
-  (1108 × 392 dp) and inflated with a corrected density, to take the same share of the screen
-  everywhere. If the window granted is smaller than expected, the card is shrunk as a whole and the
-  `MG4_OVERLAY` log gives the room found. Tints are set in code: these layouts are inflated outside
-  the activity, without the AppCompat factory.
-
-### Color Palette
-
-The app follows the light or dark theme. Light values live in `res/values/colors.xml`, dark ones in
-`res/values-night/colors.xml` — **same token names on both sides**, which is the only rule to
-follow when adding a colour.
-
-| Token | Light | Dark | Usage |
-|-------|-------|------|-------|
-| `dash_bg` | `#F2F2F7` | `#0C0C0E` | App background |
-| `dash_card` | `#FFFFFF` | `#141416` | Cards |
-| `dash_section` | `#F2F2F7` | `#1C1C1F` | Inner sections |
-| `dash_border` | `#D1D1D6` | `#2A2A2E` | Borders and dividers |
-| `dash_btn` | `#E5E5EA` | `#222226` | Inactive button background |
-| `dash_text_lo` | `#8E8E93` | `#52525B` | Section headers |
-| `dash_accent` | `#0284C7` | `#38BDF8` | Active selection (blue) |
-| `dash_accent_dim` | `#E0F2FE` | `#0C4A6E` | Active selection background |
-| `dash_eco` | `#16A34A` | `#22C55E` | ECO mode (green) |
-| `dash_warn` | `#D97706` | `#F59E0B` | Warning (amber) |
-| `dash_danger` | `#E11D48` | `#F43F5E` | Delete / danger actions |
-| `text_primary` | `#1C1C1E` | `#FFFFFF` | Primary text |
-| `text_secondary` | `#6C6C70` | `#B0B0B0` | Secondary text |
-
-Every `*_dim` colour is the background paired with its vivid counterpart: `dash_eco_dim`,
-`dash_warn_dim` and `dash_danger_dim` follow the same principle as `dash_accent_dim`.
-
-> **Naming pitfall:** `bg_dark` is `#FFFFFF` in the light theme. The name dates back to when the
-> app only had a dark theme; it means the general background, not a dark colour.
-
----
-
-## External API (KeyMapper, Tasker…)
-
-Lets a third-party app trigger MG4Control functions (issue #79).
-
-> **Disabled by default.** Turn it on in *Settings → Advanced settings → "External API"*, with an
-> explicit confirmation. While disabled, every incoming command is refused and logged. Once
-> enabled, **any installed app** can send these intents: they are protected by no permission,
-> because KeyMapper and Tasker ship from the Play Store and can never hold a `signature` one.
-
-### Direct actions — one intent action per command
-
-No extras required. This is the form usable from **KeyMapper**, whose intent editor only offers
-the type (*Broadcast receiver*) and the action string.
-
-| Action | Effect |
-|---|---|
-| `com.mg4.control.action.ONE_PEDAL` | Toggle 1-pedal ↔ fallback regen level |
-| `com.mg4.control.action.ENERGY_SAVING_TOGGLE` | Energy saving |
-| `com.mg4.control.action.PROFILE_PICKER` | Show the on-screen profile picker |
-| `com.mg4.control.action.OPEN_APP` | Open MG4Control |
-
-These are **toggles**: each send flips the state, there is no "set to ON".
-
-> **Deliberately out of the API.** `VEHICLE_POWER_OFF`, `ADAS_CYCLE`, `AEB_CYCLE`, `TSR_TOGGLE`,
-> `OVERSPEED_ALARM`, `SPEED_LIMIT_TONE` and `SOUND_WARNING` are **not** exposed: they affect active
-> safety or shut the vehicle down. The refusal also covers `EXECUTE` — removing them from the direct
-> actions alone would have protected nothing. They remain available from the app and the steering
-> wheel shortcuts.
-
-**In KeyMapper**: add an action → *Intent* (version 2.3.0 minimum) → type **Broadcast receiver** →
-paste the string into the *Action* field.
-
-### `EXECUTE` — for Tasker, adb, scripts
-
-`com.mg4.control.action.EXECUTE` with a string extra `action` holding **the name of any shortcut
-action**, except the ones listed above as out of the API. That covers far more than the four direct
-actions: `REGEN_CYCLE`, `SEAT_HEAT_LEFT_CYCLE`, `HVAC_RECIRC_CYCLE`, `BRIGHTNESS_UP`… — the exact
-names are the ones in `shortcut/ShortcutAction.kt`.
-
-Two of them need an extra, and therefore cannot exist as a direct action:
-
-- `APPLY_PROFILE` — requires a `profile` extra: the profile name, case-insensitive
-- `OPEN_CUSTOM_APP` — opens the app configured in the shortcuts screen
-
-```bash
-adb shell am broadcast -a com.mg4.control.action.EXECUTE \
-  --es action APPLY_PROFILE --es profile "Home commute"
-```
-
-### `SET` — write a value directly
-
-`com.mg4.control.action.SET` with the `key` and `value` extras:
-
-| `key` | accepted `value` |
-|---|---|
-| `drive_mode` | `ECO` `NORMAL` `SPORT` `SNOW` `CUSTOM` |
-| `regen` | `OFF` `LOW` `MEDIUM` `HIGH` `ADAPTIVE` `ONE_PEDAL` |
-| `seat_heat_left` | `0` to `3` |
-| `seat_heat_right` | `0` to `3` |
-| `steering_heat` | `0`/`1` or `false`/`true` |
-| `profile` | profile name |
-| `hvac_power` | `0`/`1` — climate on/off |
-| `ac` | `0`/`1` — A/C compressor |
-| `hvac_auto` | `0`/`1` — automatic mode |
-| `hvac_temp` | °C, clamped to the vehicle's real bounds |
-| `hvac_fan` | fan level, clamped to the real bounds |
-| `hvac_recirc` | `INNER` `OUTSIDE` `AUTO` (or `0` `1` `2`) |
-| `defrost_front` | `0`/`1` |
-| `defrost_rear` | `0`/`1` |
-
-The `hvac_*` and `defrost_*` keys are ignored when the firmware exposes no climate control.
-Setpoint and fan are clamped to bounds **read from the vehicle**, which differ across firmwares.
-These are hardware toggles that step one notch at a time: expect a few seconds before the final
-state is reached.
-
-```bash
-adb shell am broadcast -a com.mg4.control.action.SET --es key drive_mode --es value SPORT
-```
-
-#### `NEXT` / `PREV` / `TOGGLE` — cycling without knowing the state
-
-Instead of a setpoint, `value` accepts **`NEXT`** (next notch), **`PREV`** (previous notch) or
-**`TOGGLE`** (an alias of `NEXT`, easier to read on a boolean). The new value is computed from the
-state read on the vehicle, so a single steering-wheel button can mean "seat heat +1". The cycle
-**wraps around**: past the maximum, the next notch returns to the minimum.
-
-```bash
-adb shell am broadcast -a com.mg4.control.action.SET --es key seat_heat_left --es value NEXT
-adb shell am broadcast -a com.mg4.control.action.SET --es key ac --es value TOGGLE
-```
-
-Cyclable keys: `seat_heat_left`, `seat_heat_right`, `steering_heat`, `hvac_power`, `ac`,
-`hvac_auto`, `hvac_temp`, `hvac_fan`, `hvac_recirc`, `defrost_front`, `defrost_rear`.
-
-`drive_mode`, `regen` and `profile` are **deliberately excluded**: the drive-mode enum is not
-filtered per firmware (cycling could select a mode the car does not have), regen availability
-depends on the current state (no level at all in Snow mode, One Pedal only while Energy Saving is
-on), and there is no notion of a "current profile".
-
-When the current state cannot be read, the command is **refused without writing anything** rather
-than assuming a starting point — a guessed origin would move the value down while you press to
-move it up. Refusals are logged (`adb logcat -s MG4_API`).
-
-### Reading state — ContentProvider
-
-`content://com.mg4.control.state/state` (or `com.mg4.control.offline.state` for the offline
-variant — the authority follows the applicationId). A **single**-row cursor:
-
-`drive_mode`, `regen`, `seat_heat_left`, `seat_heat_right`, `steering_heat`, `speed_kmh`,
-`outside_temp_c`, `tsr`, `energy_saving`, `aeb_enabled`, `firmware`, `profiles` (names separated
-by `|`), `default_profile`.
-
-An unreadable value is `null`, never `0` — a zero would be indistinguishable from "seat off" or
-"vehicle stopped". Tasker can query a ContentProvider, KeyMapper cannot.
-
-Unlike broadcasts, a provider knows its caller: every read is logged by package name, and the
-`external_api_allowlist` preference (comma-separated packages, empty = all allowed) is actually
-enforced.
-
-### Security and diagnostics
-
-The **speed lock** (*Settings → "Block driving settings above a given speed"*) also covers the API,
-since it sits in the write primitives. Note that it is itself **disabled by default** — if you have
-not enabled it, no speed limit applies to external commands. Comfort settings (seats, steering
-wheel heating) are never affected.
-
-Every command, accepted or refused, is traced under the **`MG4_API`** tag (visible via the
-Diagnostic button). To test the app independently of KeyMapper:
-
-```bash
-adb shell am broadcast -a com.mg4.control.action.PROFILE_PICKER
-```
-
-Complete silence = stale APK or service not running. `REFUS … API externe désactivée` = the
-Settings toggle was never confirmed.
-
----
-
-## Build & Installation
-
-You can download the latest version of MG4Control directly from the releases page: https://github.com/SliDeeN/MG4Control/releases
-All you need is a USB drive and access to the AAOS settings to install the APK.
-
-
-You can also compile the project yourself:
-
-### Prerequisites
-- Android Studio Hedgehog (2023.1) or later
-- JDK 17+
-- Android SDK API 34
-
-### Debug Build
-
-```bash
-# Using Android Studio's bundled JDK
-JAVA_HOME="/path/to/Android Studio/jbr" ./gradlew assembleDebug
-```
-
-Output APK location:
-```
-app/build/outputs/apk/debug/app-debug.apk
-```
-
-### Installing on the Vehicle
-
-The application must be signed with the ROM's system key. On a development system:
-
-```bash
-adb push app-debug.apk /sdcard/
-adb shell pm install -r --system /sdcard/app-debug.apk
-```
-
-> On a production ROM, the APK must be included in the system build or installed through an OEM-specific mechanism.
-
----
-
-## Required Permissions
-
-| Permission | Reason |
-|-----------|--------|
-| `FOREGROUND_SERVICE` | Persistent foreground service for auto-apply |
-| `WAKE_LOCK` | Prevents sleep during settings application |
-| `RECEIVE_BOOT_COMPLETED` | Auto-start on vehicle boot |
-| `CAR_POWERTRAIN` | Drive mode and regeneration control |
-| `CONTROL_CAR_CLIMATE` | Seat and steering wheel heating control |
-| `CAR_VENDOR_EXTENSION` | SAIC proprietary extensions |
-| `CAR_ENERGY` | Battery / powertrain information |
-| `INTERNET` | Update check (GitHub API) |
-| `DOWNLOAD_WITHOUT_NOTIFICATION` | Silent download of the update APK |
-| `WRITE_EXTERNAL_STORAGE` | Saving the APK into the Downloads folder |
-
----
-
-## Licence
-
-| Versions | Licence |
-|---|---|
-| up to and including **2.6.5** | MIT — [`LICENSE.MIT`](LICENSE.MIT) |
-| from **2.6.6** onwards | **GNU GPL v3** or later — [`COPYING`](COPYING) |
-
-Already published versions stay under MIT: a granted licence cannot be revoked. From 2.6.6, any
-modified version you redistribute must also be released under the GPL, **source code included**.
-
-The MIT notice is retained for the code published under that regime before the switch, third-party
-contributions included. Details in [`LICENCE.md`](LICENCE.md).
-
-Weather data for automatic brightness: [Open-Meteo.com](https://open-meteo.com), licensed under
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
----
-
 ## Credits
 
 Made with ❤ by **SliDeeN** and **Claude IA**
 
-Basé sur l'application **DriveHub Dort** développée par **Merth4n** & **hotboy_ist**
+Based on the **DriveHub Dort** app developed by **Merth4n** & **hotboy_ist**
 
-Merci à **confor1max**, **FrAsErTaG**, **sixty4h**, **hojnikb** et **depippi.p** pour les tests avant chaque release 🙏
+Thanks to **confor1max**, **FrAsErTaG**, **sixty4h**, **hojnikb** and **depippi.p** for testing before every release 🙏
 
-Le pilotage des vitres doit beaucoup à **[winclose](https://github.com/Skittle6938/winclose)** de
-**Skittle6938** : identifiants et valeurs de commande des vitres, et principe de la fermeture
-automatique en quittant la voiture, repris puis étendus aux six firmwares. Merci 🙏
+Window control owes a lot to **[winclose](https://github.com/Skittle6938/winclose)** by
+**Skittle6938**: the window identifiers and command values, and the idea of closing them
+automatically when leaving the car, taken over and then extended to all six firmwares. Thank you 🙏
 
-Merci aussi à **sensoyg** pour son fork et ses essais sur le firmware turc DBI68, à **Skittle6938**
-([MG4Dash](https://github.com/Skittle6938/MG4Dash)) pour le verrouillage depuis l'écran du
-Garde-voiture et l'analyse du chauffage de la batterie sur SWI69, et à **Geekice1** pour le
-prototype des sons d'automatisation 🙏
+Thanks also to **sensoyg** for their fork and their tests on the Turkish DBI68 firmware, to **Skittle6938**
+([MG4Dash](https://github.com/Skittle6938/MG4Dash)) for locking from the Car keeper screen and the
+analysis of battery heating on SWI69, and to **Geekice1** for the automation sounds prototype 🙏
 
 [![GitHub](https://img.shields.io/badge/GitHub-SliDeeN%2FMG4Control-181717?logo=github)](https://github.com/SliDeeN/MG4Control)
-
-</details>
 
 <a href="https://star-history.com/#SliDeeN/MG4Control&Date">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date&theme=dark" />
-    <img alt="Star history · Historique des étoiles" src="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date" width="600" />
+    <img alt="Star history" src="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date" width="600" />
   </picture>
 </a>

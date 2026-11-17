@@ -106,6 +106,8 @@ class ProfileManager(private val context: Context) {
             persist(list)
         }
         triggerBackup()
+        // Premier profil : le combiné quitte les réglages communs pour les siens.
+        if (getAll().size == 1) suiviPeutChanger("premier profil")
         return true
     }
 
@@ -122,6 +124,32 @@ class ProfileManager(private val context: Context) {
         }
         if (change) triggerBackup()
         return change
+    }
+
+    /**
+     * Duplique le profil [profileId] (2026-11-08) : la copie, nommée « <nom> [word] », est rangée
+     * juste après lui. `null` si le profil n'existe plus ou si les [MAX_PROFILES] sont atteints.
+     */
+    fun duplicate(profileId: String, word: String): DrivingProfile? {
+        val copie = synchronized(MUTATION_LOCK) {
+            val list = getAll()
+            if (list.size >= MAX_PROFILES) return null
+            val original = list.firstOrNull { it.id == profileId } ?: return null
+            val c = com.mg4.control.model.ProfileCopy.duplicate(original,
+                com.mg4.control.model.ProfileCopy.name(original.name, word, list.map { it.name }))
+            persist(com.mg4.control.model.ProfileCopy.insertAfter(list, profileId, c))
+            c
+        }
+        triggerBackup()
+        return copie
+    }
+
+    /** Renomme un profil depuis sa carte, sans passer par l'éditeur. `false` si nom vide ou profil absent. */
+    fun rename(profileId: String, name: String): Boolean {
+        val nom = name.trim().take(com.mg4.control.model.ProfileCopy.NAME_MAX)
+        if (nom.isEmpty()) return false
+        val p = getById(profileId) ?: return false
+        return save(p.copy(name = nom))
     }
 
     fun delete(profileId: String) {
@@ -143,6 +171,7 @@ class ProfileManager(private val context: Context) {
             ActiveProfile.forgetIfMissing(context, list.map { it.id })
         }
         triggerBackup()
+        suiviPeutChanger("profil supprimé")
     }
 
     /**
@@ -155,12 +184,22 @@ class ProfileManager(private val context: Context) {
             persist(ordonner(getAll(), ids))
         }
         triggerBackup()
+        suiviPeutChanger("profils réordonnés")
     }
 
     fun setDefault(profileId: String) {
         prefs.edit().putString(KEY_DEFAULT_ID, profileId).apply()
         triggerBackup()
+        suiviPeutChanger("profil par défaut")
     }
+
+    /**
+     * Le profil que suit l'écran conducteur a pu changer sans qu'aucun profil soit appliqué
+     * (2026-11-14) : profil par défaut, suppression du profil actif, ordre, premier profil créé.
+     * Le module est remis en place ou retiré selon les réglages du profil désormais suivi.
+     */
+    private fun suiviPeutChanger(pourquoi: String) =
+        runCatching { com.mg4.control.service.ClusterModuleOverlay.refresh(context, pourquoi) }
 
     fun getDefaultProfile(): DrivingProfile? {
         val defaultId = prefs.getString(KEY_DEFAULT_ID, null) ?: return null

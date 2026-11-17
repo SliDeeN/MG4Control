@@ -52,6 +52,7 @@ jobs:
           MG4_KEYSTORE_PASSWORD: ${{ secrets.MG4_KEYSTORE_PASSWORD }}
           MG4_KEY_ALIAS: ${{ secrets.MG4_KEY_ALIAS }}
           MG4_KEY_PASSWORD: ${{ secrets.MG4_KEY_PASSWORD }}
+          ABRP_API_KEY: ${{ secrets.ABRP_API_KEY }}
         run: |
           chmod +x gradlew
           ./gradlew assembleOnlineRelease assembleOfflineRelease --no-daemon

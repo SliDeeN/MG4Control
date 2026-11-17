@@ -346,7 +346,10 @@ object ChargePopupOverlay {
         ligne(v.puissance, e.kw?.takeIf { e.enCharge }?.let { decimale(v.locale).format(it) } ?: "–", "kW",
             e.kwMax?.let { v.s(R.string.charge_popup_power_max, decimale(v.locale).format(it)) })
         ligne(v.energie, "+" + decimale(v.locale).format(e.energieKwh), "kWh", null)
-        ligne(v.autonomie, e.autonomieGagneeKm?.let { "+$it" } ?: "–", if (e.autonomieGagneeKm != null) "km" else "", null)
+        // Dans l'unité de distance générale (2026-11-10).
+        val distance = com.mg4.control.util.DistanceSetting.unit(v.loc)
+        ligne(v.autonomie, e.autonomieGagneeKm?.let { "+${kotlin.math.round(distance.fromKm(it.toFloat())).toInt()}" } ?: "–",
+            if (e.autonomieGagneeKm != null) distance.short else "", null)
         val prixTexte = prix(v.locale, e.prix)
         ligne(v.cout, montant(v.locale, e.energieKwh * e.prix), e.devise,
             if (e.prixCorrige) v.s(R.string.charge_popup_tariff_fixed, prixTexte, e.devise)

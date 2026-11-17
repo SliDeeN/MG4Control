@@ -23,6 +23,7 @@ import com.mg4.control.ui.RestoreProfilesDialog
 import com.mg4.control.ui.SettingsFragment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.mg4.control.update.UpdateChecker
@@ -31,6 +32,7 @@ import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.FullScreen
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.NavSide
 import com.mg4.control.util.ThemeHelper
 
 class MainActivity : AppCompatActivity() {
@@ -86,6 +88,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_main)
+        placerMenu()
+        // Libellés trop longs : deux lignes s'il y a la place, sinon une, puis « … ».
+        com.mg4.control.util.ButtonLines.suivre(window.decorView)
 
         startForegroundService(Intent(this, MG4ControlService::class.java))
         MG4Hardware.initAudio(applicationContext)  // connecte le helper audio vendor (A9 uniquement, no-op ailleurs)
@@ -116,6 +121,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        ouvrirPageDemandee(intent)
         val info = UpdateNotifier.readFrom(intent) ?: return
         if (!isFinishing && !isDestroyed) UpdateDialogManager.show(this, info)
     }
@@ -159,12 +165,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Déblocage du bouton Diagnostic (5 clics sur le logo) ────────────────
+    // ── Logo : retour au Tableau de bord, et déblocage du Diagnostic (5 clics) ─
 
     private var logoClickCount = 0
 
     private fun setupDiagnosticUnlock() {
-        findViewById<View>(R.id.topbar_logo)?.setOnClickListener {
+        findViewById<View>(R.id.nav_home)?.setOnClickListener {
+            // Le Tableau de bord n'a plus d'onglet (refonte B) : c'est le logo qui y ramène.
+            navController.popBackStack(R.id.dashboardFragment, false)
             if (diagnosticUnlocked) return@setOnClickListener
             logoClickCount++
             if (logoClickCount >= 5) {
@@ -178,11 +186,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ── Page demandée par un pop-up (Réglages rapides, issue #197) ────────────
+
+    /** « Choisir les tuiles » du pop-up Réglages rapides : Raccourcis › Réglages rapides. */
+    private fun ouvrirPageDemandee(intent: Intent?): Boolean {
+        if (intent?.getStringExtra(EXTRA_OPEN_PAGE) != PAGE_QUICK_SETTINGS) return false
+        intent.removeExtra(EXTRA_OPEN_PAGE)
+        com.mg4.control.ui.ShortcutsFragment.pageDemandee = PAGE_QUICK_SETTINGS
+        runCatching {
+            if (navController.currentDestination?.id == R.id.shortcutsFragment) return true
+            navController.navigate(R.id.shortcutsFragment)
+        }
+        return true
+    }
+
     // ── Navigation vers l'écran par défaut au démarrage ─────────────────────
 
     private fun navigateToDefaultScreen(savedInstanceState: Bundle?) {
         // Ne naviguer que si c'est un vrai démarrage (pas une rotation / recreate)
         if (savedInstanceState != null) return
+        // Ouverte par un pop-up pour une page précise : c'est elle, pas l'écran par défaut.
+        if (ouvrirPageDemandee(intent)) return
         val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
         when (prefs.getString("default_screen", "dashboard")) {
             "profiles"  -> navController.navigate(R.id.profileFragment)
@@ -250,68 +274,78 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Boutons de navigation dans la top-bar ─────────────────────────────────
+    // ── Côté du menu (volant à droite) ──────────────────────────────────────
+
+    /**
+     * Le menu passe à droite du contenu quand le conducteur est à droite (Réglages › Interface).
+     * En Auto, le côté du volant est relu en arrière-plan — la connexion à la voiture n'est pas
+     * prête au démarrage : s'il fait changer le menu de côté, l'activité se recrée une fois.
+     */
+    private fun placerMenu() {
+        if (NavSide.right(this)) {
+            val menu = findViewById<View>(R.id.nav_column)
+            val racine = menu.parent as android.view.ViewGroup
+            racine.removeView(menu)
+            racine.addView(menu)
+        }
+        if (NavSide.mode(this) != NavSide.Mode.AUTO) return
+        val app = applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            repeat(LECTURES_COTE) { essai ->
+                if (essai > 0) delay(LECTURE_COTE_PAUSE_MS)
+                val cote = com.mg4.control.hardware.DriverSide.read() ?: return@repeat
+                val avant = NavSide.right(app)
+                NavSide.saveDetected(app, cote)
+                if (NavSide.right(app) != avant) withContext(Dispatchers.Main) {
+                    if (!isFinishing && !isDestroyed) recreate()
+                }
+                return@launch
+            }
+        }
+    }
+
+    // ── Menu principal (colonne de gauche) ──────────────────────────────────
 
     private fun setupNavButtons() {
-        val btnAutomation = findViewById<MaterialButton>(R.id.btn_nav_automation)
-        val btnStats     = findViewById<MaterialButton>(R.id.btn_nav_stats)
-        val btnShortcuts = findViewById<MaterialButton>(R.id.btn_nav_shortcuts)
-        val btnProfiles  = findViewById<MaterialButton>(R.id.btn_nav_profiles)
-        val btnSettings  = findViewById<MaterialButton>(R.id.btn_nav_settings)
-
-        btnAutomation.setOnClickListener {
-            when (navController.currentDestination?.id) {
-                R.id.automationFragment -> navController.popBackStack(R.id.dashboardFragment, false)
-                else                    -> navController.navigate(R.id.automationFragment)
+        // Entrée → écran. Le Tableau de bord, écran de départ, n'a pas d'entrée : le logo y ramène
+        // en dépilant. Un éditeur allume l'entrée d'où il s'ouvre : profil → Profils, automatisation
+        // → Automatisation.
+        val entrees = listOf(
+            findViewById<MaterialButton>(R.id.btn_nav_profiles)   to R.id.profileFragment,
+            findViewById<MaterialButton>(R.id.btn_nav_shortcuts)  to R.id.shortcutsFragment,
+            findViewById<MaterialButton>(R.id.btn_nav_automation) to R.id.automationFragment,
+            findViewById<MaterialButton>(R.id.btn_nav_stats)      to R.id.statsFragment,
+            findViewById<MaterialButton>(R.id.btn_nav_settings)   to R.id.settingsFragment,
+        )
+        entrees.forEach { (bouton, destination) ->
+            bouton.setOnClickListener {
+                // Un second appui sur l'entrée affichée ramène au Tableau de bord, comme avant.
+                if (navController.currentDestination?.id == destination) navController.popBackStack(R.id.dashboardFragment, false)
+                else navController.navigate(destination)
             }
         }
 
-        btnStats.setOnClickListener {
-            when (navController.currentDestination?.id) {
-                R.id.statsFragment -> navController.popBackStack(R.id.dashboardFragment, false)
-                else               -> navController.navigate(R.id.statsFragment)
-            }
-        }
-
-        btnShortcuts.setOnClickListener {
-            when (navController.currentDestination?.id) {
-                R.id.shortcutsFragment -> navController.popBackStack(R.id.dashboardFragment, false)
-                else                   -> navController.navigate(R.id.shortcutsFragment)
-            }
-        }
-
-        btnProfiles.setOnClickListener {
-            when (navController.currentDestination?.id) {
-                R.id.profileFragment -> navController.popBackStack(R.id.dashboardFragment, false)
-                else                 -> navController.navigate(R.id.profileFragment)
-            }
-        }
-
-        btnSettings.setOnClickListener {
-            when (navController.currentDestination?.id) {
-                R.id.settingsFragment -> navController.popBackStack(R.id.dashboardFragment, false)
-                else                  -> navController.navigate(R.id.settingsFragment)
-            }
-        }
-
+        // L'entrée affichée prend un fond de carte, une bordure et l'accent ; les autres restent
+        // sans fond, en texte principal. Sur le Tableau de bord, c'est le logo qui est encadré.
+        val fondActif = ColorStateList.valueOf(getColor(R.color.dash_card))
+        val sansFond = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+        val accent = getColor(R.color.dash_accent)
+        val texte = getColor(R.color.text_primary)
+        val trait = (resources.displayMetrics.density).toInt().coerceAtLeast(1)
+        val accueil = findViewById<View>(R.id.nav_home)
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            val accent   = getColor(R.color.dash_accent_dim)
-            val inactive = getColor(R.color.dash_btn)
-            btnAutomation.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                if (destination.id == R.id.automationFragment) accent else inactive
-            )
-            btnStats.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                if (destination.id == R.id.statsFragment) accent else inactive
-            )
-            btnShortcuts.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                if (destination.id == R.id.shortcutsFragment) accent else inactive
-            )
-            btnProfiles.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                if (destination.id == R.id.profileFragment) accent else inactive
-            )
-            btnSettings.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                if (destination.id == R.id.settingsFragment) accent else inactive
-            )
+            val affiche = when (destination.id) {
+                R.id.profileEditFragment -> R.id.profileFragment
+                R.id.customRuleEditFragment -> R.id.automationFragment
+                else -> destination.id
+            }
+            entrees.forEach { (bouton, id) ->
+                val actif = id == affiche
+                bouton.backgroundTintList = if (actif) fondActif else sansFond
+                bouton.setTextColor(if (actif) accent else texte)
+                bouton.strokeWidth = if (actif) trait else 0
+            }
+            accueil.setBackgroundResource(if (affiche == R.id.dashboardFragment) R.drawable.bg_nav_home_active else 0)
         }
     }
 
@@ -335,7 +369,10 @@ class MainActivity : AppCompatActivity() {
             R.id.btn_pick_es to "es",
             R.id.btn_pick_pt to "pt",
             R.id.btn_pick_it to "it",
-            R.id.btn_pick_tr to "tr"
+            R.id.btn_pick_tr to "tr",
+            R.id.btn_pick_pl to "pl",
+            R.id.btn_pick_nb to "nb",
+            R.id.btn_pick_cs to "cs"
         )
         buttons.forEach { (viewId, code) ->
             dialogView.findViewById<View>(viewId).setOnClickListener {
@@ -348,9 +385,17 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         /**
-         * Débloqué via 5 clics sur le logo en haut à gauche. En mémoire uniquement :
+         * Débloqué via 5 clics sur le logo du menu. En mémoire uniquement :
          * réinitialisé au redémarrage du process (le bouton Diagnostic reste masqué par défaut).
          */
         @Volatile var diagnosticUnlocked = false
+
+        /** Côté du volant : quelques lectures, le temps que la connexion à la voiture s'établisse. */
+        /** Page à ouvrir, demandée par un pop-up : [PAGE_QUICK_SETTINGS]. */
+        const val EXTRA_OPEN_PAGE = "com.mg4.control.extra.OPEN_PAGE"
+        const val PAGE_QUICK_SETTINGS = "quick_settings"
+
+        private const val LECTURES_COTE = 5
+        private const val LECTURE_COTE_PAUSE_MS = 2_000L
     }
 }

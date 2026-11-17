@@ -2,6 +2,7 @@ package com.mg4.control.ui
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
@@ -30,6 +31,7 @@ import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateScreenMode
 import com.mg4.control.model.PreClimateTrend
+import com.mg4.control.service.DashcamRemote
 import com.mg4.control.service.OverlayKit
 import com.mg4.control.service.PreClimate
 import com.mg4.control.service.PreClimateScreen
@@ -79,20 +81,52 @@ class PreClimateActivity : Activity() {
         OverlayKit.tenirDansLaFenetre(v.racine, (MARGE_DP * c.mesures.density).roundToInt(), "Pré-climatisation (suivi)",
             carte = v.racine.findViewById(R.id.preclim_frame))
         pleinEcran()
+        journaliserFenetre(c)
         PreClimateScreen.attacher(this)
         eveilJusqua = SystemClock.elapsedRealtime() + EVEIL_MS
         AppLogger.i(TAG, "Écran de suivi affiché (plein écran)")
     }
 
+    /** Raccourci pendant un programme alors que l'écran existe déjà : il revient devant, rallumé. */
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        eveiller()
+    }
+
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration?) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        AppLogger.w(TAG, "Écran de suivi : multi-fenêtre $isInMultiWindowMode")
+    }
+
+    /**
+     * Diagnostic de l'affichage « format téléphone » vu parfois (2026-11-02) : la taille réelle de
+     * la fenêtre à chaque changement, l'écran annoncé, l'échelle retenue et le mode multi-fenêtre.
+     */
+    private fun journaliserFenetre(c: OverlayKit.Contextes) {
+        var derniere = ""
+        v.racine.addOnLayoutChangeListener { _, gauche, haut, droite, bas, _, _, _, _ ->
+            val taille = "${droite - gauche}×${bas - haut}"
+            if (taille == derniere) return@addOnLayoutChangeListener
+            derniere = taille
+            val m = resources.displayMetrics
+            AppLogger.i(TAG, "Écran de suivi : fenêtre $taille px (écran ${m.widthPixels}×${m.heightPixels}, " +
+                "à la création ${c.mesures.widthPixels}×${c.mesures.heightPixels}, échelle " +
+                "${String.format(Locale.US, "%.2f", c.echelle)}, multi-fenêtre $isInMultiWindowMode)")
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         PreClimate.ecouteur = ecoute
+        // État de l'appli caméra : la pastille « REC » suit sans attendre le relevé suivant.
+        DashcamRemote.ecouteur = { if (PreClimate.etat?.req?.surveillance == true) peindreRec() }
         val e = PreClimate.etat
         if (e == null) finish() else peindre(e)
     }
 
     override fun onStop() {
         if (PreClimate.ecouteur === ecoute) PreClimate.ecouteur = null
+        DashcamRemote.ecouteur = null
         super.onStop()
     }
 
@@ -141,6 +175,7 @@ class PreClimateActivity : Activity() {
         val lignes: LinearLayout = racine.findViewById(R.id.preclim_lines)
         val dehors: TextView = racine.findViewById(R.id.preclim_outside)
         val batterie: TextView = racine.findViewById(R.id.preclim_battery)
+        val puissance: TextView = racine.findViewById(R.id.preclim_power)
         val masquer: TextView = racine.findViewById(R.id.preclim_hide)
         val arreter: TextView = racine.findViewById(R.id.preclim_stop)
         val chien: View = racine.findViewById(R.id.preclim_dog)
@@ -156,6 +191,7 @@ class PreClimateActivity : Activity() {
         val survIcone: ImageView = racine.findViewById(R.id.preclim_surv_icon)
         val survTitre: TextView = racine.findViewById(R.id.preclim_surv_title)
         val survEtat: TextView = racine.findViewById(R.id.preclim_surv_status)
+        val survRec: TextView = racine.findViewById(R.id.preclim_surv_rec)
         val survMasquer: TextView = racine.findViewById(R.id.preclim_surv_hide)
         val survArreter: TextView = racine.findViewById(R.id.preclim_surv_stop)
         val fin: View = racine.findViewById(R.id.preclim_end)
@@ -231,6 +267,7 @@ class PreClimateActivity : Activity() {
     // ── Peinture ─────────────────────────────────────────────────────────────
 
     private fun peindre(e: PreClimate.Etat) {
+        if (e.phase == PreClimate.Phase.ENDED && e.end == PreClimateEnd.CANCELLED) { quitterAnnule(e); return }
         val maintenant = SystemClock.elapsedRealtime()
         val chien = e.req.dog && e.phase == PreClimate.Phase.ACTIVE
         val surv = e.req.surveillance && e.phase == PreClimate.Phase.ACTIVE
@@ -246,8 +283,10 @@ class PreClimateActivity : Activity() {
             e.phase == PreClimate.Phase.ACTIVE -> peindreSuivi(e, maintenant)
             else -> peindreFin(e)
         }
-        // Le mode chien et la surveillance ne s'atténuent jamais : les passants doivent pouvoir lire.
-        attenuer(e.phase == PreClimate.Phase.ACTIVE && !chien && !surv && maintenant > eveilJusqua)
+        // Le mode chien ne s'atténue jamais : les passants doivent pouvoir lire. La surveillance non
+        // plus, sauf si le réglage « Appliquer aussi à la surveillance » le demande (2026-11-13).
+        attenuer(e.phase == PreClimate.Phase.ACTIVE && maintenant > eveilJusqua &&
+            PreClimateScreenMode.mayDim(chien, surv, PreClimateSettings.survFollowsScreen(v.loc)))
         peindreParticules(e)
     }
 
@@ -325,6 +364,9 @@ class PreClimateActivity : Activity() {
         lignes(e, step)
         v.dehors.text = v.s(R.string.preclim_outside, temperatureDehors(e))
         v.batterie.text = v.s(R.string.preclim_battery, batterie(e))
+        // Consommation (issue #210) : absente tant que la mesure est illisible.
+        v.puissance.text = e.powerW?.let { v.s(R.string.preclim_power, watts(it)) }.orEmpty()
+        v.puissance.visibility = if (e.powerW != null) View.VISIBLE else View.GONE
     }
 
     /**
@@ -341,13 +383,32 @@ class PreClimateActivity : Activity() {
         v.chienTemp.setTextColor(couleur)
         v.chienTemp.text = v.s(R.string.preclim_value_celsius, e.req.tempC)
         v.chienDehors.text = v.s(R.string.preclim_dog_outside, temperatureDehors(e))
-        v.chienEtat.text = v.s(R.string.preclim_dog_status, heure(e.startWallMinute.toInt()), batterie(e))
+        v.chienEtat.text = v.s(R.string.preclim_dog_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e))
     }
 
-    /** Surveillance (issue #180) : l'avertissement est fixe ; seule la ligne d'état change. */
+    /** Surveillance (issue #180) : l'avertissement est fixe ; la ligne d'état et « REC » changent. */
     private fun peindreSurveillance(e: PreClimate.Etat) {
-        v.survEtat.text = v.s(R.string.preclim_surv_status, heure(e.startWallMinute.toInt()), batterie(e),
+        v.survEtat.text = v.s(R.string.preclim_surv_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e),
             heure((e.startWallMinute + e.req.maxMin).roundToInt()))
+        peindreRec()
+    }
+
+    /**
+     * Pastille « REC » (2026-11-08, variante A) : point rouge fixe et durée filmée, d'après l'état
+     * annoncé par l'appli caméra ([DashcamRemote]) ; grise en pause, absente si rien ne filme.
+     */
+    private fun peindreRec() {
+        val rec = DashcamRemote.rec()
+        if (rec == null) { v.survRec.visibility = View.GONE; return }
+        val couleur = if (rec.enPause) v.texteBas else v.danger
+        val texte = v.s(if (rec.enPause) R.string.preclim_surv_rec_paused else R.string.preclim_surv_rec, rec.duree)
+        v.survRec.text = SpannableStringBuilder("●  $texte").apply {
+            setSpan(ForegroundColorSpan(couleur), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        v.survRec.setTextColor(if (rec.enPause) v.texteBas else v.texte)
+        OverlayKit.fond(v.survRec, if (rec.enPause) v.bouton else v.dangerDoux, if (rec.enPause) v.bordure else v.danger,
+            v.dp(1f), v.dp(22f).toFloat())
+        v.survRec.visibility = View.VISIBLE
     }
 
     private fun peindreVerrou(e: PreClimate.Etat) = when (e.lock) {
@@ -392,15 +453,22 @@ class PreClimateActivity : Activity() {
         }
     }
 
+    /**
+     * Annulé pendant le décompte : pas d'écran de fin, un simple toast. Avant (2026-11-02), la vue
+     * de fin était rendue visible avant d'être remplie, et le temps que l'activité se ferme on
+     * voyait un « Fermer » seul sur fond noir. Écran vidé, puis fermé.
+     */
+    private fun quitterAnnule(e: PreClimate.Etat) {
+        if (isFinishing) return
+        v.racine.visibility = View.INVISIBLE
+        Toast.makeText(v.loc, v.s(if (e.req.surveillance) R.string.preclim_surv_cancelled else R.string.preclim_cancelled),
+            Toast.LENGTH_SHORT).show()
+        PreClimate.oublierFin()
+        finish()
+    }
+
     private fun peindreFin(e: PreClimate.Etat) {
         val fin = e.end ?: return
-        if (fin == PreClimateEnd.CANCELLED) {
-            Toast.makeText(v.loc, v.s(if (e.req.surveillance) R.string.preclim_surv_cancelled else R.string.preclim_cancelled),
-                Toast.LENGTH_SHORT).show()
-            PreClimate.oublierFin()
-            finish()
-            return
-        }
         val heureFin = heure((e.endWallMinute ?: PreClimate.minuteDuJour()).toInt())
         val surv = e.req.surveillance
         val (titre, couleur, icone) = when (fin) {
@@ -452,6 +520,17 @@ class PreClimateActivity : Activity() {
     private fun batterie(e: PreClimate.Etat): String =
         e.soc?.let { v.s(R.string.preclim_value_percent, it.toInt()) } ?: "–"
 
+    /**
+     * Ligne d'état du mode chien et de la surveillance (issue #210) : « 78 % · 2 100 W » — la
+     * puissance suit la batterie, et disparaît tant qu'elle est illisible.
+     */
+    private fun batterieEtPuissance(e: PreClimate.Etat): String =
+        batterie(e) + (e.powerW?.let { " · " + watts(it) } ?: "")
+
+    /** « 1 850 W », séparateur de milliers de la langue. */
+    private fun watts(w: Int): String =
+        java.text.NumberFormat.getIntegerInstance(v.locale).format(w) + " W"
+
     /** « 25 °C · ventilation 8 · A/C » : ce que la pré-climatisation règle (compresseur toujours en marche). */
     private fun resumeDemande(e: PreClimate.Etat): String = v.s(
         R.string.preclim_summary_ac, v.s(R.string.preclim_value_celsius, e.req.tempC), e.req.fan.toString())
@@ -492,7 +571,8 @@ class PreClimateActivity : Activity() {
         /** Allumé ce temps à l'ouverture et après un toucher, puis atténué selon le réglage. */
         const val EVEIL_MS = 10_000L
         const val VOILE_ATTENUE = 0.6f
-        const val VOILE_ETEINT = 0.97f
+        /** « Éteint » : noir complet (2026-11-13, 97 % avant), luminosité au minimum ([LUMINOSITE_MIN]). */
+        const val VOILE_ETEINT = 1f
         const val LUMINOSITE_MIN = 0.01f
         /** Fin où le conducteur est là (retour, arrêt) : l'écran s'en va de lui-même. */
         const val FIN_PRESENT_MS = 30_000L

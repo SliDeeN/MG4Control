@@ -10,6 +10,7 @@ import com.mg4.control.R
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.ProfileSections
+import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.util.FirmwareInfo
 
 class ProfileAdapter(
@@ -18,17 +19,19 @@ class ProfileAdapter(
     private val onApply: (DrivingProfile) -> Unit,
     private val onSetDefault: (DrivingProfile) -> Unit,
     private val onEdit: (DrivingProfile) -> Unit,
-    private val onDelete: (DrivingProfile) -> Unit
+    /** Menu ⋮ de la carte : Dupliquer, Renommer, Supprimer (2026-11-08). */
+    private val onMenu: (DrivingProfile) -> Unit
 ) : RecyclerView.Adapter<ProfileAdapter.VH>() {
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView    = view.findViewById(R.id.tv_profile_name)
         val tvSummary: TextView = view.findViewById(R.id.tv_profile_summary)
         val tvDefault: TextView = view.findViewById(R.id.tv_default_badge)
+        val tvActive: TextView  = view.findViewById(R.id.tv_active_badge)
         val btnApply: Button    = view.findViewById(R.id.btn_apply)
         val btnDefault: Button  = view.findViewById(R.id.btn_set_default)
         val btnEdit: Button     = view.findViewById(R.id.btn_edit)
-        val btnDelete: Button   = view.findViewById(R.id.btn_delete)
+        val btnMenu: View       = view.findViewById(R.id.btn_profile_menu)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
@@ -59,7 +62,7 @@ class ProfileAdapter(
 
         holder.tvName.text    = profile.name
         // Seulement ce que le profil applique : une catégorie coupée n'est pas annoncée.
-        holder.tvSummary.text = ": " + ProfileSections.summary(
+        holder.tvSummary.text = ProfileSections.summary(
             profile, adasLabel,
             context.getString(R.string.profile_cat_drive),
             context.getString(R.string.profile_cat_safety),
@@ -68,15 +71,15 @@ class ProfileAdapter(
         )
 
         holder.tvDefault.visibility = if (isDefault) View.VISIBLE else View.GONE
-        holder.tvName.setTextColor(
-            if (isDefault) context.getColor(R.color.accent_normal)
-            else           context.getColor(R.color.text_primary)
-        )
+        // Refonte 2.7.0 : le profil actif (le dernier appliqué) se reconnaît à son cadre d'accent.
+        val isActive = profile.id == ActiveProfile.id(context)
+        holder.tvActive.visibility = if (isActive) View.VISIBLE else View.GONE
+        holder.itemView.setBackgroundResource(if (isActive) R.drawable.bg_card_active else R.drawable.bg_card_rounded)
 
         holder.btnApply.setOnClickListener   { if (!clicsBloques) onApply(profile) }
         holder.btnDefault.setOnClickListener { if (!clicsBloques) onSetDefault(profile) }
         holder.btnEdit.setOnClickListener    { if (!clicsBloques) onEdit(profile) }
-        holder.btnDelete.setOnClickListener  { if (!clicsBloques) onDelete(profile) }
+        holder.btnMenu.setOnClickListener    { if (!clicsBloques) onMenu(profile) }
     }
 
     override fun getItemCount() = profiles.size

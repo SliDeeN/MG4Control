@@ -21,6 +21,11 @@ import android.view.WindowManager
 import android.widget.TextView
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.R
+import com.mg4.control.model.BubbleIcon
+import com.mg4.control.model.BubbleInfo
+import com.mg4.control.model.BubbleLook
+import com.mg4.control.model.RuleSignal
 import com.mg4.control.model.FloatingButton
 import com.mg4.control.model.FloatingButtonStyle
 import com.mg4.control.model.FloatingButtons
@@ -77,14 +82,16 @@ object FloatingButtonsOverlay {
     private const val ENFONCE_MS = 80L
     private const val RELACHE_MS = 100L
 
-    /** Bulle : fond sombre presque opaque, bordure bleue (orange pendant le déplacement). */
-    private val FOND = Color.argb(0xE6, 0x17, 0x17, 0x1A)
-    private val BORDURE = Color.rgb(0x38, 0xBD, 0xF8)
-    private val BORDURE_DEPLACEMENT = Color.rgb(0xF5, 0x9E, 0x0B)
-    private val TEXTE = Color.rgb(0xE5, 0xE5, 0xE5)
-    /** Bascule coupée : le fond s'efface ; activée : plein, de la couleur de la bordure. */
-    private val FOND_COUPE = Color.argb(0x59, 0x17, 0x17, 0x1A)
-    private val TEXTE_SUR_PLEIN = Color.rgb(0x06, 0x28, 0x3D)
+    /**
+     * Bulle : fond sombre presque opaque, bordure de sa couleur (orange pendant le déplacement).
+     * La couleur est celle de la bulle, sinon la générale — bleu de la refonte par défaut
+     * ([FloatingButtonSettings.colorOf], 2026-11-04).
+     */
+    // Fond, texte, bordure : BubbleLook (issue #230) ; sans réglage, le rendu d'avant (fond sombre 90 %).
+    /** Contour du texte d'une bulle presque sans fond, pour qu'il se lise sur la carte. */
+    private val CONTOUR_TEXTE = Color.argb(0xCC, 0, 0, 0)
+    /** Fondu vers l'atténuation au repos. */
+    private const val ATTENUATION_MS = 400L
     /** Seconde lecture de la valeur : si la voiture n'avait pas encore suivi à la première. */
     private const val VALEUR_RELUE_MS = 1_600L
 
@@ -111,6 +118,10 @@ object FloatingButtonsOverlay {
         var enDeplacement = false
         /** Barre du haut : bord gauche de la fenêtre sur l'écran réel (le rail, quand il est affiché). */
         var decalage = 0
+        /** Atténuation au repos à venir, ou `null` ([reveiller]). */
+        var attenuer: Runnable? = null
+        /** Bulle d'information : le dernier texte affiché (libellé et valeur), ou `null`. */
+        var infoTexte: CharSequence? = null
     }
 
     /** Relecture de l'origine des fenêtres de la barre du haut (rail affiché ou caché). */
@@ -163,7 +174,9 @@ object FloatingButtonsOverlay {
         if (boutons.isEmpty()) {
             rapportTour = 0
             etatTour = 0
+            infoTour = 0
             bascules = emptyList()
+            infosPosees = emptyList()
             return
         }
         val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -180,8 +193,18 @@ object FloatingButtonsOverlay {
         } else {
             rapportTour = 0
         }
-        bascules = boutons.mapNotNull { b ->
+        // Une bulle d'information se colore selon SA valeur (oui / non), pas selon son action.
+        bascules = boutons.filter { !BubbleInfo.isInfo(it) }.mapNotNull { b ->
             action(b)?.takeIf { FloatingButtonStyle.kind(it) == FloatingKind.TOGGLE }?.let { b.id to it }
+        }
+        mots = com.mg4.control.ui.AndroidRuleWords(ctx)
+        infosPosees = boutons.filter { BubbleInfo.isInfo(it) }.map { it.id to it.info }
+        if (infosPosees.isNotEmpty()) {
+            val tour = infoTour + 1
+            infoTour = tour
+            lecteur.post { lireInfos(tour, 0) }
+        } else {
+            infoTour = 0
         }
         if (bascules.isNotEmpty()) {
             val tour = etatTour + 1
@@ -195,7 +218,10 @@ object FloatingButtonsOverlay {
 
     private fun action(b: FloatingButton): ShortcutAction? = ShortcutAction.entries.firstOrNull { it.name == b.action }
 
-    private fun titre(bulle: Bulle): String = FloatingButtons.title(bulle.bouton, bulle.bouton.actionLabel)
+    /** Ce qu'affiche la bulle : son titre, ou pour une bulle d'information sa dernière valeur. */
+    private fun titre(bulle: Bulle): CharSequence =
+        if (BubbleInfo.isInfo(bulle.bouton)) bulle.infoTexte ?: texteInfo(bulle.vue.context, bulle.bouton, BubbleInfo.UNKNOWN)
+        else FloatingButtons.title(bulle.bouton, bulle.bouton.actionLabel)
 
     /** Relit les bascules posées, puis recommence tant que le tour est le bon (fil mg4-float). */
     private fun lireBascules(tour: Int) {
@@ -229,8 +255,20 @@ object FloatingButtonsOverlay {
 
     /** Après un appui court : relit la bascule (deux fois), ou montre la nouvelle valeur. */
     private fun apresAppui(ctx: Context, bulle: Bulle) {
-        val a = action(bulle.bouton) ?: return
         val id = bulle.bouton.id
+        // Bulle d'information : la valeur relue peu après (l'action a pu la changer) ; pas d'éclair,
+        // c'est la valeur elle-même qui s'affiche.
+        if (BubbleInfo.isInfo(bulle.bouton)) {
+            val cle = bulle.bouton.info
+            listOf(FloatingButtonStyle.READBACK_MS, VALEUR_RELUE_MS).forEach { delai ->
+                lecteur.postDelayed({
+                    val (texte, etat) = lireInfo(ctx, cle)
+                    main.post { bulles[id]?.let { majInfo(it, texte, etat) } }
+                }, delai)
+            }
+            return
+        }
+        val a = action(bulle.bouton) ?: return
         when (FloatingButtonStyle.kind(a)) {
             FloatingKind.TOGGLE -> {
                 lecteur.postDelayed({ relire(listOf(id to a)) }, FloatingButtonStyle.READBACK_MS)
@@ -257,7 +295,7 @@ object FloatingButtonsOverlay {
         // Largeur gardée : la fenêtre suit son contenu, une valeur plus courte la ferait rétrécir.
         vue.minWidth = maxOf(vue.width, vue.minWidth)
         vue.text = texte
-        vue.setTextColor(BORDURE)
+        vue.setTextColor(FloatingButtonSettings.colorOf(vue.context, bulle.bouton))
         val fin = Runnable {
             bulle.eclair = null
             peindre(vue, bulle.bouton, titre(bulle), deplacement = false, etat = bulle.etat)
@@ -268,7 +306,7 @@ object FloatingButtonsOverlay {
 
     private fun retirerTout() {
         val wm = fenetres
-        bulles.values.forEach { b -> b.eclair?.let(main::removeCallbacks) }
+        bulles.values.forEach { b -> b.eclair?.let(main::removeCallbacks); b.attenuer?.let(main::removeCallbacks) }
         bulles.values.forEach { b -> runCatching { wm?.removeViewImmediate(b.vue) } }
         bulles.clear()
         main.removeCallbacks(recalage)
@@ -291,9 +329,10 @@ object FloatingButtonsOverlay {
      * rail affiché, [decalage]) et les autres boutons de la barre, [sauf] lui-même.
      */
     private fun bloquesHaut(ctx: Context, largeurEcran: Int, decalage: Int, sauf: String?): List<ClosedFloatingPointRange<Float>> {
-        val d = ctx.resources.displayMetrics.density
-        val liste = mutableListOf(FloatingButtons.topBarHvac(largeurEcran.toFloat(), FloatingButtons.TOP_HVAC_DP * d))
-        if (decalage > 0) liste += -1f..decalage.toFloat()
+        // Languette de la clim et début de la barre NE SONT PLUS réservés (issue #222, 2026-11-14, sa
+        // décision) : une bulle se pose où on la lâche, à l'utilisateur de laisser la clim accessible.
+        // Seules les autres bulles de la barre sont évitées, pour ne pas s'empiler.
+        val liste = mutableListOf<ClosedFloatingPointRange<Float>>()
         bulles.values.filter { it.bouton.id != sauf && dansLaBarre(it) }
             .mapTo(liste) { (it.params.x + it.decalage).toFloat()..(it.params.x + it.decalage + it.vue.measuredWidth).toFloat() }
         return liste
@@ -331,7 +370,8 @@ object FloatingButtonsOverlay {
     @SuppressLint("ClickableViewAccessibility")
     private fun poser(ctx: Context, wm: WindowManager, b: FloatingButton) {
         val vue = TextView(ctx)
-        peindre(vue, b, FloatingButtons.title(b, b.actionLabel), deplacement = false)
+        peindre(vue, b, if (BubbleInfo.isInfo(b)) texteInfo(ctx, b, BubbleInfo.UNKNOWN) else FloatingButtons.title(b, b.actionLabel),
+            deplacement = false)
         vue.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val taille = ecran(wm)
         if (FloatingButtons.inTopBar(b) && poserEnHaut(ctx, wm, b, vue)) return
@@ -353,6 +393,7 @@ object FloatingButtonsOverlay {
         try {
             wm.addView(vue, params)
             bulles[b.id] = bulle
+            reveiller(bulle)
         } catch (e: Exception) {
             AppLogger.e(TAG, "bouton « ${vue.text} » non posé : ${e.javaClass.simpleName} ${e.message}")
         }
@@ -394,6 +435,7 @@ object FloatingButtonsOverlay {
                 .isSuccess
             if (!ok) continue
             bulles[b.id] = bulle
+            reveiller(bulle)
             if (auto || x + decalage != voulu.roundToInt()) {
                 bulle.bouton = b.copy(x = ((x + decalage + largeur / 2f) / largeurEcran.coerceAtLeast(1)).coerceIn(0f, 1f))
                 FloatingButtonSettings.update(ctx, bulle.bouton)
@@ -434,6 +476,11 @@ object FloatingButtonsOverlay {
                     fenetreY = bulle.params.y
                     deplacement = false
                     annule = false
+                    // Atténuée au repos : nette dès le toucher, et l'action part quand même (issue #230).
+                    bulle.attenuer?.let(main::removeCallbacks)
+                    bulle.attenuer = null
+                    bulle.vue.animate().cancel()
+                    bulle.vue.alpha = 1f
                     bulle.vue.animate().scaleX(ENFONCEE).scaleY(ENFONCEE).setDuration(ENFONCE_MS).start()
                     main.postDelayed(appuiLong, APPUI_LONG_MS)
                 }
@@ -467,6 +514,8 @@ object FloatingButtonsOverlay {
                             peindre(bulle.vue, bulle.bouton, titre(bulle), deplacement = false, etat = bulle.etat)
                             enregistrerPlace(ctx, bulle)
                         }
+                        // Bulle d'information « au toucher : rien » (issue #236) : seul l'appui long agit.
+                        !annule && !BubbleInfo.tapRuns(bulle.bouton) -> relacher(bulle.vue)
                         !annule -> {
                             relacher(bulle.vue)
                             halo(ctx, bulle)
@@ -474,6 +523,7 @@ object FloatingButtonsOverlay {
                             apresAppui(ctx, bulle)
                         }
                     }
+                    reveiller(bulle)
                 }
                 MotionEvent.ACTION_CANCEL -> {
                     main.removeCallbacks(appuiLong)
@@ -485,6 +535,7 @@ object FloatingButtonsOverlay {
                     } else {
                         relacher(bulle.vue)
                     }
+                    reveiller(bulle)
                 }
             }
             true
@@ -503,10 +554,11 @@ object FloatingButtonsOverlay {
             // barre comprise.
             val reel = ecranReel(wm)
             val e = Point(reel.x - bulle.decalage, reel.y)
-            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, e, BORDURE,
-                type = bulle.params.type, pleinEcran = true)
+            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, e,
+                FloatingButtonSettings.colorOf(ctx, bulle.bouton), type = bulle.params.type, pleinEcran = true)
         } else {
-            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, ecran(wm), BORDURE)
+            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, ecran(wm),
+                FloatingButtonSettings.colorOf(ctx, bulle.bouton))
         }
     }
 
@@ -546,7 +598,7 @@ object FloatingButtonsOverlay {
      * texte sur deux lignes au plus. [etat] : celui d'une bascule (`null` = inconnu ou autre action).
      * Sert aussi aux pastilles de la page de réglage.
      */
-    fun peindre(vue: TextView, b: FloatingButton, titre: String, deplacement: Boolean, etat: Boolean? = null) {
+    fun peindre(vue: TextView, b: FloatingButton, titre: CharSequence, deplacement: Boolean, etat: Boolean? = null) {
         val densite = vue.resources.displayMetrics.density
         val enHaut = FloatingButtons.inTopBar(b)
         // Dans la barre du haut : sa hauteur, moins une petite marge, et une seule ligne.
@@ -562,30 +614,157 @@ object FloatingButtonsOverlay {
         vue.includeFontPadding = false
         vue.minHeight = hauteur
         if (enHaut) vue.height = hauteur
-        vue.minWidth = if (enHaut) (hauteur * 1.6f).roundToInt() else (FloatingButtons.minWidthDp(b.size) * densite).roundToInt()
-        vue.maxWidth = (LARGEUR_MAX_DP * densite).roundToInt()
+        val fixe = BubbleLook.width(b)
+        if (fixe != null) {
+            // Largeur fixe (issue #222) : la même quelle que soit la valeur, texte coupé par « … ».
+            vue.minWidth = (fixe * densite).roundToInt()
+            vue.maxWidth = vue.minWidth
+        } else {
+            vue.minWidth = if (enHaut) (hauteur * 1.6f).roundToInt() else (FloatingButtons.minWidthDp(b.size) * densite).roundToInt()
+            vue.maxWidth = (LARGEUR_MAX_DP * densite).roundToInt()
+        }
         val marge = if (enHaut) (10 * densite).roundToInt() else (hauteur * 0.35f).roundToInt()
         val vertical = if (enHaut) 0 else (6 * densite).roundToInt()
         vue.setPadding(marge, vertical, marge, vertical)
+        // Icône (2026-11-17) : bulle-icône, ou information « icône + valeur » (issue #236). Une
+        // bulle-icône a une icône plus grande que le texte ; sans icône (appli disparue), son titre.
+        val trouvee = com.mg4.control.ui.BubbleIcons.forBubble(vue.context, b)
+        val icone = trouvee?.drawable
+        val bulleIcone = BubbleIcon.isIcon(b) && icone != null
+        icone?.let { d ->
+            val cote = if (bulleIcone) (hauteur * if (enHaut) 0.7f else 0.55f).roundToInt()
+                else (FloatingButtons.textFor(b) * vue.resources.displayMetrics.scaledDensity * 1.15f).roundToInt()
+            d.setBounds(0, 0, cote, cote)
+        }
+        if (bulleIcone && !BubbleIcon.showsTitle(b)) vue.text = ""
+        teinteIcone[vue] = trouvee?.tint ?: true
+        // À gauche en absolu (2026-11-17) : une icône « relative » n'est résolue qu'une fois la vue
+        // posée, et la mesure faite avant (placement de la bulle) l'ignorait.
+        vue.setCompoundDrawables(icone, null, null, null)
+        vue.compoundDrawablePadding = if (vue.text.isNullOrEmpty()) 0 else (6 * densite).roundToInt()
+        // Android colle une icône posée à gauche contre la marge, même quand le texte est centré :
+        // pour une bulle-icône, les marges sont calculées pour centrer l'ensemble icône + titre.
+        if (bulleIcone && icone != null) {
+            val texteL = if (vue.text.isNullOrEmpty()) 0 else vue.paint.measureText(vue.text.toString()).roundToInt()
+            val contenu = icone.bounds.width() + vue.compoundDrawablePadding + texteL
+            val largeur = maxOf(vue.minWidth, contenu + 2 * marge).coerceAtMost(maxOf(vue.maxWidth, contenu))
+            val cote = ((largeur - contenu) / 2).coerceAtLeast(0)
+            vue.setPadding(cote, vertical, cote, vertical)
+        }
         habiller(vue, b, deplacement, etat)
         vue.scaleX = if (deplacement) 1.1f else 1f
         vue.scaleY = vue.scaleX
     }
 
-    /** Fond, bordure et couleur du texte : bascule activée = plein, coupée = presque transparent. */
+    /** Icône d'appli posée sur une vue (pas de teinte) ; les vues disparues s'effacent seules. */
+    private val teinteIcone = java.util.WeakHashMap<TextView, Boolean>()
+
+    // ── Bulles d'information (issue #236, 2026-11-10) ───────────────────────────
+
+    /** Mots des automatisations (noms des valeurs, unités, modes…), refaits à chaque pose. */
+    @Volatile private var mots: com.mg4.control.ui.AndroidRuleWords? = null
+
+    /** Libellé d'une bulle d'information : son titre saisi, sinon le nom de la valeur. */
+    private fun libelleInfo(ctx: Context, b: FloatingButton): String =
+        b.customTitle?.trim()?.takeIf { it.isNotEmpty() }
+            ?: BubbleInfo.signal(b.info)?.let { s -> (mots ?: com.mg4.control.ui.AndroidRuleWords(ctx)).signal(s) }
+            ?: ctx.getString(R.string.floating_info_time)
+
+    /**
+     * Texte d'une bulle d'information pour la valeur [valeur] : la valeur seule, ou le libellé en
+     * petit au-dessus (sur une ligne « libellé valeur » dans la barre du haut, faute de hauteur).
+     */
+    fun texteInfo(ctx: Context, b: FloatingButton, valeur: String): CharSequence {
+        if (BubbleInfo.style(b) != BubbleInfo.STYLE_LABEL) return valeur
+        val libelle = libelleInfo(ctx, b)
+        val sep = if (FloatingButtons.inTopBar(b)) " " else "\n"
+        return android.text.SpannableStringBuilder(libelle).apply {
+            setSpan(android.text.style.RelativeSizeSpan(0.62f), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append(sep).append(valeur)
+        }
+    }
+
+    /** Valeur lue d'une information (fil mg4-float) ; le texte et l'état oui / non. */
+    private fun lireInfo(ctx: Context, cle: String?): Pair<String, Boolean?> {
+        val m = mots ?: com.mg4.control.ui.AndroidRuleWords(ctx).also { mots = it }
+        if (cle == BubbleInfo.TIME) {
+            val maintenant = System.currentTimeMillis()
+            // Horloge d'usine au réveil (~2019) : pas d'heure plutôt qu'une heure fausse.
+            if (!com.mg4.control.model.StatsTracker.clockPlausible(maintenant)) return BubbleInfo.UNKNOWN to null
+            return android.text.format.DateFormat.getTimeFormat(ctx).format(java.util.Date(maintenant)) to null
+        }
+        val s = BubbleInfo.signal(cle) ?: return BubbleInfo.UNKNOWN to null
+        val lu = com.mg4.control.automation.CustomRules.readSignal(ctx, s)
+        // Vitesse et autonomie dans l'unité générale ; en Auto, relue dans la voiture (ce fil, binder).
+        val converti = BubbleInfo.inDistanceUnit(s, lu, com.mg4.control.util.DistanceSetting.unitReading(ctx))
+        val v = converti?.first ?: lu
+        val unite = converti?.second ?: m.unit(s).ifEmpty { BubbleInfo.extraUnit(s) }
+        return BubbleInfo.format(v, unite, ctx.getString(R.string.common_on), ctx.getString(R.string.common_off),
+            { m.value(s, it) }) to BubbleInfo.toggleState(v)
+    }
+
+    /** Tour de relecture des informations ; 0 = aucune. */
+    @Volatile private var infoTour = 0
+    /** Bulles d'information posées (id, clé), pour le fil de lecture. */
+    @Volatile private var infosPosees: List<Pair<String, String?>> = emptyList()
+
+    /** Fil mg4-float : chaque seconde l'heure et la vitesse, toutes les 5 s le reste. */
+    private fun lireInfos(tour: Int, tic: Int) {
+        if (infoTour != tour) return
+        val ctx = app
+        if (ctx != null && !marcheArriere) {
+            val lus = infosPosees.filter { (_, cle) -> tic % BubbleInfo.SLOW_EVERY == 0 || BubbleInfo.fast(cle) }
+                .map { (id, cle) -> lireInfo(ctx, cle).let { (texte, etat) -> Triple(id, texte, etat) } }
+            if (lus.isNotEmpty()) main.post { lus.forEach { (id, texte, etat) -> bulles[id]?.let { majInfo(it, texte, etat) } } }
+        }
+        lecteur.postDelayed({ lireInfos(tour, tic + 1) }, BubbleInfo.TICK_MS)
+    }
+
+    /** Nouvelle valeur : le texte (sauf pendant un déplacement ou une valeur affichée), et la couleur d'un oui / non. */
+    private fun majInfo(bulle: Bulle, valeur: String, etat: Boolean?) {
+        val texte = texteInfo(bulle.vue.context, bulle.bouton, valeur)
+        if (bulle.infoTexte?.toString() != texte.toString()) {
+            bulle.infoTexte = texte
+            if (!bulle.enDeplacement && bulle.eclair == null) bulle.vue.text = texte
+        }
+        teinter(bulle, etat)
+    }
+
+    /**
+     * Fond, bordure et couleur du texte selon l'apparence de la bulle ([BubbleLook], issue #230) :
+     * bascule activée = pleine, coupée = fond effacé ; presque sans fond, le texte prend un contour.
+     */
     private fun habiller(vue: TextView, b: FloatingButton, deplacement: Boolean, etat: Boolean?) {
         val densite = vue.resources.displayMetrics.density
         val hauteur = (FloatingButtons.heightDp(b.size) * densite).roundToInt()
-        vue.setTextColor(if (etat == true) TEXTE_SUR_PLEIN else TEXTE)
+        val p = BubbleLook.paint(b, FloatingButtonSettings.colorOf(vue.context, b), etat, deplacement)
+        vue.setTextColor(p.text)
+        // Icône : un symbole prend la couleur du texte ; l'icône d'une appli garde ses couleurs.
+        if (teinteIcone[vue] != false) vue.compoundDrawables[0]?.setTint(p.text)
+        if (p.halo) vue.setShadowLayer(3 * densite, 0f, 0f, CONTOUR_TEXTE) else vue.setShadowLayer(0f, 0f, 0f, 0)
         vue.background = GradientDrawable().apply {
             cornerRadius = hauteur / 2f
-            setColor(when (etat) {
-                true -> BORDURE
-                false -> FOND_COUPE
-                null -> FOND
-            })
-            setStroke((2 * densite).roundToInt(), if (deplacement) BORDURE_DEPLACEMENT else BORDURE)
+            setColor(p.background)
+            if (p.border != null) setStroke((2 * densite).roundToInt(), p.border)
         }
+    }
+
+    /**
+     * Atténuation au repos (issue #230) : la bulle redevient nette, et repasse à [BubbleLook.DIM_ALPHA]
+     * après [BubbleLook.DIM_AFTER_MS] sans toucher si elle est réglée ainsi. Le toucher qui la réveille
+     * lance aussi son action (choix du 2026-11-09).
+     */
+    private fun reveiller(bulle: Bulle) {
+        bulle.attenuer?.let(main::removeCallbacks)
+        bulle.attenuer = null
+        bulle.vue.alpha = 1f
+        if (!BubbleLook.dims(bulle.bouton)) return
+        val r = Runnable {
+            bulle.attenuer = null
+            if (!bulle.enDeplacement) bulle.vue.animate().alpha(BubbleLook.DIM_ALPHA).setDuration(ATTENUATION_MS).start()
+        }
+        bulle.attenuer = r
+        main.postDelayed(r, BubbleLook.DIM_AFTER_MS)
     }
 
     private fun appliquerVisibilite() {

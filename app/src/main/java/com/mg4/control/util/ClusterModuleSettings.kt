@@ -4,6 +4,8 @@ import android.content.Context
 import com.mg4.control.model.AverageUnit
 import com.mg4.control.model.ClusterConfig
 import com.mg4.control.model.ClusterGaugeStyle
+import com.mg4.control.model.ClusterLayout
+import com.mg4.control.model.ClusterLayouts
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
@@ -40,12 +42,35 @@ object ClusterModuleSettings {
 
     /**
      * Firmwares où le combiné montre l'image de l'écran central : SWI133 (vu en voiture le
-     * 2026-10-14), SWI68 et SWI165 (même appli SAIC du combiné, lancée par SystemUI). Pas les A9 :
-     * essai SWI69 du 2026-10-14, rien ne s'affiche, même en annonçant au combiné une image prête.
+     * 2026-10-14), SWI68 et SWI165 (même appli SAIC du combiné, lancée par SystemUI). Acceptés
+     * d'office ; ailleurs, c'est la présence de l'appli qui alimente le combiné qui décide ([IMAGE_APPS]).
      */
     val SUPPORTED = setOf(FirmwareInfo.Gen.SWI133, FirmwareInfo.Gen.SWI68, FirmwareInfo.Gen.SWI165)
 
-    fun isSupported(): Boolean = supportedOn(FirmwareInfo.getGeneration())
+    /**
+     * Applis SAIC qui donnent au combiné l'image de l'écran central (issue #231, vérifié sur les
+     * extractions le 2026-11-09) : `clusterprojection` sur SWI133, SWI68, SWI165 ; `caripk` sur SWI173
+     * (A9 : elle annonce au combiné une image prête — ce qui manquait à l'essai SWI69). Absentes de
+     * SWI69, SWI131 et SWI132, où rien ne s'affiche. Une finition inconnue qui en a une a donc les
+     * onglets Navigation / Musique avec l'image de l'écran central.
+     */
+    val IMAGE_APPS = listOf("com.saicmotor.hmi.clusterprojection", "com.saicmotor.caripk")
+
+    /** Appli trouvée, « » si aucune ; lue une fois (les applis système ne changent pas en route). */
+    @Volatile private var appliImage: String? = null
+
+    /** Le paquet de l'appli qui alimente le combiné, ou `null`. */
+    fun imageApp(): String? {
+        appliImage?.let { return it.ifEmpty { null } }
+        val ctx = com.mg4.control.hardware.MG4Hardware.appContext() ?: return null
+        val trouvee = IMAGE_APPS.firstOrNull { p -> runCatching { ctx.packageManager.getPackageInfo(p, 0) }.isSuccess }
+        appliImage = trouvee ?: ""
+        com.mg4.control.debug.AppLogger.i("MG4_CLUSTER", "chaîne d'image du combiné : ${trouvee ?: "aucune appli SAIC"} " +
+            "(firmware ${FirmwareInfo.getGeneration()}) → écran conducteur ${if (supportedOn(FirmwareInfo.getGeneration(), trouvee != null)) "proposé" else "non proposé"}")
+        return trouvee
+    }
+
+    fun isSupported(): Boolean = supportedOn(FirmwareInfo.getGeneration(), imageApp() != null)
     const val KEY_REFRESH = "cluster_refresh_ms"
     /** Unité de la consommation (2026-10-15), Wh/km par défaut. */
     const val KEY_UNIT = "cluster_consumption_unit"
@@ -73,6 +98,9 @@ object ClusterModuleSettings {
     /** Pastille en haut à gauche (issue #152) : profil actif par défaut. */
     const val KEY_PILL = "cluster_pill"
 
+    /** Disposition du module (issue #229), en JSON ; absente = celle d'avant. Sans aucun profil seulement. */
+    const val KEY_LAYOUT = "cluster_layout"
+
     /**
      * Durée du glissement de la jauge d'une valeur à la suivante (issue #152), en ms : 0,2 à 2 s
      * par pas de 0,1 s, à part de l'actualisation. Avant, elle valait 80 % de celle-ci (50 à
@@ -81,6 +109,7 @@ object ClusterModuleSettings {
      * chaque relevé repart de ce qui est à l'écran.
      */
     const val KEY_ANIMATION = "cluster_animation_ms"
+    const val KEY_POWER_MAX = "cluster_power_max"
     const val MIN_ANIMATION_MS = 200
     const val MAX_ANIMATION_MS = 2000
     const val STEP_ANIMATION_MS = 100
@@ -99,20 +128,18 @@ object ClusterModuleSettings {
 
     fun style(ctx: Context?): ClusterGaugeStyle = style(ClusterProfiles.effective(ctx))
 
-    /** Choix enregistré : km ou miles, `null` = Auto (« auto » enregistré, ou aucun choix). */
-    fun distanceChoice(ctx: Context?): DistanceUnit? = distanceChoice(ClusterProfiles.effective(ctx))
-
     /**
-     * Le choix, sinon [vehicle] — l'unité de la voiture, que l'appelant tient de
-     * `VehicleDistanceUnit.connue()` — et km si elle n'est pas connue.
+     * Unité de distance : le réglage général de l'appli depuis le 2026-11-10 ([DistanceSetting]),
+     * qui a repris le choix fait ici. En Auto, relit la voiture (binder, au plus une fois par minute).
      */
-    fun distanceUnit(ctx: Context?, vehicle: DistanceUnit?): DistanceUnit =
-        distanceUnit(ClusterProfiles.effective(ctx), vehicle)
+    fun distanceUnit(ctx: Context?): DistanceUnit = DistanceSetting.unitReading(ctx)
 
     /** Sans choix, l'unité de la jauge. */
     fun averageUnit(ctx: Context?): AverageUnit = averageUnit(ClusterProfiles.effective(ctx))
 
     fun pill(ctx: Context?): ClusterPill = pill(ClusterProfiles.effective(ctx))
+
+    fun layout(ctx: Context?): ClusterLayout = layout(ClusterProfiles.effective(ctx))
 
     fun animationMs(ctx: Context?): Int = animationMs(ClusterProfiles.effective(ctx))
 
@@ -165,7 +192,12 @@ object ClusterModuleSettings {
             pill = p.getString(KEY_PILL, null),
             refreshMs = if (p.contains(KEY_REFRESH)) p.getInt(KEY_REFRESH, DEFAULT_REFRESH_MS) else null,
             animationMs = if (p.contains(KEY_ANIMATION)) p.getInt(KEY_ANIMATION, DEFAULT_ANIMATION_MS) else null,
-        )
+        ).copy(
+            // Puissance maxi (issue #165) : oubliée ici jusqu'au 2026-11-14 — sans profil, le choix revenait à Auto.
+            powerMax = if (p.contains(KEY_POWER_MAX)) p.getInt(KEY_POWER_MAX, 0) else null,
+            layout = p.getString(KEY_LAYOUT, null)?.let { j ->
+            runCatching { com.google.gson.Gson().fromJson(j, ClusterLayout::class.java) }.getOrNull()
+        })
     }
 
     /** Sans aucun profil, la carte règle les réglages communs : ils sont réécrits en entier. */
@@ -181,12 +213,15 @@ object ClusterModuleSettings {
             putString(KEY_PILL, c.pill)
             c.refreshMs?.let { putInt(KEY_REFRESH, it) } ?: remove(KEY_REFRESH)
             c.animationMs?.let { putInt(KEY_ANIMATION, it) } ?: remove(KEY_ANIMATION)
+            c.powerMax?.let { putInt(KEY_POWER_MAX, it) } ?: remove(KEY_POWER_MAX)
+            c.layout?.let { putString(KEY_LAYOUT, com.google.gson.Gson().toJson(it)) } ?: remove(KEY_LAYOUT)
         }.apply()
     }
 
     // ── Sans Android ─────────────────────────────────────────────────────────
 
-    fun supportedOn(gen: FirmwareInfo.Gen): Boolean = gen in SUPPORTED
+    /** Firmware validé, ou appli SAIC du combiné présente ([hasImageApp]) — issue #231. */
+    fun supportedOn(gen: FirmwareInfo.Gen, hasImageApp: Boolean = false): Boolean = gen in SUPPORTED || hasImageApp
 
     fun isEnabled(c: ClusterConfig): Boolean = c.enabled == true
 
@@ -202,14 +237,12 @@ object ClusterModuleSettings {
 
     fun style(c: ClusterConfig): ClusterGaugeStyle = ClusterGaugeStyle.fromKey(c.style)
 
-    fun distanceChoice(c: ClusterConfig): DistanceUnit? =
-        c.distance?.let { k -> DistanceUnit.entries.firstOrNull { it.key == k } }
-
-    fun distanceUnit(c: ClusterConfig, vehicle: DistanceUnit?): DistanceUnit = DistanceUnit.resolve(c.distance, vehicle)
-
     fun averageUnit(c: ClusterConfig): AverageUnit = AverageUnit.resolve(c.average, consumptionUnit(c))
 
     fun pill(c: ClusterConfig): ClusterPill = ClusterPill.fromKey(c.pill)
+
+    /** Disposition du module (issue #229) : celle enregistrée, sinon celle d'avant. */
+    fun layout(c: ClusterConfig): ClusterLayout = ClusterLayouts.of(c)
 
     fun animationMs(c: ClusterConfig): Int = sanitizeAnimation(c.animationMs)
 
@@ -255,6 +288,19 @@ object ClusterModuleSettings {
      * `null` pour laisser la page d'origine — ou le combiné dessiner la sienne. Onglet illisible :
      * celui de la navigation, à défaut celui de la musique, plutôt qu'un module qui disparaît.
      */
+    /**
+     * Onglet à suivre quand la lecture vient d'échouer (issue #245, 2026-11-13) : le dernier onglet
+     * lu, s'il date de moins de [ONGLET_GARDE_MS]. Sans lui, le secours de [moduleToShow] posait le
+     * module de la navigation sur la page affichée, Musique comprise. Au-delà (onglet jamais lu, ou
+     * illisible depuis longtemps), `null` : le secours reprend, pour qu'un module ne disparaisse pas
+     * sur un combiné dont l'onglet ne se lit pas.
+     */
+    fun tabToFollow(read: Int?, lastRead: Int?, lastReadAgeMs: Long): Int? =
+        read ?: lastRead?.takeIf { lastReadAgeMs in 0..ONGLET_GARDE_MS }
+
+    /** Durée pendant laquelle le dernier onglet lu tient lieu d'onglet illisible. */
+    const val ONGLET_GARDE_MS = 30_000L
+
     fun moduleToShow(tabValue: Int?, navigation: ClusterModule?, media: ClusterModule?): ClusterModule? =
         when (tabValue) {
             null -> navigation ?: media

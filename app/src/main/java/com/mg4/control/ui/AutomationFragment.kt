@@ -39,6 +39,7 @@ import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.ui.widget.setCategoryTabActive
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToLong
@@ -48,6 +49,11 @@ import kotlinx.coroutines.withContext
 
 class AutomationFragment : Fragment() {
 
+    private companion object {
+        /** Onglet du rail rouvert en revenant sur Automatisation, le temps de la session. */
+        var ongletRetenu = 0
+    }
+
     private var profiles: List<DrivingProfile> = emptyList()
 
     /** Carte des vitres : le panneau survit à la vue, comme au tableau de bord avant le déplacement. */
@@ -55,6 +61,18 @@ class AutomationFragment : Fragment() {
 
     /** Carte des sons (issue #161). */
     private val soundCard = SoundCard()
+
+    /** Page « Mes automatisations » (issue #201). */
+    private val customRules: CustomRulesPage = CustomRulesPage().also { p ->
+        p.parcourirDossier = { choisirDossier.launch(null) }
+        p.parcourirFichier = { choisirFichier.launch(arrayOf("*/*")) }
+    }
+
+    /** Export / import des automatisations : les sélecteurs d'Android (2026-11-05). */
+    private val choisirDossier: androidx.activity.result.ActivityResultLauncher<android.net.Uri?> = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { customRules.surDossier(it) }
+    private val choisirFichier: androidx.activity.result.ActivityResultLauncher<Array<String>> = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { customRules.surFichier(it) }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -128,6 +146,45 @@ class AutomationFragment : Fragment() {
         bindClimateAutomation(view, prefs)
         bindDoorVolume(view, prefs)
         bindSounds(view)
+        customRules.bind(this, view)
+        // En dernier : les cartes masquées par firmware sont alors connues (garde d'onglet vide).
+        bindCategoryRail(view)
+    }
+
+    // ══════════ Rail de catégories (refonte 2.7.0) ══════════
+
+    /**
+     * Six pages, une seule visible. Un onglet dont la page n'a plus aucune carte visible
+     * (firmware sans l'équipement) est masqué. L'onglet choisi est retenu le temps de la session :
+     * revenir sur Automatisation rouvre la même page.
+     */
+    private fun bindCategoryRail(root: View) {
+        val onglets = listOf(
+            R.id.btn_auto_cat_profiles to R.id.page_auto_profiles,
+            R.id.btn_auto_cat_climate  to R.id.page_auto_climate,
+            R.id.btn_auto_cat_screen   to R.id.page_auto_screen,
+            R.id.btn_auto_cat_leave    to R.id.page_auto_leave,
+            R.id.btn_auto_cat_sounds   to R.id.page_auto_sounds,
+            R.id.btn_auto_cat_custom   to R.id.page_auto_custom,
+        ).map { (b, p) -> root.findViewById<MaterialButton>(b) to root.findViewById<ViewGroup>(p) }
+        val scroll  = root.findViewById<android.widget.ScrollView>(R.id.scroll_automation)
+
+        fun garnie(page: ViewGroup) = (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
+        onglets.forEach { (btn, page) -> btn.visibility = if (garnie(page)) View.VISIBLE else View.GONE }
+        val utiles = onglets.indices.filter { garnie(onglets[it].second) }
+        if (utiles.isEmpty()) return
+
+        fun choisir(index: Int) {
+            ongletRetenu = index
+            onglets.forEachIndexed { i, (btn, page) ->
+                val on = i == index
+                page.visibility = if (on) View.VISIBLE else View.GONE
+                btn.setCategoryTabActive(on)
+            }
+            scroll?.scrollTo(0, 0)
+        }
+        onglets.forEachIndexed { i, (btn, _) -> btn.setOnClickListener { choisir(i) } }
+        choisir(if (ongletRetenu in utiles) ongletRetenu else utiles.first())
     }
 
     // ══════════ Sons d'automatisation (issue #161) ══════════
@@ -160,6 +217,7 @@ class AutomationFragment : Fragment() {
 
     override fun onDestroyView() {
         soundCard.detacher()
+        customRules.detacher()
         super.onDestroyView()
     }
 
@@ -529,14 +587,14 @@ class AutomationFragment : Fragment() {
         }
     }
 
-    /** Curseur 5–100 % par pas de 5, aligné sur le pas : le Slider refuse toute autre valeur. */
+    /** Curseur plancher–100 % par pas de 5, aligné sur le pas : le Slider refuse toute autre valeur. */
     private fun bindPercentSlider(
         view: View, sliderId: Int, valueId: Int, key: String, initial: Int,
         prefs: android.content.SharedPreferences,
     ) {
         val slider = view.findViewById<Slider>(sliderId)
         val valeur = view.findViewById<TextView>(valueId)
-        val min = AutoBrightnessSettings.MIN_PERCENT
+        val min = AutoBrightnessSettings.minPercent()
         val pas = AutoBrightnessSettings.STEP_PERCENT
         slider.valueFrom = min.toFloat()
         slider.valueTo   = AutoBrightnessSettings.MAX_PERCENT.toFloat()
@@ -907,6 +965,7 @@ class AutomationFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         // Les profils peuvent avoir changé dans l'onglet Profils → on recharge la liste.
+        customRules.refresh()
         val prefs = requireContext().getSharedPreferences(AutomationSettings.PREFS, Context.MODE_PRIVATE)
         view?.findViewById<Spinner>(R.id.spinner_automation_profile)?.let { sp ->
             setupSpinner(sp, prefs, AutomationSettings.KEY_PROFILE_ID)
@@ -964,6 +1023,8 @@ class AutomationFragment : Fragment() {
         }
         apply()
         btn.setOnClickListener { open = !open; apply() }
+        // Le titre déplie aussi (2026-11-03) : la rangée d'en-tête ne porte que lui et le chevron.
+        (btn.parent as? View)?.setOnClickListener { open = !open; apply() }
         // Pour l'interrupteur d'activation : activer déplie, désactiver replie (décision du 2026-10-02).
         return { voulu -> if (voulu != open) { open = voulu; apply() } }
     }

@@ -10,9 +10,8 @@ import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.AebMode
@@ -49,12 +48,17 @@ class ProfileFragment : Fragment() {
             manager.getDefaultId(),
             onApply = { profile ->
                 ProfileApplier.apply(profile) { ok ->
-                    requireActivity().runOnUiThread {
+                    activity?.runOnUiThread {
+                        if (!isAdded) return@runOnUiThread
                         val msg = if (ok) getString(R.string.profile_applied, profile.name)
                                   else getString(R.string.profile_applied_check_logs)
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     }
                 }
+                // Le profil actif est noté dès la demande ([ProfileApplier.apply]) : la carte
+                // passe en surbrillance tout de suite, sans attendre la fin des écritures ni un
+                // changement d'onglet (2026-11-03).
+                refreshList()
             },
             onSetDefault = { profile ->
                 manager.setDefault(profile.id)
@@ -65,24 +69,26 @@ class ProfileFragment : Fragment() {
             onEdit = { profile ->
                 openEditor(existing = profile, data = profile)
             },
-            onDelete = { profile ->
-                AppDialog.confirmer(
-                    requireContext(),
-                    titre = getString(R.string.profile_delete_title, profile.name),
-                    ton = AppDialog.Ton.DANGER,
-                    icone = R.drawable.ic_dialog_trash,
-                    oui = getString(R.string.profile_delete),
-                    non = getString(R.string.profile_cancel),
-                    onOui = {
-                        manager.delete(profile.id)
-                        refreshList()
-                    },
-                )
-            }
+            onMenu = { profile -> menuProfil(profile) }
         )
+        supprimer = { profile ->
+            AppDialog.confirmer(
+                requireContext(),
+                titre = getString(R.string.profile_delete_title, profile.name),
+                ton = AppDialog.Ton.DANGER,
+                icone = R.drawable.ic_dialog_trash,
+                oui = getString(R.string.profile_delete),
+                non = getString(R.string.profile_cancel),
+                onOui = {
+                    manager.delete(profile.id)
+                    refreshList()
+                },
+            )
+        }
 
         val liste = view.findViewById<RecyclerView>(R.id.recycler_profiles).apply {
-            layoutManager = LinearLayoutManager(context)
+            // Refonte 2.7.0 : une grille de trois colonnes de cartes.
+            layoutManager = GridLayoutManager(context, COLONNES)
             adapter = this@ProfileFragment.adapter
         }
 
@@ -95,11 +101,12 @@ class ProfileFragment : Fragment() {
         }
         val densite = resources.displayMetrics.density
         fun anneau() = GradientDrawable().apply {
-            cornerRadius = 14f * densite            // celui de bg_card_rounded
+            cornerRadius = 20f * densite            // celui de bg_card_rounded
             setColor(Color.TRANSPARENT)
             setStroke((2f * densite).toInt(), requireContext().getColor(R.color.dash_accent))
         }
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0) {
+        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0) {
             private var ordreAvant: List<String>? = null
 
             override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, cible: RecyclerView.ViewHolder): Boolean {
@@ -133,11 +140,6 @@ class ProfileFragment : Fragment() {
             }
         }).attachToRecyclerView(liste)
 
-        // ── Bouton Fermer ─────────────────────────────────────────────────────
-        view.findViewById<MaterialButton>(R.id.btn_close_profiles).setOnClickListener {
-            findNavController().popBackStack(R.id.dashboardFragment, false)
-        }
-
         view.findViewById<View>(R.id.btn_add_profile).setOnClickListener {
             if (manager.getAll().size >= ProfileManager.MAX_PROFILES) {
                 Toast.makeText(context, getString(R.string.profile_max_reached, ProfileManager.MAX_PROFILES), Toast.LENGTH_SHORT).show()
@@ -152,6 +154,40 @@ class ProfileFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         refreshList()
+    }
+
+    /** Confirmation de suppression (bouton d'avant, désormais dans le menu ⋮). */
+    private var supprimer: (DrivingProfile) -> Unit = {}
+
+    /**
+     * Menu ⋮ d'une carte (2026-11-08, maquette C) : Dupliquer — la copie « <nom> Copie » se range
+     * juste après, sans ouvrir l'éditeur —, Renommer depuis la page, Supprimer.
+     */
+    private fun menuProfil(profile: DrivingProfile) {
+        val ctx = requireContext()
+        val gestes = listOf<Pair<String, () -> Unit>>(
+            getString(R.string.profile_duplicate) to {
+                val copie = manager.duplicate(profile.id, getString(R.string.profile_copy_word))
+                if (copie == null) {
+                    Toast.makeText(ctx, getString(R.string.profile_max_reached, ProfileManager.MAX_PROFILES), Toast.LENGTH_SHORT).show()
+                } else {
+                    refreshList()
+                    Toast.makeText(ctx, getString(R.string.profile_duplicated_fmt, copie.name), Toast.LENGTH_LONG).show()
+                }
+            },
+            getString(R.string.profile_rename) to {
+                RuleValueDialogs.texte(ctx, getString(R.string.profile_rename_title), profile.name) { nom ->
+                    if (manager.rename(profile.id, nom)) refreshList()
+                }
+            },
+            getString(R.string.profile_delete) to { supprimer(profile) },
+        )
+        AppDialog.choisir(ctx,
+            titre = profile.name,
+            icone = R.drawable.ic_dialog_edit,
+            choix = gestes.map { AppDialog.Choix(it.first) },
+            annuler = getString(R.string.profile_cancel),
+        ) { rang -> gestes[rang].second() }
     }
 
     private fun refreshList() {
@@ -242,5 +278,10 @@ class ProfileFragment : Fragment() {
         ProfileEditFragment.pendingExisting = existing
         ProfileEditFragment.pendingData = data
         findNavController().navigate(R.id.profileEditFragment)
+    }
+
+    private companion object {
+        /** Cartes par rangée dans la liste des profils. */
+        const val COLONNES = 3
     }
 }

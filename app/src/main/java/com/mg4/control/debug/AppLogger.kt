@@ -10,25 +10,40 @@ import java.util.Locale
  * so the Diagnostic report can include them without ADB.
  *
  * Le buffer est un ArrayDeque sous verrou : la CopyOnWriteArrayList précédente recopiait
- * les 400 entrées deux fois par ligne de log, sur le thread appelant — c'est-à-dire
+ * tout le buffer deux fois par ligne de log, sur le thread appelant — c'est-à-dire
  * pendant l'application d'un profil.
+ *
+ * 2000 lignes depuis le 2026-11-12 (400 avant : le journal de la discussion #219 s'arrêtait
+ * avant le passage en READY). La mémoire reste bornée : l'heure est gardée en `Long` (mise en
+ * forme à la lecture), un message trop long est coupé à [MAX_MSG_CHARS], et le total des
+ * messages ne dépasse pas [MAX_TOTAL_CHARS] — les plus anciens partent d'abord. Au pire
+ * ~2 Mo, en pratique quelques centaines de Ko.
  */
 object AppLogger {
 
     enum class Level { DEBUG, INFO, WARN, ERROR }
 
     data class Entry(
-        val time: String,
+        val at: Long,
         val tag: String,
         val level: Level,
         val msg: String
-    )
+    ) {
+        /** Heure de la ligne, « HH:mm:ss.SSS ». */
+        val time: String get() = formatTime(at)
+    }
 
-    private const val MAX_ENTRIES = 400
+    internal const val MAX_ENTRIES = 2000
+    internal const val MAX_MSG_CHARS = 4_000
+    internal const val MAX_TOTAL_CHARS = 1_000_000
+
+    // SimpleDateFormat n'est pas sûr entre threads : on le partage sous son propre verrou.
     private val sdf = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+    private fun formatTime(at: Long): String = synchronized(sdf) { sdf.format(Date(at)) }
 
     private val lock = Any()
-    private val buffer = ArrayDeque<Entry>(MAX_ENTRIES)
+    private val buffer = ArrayDeque<Entry>()
+    private var chars = 0
 
     /**
      * Nombre total d'entrées ajoutées depuis le démarrage du processus — l'éviction ne le
@@ -53,6 +68,7 @@ object AppLogger {
     fun clear() {
         synchronized(lock) {
             buffer.clear()
+            chars = 0
             totalCount = 0L
         }
     }
@@ -75,11 +91,17 @@ object AppLogger {
     // ---- Internal ----
 
     private fun add(tag: String, level: Level, msg: String) {
-        val entry = Entry(sdf.format(Date()), tag, level, msg)
+        val texte = if (msg.length <= MAX_MSG_CHARS) msg
+            else msg.take(MAX_MSG_CHARS) + " … (+${msg.length - MAX_MSG_CHARS} caractères)"
+        val entry = Entry(System.currentTimeMillis(), tag, level, texte)
         synchronized(lock) {
             // while et non if : le plafond tient même en cas d'ajouts concurrents.
-            while (buffer.size >= MAX_ENTRIES) buffer.removeFirst()
+            while (buffer.isNotEmpty() &&
+                (buffer.size >= MAX_ENTRIES || chars + texte.length > MAX_TOTAL_CHARS)) {
+                chars -= buffer.removeFirst().msg.length
+            }
             buffer.addLast(entry)
+            chars += texte.length
             totalCount++
         }
     }

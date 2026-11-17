@@ -83,6 +83,26 @@ data class Trip(
      * à présenter comme un ordre de grandeur. Renseigné seulement quand [energyIntegrated].
      */
     val auxiliaryKwh: Float? = null,
+    /**
+     * Morceaux du trajet par profil (2026-11-05, [TripSegments]) ; null pour un trajet enregistré
+     * avant la fonction. Un seul morceau = un seul profil ; plusieurs = trajet « Mixte ».
+     */
+    val segments: List<TripSegment>? = null,
+    /**
+     * Courbe du trajet, un point par relevé, encodée par [TripCurve] ; null pour un trajet
+     * enregistré avant la fonction (2026-11-05) ou sans énergie intégrée.
+     */
+    val curve: String? = null,
+    /**
+     * Diagnostic (2026-11-05) : la distance intégrée à chaque relevé (10 s), l'ancienne méthode,
+     * à comparer à [integratedKm] désormais intégrée à la seconde. Null avant ce contrôle.
+     */
+    val distanceCheckKm: Float? = null,
+    /**
+     * Kilométrage total de la voiture à la fin du trajet (2026-11-06, colonne `odometer_km` de
+     * l'export CSV). Null pour les trajets enregistrés avant, ou si l'odomètre n'a pas été lu.
+     */
+    val odometerEndKm: Int? = null,
 ) {
     val durationMs: Long get() = max(0L, endMs - startMs)
 

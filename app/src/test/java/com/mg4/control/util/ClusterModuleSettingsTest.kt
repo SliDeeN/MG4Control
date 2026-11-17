@@ -39,6 +39,11 @@ class ClusterModuleSettingsTest {
         assertFalse(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI131))
         assertFalse(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI132))
         assertFalse(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.UNKNOWN))
+        // Issue #231 : l'appli SAIC du combiné installée suffit (caripk sur SWI173, reconnu en SWI131).
+        assertTrue(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI131, hasImageApp = true))
+        assertTrue(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.UNKNOWN, hasImageApp = true))
+        assertTrue(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI133, hasImageApp = false))
+        assertEquals(listOf("com.saicmotor.hmi.clusterprojection", "com.saicmotor.caripk"), ClusterModuleSettings.IMAGE_APPS)
     }
 
     // ── Un module par onglet (2026-10-14) ────────────────────────────────────

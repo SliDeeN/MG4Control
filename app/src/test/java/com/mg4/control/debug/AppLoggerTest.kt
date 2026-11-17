@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 @Config(sdk = [34])
 class AppLoggerTest {
 
-    private val maxEntries = 400
+    private val maxEntries = AppLogger.MAX_ENTRIES
 
     @Before
     fun setUp() {
@@ -51,7 +51,7 @@ class AppLoggerTest {
     @Test
     fun `ecritures concurrentes ne depassent pas le plafond`() {
         val threads = 8
-        val perThread = 200
+        val perThread = 400
         val start = CountDownLatch(1)
         val done = CountDownLatch(threads)
         repeat(threads) { t ->
@@ -104,5 +104,30 @@ class AppLoggerTest {
         val seen = AppLogger.totalCount
         AppLogger.clear()
         assertNull(AppLogger.entriesSince(seen))
+    }
+
+    // ---- Mémoire bornée (2026-11-12) ----
+
+    @Test
+    fun `un message trop long est coupe`() {
+        AppLogger.i("T", "x".repeat(AppLogger.MAX_MSG_CHARS + 500))
+        val msg = AppLogger.entries.single().msg
+        assertTrue(msg.startsWith("x".repeat(AppLogger.MAX_MSG_CHARS)))
+        assertTrue(msg, msg.endsWith("(+500 caractères)"))
+    }
+
+    @Test
+    fun `le total des messages reste sous le plafond`() {
+        val gros = "y".repeat(AppLogger.MAX_MSG_CHARS)
+        repeat(AppLogger.MAX_TOTAL_CHARS / AppLogger.MAX_MSG_CHARS + 20) { AppLogger.i("T", gros) }
+        val total = AppLogger.entries.sumOf { it.msg.length }
+        assertTrue("$total", total <= AppLogger.MAX_TOTAL_CHARS)
+        assertEquals(AppLogger.MAX_TOTAL_CHARS / AppLogger.MAX_MSG_CHARS, AppLogger.entries.size)
+    }
+
+    @Test
+    fun `l heure se lit au format habituel`() {
+        AppLogger.i("T", "a")
+        assertTrue(AppLogger.entries.single().time.matches(Regex("""\d{2}:\d{2}:\d{2}\.\d{3}""")))
     }
 }

@@ -44,6 +44,39 @@ object ProfileConfirmOverlay {
     /** Focus au joystick du popup affiché ; vit et meurt avec la vue. Thread principal seulement. */
     private var navigation: OverlayNavigation? = null
 
+    /**
+     * Question d'automatisation affichée (2026-11-14) : son numéro et sa fin. Un autre bandeau qui la
+     * remplace, ou sa règle arrêtée, la termine « interrompue » — la règle n'attend plus pour rien.
+     */
+    private class Question(val id: Long, val terminer: (com.mg4.control.model.ConfirmAnswer) -> Unit)
+    private var question: Question? = null
+    /**
+     * Fin du bandeau de profil affiché (2026-11-14) : une question d'automatisation qui le remplace
+     * le termine « refusé », pour que son repli (profil BT / par défaut) s'applique quand même.
+     */
+    private var profilEnCours: ((Boolean) -> Unit)? = null
+
+    private fun interrompreProfil(pourquoi: String) {
+        val f = profilEnCours ?: return
+        profilEnCours = null
+        AppLogger.i(TAG, "Confirm de profil interrompu ($pourquoi) → onDeclined")
+        f(false)
+    }
+    private val numeros = java.util.concurrent.atomic.AtomicLong()
+
+    /** Un autre bandeau prend la place : la question en cours se termine « interrompue ». Fil principal. */
+    private fun interrompreQuestion(pourquoi: String) {
+        val q = question ?: return
+        question = null
+        AppLogger.i(TAG, "Question interrompue ($pourquoi)")
+        q.terminer(com.mg4.control.model.ConfirmAnswer.INTERRUPTED)
+    }
+
+    /** Ferme la question [id] si elle est encore affichée (automatisation arrêtée pendant l'attente). */
+    fun closeQuestion(context: Context, id: Long) {
+        handler.post { if (question?.id == id) interrompreQuestion("automatisation arrêtée") }
+    }
+
     /** Ce qui a déclenché la question : la mesure, son seuil, et de quel côté elle l'a franchi. */
     private class Declencheur(
         val icone: Int,
@@ -107,17 +140,21 @@ object ProfileConfirmOverlay {
             AppLogger.w(TAG, "Confirm non affiché : sécurité conduite active → onDeclined")
             onDeclined(); return
         }
+        interrompreQuestion("bandeau de profil")
         dismiss(context)
 
         // Un seul chemin de sortie : garde-fou pour ne déclencher qu'un callback.
         var done = false
-        val finish: (Boolean) -> Unit = { confirmed ->
+        lateinit var finish: (Boolean) -> Unit
+        finish = { confirmed ->
             if (!done) {
                 done = true
+                if (profilEnCours === finish) profilEnCours = null
                 dismiss(context)
                 if (confirmed) onConfirmed() else onDeclined()
             }
         }
+        profilEnCours = finish
 
         // Sous garde : une mise en page fautive lèverait ici, sur le thread principal du service,
         // et l'emporterait avec elle. Sans bandeau, la question vaut NON — comme sans réponse.
@@ -220,6 +257,97 @@ object ProfileConfirmOverlay {
             },
             couleurAnneau  = textePrincipal,
         ).also { it.afficher() }
+    }
+
+    /**
+     * Même bandeau, pour une question posée par une automatisation (Mes automatisations, action
+     * « Demander confirmation ») : [titre] à la place du profil, [question] à la place du seuil.
+     * [onAnswer] reçoit Oui, Non, ou `null` quand [secondes] passent sans réponse — une seule fois.
+     * Montré aussi en roulant : c'est un bandeau, et la question ne fait rien par elle-même.
+     */
+    fun showQuestion(context: Context, titre: String, question: String, secondes: Int,
+                     onAnswer: (com.mg4.control.model.ConfirmAnswer) -> Unit): Long {
+        val id = numeros.incrementAndGet()
+        handler.post {
+            interrompreQuestion("nouvelle question")
+            interrompreProfil("question d'automatisation")
+            dismiss(context)
+            var done = false
+            // Une seule fin par question : réponse, délai écoulé ou interruption.
+            val finish: (com.mg4.control.model.ConfirmAnswer) -> Unit = { r ->
+                if (!done) {
+                    done = true
+                    if (this.question?.id == id) this.question = null
+                    dismiss(context)
+                    onAnswer(r)
+                }
+            }
+            this.question = Question(id, finish)
+            try {
+                val contextes = OverlayKit.contextesBandeau(context)
+                val localized = contextes.localized
+                val themed = contextes.themed
+                val view = LayoutInflater.from(themed).inflate(R.layout.overlay_profile_confirm, null)
+                val accent = themed.getColor(R.color.dash_accent)
+                val rayonTuile = OverlayKit.dp(themed, 12f).toFloat()
+                view.findViewById<ImageView>(R.id.confirm_icon).apply {
+                    setImageResource(R.drawable.ic_dialog_question)
+                    imageTintList = ColorStateList.valueOf(accent)
+                }
+                view.findViewById<View>(R.id.confirm_value).visibility = View.GONE
+                view.findViewById<View>(R.id.confirm_unit).visibility = View.GONE
+                view.findViewById<View>(R.id.confirm_mode).visibility = View.GONE
+                view.findViewById<TextView>(R.id.confirm_threshold).text = question
+                view.findViewById<TextView>(R.id.confirm_profile).text = titre
+                val btnNo = view.findViewById<View>(R.id.confirm_btn_no)
+                val btnYes = view.findViewById<TextView>(R.id.confirm_btn_yes)
+                OverlayKit.fond(btnNo, themed.getColor(R.color.dash_btn), themed.getColor(R.color.dash_border),
+                    OverlayKit.dp(themed, 1f), rayonTuile)
+                OverlayKit.fond(btnYes, accent, rayon = rayonTuile)
+                btnYes.setTextColor(themed.getColor(R.color.hvac_on_accent))
+                btnYes.setOnClickListener { finish(com.mg4.control.model.ConfirmAnswer.YES) }
+                btnNo.setOnClickListener { finish(com.mg4.control.model.ConfirmAnswer.NO) }
+
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.addView(view, OverlayKit.fenetreBandeau(themed))
+                overlayView = view
+                AppLogger.i(TAG, "Question affichée : « $question » (${secondes} s)")
+
+                val delaiMs = secondes * 1_000L
+                val tvCountdown = view.findViewById<TextView>(R.id.confirm_countdown)
+                var remaining = secondes
+                val tick = object : Runnable {
+                    override fun run() {
+                        if (overlayView == null) return
+                        tvCountdown.text = localized.getString(R.string.win_auto_delay_value, remaining)
+                        if (remaining > 0) { remaining--; handler.postDelayed(this, 1_000L) }
+                    }
+                }
+                countdownRunnable = tick
+                handler.post(tick)
+                val dr = Runnable { finish(com.mg4.control.model.ConfirmAnswer.TIMEOUT) }
+                dismissRunnable = dr
+                handler.postDelayed(dr, delaiMs)
+                navigation = OverlayNavigation(
+                    context        = themed,
+                    grille         = listOf(listOf(btnNo, btnYes)),
+                    depart         = JoystickFocus.Position(0, 1),
+                    surDeplacement = {
+                        handler.removeCallbacks(dr)
+                        handler.postDelayed(dr, delaiMs)
+                        handler.removeCallbacks(tick)
+                        remaining = secondes
+                        handler.post(tick)
+                    },
+                    couleurAnneau  = themed.getColor(R.color.text_primary),
+                ).also { it.afficher() }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Question non affichée — ${e.javaClass.simpleName} ${e.message}")
+                // Personne n'a pu répondre : la suite ne part pas, même réglée « sans réponse = oui ».
+                finish(com.mg4.control.model.ConfirmAnswer.INTERRUPTED)
+            }
+        }
+        return id
     }
 
     private fun dismiss(context: Context) {

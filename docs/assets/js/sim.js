@@ -11,7 +11,7 @@
   'use strict';
 
   const STR = window.MG4_STRINGS || {};
-  const FIRMWARES = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165', 'UNKNOWN'];
+  const FIRMWARES = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165', 'SWI173', 'UNKNOWN'];
   const LS_KEY = 'mg4sim.fw.v1';
 
   // ── Outils ────────────────────────────────────────────────────────────────
@@ -36,8 +36,17 @@
     const t = (STR[appLang()] || {})[key] ?? (STR.fr || {})[key] ?? key;
     return args.length ? fmt(t, args) : t.replace(/%%/g, '%');
   }
+  /** Pluriel de l'app (<plurals>, clés « nom#one », « nom#few »…), choisi comme Android le fait. */
+  function P(key, n, ...args) {
+    const l = appLang(), d = STR[l] || {}, f = STR.fr || {}, m10 = n % 10, m100 = n % 100;
+    const q = n === 1 || (l === 'fr' && n === 0) ? 'one' : l === 'pl' ? (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many') : 'other';
+    const t = d[key + '#' + q] ?? d[key + '#other'] ?? f[key + '#' + q] ?? f[key + '#other'] ?? key;
+    return fmt(t, [n, ...args]);
+  }
 
   // ── Modèle ────────────────────────────────────────────────────────────────
+  const APP_VERSION = document.querySelector('.eyebrow .pill')?.textContent.trim().replace(/^v/, '') || '2.7.0';
+  const SIM_ASSETS = new URL('../img/', document.currentScript?.src || document.baseURI);
   const DRIVE = ['ECO', 'NORMAL', 'SPORT', 'SNOW', 'CUSTOM'];
   const DRIVE_LABEL = { ECO: 'Eco', NORMAL: 'Normal', SPORT: 'Sport', SNOW: 'Snow', CUSTOM: 'Custom' };
   const REGEN_LABEL = { LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', ADAPTIVE: 'Adaptive', OFF: 'Off', ONE_PEDAL: 'One Pedal' };
@@ -50,11 +59,24 @@
     299: ['Joystick gauche', 'Joystick left'], 300: ['Joystick droite', 'Joystick right'], 301: ['Joystick centre', 'Joystick centre']
   };
   const APPS = ['ABRP', 'Bluetooth', 'Chargemap', 'Deezer', 'Files', 'Google Maps', 'MG Launcher', 'Radio', 'Settings', 'Spotify', 'TomTom GO', 'Waze', 'YouTube', 'YouTube Music'];
+  const IMMERSIVE_MODES = { NORMAL: 'immersive_mode_normal', STATUS: 'immersive_mode_status', NAVIGATION: 'immersive_mode_nav', FULL: 'immersive_mode_full' };
+  const IMMERSIVE_PACKAGES = {
+    'Google Maps': 'com.google.android.apps.maps', Spotify: 'com.spotify.music', Waze: 'com.waze',
+    YouTube: 'com.google.android.youtube', 'YouTube Music': 'com.google.android.apps.youtube.music'
+  };
 
   /** Plafond de ProfileManager.MAX_PROFILES : dix depuis la 2.6.9. */
   const MAX_PROFILES = 10;
   /** Réglages de l'écran conducteur gardés par profil (lus dès l'état initial). */
-  const CL_KEYS = ['cluster', 'clusterNav', 'clusterMedia', 'clusterStyle', 'clusterPill', 'clusterUnit', 'clusterAvg', 'clusterDist', 'clusterPowerMax'];
+  const CL_DEFAULTS = { cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterStyle: 'dynamic',
+    clusterPill: 'profile', clusterUnit: 'wh', clusterAvg: null, clusterDist: 'auto', clusterPowerMax: 'auto',
+    clusterLayout: null, clusterRefresh: 1000, clusterAnim: 800 };
+  const COLOR_PALETTE = ['#A6C8FF', '#38BDF8', '#22C55E', '#FACC15', '#F97316', '#F43F5E', '#E879F9', '#A78BFA', '#F1F5FC'];
+  const parseColor = (value) => {
+    const hex = /^#?([0-9a-f]{6})$/i.exec(value.trim());
+    return hex ? '#' + hex[1].toUpperCase() : null;
+  };
+  const ST_PAGE_SIZE = 50;
   function mkProfile(o) {
     return Object.assign({
       id: uid(), name: '', driveMode: 'NORMAL', regen: 'MEDIUM', energy: false, tsr: true,
@@ -128,7 +150,7 @@
       fw, forced: null, fwDismissed: false, appLang: null,
       activeProfileId: daily.id,
       car: {
-        on: true, ready: true, speed: 0, maxSpeed: 0, outside: 12,
+        on: true, ready: true, speed: 0, inPark: true, maxSpeed: 0, outside: 12,
         custom: { power: 1, steer: 1, pedal: 1 },
         windows: { FL: 0, FR: 0, RL: 0, RR: 0 },
         driveMode: 'NORMAL', regen: 'ADAPTIVE', energy: false,
@@ -142,7 +164,7 @@
         brightness: 70, volume: 14, volMax: 30, prevVolume: null,
         soc: 64, lights: false, batHeat: false, highBeam: true,
         // Portes verrouillées (Garde-voiture), unité de distance de la voiture, projection à l'écran.
-        locked: false, distUnit: 'km', projection: null,
+        locked: false, distUnit: 'km', projection: null, rhd: false, mg4Dash: 'absent',
         doors: { L: false, R: false },
         media: { playing: false, track: 3, source: 'RADIO' },
         // Recharge simulée (véhicule virtuel) et limite de charge réglée sur la voiture.
@@ -151,24 +173,26 @@
       profiles: [daily, road, winter],
       defaultId: daily.id,
       lastManual: null,
-      settings: { defaultScreen: 'dashboard', theme: 'auto', api: false, autoUpdate: true, beta: false, gate: false, gateMax: 30,
+      settings: { ...CL_DEFAULTS, defaultScreen: 'dashboard', theme: 'auto', api: false, autoUpdate: true, beta: false, gate: false, gateMax: 30,
                   garage: false, textSize: 'standard', updOverlay: true, readyDefault: false, popupDelay: 10,
-                  // Écran conducteur (ClusterModuleSettings) : module par onglet, actualisation en ms.
-                  cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterRefresh: 1000, clusterUnit: 'wh',
-                  // Style, pastille, unité de la moyenne (null = celle de la jauge), durée de l'animation (ms).
-                  clusterStyle: 'dynamic', clusterPill: 'profile', clusterAvg: null, clusterAnim: 800,
                   // Pop-up de charge (ChargePopupSettings) : désactivé par défaut depuis la 2.6.10,
                   // comme la zone clim pendant la projection.
                   chargePopup: false,
                   // Plein écran, zone clim pendant Android Auto / CarPlay, raccourci de secours,
                   // « Ce que règle AUTO », distance et fin d'échelle de puissance du combiné.
                   fullscreen: false, hvacZone: false, rescue: true, scopeAir: true, scopeLoop: true,
-                  clusterDist: 'auto', clusterPowerMax: 'auto' },
+                  // Unité de distance générale et dernière jauge ouverte dans l'éditeur du combiné.
+                  distUnit: 'auto', clLayMod: null,
+                  // Côté du menu (NavSide) et « Garder l'A/C coupé » (#208, désactivé par défaut).
+                  navSide: 'auto', keepAcOff: false,
+                  // Relance de la détection du téléphone branché (#251) ; applications en plein écran (#248),
+                  // une application → 'FULL' | 'STATUS' | 'NAVIGATION'. Tous deux désactivés par défaut.
+                  projKick: false, immersive: false, immersiveApps: {} },
       sc: {
         enabled: true,
         map: { btn1_single: 'PROFILE_PICKER', btn1_long: 'ONE_PEDAL', btn2_single: 'NONE', btn2_long: 'ADAS_CYCLE' },
         extra: {},
-        fallback: 'HIGH', adasA: 3, adasB: 0, aebA: 1, aebB: 2,
+        fallback: 'PREV', adasA: 3, adasB: 0, aebA: 1, aebB: 2,
         regenCycle: null,          // séquence composée (null = ordre d'origine)
         profileCycle: null,        // cycle de profils composé (null = tous les profils, dans l'ordre de la liste)
         audioCycle: null,          // cycle de sources audio composé (null = radio puis Bluetooth)
@@ -177,7 +201,9 @@
         advOn: false, advService: false,
         // Raccourcis perso (CustomShortcuts) : APP, FUNCTION, BROADCAST, LINK ou WEBHOOK.
         custom: [{ id: 'cs1', name: L('Waze : maison', 'Waze: home'), kind: 'LINK', link: 'waze://?favorite=home&navigate=yes' }],
-        adv: []                    // { key, press, action, scope (profil ; null = tous), app?, profileId?, customId? (cible) }
+        adv: [],                   // { key, press, action, scope (profil ; null = tous), app?, profileId?, customId?, ruleId? (cible) }
+        keys: [], keyNames: {},    // touches ajoutées par capture, noms donnés aux touches
+        driveCycle: null           // cycle des modes de conduite composé (null = Éco → Normal → Sport)
       },
       // Mesures du calibrage par vitre (ms), conservées même quand l'option avancée est éteinte.
       winCal: { FL: 'sensor', FR: null, RL: null, RR: null },
@@ -203,27 +229,55 @@
       // mode : baisser le volume ou mettre en pause ; paused = c'est MG4Control qui a mis en pause.
       door: { on: false, open: false, level: 6, restore: true, L: true, R: true, mode: 'volume', paused: false },
       // Boutons flottants : un jeu par profil (FloatingSets), masquage en marche arrière commun.
-      floating: { hideReverse: true, sets: {} },
+      floating: { hideReverse: true, sets: {}, color: '#A6C8FF' },
       // Garde-voiture : derniers choix de la fenêtre et réglages de sa page (PreClimateSettings).
-      preclim: { mode: 'now', dur: 60, temp: 21, fan: 4, dog: false, surv: false, at: { h: 7, m: 30, run: 15, runs: 2, pause: 10 },
+      preclim: { cam: 'ok', camAuto: true, usb: null, survScreen: false, nocam: false, mode: 'now', dur: 60, temp: null, fan: null, dog: false, surv: false, at: { first: null, run: 15, runs: 1, pause: 30 },
                  lock: 20, soc: 20, screen: 'dim', cluster: true, unlock: true },
       pc: null,                    // programme en cours (pcStart)
       // Sons d'automatisation : un son par moment au plus (SoundAutomationSettings).
       sound: { on: false, open: false, slots: [{ file: null, dur: 0, vol: 15, events: [] }], profiles: null, busyUntil: 0 },
       clLearned: 150,              // fin d'échelle apprise de la jauge de puissance (Auto)
       bt: { devices: [{ mac: 'A4:C1:38:5E:22:10', name: 'Pixel 8' }, { mac: '5C:F9:38:07:AB:41', name: 'iPhone 15' }], connected: [] },
-      diagUnlocked: false
+      diagUnlocked: false,
+      // 2.7.0 : réglages rapides (null = tuiles par défaut), Mes automatisations.
+      quick: { tiles: null },
+      rules: { engine: true, hist: [], list: [
+        { id: 'r1', name: L('Message au démarrage', 'Startup message'), on: true, trg: [{ k: 'app_start' }], cond: [], act: [{ k: 'notify', msg: L('MG4Control est prêt', 'MG4Control is ready') }], opt: { ready: false, restart: false }, last: null },
+        { id: 'r2', name: L('Volant chauffant : arrêt après 15 min', 'Heated steering wheel: off after 15 min'), on: false, trg: [{ k: 'steering_on', for: 900 }], cond: [],
+          act: [{ k: 'set', key: 'steering', v: false }, { k: 'notify', msg: L('Volant chauffant coupé après 15 min', 'Heated steering wheel switched off after 15 min') }], opt: { ready: false, restart: false }, last: null },
+        { id: 'r3', name: L('Luminosité jour / nuit selon le soleil', 'Day / night brightness from the sun'), on: false, trg: [{ k: 'sunrise' }, { k: 'sunset' }, { k: 'ready' }], cond: [],
+          act: [{ k: 'if', c: { k: 'sun_up', is: true }, then: [{ k: 'brightness', v: 80 }], else: [{ k: 'brightness', v: 25 }] }], opt: { ready: false, restart: false }, last: null }
+      ] }
     };
+    // Statistiques par profil (#206) : chaque trajet d'exemple découpé par profil, un trajet « Mixte ».
+    const segs = [[[daily, 1]], [[daily, 0.58], [road, 0.42]], [[daily, 1]], [[road, 1]], [[daily, 1]], [[winter, 1]], [[winter, 0.7], [daily, 0.3]]];
+    st.stats.trips.forEach((t, i) => { t.segs = (segs[i] || [[daily, 1]]).map(([p, f]) => ({ pid: p.id, km: +(t.km * f).toFixed(1) })); t.seed = i + 1; });
     // Écran conducteur par profil : chaque profil part des réglages communs d'avant.
     st.clCfg = {};
-    st.profiles.forEach((p) => { st.clCfg[p.id] = clPick(st.settings); });
+    st.profiles.forEach((p) => { st.clCfg[p.id] = { ...CL_DEFAULTS }; });
     return st;
   }
 
   let state = initialState();
 
+  /**
+   * La voiture rallume l'A/C dès que la consigne change, même coupé à la main (#208) ; avec
+   * l'option, MG4Control le recoupe 0,7 s après. Jamais en AUTO, en dégivrage avant, clim éteinte.
+   */
+  function acAfterTemp(wasOn) {
+    const cl = state.car.clim;
+    if (wasOn || cl.auto || !cl.power || cl.defF) return;
+    cl.ac = true;
+    if (state.settings.keepAcOff && !(state.settings.garage)) {
+      setTimeout(() => { if (cl.ac) { cl.ac = false; hud(S('settings_keep_ac_title') + ' → OFF'); commit(); } }, 700);
+    }
+  }
+
   // ── Capacités par firmware (miroir de FirmwareInfo / MG4Hardware) ─────────
-  function gen() { return state.fw === 'UNKNOWN' && state.forced ? state.forced : state.fw; }
+  function gen() {
+    const fw = state.fw === 'UNKNOWN' && state.forced ? state.forced : state.fw;
+    return fw === 'SWI173' ? 'SWI131' : fw;
+  }
   function caps() {
     const g = gen();
     const known = g !== 'UNKNOWN';
@@ -238,7 +292,7 @@
       beam: known, batHeat: known,                     // feux de route automatiques, chauffage de la batterie
       counters: g === 'SWI132' || g === 'SWI133',      // compteurs d'énergie du véhicule ; sinon l'énergie est calculée
       doorSensor: g === 'SWI132' || g === 'SWI133',    // portes lisibles ; sinon sortie de READY
-      cluster: ['SWI133', 'SWI68', 'SWI165'].includes(g), // module sur l'écran conducteur (ClusterModuleSettings.SUPPORTED)
+      cluster: state.fw === 'SWI173' || ['SWI133', 'SWI68', 'SWI165'].includes(g), // caripk sur l'image SWI173 référencée
       a9: ['SWI69', 'SWI131', 'SWI132'].includes(g),       // FirmwareInfo.isA9 : pas de musique en ligne
       fifth: (!vsm || s132) ? 'adas_ica' : 'adas_tja'
     };
@@ -247,14 +301,14 @@
   const activeProfile = () => state.profiles.find((p) => p.id === state.activeProfileId) || null;
 
   // ── Écran conducteur par profil : toute la carte suit le profil actif ───────
-  function clPick(s) { const o = {}; CL_KEYS.forEach((k) => { o[k] = s[k]; }); return o; }
-  /** Réglages du combiné d'un profil ; un profil inconnu reprend ceux du moment. */
-  function clCfg(id) { if (!state.clCfg[id]) state.clCfg[id] = clPick(state.settings); return state.clCfg[id]; }
-  /** Écrit un réglage du combiné pour le profil actif (et ce qui est à l'écran). */
-  function clSet(key, v) { state.settings[key] = v; const p = activeProfile(); if (p) clCfg(p.id)[key] = v; }
+  function clCfg(id) { return state.clCfg[id] ??= { ...CL_DEFAULTS }; }
+  /** Écrit un réglage du combiné pour le profil suivi (et ce qui est à l'écran). */
+  function clSet(key, v) { state.settings[key] = v; const id = flFollowed(); if (id) clCfg(id)[key] = v; }
+  function clSync() { const id = flFollowed(); Object.assign(state.settings, id ? clCfg(id) : CL_DEFAULTS); }
   const MI_KM = 1.609344;
   /** Miles ? « Auto » suit l'unité réglée sur la voiture (0x2140f439). */
-  const clMiles = (cfg) => { const d = (cfg || state.settings).clusterDist || 'auto'; return (d === 'auto' ? state.car.distUnit : d) === 'mi'; };
+  // Unité de distance : un réglage général depuis le 2026-11-10 (Réglages › Interface), plus du combiné.
+  const clMiles = () => { const d = state.settings.distUnit || 'auto'; return (d === 'auto' ? state.car.distUnit : d) === 'mi'; };
   /** Fin d'échelle de la jauge de puissance : choisie, ou apprise en roulant (Auto). */
   const clPowerFull = (cfg) => { const v = (cfg || state.settings).clusterPowerMax; return v && v !== 'auto' ? +v : state.clLearned; };
   const POWER_STEPS = [100, 125, 150, 180, 200, 250, 320];
@@ -310,13 +364,15 @@
 
   // ── Écritures véhicule ────────────────────────────────────────────────────
   const car = () => state.car;
+  /** Écrit la régénération ; en passant en One Pedal, la voiture retient le niveau d'avant (issue #226). */
+  function putRegen(c, l) { if (l === 'ONE_PEDAL' && c.regen !== 'ONE_PEDAL') c.regenPrev = c.regen; c.regen = l; }
   const W = {
     drive(m) { if (!gateOk()) return false; car().driveMode = m; return true; },
     regen(l) {
       if (!gateOk()) return false;
       const c = car();
       if (c.driveMode === 'SNOW' || (c.energy && l !== 'ONE_PEDAL')) return false;
-      c.regen = l; return true;
+      putRegen(c, l); return true;
     },
     energy(on) { if (!gateOk()) return false; if (car().driveMode === 'SNOW') return false; car().energy = on; return true; },
     adas(i) { if (!gateOk()) return false; car().adas = i; return true; },
@@ -370,7 +426,7 @@
     const drivingOk = drive || safety ? gateOk(true) : true;
     if (drivingOk && drive) {
       c.driveMode = p.driveMode;
-      if (p.driveMode !== 'SNOW' && p.regenOn !== false) c.regen = p.regen;
+      if (p.driveMode !== 'SNOW' && p.regenOn !== false) putRegen(c, p.regen);
       if (k.known) c.energy = p.driveMode === 'SNOW' ? false : p.energy;
       // Les trois réglages du mode Personnalisé, écrits seulement si le profil est en CUSTOM.
       if (p.driveMode === 'CUSTOM') {
@@ -400,8 +456,11 @@
       if (p.steeringApply) c.steering = p.steeringOn;
       if (p.seatApply) { c.seatL = p.seatL; c.seatR = p.seatR; }
     }
+    if (comfort && k.beam && p.beam != null) c.highBeam = p.beam;
     if (comfort && p.hvac && p.hvac.enabled && k.clim) applyProfileClimate(p.hvac);
-    state.activeProfileId = p.id;   // « profil actif » des raccourcis par profil
+    const changed = state.activeProfileId !== p.id;
+    state.activeProfileId = p.id;
+    if (changed) setTimeout(() => ruleEvent('profile_change'), 0);   // « profil actif » des raccourcis par profil
     Object.assign(state.settings, clCfg(p.id));   // son écran conducteur
     soundFire('profile');
     if (opts.manual) state.lastManual = p.id;
@@ -431,6 +490,9 @@
     if (def) { trace.push(L('Profil par défaut : « ', 'Default profile: “') + def.name + L(' »', '”')); applyProfile(def, { via: L('profil par défaut', 'default profile') }); return; }
     trace.push(L('Aucun profil à appliquer', 'No profile to apply'));
   }
+  /** Altitude GPS (#254) du véhicule virtuel, en mètres : une colline douce tant qu'on roule. */
+  const altM = () => { const c = car(); return Math.round(c.altitude ?? (412 + (c.speed ? 18 * Math.sin(Date.now() / 60000) : 0))); };
+  const altTxt = (miles) => miles ? [String(Math.round(altM() / 0.3048)), 'ft'] : [String(altM()), 'm'];
   const nowHM = () => new Intl.DateTimeFormat(appLang() === 'en' ? 'en-GB' : appLang(), { hour: '2-digit', minute: '2-digit' }).format(Date.now());
   /** Changer de batterie recalcule l'énergie des recharges enregistrées, comme dans l'app. */
   function setBattery(nominal) {
@@ -497,6 +559,7 @@
     // Le pop-up s'ouvre à chaque début de charge, si l'option est active (ChargeMonitor).
     if (state.settings.chargePopup) { const s = activeSim(); if (s) s.openChargePopup(); }
     commit();
+    ruleEvent('charge_start');
   }
   function chargeTick() {
     const c = car(), ch = c.charge;
@@ -528,6 +591,7 @@
     if (!ch) return;
     clearInterval(chargeTimer); chargeTimer = null;
     c.charge = null;
+    ruleEvent('charge_end');
     instances.forEach((i) => { const o = i.ui.overlay; if (o && o.type === 'charge') { i.ui.overlay = null; i.render(); } });
     const st = state.stats;
     if (st.enabled && ch.soc - ch.soc0 >= 0.5 && ch.simMs > 0) {
@@ -647,6 +711,7 @@
     if (state.auto.bri.on && caps().bri) autoBrightness();
     commit();
     emit('ignition', { trace });
+    if (state.car.ready) { ruleEvent('ready'); ruleEvent('ready_on'); }
     return trace;
   }
 
@@ -702,6 +767,7 @@
     const c = car(), k = caps();
     if (!c.ready) return [];
     c.ready = false;
+    setTimeout(() => ruleEvent('ready_off'), 0);
     const trace = [L('Sortie de READY', 'Leaving READY')];
     if (!garage()) {
       // Baisse du volume : sur les firmwares sans capteur de porte, c'est ce signal qui sert.
@@ -810,7 +876,7 @@
   // ── Raccourcis perso (CustomShortcutRunner) ───────────────────────────────
   const CS_KINDS = ['APP', 'FUNCTION', 'BROADCAST', 'LINK', 'WEBHOOK'];
   const CS_KIND_KEY = { APP: 'custom_kind_app', FUNCTION: 'custom_kind_function', BROADCAST: 'custom_kind_broadcast', LINK: 'custom_kind_link', WEBHOOK: 'custom_kind_webhook' };
-  /** Fonctions proposées : raccourcis Android des applis, et celles exposées à MG4Control (convention). */
+  /** Fonctions proposées : raccourcis Android des applications, et celles exposées à MG4Control (convention). */
   const CS_FUNCS = [['Spotify · ' + 'Search', 'custom_tag_shortcut'], ['Waze · Home', 'custom_tag_shortcut'], ['MG4 Dashcam · Event', 'custom_tag_declared']];
   const customTarget = (cs) => ({ APP: cs.app, FUNCTION: cs.fn, BROADCAST: cs.action, LINK: cs.link, WEBHOOK: cs.url }[cs.kind] || '');
   const customName = (id) => { const cs = state.sc.custom.find((x) => x.id === id); return cs ? cs.name : '?'; };
@@ -843,14 +909,18 @@
   // clim vaut une minute, une seconde d'attente (« À une heure ») dix minutes.
   let pcTimer = null;
   const PC_TICK = 250;
-  const hmIn = (min) => new Intl.DateTimeFormat(appLang() === 'en' ? 'en-GB' : appLang(), { hour: '2-digit', minute: '2-digit' }).format(Date.now() + min * 60000);
-  /** Cycles [début, fin], en minutes depuis le verrouillage (PreClimatePlan) ; le mode chien dure 2 h. */
-  function pcPlan(r) {
+  const PC_DAY = 1440;
+  const pcMinute = () => { const t = new Date(); return t.getHours() * 60 + t.getMinutes() + t.getSeconds() / 60; };
+  const pcClock = (minute) => {
+    const m = (Math.round(minute) % PC_DAY + PC_DAY) % PC_DAY;
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  };
+  const pcFirst = (at, now) => at.first ?? (Math.ceil(Math.floor(now + 60) / 5) * 5) % PC_DAY;
+  const pcCanStart = () => car().inPark && car().speed === 0;
+  /** Cycles [début, fin], en minutes depuis le départ (PreClimatePlan) ; le mode chien dure 2 h. */
+  function pcPlan(r, now) {
     if (r.mode !== 'at' || r.dog || r.surv) return [[0, r.dog && !r.surv ? 120 : r.dur]];
-    const now = new Date(), t = new Date(now);
-    t.setHours(r.at.h, r.at.m, 0, 0);
-    let first = Math.round((t - now) / 60000);
-    if (first < 1) first += 1440;
+    const delay = pcFirst(r.at, now) - now, first = delay < 1 ? delay + PC_DAY : delay;
     const out = [];
     for (let i = 0; i < r.at.runs; i++) { const a = first + i * (r.at.run + r.at.pause); out.push([a, a + r.at.run]); }
     return out;
@@ -863,10 +933,14 @@
   }
   function pcStart(r) {
     const cl = car().clim;
-    state.pc = { req: JSON.parse(JSON.stringify(r)), phase: 'cd', left: r.lock, min: 0, plan: pcPlan(r),
-                 snap: { power: cl.power, ac: cl.ac, auto: cl.auto, temp: cl.temp, fan: cl.fan }, hidden: false, wake: Date.now(), startHM: nowHM() };
-    // « Maintenant » : la clim démarre tout de suite ; surveillance et « À une heure » : coupée.
-    if (r.surv || (r.mode === 'at' && !r.dog)) cl.power = false; else pcClim(true);
+    const started = pcMinute();
+    // Surveillance : l'application caméra pilotable filme dès « Démarrer » (START), si l'interrupteur est allumé.
+    const rec = !!(r.surv && state.preclim.cam === 'ok' && state.preclim.camAuto);
+    state.pc = { req: JSON.parse(JSON.stringify(r)), phase: 'cd', left: r.lock, min: 0, plan: pcPlan(r, started), rec,
+                 snap: { power: cl.power, ac: cl.ac, auto: cl.auto, temp: cl.temp, fan: cl.fan }, hidden: false, wake: Date.now(), started };
+    // « À une heure » conserve la clim pendant le décompte et applique le premier état au verrouillage.
+    if (r.surv) cl.power = false;
+    else if (r.mode === 'now') pcClim(true);
     clearInterval(pcTimer); pcTimer = setInterval(pcTick, PC_TICK);
     commit();
   }
@@ -876,28 +950,33 @@
     if (c.speed > 3) return pcEnd('driving');
     if (pc.phase === 'cd') {
       pc.left -= 1;
-      if (pc.left <= 0) { pc.phase = 'live'; c.locked = true; pc.wake = Date.now(); pc.startHM = nowHM(); }
+      pc.min = (pc.req.lock - pc.left) / 60;
+      if (pc.left <= 0) {
+        pc.phase = 'live'; c.locked = true; pc.wake = Date.now();
+        if (pc.req.mode === 'at') pcClim(pc.plan.some(([a, b]) => pc.min >= a && pc.min < b));
+      }
       return commit();
     }
     if (!c.locked) return pcEnd('back');
     if (c.soc < pc.req.soc) return pcEnd('battery');
-    const plan = pc.plan, last = plan[plan.length - 1][1];
-    const running = plan.some(([a, b]) => pc.min >= a && pc.min < b);
-    pc.min += (running ? 1 : 10) * PC_TICK / 1000;
-    if (pc.min >= last) return pcEnd('done');
-    const now = plan.some(([a, b]) => pc.min >= a && pc.min < b);
-    if (!pc.req.surv && now !== running) pcClim(now);
+    const cur = pc.plan.find(([a, b]) => pc.min >= a && pc.min < b);
+    const next = pc.plan.find(([a]) => a > pc.min);
+    if (!cur && !next) return pcEnd('done');
+    pc.min = Math.min(pc.min + (cur ? 1 : 10) * PC_TICK / 1000, cur ? cur[1] : next[0]);
+    if (pc.min >= pc.plan[pc.plan.length - 1][1]) return pcEnd('done');
+    const running = pc.plan.some(([a, b]) => pc.min >= a && pc.min < b);
+    if (!pc.req.surv && running !== !!cur) pcClim(running);
     commit();
   }
   /** Fin : la clim retrouve toujours ses réglages d'avant ; la voiture ne s'éteint qu'à la fin du programme ou batterie faible. */
   function pcEnd(kind) {
     const pc = state.pc, c = car();
-    if (!pc) return;
+    if (!pc || pc.phase === 'end') return;
     clearInterval(pcTimer); pcTimer = null;
     Object.assign(c.clim, pc.snap);
+    pc.rec = false;
     pc.end = { kind, ran: pc.min, at: nowHM(), off: kind === 'done' || kind === 'battery' };
     if (pc.end.off) { c.on = false; c.ready = false; }
-    if (kind === 'back' || kind === 'driving' || kind === 'cancelled') c.locked = false;
     pc.phase = 'end'; pc.hidden = false;
     commit();
   }
@@ -908,7 +987,7 @@
     const plan = pc.plan, cur = plan.find(([a, b]) => pc.min >= a && pc.min < b), next = plan.find(([a]) => a > pc.min);
     const left = pc.phase === 'cd' ? null : cur ? cur[1] - pc.min : next ? next[0] - pc.min : 0;
     return { cd: pc.phase === 'cd' ? Math.max(0, Math.ceil(pc.left)) : null, surv: pc.req.surv, dog: pc.req.dog, running: !!cur, left,
-             cycle: plan.length > 1 ? [plan.indexOf(cur || next) + 1, plan.length] : null, temp: pc.req.temp, off: hmIn(plan[plan.length - 1][1] - pc.min) };
+             cycle: plan.length > 1 ? [plan.indexOf(cur || next) + 1, plan.length] : null, temp: pc.req.temp, off: pcClock(pc.started + plan[plan.length - 1][1]) };
   }
 
   // ── Actions des raccourcis (MG4ControlService.executeShortcut) ────────────
@@ -927,6 +1006,7 @@
     AUTO_HIGH_BEAM_TOGGLE: 'shortcuts_action_auto_high_beam', BATTERY_HEAT_TOGGLE: 'shortcuts_action_battery_heat',
     MEDIA_NEXT: 'shortcuts_action_media_next', MEDIA_PREVIOUS: 'shortcuts_action_media_prev', MEDIA_PLAY_PAUSE: 'shortcuts_action_media_play_pause',
     VOLUME_UP: 'shortcuts_action_volume_up', VOLUME_DOWN: 'shortcuts_action_volume_down',
+    DRIVE_MODE_CYCLE: 'shortcuts_action_drive_cycle', QUICK_SETTINGS: 'shortcuts_action_quick_settings', RUN_RULE: 'shortcuts_action_run_rule',
     APPLY_PROFILE: 'shortcuts_action_apply_profile', PROFILE_PICKER: 'shortcuts_action_profile_picker',
     PROFILE_CYCLE: 'shortcuts_action_profile_cycle', AUDIO_SOURCE_CYCLE: 'shortcuts_action_audio_cycle',
     OPEN_APP: 'shortcuts_action_open_app', OPEN_CUSTOM_APP: 'shortcuts_action_open_custom_app', ANDROID_SETTINGS: 'shortcuts_action_android_settings', VEHICLE_POWER_OFF: 'shortcuts_action_vehicle_power_off',
@@ -967,7 +1047,7 @@
   /** Liste des actions proposées, filtrée par firmware (ShortcutsFragment.baseActionItems). */
   function availableActions() {
     const k = caps();
-    const a = ['NONE', 'ONE_PEDAL', 'REGEN_CYCLE'];
+    const a = ['NONE', 'ONE_PEDAL', 'REGEN_CYCLE', 'DRIVE_MODE_CYCLE'];
     if (k.known) a.push('AEB_CYCLE');
     if (k.vsm && !k.s132) a.push('SOUND_WARNING');
     if (k.twoAlerts && k.known) a.push('OVERSPEED_ALARM', 'SPEED_LIMIT_TONE');
@@ -981,7 +1061,8 @@
     a.push('MEDIA_NEXT', 'MEDIA_PREVIOUS', 'MEDIA_PLAY_PAUSE', 'VOLUME_UP', 'VOLUME_DOWN',
       'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'PROFILE_CYCLE', 'AUDIO_SOURCE_CYCLE', 'CHARGE_POPUP', 'OPEN_APP', 'OPEN_CUSTOM_APP', 'ANDROID_SETTINGS');
     if (k.known && k.clim) a.push('PRE_CLIMATE');
-    a.push('PROJECTION', 'CUSTOM');
+    if (k.known) a.push('QUICK_SETTINGS');
+    a.push('PROJECTION', 'CUSTOM', 'RUN_RULE');
     if (k.power) a.push('VEHICLE_POWER_OFF');
     return a;
   }
@@ -1005,10 +1086,12 @@
       case 'NONE': return '';
       case 'ONE_PEDAL': {
         const v = c.regen !== 'ONE_PEDAL';   // état lu sur le véhicule
-        const lvl = v ? 'ONE_PEDAL' : sc.fallback;
+        // Second appui : « Comme avant » (défaut) = la voiture remet le niveau d'avant ; sinon le niveau choisi.
+        const fixe = ['LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE'].includes(sc.fallback) ? sc.fallback : null;
+        const lvl = v ? 'ONE_PEDAL' : fixe || (c.regenPrev && c.regenPrev !== 'ONE_PEDAL' ? c.regenPrev : 'MEDIUM');
         if (!gateOk()) return '';
         if (c.driveMode === 'SNOW') { msg = L('Régénération indisponible en mode SNOW', 'Regeneration unavailable in SNOW mode'); break; }
-        c.regen = lvl; msg = S('drive_section_regen') + ' → ' + regenName(lvl); break;
+        putRegen(c, lvl); msg = S('drive_section_regen') + ' → ' + regenName(lvl); break;
       }
       case 'REGEN_CYCLE': {
         // Repart du niveau LU sur le véhicule ; hors séquence → premier cran.
@@ -1041,6 +1124,7 @@
       case 'AUTO_HIGH_BEAM_TOGGLE': c.highBeam = !c.highBeam; msg = S('lighting_auto_high_beam') + ' → ' + onOff(c.highBeam); break;
       case 'BATTERY_HEAT_TOGGLE': c.batHeat = !c.batHeat; msg = S('batheat_section') + ' → ' + onOff(c.batHeat); break;
       case 'HVAC_TEMP_UP': case 'HVAC_TEMP_DOWN':
+        acAfterTemp(c.clim.ac);
         c.clim.temp = clamp(c.clim.temp + (action === 'HVAC_TEMP_UP' ? 1 : -1), c.clim.tMin, c.clim.tMax); msg = S('clim_temperature') + ' → ' + c.clim.temp + ' °C'; break;
       case 'HVAC_FAN_UP': case 'HVAC_FAN_DOWN':
         // Clim éteinte : « plus » la rallume, et la voiture reprend son cran ou AUTO d'avant
@@ -1059,7 +1143,8 @@
         c.clim.autoVol = (c.clim.autoVol + 2) % 3; msg = S('clim_section_autovol') + ' → ' + S(AUTOVOL_KEY[c.clim.autoVol]); break;
       case 'HVAC_RECIRC_CYCLE': autoTouched('loop'); c.clim.loop = (c.clim.loop + 1) % 3; msg = S('clim_section_loop') + ' → ' + loopName(c.clim.loop); break;
       case 'BRIGHTNESS_UP': case 'BRIGHTNESS_DOWN':
-        c.brightness = clamp(c.brightness + (action === 'BRIGHTNESS_UP' ? 10 : -10), 5, 100); msg = S('overlay_brightness_title') + ' → ' + c.brightness + ' %'; break;
+        // « − » ne remonte jamais un écran déjà sous le plancher (réglé ailleurs plus bas).
+        c.brightness = action === 'BRIGHTNESS_DOWN' && c.brightness <= briMin() ? c.brightness : clamp(c.brightness + (action === 'BRIGHTNESS_UP' ? 10 : -10), briMin(), 100); msg = S('overlay_brightness_title') + ' → ' + c.brightness + ' %'; break;
       case 'MEDIA_NEXT': c.media.track++; msg = '⏭ ' + S('shortcuts_action_media_next'); break;
       case 'MEDIA_PREVIOUS': c.media.track = Math.max(1, c.media.track - 1); msg = '⏮ ' + S('shortcuts_action_media_prev'); break;
       case 'MEDIA_PLAY_PAUSE': c.media.playing = !c.media.playing; msg = (c.media.playing ? '▶ ' : '⏸ ') + S('shortcuts_action_media_play_pause'); break;
@@ -1111,6 +1196,18 @@
       case 'VEHICLE_POWER_OFF': { const s = activeSim(); if (s) s.askPowerOff(); return 'power'; }
       case 'PRE_CLIMATE': { const s = activeSim(); if (s) s.togglePreclim(); return 'preclim'; }
       case 'PROJECTION': return projectionToggle();
+      case 'DRIVE_MODE_CYCLE': {
+        // Cycle des modes (#207) : repart du mode LU ; hors cycle ou illisible → le premier. Permis en roulant.
+        const order = driveOrder(), i = order.indexOf(c.driveMode), m = i < 0 ? order[0] : order[(i + 1) % order.length];
+        c.driveMode = m; msg = S('drive_section_mode') + ' → ' + driveName(m); break;
+      }
+      case 'QUICK_SETTINGS': { const s = activeSim(); if (s) s.toggleQuick(); return 'quick'; }
+      case 'RUN_RULE': {
+        const r = extra && state.rules.list.find((x) => x.id === extra.ruleId);
+        if (!r) { hud(S('rule_none_to_pick')); return ''; }
+        if (!rulesOn()) { hud(S('rule_engine_switch') + ' : OFF'); return ''; }
+        runRule(r, S('rule_trg_manual')); return 'rule';
+      }
       case 'CUSTOM': return runCustom(extra);
       default: return '';
     }
@@ -1374,6 +1471,401 @@
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
+  // ══ 2.7.0 ════════════════════════════════════════════════════════════════
+  /** Plancher de luminosité (MG4Hardware.brightnessMinPercent) : 0 % sur l'ancien SDK, 5 % sur les A9. */
+  const briMin = () => (caps().a9 ? 5 : 0);
+  const driveName = (m) => S('drive_' + String(m).toLowerCase());
+
+  /** Cycle des modes de conduite (#207, DriveModeCycle) : défaut Éco → Normal → Sport, deux modes au moins. */
+  const DRIVE_CYCLE = ['ECO', 'NORMAL', 'SPORT'];
+  const driveOrder = () => (state.sc.driveCycle && state.sc.driveCycle.length >= 2 ? state.sc.driveCycle : DRIVE_CYCLE);
+
+  // ── Réglages rapides (#197, QuickTiles) ──────────────────────────────────
+  const QT_DEFAULT = ['ELK_MODE', 'CRUISE', 'REGEN', 'BATTERY_HEAT', 'DRIVE_MODE'];
+  const QT_MAX = 8;
+  const ynOpts = () => [[false, S('rule_off')], [true, S('rule_on')]];
+  /**
+   * Une tuile : son nom, ses valeurs, sa lecture et son écriture — les mêmes que le tableau de bord.
+   * stop : réglage que la voiture n'accepte qu'à l'arrêt (grisé en roulant).
+   */
+  const QT = {
+    ELK_MODE: { key: 'quick_tile_elk', ok: (k) => k.known, opts: () => [[ELK.OFF, S('climate_off')], [ELK.ALERT, S('elk_mode_alert')], [ELK.ASSIST, S('elk_mode_assist')]].concat(caps().s132 ? [] : [[ELK.EMERGENCY, S('elk_mode_emergency')]]),
+      get: () => car().elkMode, set: (v) => (v === ELK.OFF ? W.elkOn(false) : W.elkMode(v)) },
+    ELK_SENSITIVITY: { key: 'quick_tile_elk_sens', ok: (k) => k.known, opts: () => [[1, S('sens_low')], [2, S('sens_medium')], [3, S('sens_high')]], get: () => car().elkSen, set: (v) => W.elkSen(v) },
+    CRUISE: { key: 'quick_tile_cruise', ok: (k) => k.known, opts: () => [0, 1, 2, 3, 4].map((i) => [i, adasLabel(i)]), get: () => car().adas, set: (v) => W.adas(v) },
+    AEB: { key: 'quick_tile_aeb', ok: (k) => k.known, stop: true, opts: ynOpts, get: () => car().aebOn, set: (v) => W.bool('aebOn', v) },
+    TSR: { key: 'quick_tile_tsr', ok: (k) => k.known, opts: ynOpts, get: () => car().tsr, set: (v) => W.tsr(v) },
+    OVERSPEED_ALARM: { key: 'quick_tile_overspeed', ok: (k) => k.known && k.twoAlerts, opts: ynOpts, get: () => car().overspeed, set: (v) => W.bool('overspeed', v) },
+    AUTO_HIGH_BEAM: { key: 'quick_tile_high_beam', ok: (k) => k.beam, opts: ynOpts, get: () => car().highBeam, set: (v) => { car().highBeam = v; return true; } },
+    REGEN: { key: 'quick_tile_regen', ok: () => true, opts: () => ['OFF', 'LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE', 'ONE_PEDAL'].map((l) => [l, regenName(l)]), get: () => car().regen, set: (v) => W.regen(v) },
+    DRIVE_MODE: { key: 'quick_tile_drive', ok: () => true, opts: () => DRIVE.map((m) => [m, driveName(m)]), get: () => car().driveMode, set: (v) => W.drive(v) },
+    ENERGY_SAVING: { key: 'quick_tile_energy', ok: (k) => k.known, opts: ynOpts, get: () => car().energy, set: (v) => W.energy(v) },
+    BATTERY_HEAT: { key: 'quick_tile_battery_heat', ok: (k) => k.batHeat, opts: ynOpts, get: () => car().batHeat, set: (v) => { car().batHeat = v; return true; } },
+    AC: { key: 'quick_tile_ac', ok: (k) => k.clim, opts: ynOpts, get: () => car().clim.ac, set: (v) => { car().clim.ac = v; return true; } },
+    RECIRC: { key: 'quick_tile_recirc', ok: (k) => k.clim, opts: () => [[0, S('recirc_inner')], [1, S('recirc_outside')], [2, S('recirc_auto')]], get: () => car().clim.loop, set: (v) => { car().clim.loop = v; return true; } },
+    DEFROST_FRONT: { key: 'quick_tile_defrost_front', ok: (k) => k.clim, opts: ynOpts, get: () => car().clim.defF, set: (v) => { car().clim.defF = v; return true; } },
+    DEFROST_REAR: { key: 'quick_tile_defrost_rear', ok: (k) => k.clim, opts: ynOpts, get: () => car().clim.defR, set: (v) => { car().clim.defR = v; return true; } },
+    SEAT_LEFT: { key: 'quick_tile_seat_left', ok: (k) => k.heat, opts: () => [0, 1, 2, 3].map((n) => [n, levelName(n)]), get: () => car().seatL, set: (v) => { car().seatL = v; return true; } },
+    SEAT_RIGHT: { key: 'quick_tile_seat_right', ok: (k) => k.heat, opts: () => [0, 1, 2, 3].map((n) => [n, levelName(n)]), get: () => car().seatR, set: (v) => { car().seatR = v; return true; } },
+    STEERING_HEAT: { key: 'quick_tile_steering', ok: (k) => k.heat, opts: ynOpts, get: () => car().steering, set: (v) => { car().steering = v; return true; } },
+    BRIGHTNESS: { key: 'quick_tile_brightness', ok: (k) => k.bri, opts: () => [20, 40, 60, 80, 100].map((n) => [n, n + ' %']), get: () => car().brightness, set: (v) => { car().brightness = v; return true; } }
+  };
+  const qtTiles = () => (state.quick.tiles || QT_DEFAULT).filter((t) => QT[t] && QT[t].ok(caps()));
+  const qtValue = (t) => { const d = QT[t], v = d.get(), o = d.opts().find(([x]) => x === v); return o ? o[1] : String(v); };
+
+  // ── Mes automatisations (CustomRules) : version de démonstration du moteur ─────
+  const RULES_MAX = 30;
+  const DAY_KEYS = [1, 2, 3, 4, 5, 6, 7];
+  const dayName = (d) => new Intl.DateTimeFormat(appLang() === 'en' ? 'en-GB' : appLang(), { weekday: 'short' }).format(new Date(2024, 0, d));   // 1er janv. 2024 = lundi
+  const hm = (h, m) => String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1);
+  const ruleName = (id) => { const r = state.rules.list.find((x) => x.id === id); return r ? r.name : '?'; };
+  const profName = (id) => { const p = state.profiles.find((x) => x.id === id); return p ? p.name : '?'; };
+  /** Lever et coucher du soleil approchés (Paris) : la démonstration n'a pas de position GPS. */
+  function sunTimes(d) {
+    const doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5);
+    const len = 12.2 + 3.9 * Math.sin(2 * Math.PI * (doy - 80) / 365);
+    const noon = 13.7 + (d.getTimezoneOffset() === -120 ? 1 : 0) - 0.25 * Math.sin(4 * Math.PI * (doy - 3) / 365);
+    return [noon - len / 2, noon + len / 2];
+  }
+  const sunUp = () => { const n = new Date(), h = n.getHours() + n.getMinutes() / 60, [a, b] = sunTimes(n); return h >= a && h < b; };
+  const valTxt = (key, v) => (typeof v === 'boolean' ? S(v ? 'rule_on' : 'rule_off') : key === 'hvac_temp' ? v + ' °C'
+    : key === 'recirc' ? S(['rule_recirc_inner', 'rule_recirc_outside', 'rule_recirc_auto'][v]) : /^seat/.test(key) ? (v ? S('climate_level_' + v) : S('rule_seat_off')) : String(v));
+  const SET_KEYS = {
+    seat_left: { k: 'seatL', opts: [0, 1, 2, 3], ok: (k) => k.heat }, seat_right: { k: 'seatR', opts: [0, 1, 2, 3], ok: (k) => k.heat },
+    steering: { k: 'steering', bool: true, ok: (k) => k.heat }, hvac: { k: 'clim.power', bool: true, ok: (k) => k.clim },
+    ac: { k: 'clim.ac', bool: true, ok: (k) => k.clim }, hvac_auto: { k: 'clim.auto', bool: true, ok: (k) => k.clim },
+    hvac_temp: { k: 'clim.temp', min: 16, max: 32, ok: (k) => k.clim }, recirc: { k: 'clim.loop', opts: [0, 1, 2], ok: (k) => k.clim },
+    defrost_front: { k: 'clim.defF', bool: true, ok: (k) => k.clim }, defrost_rear: { k: 'clim.defR', bool: true, ok: (k) => k.clim },
+    battery_heat: { k: 'batHeat', bool: true, ok: (k) => k.batHeat }, auto_high_beam: { k: 'highBeam', bool: true, ok: (k) => k.beam }
+  };
+  const carGet = (path) => path.split('.').reduce((o, p) => o[p], car());
+  const carPut = (path, v) => { const ps = path.split('.'), last = ps.pop(); ps.reduce((o, p) => o[p], car())[last] = v; };
+
+  /**
+   * Catalogue : catégorie (comme la grande fenêtre de l'éditeur), texte d'une ligne, valeurs par
+   * défaut et, pour un déclencheur à valeur, l'état vrai/faux relevé à chaque seconde.
+   */
+  const R_TRG = {
+    ready: { cat: 'car', name: () => S('rule_yes_fmt', S('rule_sig_ready')), txt: () => S('rule_yes_fmt', S('rule_sig_ready')) },
+    app_start: { cat: 'car', name: () => S('rule_event_app_start'), txt: () => S('rule_event_app_start') },
+    door: { cat: 'car', ok: (k) => k.doorSensor, name: () => S('rule_event_door'), txt: () => S('rule_event_door'), st: () => !!(car().doors.L || car().doors.R) },
+    soc_below: { cat: 'charge', def: { v: 20 }, name: () => S('rule_sig_soc') + ' · ' + lc(S('rule_op_below')), txt: (t) => S('rule_sig_soc') + ' ' + lc(S('rule_op_below')) + ' ' + t.v + ' %', val: (t) => car().soc < t.v },
+    charge_start: { cat: 'charge', name: () => S('rule_trg_charge_start'), txt: () => S('rule_trg_charge_start'), st: () => !!car().charge },
+    charge_end: { cat: 'charge', name: () => S('rule_trg_charge_end'), txt: () => S('rule_trg_charge_end'), st: () => !car().charge },
+    temp_below: { cat: 'car', def: { v: 5 }, name: () => S('rule_sig_outside_temp') + ' · ' + lc(S('rule_op_below')), txt: (t) => S('rule_sig_outside_temp') + ' ' + lc(S('rule_op_below')) + ' ' + t.v + ' °C', val: (t) => car().outside < t.v },
+    temp_above: { cat: 'car', def: { v: 28 }, name: () => S('rule_sig_outside_temp') + ' · ' + lc(S('rule_op_above')), txt: (t) => S('rule_sig_outside_temp') + ' ' + lc(S('rule_op_above')) + ' ' + t.v + ' °C', val: (t) => car().outside > t.v },
+    alt_below: { cat: 'places', def: { v: 500 }, name: () => S('rule_sig_altitude') + ' · ' + lc(S('rule_op_below')), txt: (t) => S('rule_sig_altitude') + ' ' + lc(S('rule_op_below')) + ' ' + t.v + ' m', val: (t) => altM() < t.v },
+    alt_above: { cat: 'places', def: { v: 1000 }, name: () => S('rule_sig_altitude') + ' · ' + lc(S('rule_op_above')), txt: (t) => S('rule_sig_altitude') + ' ' + lc(S('rule_op_above')) + ' ' + t.v + ' m', val: (t) => altM() > t.v },
+    steering_for: { cat: 'car', ok: (k) => k.heat, def: { min: 15 }, name: () => S('rule_yes_fmt', S('rule_key_steering')) + ' · ' + S('rule_for_title').replace(/ ?\?$/, ''),
+      txt: (t) => S('rule_yes_fmt', S('rule_key_steering')) + ' · ' + S('rule_minutes_fmt', t.min), val: () => car().steering, hold: (t) => t.min * 60 },
+    seat_for: { cat: 'car', ok: (k) => k.heat, def: { min: 20 }, name: () => S('rule_key_seat_left') + ' > ' + S('rule_seat_off').toLowerCase(),
+      txt: (t) => S('rule_key_seat_left') + ' > ' + S('rule_seat_off').toLowerCase() + ' · ' + S('rule_minutes_fmt', t.min), val: () => car().seatL > 0, hold: (t) => t.min * 60 },
+    time: { cat: 'time', def: { h: 7, m: 30 }, name: () => S('rule_trg_time'), txt: (t) => S('rule_at_fmt', hm(t.h, t.m)) },
+    every: { cat: 'time', def: { min: 15 }, name: () => S('rule_trg_every'), txt: (t) => S('rule_every_fmt', t.min) },
+    sunrise: { cat: 'time', name: () => S('rule_sunrise'), txt: () => S('rule_sunrise') },
+    sunset: { cat: 'time', name: () => S('rule_sunset'), txt: () => S('rule_sunset') },
+    manual: { cat: 'time', name: () => S('rule_trg_manual'), txt: () => S('rule_trg_manual') },
+    ready_on: { cat: 'car', name: () => S('rule_trg_ready_on'), txt: () => S('rule_trg_ready_on'), st: () => !!car().ready },
+    ready_off: { cat: 'car', name: () => S('rule_trg_ready_off'), txt: () => S('rule_trg_ready_off'), st: () => !car().ready },
+    door_close: { cat: 'car', ok: (k) => k.doorSensor, name: () => S('rule_event_door_close'), txt: () => S('rule_event_door_close'), st: () => !car().doors.L && !car().doors.R },
+    profile_change: { cat: 'car', name: () => S('rule_trg_profile_changes'), txt: () => S('rule_trg_profile_changes') },
+    // Modes d'un capteur (2026-11-12) : « Bascule (les deux sens) » = la valeur change ; vrai / faux / seuil.
+    ready_change: { name: () => S('rule_sig_ready'), txt: () => S('rule_changes_fmt', S('rule_sig_ready')), chg: () => !!car().ready },
+    door_change: { ok: (k) => k.doorSensor, name: () => S('rule_sig_front_door'), txt: () => S('rule_changes_fmt', S('rule_sig_front_door')), chg: () => !!(car().doors.L || car().doors.R) },
+    soc_above: { def: { v: 80 }, name: () => S('rule_sig_soc'), txt: (t) => S('rule_sig_soc') + ' ' + lc(S('rule_op_above')) + ' ' + t.v + ' %', val: (t) => car().soc > t.v },
+    charging_change: { name: () => S('rule_sig_charging'), txt: () => S('rule_changes_fmt', S('rule_sig_charging')), chg: () => !!car().charge },
+    steering_on: { ok: (k) => k.heat, name: () => S('rule_key_steering'), txt: () => S('rule_yes_fmt', S('rule_key_steering')), val: () => !!car().steering },
+    steering_off: { ok: (k) => k.heat, name: () => S('rule_key_steering'), txt: () => S('rule_no_fmt', S('rule_key_steering')), val: () => !car().steering },
+    steering_change: { ok: (k) => k.heat, name: () => S('rule_key_steering'), txt: () => S('rule_changes_fmt', S('rule_key_steering')), chg: () => !!car().steering },
+    seat_above: { ok: (k) => k.heat, def: { v: 0 }, name: () => S('rule_key_seat_left'), txt: (t) => S('rule_key_seat_left') + ' ' + lc(S('rule_op_above')) + ' ' + t.v, val: (t) => car().seatL > t.v },
+    seat_below: { ok: (k) => k.heat, def: { v: 1 }, name: () => S('rule_key_seat_left'), txt: (t) => S('rule_key_seat_left') + ' ' + lc(S('rule_op_below')) + ' ' + t.v, val: (t) => car().seatL < t.v }
+  };
+  const R_COND = {
+    time_range: { cat: 'time', def: { a: [22, 0], b: [6, 0] }, name: () => S('rule_cond_time'), txt: (c) => S('rule_range_fmt', hm(c.a[0], c.a[1]), hm(c.b[0], c.b[1])),
+      ok: (c) => { const n = new Date(), x = n.getHours() * 60 + n.getMinutes(), a = c.a[0] * 60 + c.a[1], b = c.b[0] * 60 + c.b[1]; return a <= b ? x >= a && x < b : x >= a || x < b; } },
+    days: { cat: 'time', def: { d: [1, 2, 3, 4, 5] }, name: () => S('rule_cond_days'), txt: (c) => (c.d.length === 7 ? S('rule_every_day') : c.d.map(dayName).join(', ')), ok: (c) => c.d.includes(new Date().getDay() || 7) },
+    sun_up: { cat: 'time', def: { is: true }, name: () => S('rule_sig_sun_up'), txt: (c) => S(c.is ? 'rule_yes_fmt' : 'rule_no_fmt', S('rule_sig_sun_up')), ok: (c) => sunUp() === c.is },
+    random: { cat: 'time', def: { p: 50 }, name: () => S('rule_cond_random'), txt: (c) => S('rule_random_fmt', c.p), ok: (c) => Math.random() * 100 < c.p },
+    temp_below: { cat: 'car', def: { v: 5 }, name: () => R_TRG.temp_below.name(), txt: (c) => R_TRG.temp_below.txt(c), ok: (c) => car().outside < c.v },
+    temp_above: { cat: 'car', def: { v: 28 }, name: () => R_TRG.temp_above.name(), txt: (c) => R_TRG.temp_above.txt(c), ok: (c) => car().outside > c.v },
+    alt_below: { cat: 'places', def: { v: 500 }, name: () => R_TRG.alt_below.name(), txt: (c) => R_TRG.alt_below.txt(c), ok: (c) => altM() < c.v },
+    alt_above: { cat: 'places', def: { v: 1000 }, name: () => R_TRG.alt_above.name(), txt: (c) => R_TRG.alt_above.txt(c), ok: (c) => altM() > c.v },
+    soc_below: { cat: 'charge', def: { v: 20 }, name: () => R_TRG.soc_below.name(), txt: (c) => R_TRG.soc_below.txt(c), ok: (c) => car().soc < c.v },
+    soc_above: { def: { v: 80 }, name: () => S('rule_sig_soc'), txt: (c) => R_TRG.soc_above.txt(c), ok: (c) => car().soc > c.v },
+    ready: { cat: 'car', def: { is: true }, name: () => S('rule_sig_ready'), txt: (c) => S(c.is ? 'rule_yes_fmt' : 'rule_no_fmt', S('rule_sig_ready')), ok: (c) => !!car().ready === c.is },
+    drive_mode: { cat: 'car', def: { m: 'ECO' }, name: () => S('rule_sig_drive_mode'), txt: (c) => S('rule_set_fmt', S('rule_sig_drive_mode'), driveName(c.m)), ok: (c) => car().driveMode === c.m }
+  };
+  const R_ACT = {
+    set: { cat: 'climate', def: { key: 'hvac', v: true }, name: () => S('rule_choose_setting'), txt: (a) => S('rule_set_fmt', S('rule_key_' + a.key), valTxt(a.key, a.v)) },
+    profile: { cat: 'driving', name: () => S('rule_subject_profile'), txt: (a) => S('rule_act_profile_fmt', profName(a.id)) },
+    brightness: { cat: 'screen', ok: (k) => k.bri, def: { v: 60 }, name: () => S('rule_sig_brightness'), txt: (a) => S('rule_set_fmt', S('rule_sig_brightness'), a.v + ' %') },
+    volume: { cat: 'screen', def: { v: 10 }, name: () => S('rule_sig_volume'), txt: (a) => S('rule_set_fmt', S('rule_sig_volume'), a.v) },
+    windows: { cat: 'comfort', def: { close: true }, name: () => S('rule_act_windows'), txt: (a) => S(a.close ? 'shortcuts_action_windows_close' : 'shortcuts_action_windows_open') },
+    shortcut: { cat: 'shortcuts', def: { a: 'HVAC_POPUP' }, name: () => S('rule_choose_shortcut'), txt: (a) => S(ACTION_KEY[a.a] || 'rule_unknown') },
+    run_rule: { cat: 'shortcuts', name: () => S('rule_act_rule'), txt: (a) => S('rule_run_fmt', ruleName(a.id)) },
+    notify: { cat: 'screen', def: { msg: '' }, name: () => S('rule_act_notify'), txt: (a) => S('rule_act_notify_fmt', a.msg) },
+    speak: { cat: 'screen', def: { msg: '' }, name: () => S('rule_act_speak'), txt: (a) => S('rule_speak_fmt', a.msg) },
+    confirm: { cat: 'flow', def: { msg: '' }, name: () => S('rule_act_confirm'), txt: (a) => S('rule_confirm_fmt', a.msg) },
+    wait: { cat: 'flow', def: { s: 10 }, name: () => S('rule_act_wait'), txt: (a) => S('rule_act_wait_fmt', a.s) },
+    if: { cat: 'flow', name: () => S('rule_act_if'), txt: (a) => S('rule_act_if_fmt', R_COND[a.c.k].txt(a.c)) },
+    stop: { cat: 'flow', name: () => S('rule_act_stop'), txt: () => S('rule_act_stop') },
+    media: { cat: 'screen', def: { play: false }, name: () => S('rule_subject_playback'), txt: (a) => S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause') },
+    android: { def: { w: 'home' }, name: () => S('rule_act_android'), txt: (a) => S(R_ANDROID[a.w] || 'rule_unknown') },
+    sound: { cat: 'screen', name: () => S('rule_act_sound'), txt: () => S('rule_set_fmt', S('rule_act_sound'), S('rule_sound_beep')) },
+    stop_rule: { cat: 'shortcuts', name: () => S('rule_rule_stop'), txt: (a) => S('rule_stop_rule_fmt', ruleName(a.id)) },
+    abrp: { cat: 'driving', def: { on: true }, name: () => S('abrp_rule_action'), txt: (a) => (a.on ? S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4')) : S('abrp_rule_stop')) }
+  };
+  const R_ANDROID = { home: 'rule_android_home', back: 'rule_android_back', close: 'rule_android_close_app', settings: 'rule_android_settings' };
+  /** Les moments : un déclencheur qui n'est pas un état n'a pas de « Pendant ». */
+  const R_MOMENTS = ['app_start', 'time', 'every', 'sunrise', 'sunset', 'manual'];
+  /** Ordre des catégories de la grande fenêtre (Cat de l'éditeur). */
+  const R_CATS = ['car', 'time', 'places', 'driving', 'battery', 'climate', 'comfort', 'adas', 'media', 'screen_sound', 'screen_apps', 'connections', 'shortcuts', 'flow', 'system', 'advanced'];
+  /**
+   * Les tuiles d'une fenêtre de choix (2026-11-12) : une par option (capteur, réglage, action…),
+   * avec ses modes — un mode s'applique au toucher, plusieurs se choisissent ensuite. Pour les
+   * actions, un réglage et les raccourcis qui agissent sur la même chose ne font qu'une tuile.
+   */
+  function rSubjects(kind) {
+    const k = caps(), out = [];
+    const subj = (id, cat, name, modes) => { const m = modes.filter(Boolean); if (m.length) out.push({ id, cat, name, modes: m }); };
+    const md = (label, key, pre) => ({ label, k: key, pre: pre || {} });
+    if (kind === 'trg') {
+      subj('app_start', 'car', S('rule_event_app_start'), [md(S('rule_event_app_start'), 'app_start')]);
+      if (k.doorSensor) subj('door', 'car', S('rule_sig_front_door'), [md(S('rule_event_door'), 'door'), md(S('rule_event_door_close'), 'door_close'), md(S('rule_mode_both'), 'door_change')]);
+      subj('time', 'time', S('rule_trg_time'), [md(S('rule_trg_time'), 'time')]);
+      subj('every', 'time', S('rule_trg_every'), [md(S('rule_trg_every'), 'every')]);
+      subj('sun', 'time', S('rule_trg_sun'), [md(S('rule_sunrise'), 'sunrise'), md(S('rule_sunset'), 'sunset')]);
+      subj('ready', 'driving', S('rule_sig_ready'), [md(S('rule_trg_ready_on'), 'ready_on'), md(S('rule_trg_ready_off'), 'ready_off'), md(S('rule_mode_both'), 'ready_change')]);
+      subj('profile', 'driving', S('rule_sig_profile'), [md(S('rule_trg_profile_changes'), 'profile_change')]);
+      subj('soc', 'battery', S('rule_sig_soc'), [md(S('rule_mode_above'), 'soc_above'), md(S('rule_mode_below'), 'soc_below')]);
+      subj('charging', 'battery', S('rule_sig_charging'), [md(S('rule_trg_charge_start'), 'charge_start'), md(S('rule_trg_charge_end'), 'charge_end'), md(S('rule_mode_both'), 'charging_change')]);
+      subj('outside', 'climate', S('rule_sig_outside_temp'), [md(S('rule_mode_above'), 'temp_above'), md(S('rule_mode_below'), 'temp_below')]);
+      subj('altitude', 'places', S('rule_sig_altitude'), [md(S('rule_mode_above'), 'alt_above'), md(S('rule_mode_below'), 'alt_below')]);
+      if (k.heat) {
+        subj('steering', 'comfort', S('rule_key_steering'), [md(S('rule_mode_to_true'), 'steering_on'), md(S('rule_mode_to_false'), 'steering_off'), md(S('rule_mode_both'), 'steering_change')]);
+        subj('seat', 'comfort', S('rule_key_seat_left'), [md(S('rule_mode_above'), 'seat_above'), md(S('rule_mode_below'), 'seat_below')]);
+      }
+      subj('manual', 'advanced', S('rule_trg_manual'), [md(S('rule_trg_manual'), 'manual')]);
+    } else if (kind === 'cond') {
+      subj('time_range', 'time', S('rule_cond_time'), [md(S('rule_cond_time'), 'time_range')]);
+      subj('days', 'time', S('rule_cond_days'), [md(S('rule_cond_days'), 'days')]);
+      subj('ready', 'driving', S('rule_sig_ready'), [md(S('segment_yes'), 'ready', { is: true }), md(S('segment_no'), 'ready', { is: false })]);
+      subj('drive_mode', 'driving', S('rule_sig_drive_mode'), [md(S('rule_op_is'), 'drive_mode')]);
+      subj('soc', 'battery', S('rule_sig_soc'), [md(S('rule_op_above'), 'soc_above'), md(S('rule_op_below'), 'soc_below')]);
+      subj('outside', 'climate', S('rule_sig_outside_temp'), [md(S('rule_op_above'), 'temp_above'), md(S('rule_op_below'), 'temp_below')]);
+      subj('altitude', 'places', S('rule_sig_altitude'), [md(S('rule_op_above'), 'alt_above'), md(S('rule_op_below'), 'alt_below')]);
+      subj('sun_up', 'screen_sound', S('rule_sig_sun_up'), [md(S('segment_yes'), 'sun_up', { is: true }), md(S('segment_no'), 'sun_up', { is: false })]);
+      subj('random', 'flow', S('rule_cond_random'), [md(S('rule_cond_random'), 'random')]);
+    } else {
+      const av = availableActions(), used = new Set(['NONE', 'APPLY_PROFILE', 'OPEN_APP', 'OPEN_CUSTOM_APP', 'CUSTOM', 'RUN_RULE', 'ANDROID_SETTINGS']);
+      const sc = (a, label) => { if (!av.includes(a)) return null; used.add(a); return Object.assign(md(label || S(ACTION_KEY[a]), 'shortcut', { a }), { w: S(ACTION_KEY[a]) }); };
+      const one = (a, cat) => { const m = sc(a); if (m) subj('sc:' + a, cat, m.label, [m]); };
+      const tog = S('rule_act_mode_toggle'), cyc = S('rule_act_mode_cycle'), up = S('rule_act_mode_up'), dn = S('rule_act_mode_down'), setL = S('rule_act_mode_set');
+      const SET_CAT = { seat_left: 'comfort', seat_right: 'comfort', steering: 'comfort', battery_heat: 'battery', auto_high_beam: 'adas' };
+      const reg = (key, ...more) => subj('set:' + key, SET_CAT[key] || 'climate', S('rule_key_' + key), [SET_KEYS[key].ok(k) ? md(setL, 'set', { key }) : null].concat(more));
+      used.add('WINDOWS_OPEN_ALL'); used.add('WINDOWS_CLOSE_ALL');
+      subj('windows', 'car', S('rule_act_windows'), [md(S('shortcuts_action_windows_open'), 'windows', { close: false }), md(S('shortcuts_action_windows_close'), 'windows', { close: true })]);
+      subj('profile', 'car', S('rule_subject_profile'), state.profiles.map((p) => md(S('rule_act_profile_fmt', p.name), 'profile', { id: p.id })).concat([sc('PROFILE_CYCLE'), sc('PROFILE_PICKER')]));
+      one('VEHICLE_POWER_OFF', 'car');
+      ['DRIVE_MODE_CYCLE', 'REGEN_CYCLE', 'ONE_PEDAL', 'ENERGY_SAVING_TOGGLE'].forEach((a) => one(a, 'driving'));
+      reg('battery_heat', sc('BATTERY_HEAT_TOGGLE', tog));
+      one('CHARGE_POPUP', 'battery');
+      reg('hvac', sc('HVAC_TOGGLE', tog)); reg('ac', sc('HVAC_AC_TOGGLE', tog)); reg('hvac_auto');
+      reg('hvac_temp', sc('HVAC_TEMP_UP', up), sc('HVAC_TEMP_DOWN', dn));
+      subj('fan', 'climate', S('rule_key_hvac_fan'), [sc('HVAC_FAN_UP', up), sc('HVAC_FAN_DOWN', dn)]);
+      reg('recirc', sc('HVAC_RECIRC_CYCLE', cyc)); reg('defrost_front', sc('DEFROST_FRONT_TOGGLE', tog)); reg('defrost_rear', sc('DEFROST_REAR_TOGGLE', tog));
+      ['HVAC_AUTO_VOLUME_CYCLE', 'HVAC_POPUP', 'PRE_CLIMATE'].forEach((a) => one(a, 'climate'));
+      reg('seat_left', sc('SEAT_HEAT_LEFT_CYCLE', cyc)); reg('seat_right', sc('SEAT_HEAT_RIGHT_CYCLE', cyc)); reg('steering', sc('STEERING_HEAT_TOGGLE', tog));
+      reg('auto_high_beam', sc('AUTO_HIGH_BEAM_TOGGLE', tog));
+      ['AEB_CYCLE', 'TSR_TOGGLE', 'ESC_TOGGLE', 'DROWSINESS_TOGGLE', 'DROWSINESS_SEN_CYCLE', 'OVERSPEED_ALARM', 'SPEED_LIMIT_TONE', 'SOUND_WARNING', 'ADAS_CYCLE'].forEach((a) => one(a, 'adas'));
+      subj('playback', 'media', S('rule_subject_playback'), [md(S('rule_act_media_play'), 'media', { play: true }), md(S('rule_act_media_pause'), 'media', { play: false }), sc('MEDIA_PLAY_PAUSE', tog)]);
+      ['MEDIA_NEXT', 'MEDIA_PREVIOUS', 'AUDIO_SOURCE_CYCLE'].forEach((a) => one(a, 'media'));
+      subj('sound', 'media', S('rule_act_sound'), [md(S('rule_act_sound'), 'sound')]);
+      if (k.bri) subj('brightness', 'screen_sound', S('rule_sig_brightness'), [md(setL, 'brightness'), sc('BRIGHTNESS_UP', up), sc('BRIGHTNESS_DOWN', dn)]);
+      subj('volume', 'screen_sound', S('rule_sig_volume'), [md(setL, 'volume'), sc('VOLUME_UP', up), sc('VOLUME_DOWN', dn)]);
+      one('QUICK_SETTINGS', 'screen_apps');
+      subj('notify', 'screen_apps', S('rule_act_notify'), [md(S('rule_act_notify'), 'notify')]);
+      Object.keys(R_ANDROID).forEach((w) => subj('android:' + w, 'screen_apps', S(R_ANDROID[w]), [md(S(R_ANDROID[w]), 'android', { w })]));
+      one('PROJECTION', 'connections');
+      subj('abrp', 'connections', S('abrp_rule_action'), [md(S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4')), 'abrp', { on: true }), md(S('abrp_rule_stop'), 'abrp', { on: false })]);
+      subj('rule', 'shortcuts', S('rule_act_rule'), [md(S('rule_rule_run'), 'run_rule'), md(S('rule_rule_stop'), 'stop_rule')]);
+      av.filter((a) => !used.has(a)).forEach((a) => one(a, 'shortcuts'));
+      ['confirm', 'wait', 'if', 'stop'].forEach((x) => subj(x, 'flow', R_ACT[x].name(), [md(R_ACT[x].name(), x)]));
+    }
+    return out;
+  }
+  /** Durée lisible (« 45 s », « 2 min », « 2 min 30 s »), comme l'éditeur. */
+  const rDur = (sec) => (sec < 60 ? S('rule_seconds_fmt', sec) : sec % 60 ? S('rule_minutes_fmt', Math.floor(sec / 60)) + ' ' + S('rule_seconds_fmt', sec % 60) : S('rule_minutes_fmt', sec / 60));
+  const R_DEF = { trg: R_TRG, cond: R_COND, act: R_ACT };
+  const rItem = (kind, it) => R_DEF[kind][it.k];
+  const rTxt = (kind, it) => {
+    const d = rItem(kind, it); if (!d) return S('rule_unknown');
+    const t = d.txt(it);
+    return kind === 'trg' && it.for > 0 ? S('rule_for_fmt', t, it.for) : t;
+  };
+  const rClone = (o) => JSON.parse(JSON.stringify(o));
+  /** Liste d'un chemin « trg », « cond », « act » ou « act.2.then » / « act.2.else » (blocs Si / Sinon). */
+  function rList(rule, path) {
+    const ps = path.split('.');
+    let l = rule[ps[0]];
+    for (let i = 1; i < ps.length; i += 2) l = l[+ps[i]][ps[i + 1]];
+    return l;
+  }
+  /** Texte de résumé d'une action : un bloc Si / Sinon dit ce qu'il fait (« si X → A ; sinon → B »). */
+  const unq = (t) => t.replace(/^"|"$/g, '');
+  function rSumAct(a) {
+    if (a.k !== 'if') return rTxt('act', a);
+    const l = (x) => (x.length ? x.map(rSumAct).join(' · ') : '—');
+    return S('rule_sum_if_fmt', R_COND[a.c.k].txt(a.c), l(a.then)) + (a.else.length ? unq(S('rule_sum_else_fmt', l(a.else))) : '');
+  }
+  function rSummary(r) {
+    const join = (l, kind, sep) => (l.length ? l.map((x) => (kind === 'act' ? rSumAct(x) : rTxt(kind, x))).join(sep) : null);
+    return S('rule_summary_fmt', join(r.trg, 'trg', S('rule_or')) || '—', join(r.cond, 'cond', S('rule_and')) || S('rule_always'), join(r.act, 'act', ' · ') || '—');
+  }
+  /** Modèles (CustomRuleTemplates) : de quoi démarrer, à adapter dans l'éditeur. */
+  function rTemplates() {
+    const p0 = state.profiles[0];
+    return [
+      { id: 'blank', name: S('rule_tpl_blank'), trg: [], cond: [], act: [] },
+      { id: 'startup', name: S('rule_tpl_startup'), trg: [{ k: 'app_start' }], cond: [], act: [{ k: 'notify', msg: S('rule_tpl_startup_msg') }] },
+      { id: 'morning', name: S('rule_tpl_morning'), trg: [{ k: 'time', h: 7, m: 30 }], cond: [{ k: 'days', d: [1, 2, 3, 4, 5] }, { k: 'temp_below', v: 5 }],
+        act: [{ k: 'set', key: 'hvac', v: true }, { k: 'set', key: 'hvac_temp', v: 22 }].concat(caps().heat ? [{ k: 'set', key: 'seat_left', v: 2 }] : []).concat([{ k: 'notify', msg: S('rule_tpl_morning_msg') }]) },
+      { id: 'hot', name: S('rule_tpl_hot'), trg: [{ k: 'temp_above', v: 28 }], cond: [{ k: 'ready', is: true }], act: [{ k: 'set', key: 'ac', v: true }, { k: 'notify', msg: S('rule_tpl_hot_msg') }] },
+      { id: 'steering', name: S('rule_tpl_steering_timer'), trg: [{ k: 'steering_on', for: 900 }], cond: [], act: [{ k: 'set', key: 'steering', v: false }, { k: 'notify', msg: S('rule_tpl_steering_timer_msg') }], heat: true },
+      { id: 'seat', name: S('rule_tpl_seat_timer'), trg: [{ k: 'seat_above', v: 0, for: 1200 }], cond: [], act: [{ k: 'set', key: 'seat_left', v: 0 }, { k: 'notify', msg: S('rule_tpl_seat_timer_msg') }], heat: true },
+      { id: 'sun', name: S('rule_tpl_brightness_sun'), trg: [{ k: 'sunrise' }, { k: 'sunset' }, { k: 'ready' }], cond: [],
+        act: [{ k: 'if', c: { k: 'sun_up', is: true }, then: [{ k: 'brightness', v: 80 }], else: [{ k: 'brightness', v: 25 }] }] },
+      p0 ? { id: 'profile', name: S('rule_subject_profile') + ' · ' + p0.name, trg: [{ k: 'manual' }], cond: [], act: [{ k: 'profile', id: p0.id }] } : null
+    ].filter((t) => t && !(t.heat && !caps().heat));
+  }
+  function rNew(tpl) {
+    return { id: uid(), name: tpl.id === 'blank' ? S('rule_name_default_fmt', state.rules.list.length + 1) : tpl.name, on: true, trg: rClone(tpl.trg), cond: rClone(tpl.cond), act: rClone(tpl.act),
+      opt: { ready: false, restart: false, cooldown: 0 }, last: null };
+  }
+
+  // Moteur : déclencheurs « évènement » appelés par la maquette, déclencheurs à valeur relevés
+  // chaque seconde (« devient vrai » exige d'avoir vu faux), heures à la minute près.
+  const rSeen = {};
+  let rMinute = null;
+  function rulesOn() { return state.rules.engine && !garage(); }
+  function ruleEvent(ev) {
+    if (!rulesOn()) return;
+    // Avec une durée, l'évènement devient un état suivi chaque seconde (ruleTick).
+    state.rules.list.forEach((r) => { if (r.on && r.trg.some((t) => t.k === ev && !(t.for > 0))) runRule(r, R_TRG[ev].txt({})); });
+  }
+  function ruleTick() {
+    if (!rulesOn()) return;
+    const n = new Date(), mk = n.getHours() * 60 + n.getMinutes(), newMin = mk !== rMinute;
+    const [rise, set] = sunTimes(n);
+    state.rules.list.forEach((r) => {
+      if (!r.on) return;
+      r.trg.forEach((t, i) => {
+        const d = R_TRG[t.k]; if (!d) return;
+        const key = r.id + ':' + i;
+        if (d.chg) {
+          // « Change » : la nouvelle valeur doit tenir la durée ; revenir avant l'annule.
+          const v = d.chg(t), s = rSeen[key];
+          if (!s) { rSeen[key] = { v, pend: undefined, since: 0 }; return; }
+          if (v === s.v) { s.pend = undefined; return; }
+          if (s.pend !== v) { s.pend = v; s.since = Date.now(); }
+          if (Date.now() - s.since >= (t.for || 0) * 1000) { s.v = v; s.pend = undefined; runRule(r, rTxt('trg', t)); }
+        } else if (d.val || (t.for > 0 && d.st)) {
+          // « Devient vrai » : il faut avoir vu faux, puis vrai pendant la durée choisie.
+          const v = !!(d.val ? d.val(t) : d.st(t)), s = rSeen[key] || (rSeen[key] = { v: null, since: 0, fired: false, armed: !!d.hold });
+          if (v !== s.v) { s.since = Date.now(); s.fired = false; }
+          s.v = v;
+          if (!v) { s.armed = true; return; }
+          if (s.fired || !s.armed) return;
+          const hold = t.for > 0 ? t.for : d.hold ? d.hold(t) : 0;
+          if (Date.now() - s.since >= hold * 1000) { s.fired = true; runRule(r, rTxt('trg', t)); }
+        } else if (newMin && rMinute !== null) {
+          if (t.k === 'time' && mk === t.h * 60 + t.m) runRule(r, d.txt(t));
+          if (t.k === 'every' && mk % t.min === 0) runRule(r, d.txt(t));
+          if ((t.k === 'sunrise' && mk === Math.round(rise * 60)) || (t.k === 'sunset' && mk === Math.round(set * 60))) runRule(r, d.txt(t));
+        }
+      });
+    });
+    rMinute = mk;
+  }
+  setInterval(ruleTick, 1000);
+  const rWait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  /** Une exécution : conditions (sauf Tester), puis les actions de haut en bas, dans le journal. */
+  async function runRule(r, why, test) {
+    const j = [], t0 = Date.now();
+    let ok = 0, ko = 0, sent = 0;
+    j.push('▶ ' + (why || S('rule_test')));
+    if (!test) {
+      if (r.opt && r.opt.ready && !car().ready) { j.push('■ ' + S('rule_opt_ready')); return rDone(r, j, 0, 0, { short: S('rule_skip_short_not_ready'), long: S('rule_skip_not_ready'), by: why }); }
+      for (const c of r.cond) {
+        const d = R_COND[c.k]; const v = d && d.ok(c); j.push((v ? '✓ ' : '✗ ') + rTxt('cond', c));
+        if (!v) return rDone(r, j, 0, 0, { short: S('rule_skip_short_conditions'), long: S('rule_skip_conditions_fmt', rTxt('cond', c)), by: why });
+      }
+    }
+    const steps = async (list) => {
+      for (const a of list) {
+        if (a.k === 'stop') { j.push('■ ' + S('rule_act_stop')); return false; }
+        if (a.k === 'if') { const v = R_COND[a.c.k].ok(a.c); j.push('? ' + rTxt('act', a) + ' → ' + S(v ? 'rule_on' : 'rule_off')); if (await steps(v ? a.then : a.else) === false) return false; continue; }
+        if (a.k === 'wait') { j.push('… ' + rTxt('act', a)); await rWait(Math.min(a.s, 30) * 1000); continue; }
+        if (a.k === 'confirm') {
+          const s = activeSim(); const yes = s ? await s.ruleAsk(a.msg) : false;
+          j.push((yes ? '✓ ' : '■ ') + rTxt('act', a)); if (!yes) return false; continue;
+        }
+        // Fait (✓), seulement envoyé (↗) ou refusé (✗), avec la raison (2026-11-14).
+        const res = rResult(a);
+        if (res.o === 'ok') ok++; else if (res.o === 'sent') sent++; else ko++;
+        j.push((res.o === 'ok' ? '✓ ' : res.o === 'sent' ? '↗ ' : '✗ ') + rTxt('act', a) + (res.why ? ' — ' + res.why : ''));
+      }
+      return true;
+    };
+    await steps(r.act);
+    return rDone(r, j, ok, ko, false, t0, test, sent);
+  }
+  function rDone(r, j, ok, ko, skipped, t0, test, sent) {
+    // Un refus reste sur la carte jusqu'à la prochaine exécution (RuleHistory.skipIsNewer).
+    if (!skipped) { r.last = { at: nowHM(), ok, ko, sent: sent || 0 }; r.skip = null; } else r.skip = { at: nowHM(), why: skipped.short };
+    // Compteurs de la carte (2026-11-08) : « Tester » ne compte pas ; chaque refus compte.
+    if (skipped) r.skips = (r.skips || 0) + 1; else if (!test) r.runs = (r.runs || 0) + 1;
+    state.rules.hist.unshift({ id: r.id, name: r.name, at: nowHM(), ok, ko, skipped: skipped || false, journal: j });
+    state.rules.hist.length = Math.min(state.rules.hist.length, 20);
+    commit();
+  }
+  /** Résultat d'une action : relais = envoyé, « Lancer » = démarrée ou refusée et pourquoi. */
+  function rResult(a) {
+    if (a.k === 'shortcut') { runAction(a.a); return { o: 'sent', why: S('rule_res_sent') }; }
+    if (a.k === 'run_rule') {
+      const r = state.rules.list.find((x) => x.id === a.id);
+      if (!r || !r.on || !state.rules.engine) return { o: 'ko', why: S('rule_res_rule_off') };
+      runRule(r, S('rule_trg_manual'));
+      return { o: 'ok', why: S('rule_res_started') };
+    }
+    return rExec(a) ? { o: 'ok' } : { o: 'ko', why: a.k === 'set' ? S('rule_res_refused') : null };
+  }
+  function rExec(a) {
+    const c = car();
+    switch (a.k) {
+      case 'set': {
+        const d = SET_KEYS[a.key]; if (!d || !d.ok(caps())) return false;
+        if (a.key === 'hvac_auto') { setClimAuto(a.v); return true; }
+        carPut(d.k, a.v); return true;
+      }
+      case 'profile': { const p = state.profiles.find((x) => x.id === a.id); if (!p) return false; applyProfile(p, { manual: true }); return true; }
+      case 'brightness': c.brightness = clamp(a.v, briMin(), 100); return true;
+      case 'volume': c.volume = clamp(a.v, 0, c.volMax); return true;
+      case 'windows': allWindows(a.close ? -1 : 1); return true;
+      case 'shortcut': runAction(a.a); return true;
+      case 'run_rule': { const r = state.rules.list.find((x) => x.id === a.id); if (!r) return false; runRule(r, S('rule_trg_manual')); return true; }
+      case 'notify': toastActive(a.msg || '…', 3000); return true;
+      case 'media': c.media.playing = !!a.play; hud((a.play ? '▶ ' : '⏸ ') + S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause')); return true;
+      case 'android': hud(rTxt('act', a)); return true;
+      case 'sound': hud('🔔 ' + S('rule_sound_beep')); return true;
+      case 'stop_rule': return !!state.rules.list.find((x) => x.id === a.id);
+      case 'abrp': hud(a.on ? S('abrp_running_fmt', L('Ma MG4', 'My MG4')) : S('abrp_rule_stop')); return true;
+      case 'speak': hud('🗣 « ' + (a.msg || '…') + ' »'); return true;
+      default: return false;
+    }
+  }
+
   class Sim {
     constructor(el, opts) {
       this.el = el;
@@ -1381,7 +1873,7 @@
       this.hl = null;
       this.ui = {
         screen: opts.screen || 'dashboard',
-        tabs: { dash: +(opts.tab || 0), set: 0, sc: 'classic', edit: 0, st: 0 },
+        tabs: { dash: +(opts.tab || 0), set: 0, sc: 'classic', edit: 0, st: 0, auto: 0 },
         edit: null, overlay: null, dialog: null, toast: null,
         adv: { rec: false, key: null, press: 'single', action: 'NONE', scope: '' },
         logoTaps: 0, updFb: null, apkFb: null,
@@ -1425,13 +1917,18 @@
     // ── Navigation ─────────────────────────────────────────────────────────
     go(screen, tab) {
       if (screen === 'audio') { screen = 'automation'; state.door.open = true; }
+      if (screen === 'shortcuts' && (tab != null || this.ui.screen !== screen)) this.resetShortcutDraft(tab ?? this.ui.tabs.sc);
       this.ui.screen = screen;
       if (tab != null) {
-        const key = { dashboard: 'dash', settings: 'set', shortcuts: 'sc', profileEdit: 'edit', stats: 'st' }[screen];
-        if (key) this.ui.tabs[key] = key === 'sc' ? String(tab) : +tab;
+        const key = { dashboard: 'dash', settings: 'set', shortcuts: 'sc', profileEdit: 'edit', stats: 'st', automation: 'auto' }[screen];
+        if (key) this.ui.tabs[key] = key === 'sc' || isNaN(+tab) ? String(tab) : +tab;
       }
       if (screen === 'profileEdit' && !this.ui.edit) this.startEdit(state.profiles[0]);
       this.render();
+    }
+    resetShortcutDraft(tab) {
+      const key = { regen: 'regenDraft', drivemode: 'driveDraft', profiles: 'profileDraft', sources: 'audioDraft' }[tab];
+      if (key) this.ui[key] = null;
     }
     toast(text, ms) {
       clearTimeout(this._toastT);
@@ -1463,7 +1960,7 @@
     }
 
     // ── Rendu ──────────────────────────────────────────────────────────────
-    viewKey() { const u = this.ui; return u.screen + ':' + (u.screen === 'dashboard' ? u.tabs.dash : u.screen === 'settings' ? u.tabs.set : u.screen === 'shortcuts' ? u.tabs.sc : u.screen === 'profileEdit' ? u.tabs.edit : u.screen === 'stats' ? u.tabs.st : ''); }
+    viewKey() { const u = this.ui; return u.screen + ':' + (u.screen === 'dashboard' ? u.tabs.dash : u.screen === 'settings' ? u.tabs.set : u.screen === 'shortcuts' ? u.tabs.sc : u.screen === 'profileEdit' ? u.tabs.edit : u.screen === 'stats' ? u.tabs.st : u.screen === 'automation' ? u.tabs.auto : ''); }
     render() {
       if (this._drag) return;   // glisser-déposer en cours : le rendu attend le relâcher
       const sc = this.app.querySelector('.a-scroll');
@@ -1501,7 +1998,7 @@
           }
           return;
         }
-        if (deja) return;
+        if (deja || id === 'clpanel') return;
         // À l'ouverture, le choix en cours est amené en vue, une ligne au-dessus restant visible.
         const on = n.querySelector('.on');
         if (!on) return;
@@ -1527,7 +2024,8 @@
       if (u.screen === 'closed') {
         return '<div class="a-closed"><div>' + esc(L('MG4Control a été fermée.', 'MG4Control was closed.')) + '</div><button class="b" data-a="reopen">' + esc(L('Relancer l\'application', 'Relaunch the app')) + '</button></div>';
       }
-      let out = this.topbar() + '<div class="a-main">' + this.screenHtml() + '</div>';
+      // Côté du menu (NavSide) : Auto suit le volant de la voiture simulée, Gauche / Droite le forcent.
+      let out = '<div class="a-frame' + (navRight() ? ' right' : '') + '">' + this.topbar() + '<div class="a-main">' + this.screenHtml() + '</div></div>';
       if (!state.car.on) out += '<div class="a-off-badge">' + esc(L('Véhicule hors tension, écran actif', 'Vehicle powered off, screen on')) + '</div>';
       // Notification persistante du service en Mode Garage
       if (garage()) out += '<div class="a-garage-badge" data-hl="garage-notif">🔧 ' + esc(S('notif_garage_mode')) + '</div>';
@@ -1562,18 +2060,32 @@
       if (!id || garage() || this.ui.screen === 'closed' || (state.pc && state.pc.phase !== 'end')) return '';
       const set = flSet(id);
       if (!set.on || !set.list.length) return '';
-      return '<div class="a-floats">' + set.list.map((b) => {
-        const on = flKind(b.action) === 'toggle' ? flState(b.action) : null;
+      return '<div class="a-floats" style="--fl:' + (state.floating.color || '#A6C8FF') + '">' + set.list.map((b) => {
+        const info = b.content === 'info' && b.info;
+        const on = info ? flInfoBool(b.info) : flKind(b.action) === 'toggle' ? flState(b.action) : null;
         const flash = this._flFlash && this._flFlash.id === b.id ? this._flFlash.text : null;
         const h = b.bar ? 30 : Math.round(44 + 52 * b.size / 100);
         const pos = 'left:' + (b.x * 100).toFixed(2) + '%;' + (b.bar ? 'top:3px' : 'top:' + (b.y * 100).toFixed(2) + '%');
+        // Bulle d'information : la valeur, avec son libellé (le titre tapé, sinon le nom) ou son icône.
+        let text = flash || flTitle(b), inner = null;
+        const fs = b.bar ? Math.min(b.text, 22) : b.text;
+        if (info && !flash) {
+          const v = flInfoValue(b.info);
+          text = b.infoStyle === 'label' ? (b.title || flInfoName(b.info)) + ' ' + v : b.infoStyle === 'icon' ? FL_ICON[b.info] + ' ' + v : v;
+          // Icône choisie pour l'information (2026-11-17) : le symbole à la place de la sienne.
+          if (b.infoStyle === 'icon' && b.icon) inner = flIconHtml(b.icon, Math.round(fs * 1.15)) + '<span>' + esc(v) + '</span>';
+        } else if (b.content === 'icon' && !flash) {
+          inner = flIconHtml(flIconRef(b), Math.round(h * (b.bar ? 0.7 : 0.55))) + (b.iconTitle ? '<span>' + esc(flTitle(b)) + '</span>' : '');
+        }
         return '<button class="a-fl' + (b.bar ? ' bar' : '') + (on === true ? ' lit' : on === false ? ' off' : '') + (flash ? ' flash' : '') + (b.bold ? ' bold' : '') + (this._flHalo === b.id ? ' halo' : '') +
-          '" data-fl="' + b.id + '" style="' + pos + ';height:' + h + 'px;font-size:' + (b.bar ? Math.min(b.text, 22) : b.text) + 'px">' + esc(flash || flTitle(b)) + '</button>';
+          (b.dim && this._flHalo !== b.id ? ' dimmed' : '') + '" data-fl="' + b.id + '" style="' + pos + ';height:' + h + 'px;font-size:' + (b.bar ? Math.min(b.text, 22) : b.text) + 'px;' + (b.width ? 'width:' + b.width + 'px;min-width:' + b.width + 'px;max-width:' + b.width + 'px;' : '') + flLookStyle(b, on === true) + (inner ? ';display:inline-flex;align-items:center;justify-content:center;gap:6px' : '') + '">' + (inner || esc(text)) + '</button>';
       }).join('') + '</div>';
     }
     /** Appui court : le raccourci ; halo au relâchement, et la valeur un instant pour un réglage pas à pas. */
     floatPress(id) {
       const b = flFind(id); if (!b) return;
+      // Bulle d'information en « affichage seul » : un toucher ne lance rien.
+      if (b.content === 'info' && b.tap === 'none') return;
       const msg = runAction(b.action, b.customId ? { customId: b.customId } : null);
       this._flHalo = id; clearTimeout(this._flHaloT);
       this._flHaloT = setTimeout(() => { this._flHalo = null; this.render(); }, 600);
@@ -1609,16 +2121,24 @@
           '<button class="mw-b p" data-a="pcDone"><span>' + esc(S('preclim_close')) + '</span></button></div></div>';
       }
       if (pc.phase === 'cd') {
-        const line = r.surv ? S('preclim_cd_surv') : r.mode === 'at' && !r.dog ? S('preclim_cd_at', hmIn(pc.plan[0][0]), sum(r.temp, false, r.fan)) : S('preclim_cd_now', sum(r.temp, false, r.fan));
+        const line = r.surv ? S('preclim_cd_surv') : r.mode === 'at' ? S('preclim_cd_at', pcClock(pc.started + pc.plan[0][0]), sum(r.temp, false, r.fan)) : S('preclim_cd_now', sum(r.temp, false, r.fan));
         return '<div class="a-pcs" data-hl="preclim-screen"><div class="pcs-cd"><div class="pcs-sec"><b>' + Math.max(0, Math.ceil(pc.left)) + '</b><span>' + esc(S('preclim_cd_unit')) + '</span></div>' +
           '<div class="pcs-cdtxt"><div class="pcs-t">' + esc(S('preclim_cd_title')) + '</div><div class="pcs-p">' + esc(S('preclim_cd_text')) + '</div><div class="pcs-p acc">' + esc(line) + '</div>' +
-          (r.dog ? warn('preclim_dog_warning') : r.surv ? warn('preclim_surv_warning', true) : '') + '</div></div>' + btns + '</div>';
+          (r.dog ? warn('preclim_dog_warning') : r.surv ? warn('preclim_surv_warning', true) : '') + '</div></div>' +
+          '<div class="pcs-btns"><button class="mw-b d" data-a="pcStop"><span>' + esc(S('preclim_cancel')) + '</span></button></div></div>';
       }
-      const plan = pc.plan, last = plan[plan.length - 1][1], off = hmIn(last - pc.min);
+      const plan = pc.plan, last = plan[plan.length - 1][1], off = pcClock(pc.started + last), start = pcClock(Math.floor(pc.started));
       const cur = plan.find(([a, b]) => pc.min >= a && pc.min < b), next = plan.find(([a]) => a > pc.min);
       if (r.surv) {
-        return '<div class="a-pcs surv" data-hl="preclim-screen"><div class="pcs-surv">' + MW.cam + '<div class="pcs-st">' + esc(S('preclim_surv_screen_title')) + '</div><div class="pcs-p">' + esc(S('preclim_surv_screen_text')) + '</div>' +
-          '<div class="pcs-status">' + esc(S('preclim_surv_status', pc.startHM, c.soc + ' %', off)) + '</div></div>' + btns + '</div>';
+        // Pastille REC (variante A) : temps filmé, d'après l'état renvoyé par l'application caméra.
+        const rs = Math.round(pc.min * 60), two = (x) => String(x).padStart(2, '0');
+        const recTag = pc.rec ? '<div class="pcs-rec" data-hl="preclim-rec"><i></i>' + esc(S('preclim_surv_rec', two(Math.floor(rs / 3600)) + ':' + two(Math.floor(rs / 60) % 60) + ':' + two(rs % 60))) + '</div>' : '';
+        // Écran selon « Écran pendant l'attente » seulement si « Appliquer aussi à la surveillance » (2026-11-13).
+        const sdim = r.survScreen && r.screen !== 'normal' && Date.now() - pc.wake > 10000 ? (r.screen === 'off' ? ' black' : ' dim') : '';
+        const message = pc.rec ? 'preclim_surv_screen_text' : r.cam === 'none' ? 'preclim_cam_nocam_warn_title' : null;
+        return '<div class="a-pcs surv' + sdim + '"' + (r.survScreen ? ' data-a="pcWake"' : '') + ' data-hl="preclim-screen">' + recTag + '<div class="pcs-surv">' + MW.cam + '<div class="pcs-st">' +
+          esc(S(r.cam === 'none' ? 'preclim_surv' : 'preclim_surv_screen_title')) + '</div>' + (message ? '<div class="pcs-p">' + esc(S(message)) + '</div>' : '') +
+          '<div class="pcs-status">' + esc(S('preclim_surv_status', start, c.soc + ' % · ' + pcPowerW(), off)) + '</div></div>' + btns + '</div>';
       }
       // Particules bleues si la clim refroidit, orange si elle chauffe ; seulement clim en marche.
       const trend = r.temp > c.outside + 0.5 ? 'heat' : 'cool';
@@ -1626,29 +2146,37 @@
       if (r.dog) {
         return '<div class="a-pcs dog ' + trend + '" data-hl="preclim-screen">' + parts + '<div class="pcs-dog">' + MW.paw + '<div class="pcs-t">' + esc(S('preclim_dog_title')) + '</div><div class="pcs-p">' + esc(S('preclim_dog_text')) + '</div>' +
           '<div class="pcs-temp">' + r.temp + '<span>°C</span></div><div class="pcs-p">' + esc(S('preclim_dog_outside', c.outside + ' °C')) + '</div>' +
-          '<div class="pcs-status">' + esc(S('preclim_dog_status', dur(pc.min), c.soc + ' %')) + '</div></div>' + btns + '</div>';
+          '<div class="pcs-status">' + esc(S('preclim_dog_status', start, c.soc + ' % · ' + pcPowerW())) + '</div></div>' + btns + '</div>';
       }
       const left = cur ? cur[1] - pc.min : next ? next[0] - pc.min : 0;
-      const prevEnd = next && plan.indexOf(next) > 0 ? plan[plan.indexOf(next) - 1][1] : 0;
+      const prevEnd = next && plan.indexOf(next) > 0 ? plan[plan.indexOf(next) - 1][1] : r.lock / 60;
       const tot = cur ? cur[1] - cur[0] : next ? Math.max(1, next[0] - prevEnd) : 1;
       const part = clamp(1 - left / tot, 0, 1), R = 92, C = 2 * Math.PI * R;
+      const scheduled = r.mode === 'at', idx = plan.indexOf(cur || next);
+      const ringLabel = !cur ? S('preclim_wait_label') : scheduled ? S('preclim_cycle', idx + 1, plan.length) : S('preclim_remaining');
+      const ringTime = cur ? S(scheduled ? 'preclim_until' : 'preclim_stop_at', pcClock(pc.started + cur[1])) : S('preclim_at_time', pcClock(pc.started + (next ? next[0] : last)));
       const ring = '<div class="pcs-ring ' + (cur ? trend : 'wait') + '"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" class="tr"/><circle cx="110" cy="110" r="' + R + '" class="pv" stroke-dasharray="' + (C * part).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 110 110)"/></svg>' +
-        '<div class="pcs-rin"><small>' + esc(S(cur ? 'preclim_remaining' : 'preclim_wait_label')) + '</small><b>' + esc(dur(left)) + '</b><small>' + esc(cur ? S('preclim_until', hmIn(left)) : S('preclim_at_time', hmIn(left))) + '</small></div></div>';
-      const idx = plan.indexOf(cur || next) + 1;
-      const info = [cur ? S('preclim_state_run') : S('preclim_state_wait'), plan.length > 1 ? S('preclim_cycle', idx, plan.length) : null,
-        S('preclim_started_at', pc.startHM), S('preclim_off_at', off), S('preclim_outside', c.outside + ' °C'), S('preclim_battery', c.soc + ' %'), '🔒 ' + S('preclim_lock_ok')].filter(Boolean);
+        '<div class="pcs-rin"><small>' + esc(ringLabel) + '</small><b>' + esc(dur(left)) + '</b><small>' + esc(ringTime) + '</small></div></div>';
+      const lines = scheduled ? plan.map(([a, b], i) => (i < idx ? '✓ ' : '● ') + S('preclim_run_line', i + 1, pcClock(pc.started + a), pcClock(pc.started + b))) :
+        [S('preclim_started_at', start), S('preclim_off_at', off)];
+      const info = [cur ? S('preclim_state_run') : S('preclim_state_wait'), sum(r.temp, false, r.fan), ...lines, S('preclim_outside', c.outside + ' °C'),
+        S('preclim_battery', c.soc + ' %'), S('preclim_power', pcPowerW()), '🔒 ' + S('preclim_lock_ok')];
       const dim = r.screen !== 'normal' && Date.now() - pc.wake > 10000 ? (r.screen === 'off' ? ' black' : ' dim') : '';
-      return '<div class="a-pcs ' + trend + dim + '" data-a="pcWake" data-hl="preclim-screen">' + parts + '<div class="pcs-live">' + ring + '<div class="pcs-info"><div class="pcs-t">' + esc(S('preclim_live_title', sum(r.temp, false, r.fan))) + '</div>' +
+      return '<div class="a-pcs ' + trend + dim + '" data-a="pcWake" data-hl="preclim-screen">' + parts + '<div class="pcs-live">' + ring + '<div class="pcs-info"><div class="pcs-t">' + esc(S('preclim_live_title', pcClock(Math.floor(pc.started + pc.min)))) + '</div>' +
         info.map((x) => '<div class="pcs-p">' + esc(x) + '</div>').join('') + '<div class="pcs-p dimtxt">' + esc(S('preclim_hint')) + '</div></div></div>' + btns + '</div>';
     }
 
+    /**
+     * Menu principal 2.7.0 (activity_main.xml, refonte B) : une colonne, le logo (retour au
+     * tableau de bord, 5 appuis = Diagnostic) puis cinq entrées à pictogramme, à poids égaux.
+     * L'éditeur de profil garde Profils allumé, l'éditeur de règle garde Automatisation.
+     */
     topbar() {
-      const s = this.ui.screen;
+      const s = this.ui.screen === 'profileEdit' ? 'profiles' : this.ui.screen === 'ruleEdit' ? 'automation' : this.ui.screen;
       const nav = (id, key) =>
-        '<button class="a-nav' + (s === id ? ' on' : '') + '" data-a="nav" data-v="' + id + '" data-hl="nav nav-' + id + '">' + esc(S(key)) + '</button>';
-      // Ordre de activity_main.xml : les cinq onglets se partagent la largeur laissée par le logo.
-      return '<div class="a-top" data-hl="topbar"><div class="a-logo" data-a="logo" data-hl="logo"><span class="lg"><span class="mg">MG</span><span class="four">4</span><span class="ctl">Control</span></span></div>' +
-        nav('profiles', 'nav_profiles') + nav('automation', 'nav_automation') + nav('shortcuts', 'nav_shortcuts') +
+        '<button class="a-nav' + (s === id ? ' on' : '') + '" data-a="nav" data-v="' + id + '" data-hl="nav nav-' + id + '">' + ico('nav_' + id) + '<span>' + esc(S(key)) + '</span></button>';
+      return '<div class="a-top" data-hl="topbar"><div class="a-logo' + (s === 'dashboard' ? ' on' : '') + '" data-a="logo" data-hl="logo"><span class="lg" role="img" aria-label="MG4Control"></span></div>' +
+        nav('profiles', 'nav_profiles') + nav('shortcuts', 'nav_shortcuts') + nav('automation', 'nav_automation') +
         nav('stats', 'nav_stats') + nav('settings', 'nav_settings') + '</div>';
     }
 
@@ -1659,32 +2187,38 @@
         case 'settings': return this.settingsHtml();
         case 'shortcuts': return this.shortcutsHtml();
         case 'automation': return this.automationHtml();
+        case 'ruleEdit': return this.ruleEditHtml();
         case 'stats': return this.statsHtml();
         case 'audio': return this.automationHtml();   // ancien onglet Audio : sa carte vit dans Automatisation
         default: return this.dashHtml();
       }
     }
 
-    /** Rail de catégories : un onglet sans contenu visible est masqué. */
-    railLayout(tabKey, tabs, extraCls) {
+    /**
+     * Sous-onglets 2.7.0 : une rangée de pastilles à pictogramme en haut (Widget.MG4.CategoryTab),
+     * qui défile si elle déborde ; [after] se pose au bout de la rangée (interrupteur « Activer »
+     * des Boutons physiques). Un onglet sans contenu visible est masqué.
+     */
+    railLayout(tabKey, tabs, extraCls, after) {
       const id = (t, i) => (t.id != null ? t.id : String(i));
       const usable = tabs.map((t, i) => (t.page && !t.hidden ? i : -1)).filter((i) => i >= 0);
       let cur = tabs.findIndex((t, i) => id(t, i) === String(this.ui.tabs[tabKey]));
       if (cur < 0 || !tabs[cur].page) cur = usable.length ? usable[0] : 0;
       const rail = tabs.map((t, i) => {
         if (!t.page || (t.hidden && i !== cur)) return '';
-        return '<button class="a-tab' + (t.sub ? ' sub' : '') + (t.off ? ' off' : '') + (i === cur ? ' on' : '') + '" data-a="tab" data-v="' + tabKey + ':' + id(t, i) + '" data-hl="rail' + (t.hl ? ' ' + t.hl : '') + '">' + esc(t.label) + (t.off ? '<small>' + esc(S('climate_off')) + '</small>' : '') + '</button>';
+        return '<button class="a-tab' + (t.off ? ' off' : '') + (i === cur ? ' on' : '') + '" data-a="tab" data-v="' + tabKey + ':' + id(t, i) + '" data-hl="rail' + (t.hl ? ' ' + t.hl : '') + '">' + (t.icon ? ico(t.icon) : '') + '<span>' + esc(t.label) + '</span>' + (t.off ? '<small>' + esc(S('climate_off')) + '</small>' : '') + '</button>';
       }).join('');
-      return '<div class="a-body ' + (extraCls || '') + '"><div class="a-rail" data-hl="rail">' + rail + '</div><div class="a-vline"></div><div class="a-scroll"><div class="a-stack">' + (tabs[cur] ? tabs[cur].page : '') + '</div></div></div>';
+      return '<div class="a-body ' + (extraCls || '') + '"><div class="a-pillrow"><div class="a-rail" data-hl="rail" data-sk="rail-' + tabKey + '">' + rail + '</div>' + (after || '') + '</div><div class="a-scroll"><div class="a-stack">' + (tabs[cur] ? tabs[cur].page : '') + '</div></div></div>';
     }
 
     // ── Dashboard ──────────────────────────────────────────────────────────
     dashHtml() {
-      return this.railLayout('dash', [
-        { label: S('profile_cat_drive'), page: this.dashDrive() },
-        { label: S('profile_cat_safety'), page: this.dashSafety() },
-        { label: S('profile_cat_comfort'), page: this.dashComfort() }
-      ]);
+      // Même cadre que les autres écrans : marges et espace sous les pastilles.
+      return '<div class="a-page">' + this.railLayout('dash', [
+        { label: S('profile_cat_drive'), icon: 'steering', page: this.dashDrive() },
+        { label: S('profile_cat_safety'), icon: 'shield', page: this.dashSafety() },
+        { label: S('profile_cat_comfort'), icon: 'armchair', page: this.dashComfort() }
+      ], 'dash-pages') + '</div>';
     }
     dashDrive() {
       const c = car(), k = caps();
@@ -1692,7 +2226,7 @@
       const dm = (m) => {
         const on = c.driveMode === m;
         const v = on ? (m === 'ECO' ? ' eco' : m === 'SPORT' ? ' warn' : '') : '';
-        return '<button class="b' + (on ? ' on' : '') + v + '" data-a="drive" data-v="' + m + '">' + esc(S('drive_' + m.toLowerCase())) + '</button>';
+        return '<button class="b mode' + (on ? ' on' : '') + v + '" data-a="drive" data-v="' + m + '">' + ico('mode_' + m.toLowerCase()) + '<span>' + esc(S('drive_' + m.toLowerCase())) + '</span></button>';
       };
       const regenOk = !snow && !c.energy;
       const rg = (l, key) => {
@@ -1702,8 +2236,8 @@
       const energy = k.known ? '<button class="b full' + (c.energy ? ' on' : '') + (snow ? ' dis' : '') + '" data-a="energy" data-hl="energy"' + (snow ? ' disabled' : '') + ' style="margin-top:5px">' + esc(S('drive_energy_saving')) + '</button>' : '';
       const custom = c.driveMode === 'CUSTOM' ? this.customCard(c.custom, 'custom', 'custom') : '';
       return '<div class="a-sec" data-hl="drive"><div class="a-h">' + esc(S('drive_section_mode')) + '</div>' +
-        '<div class="a-grid g2">' + dm('ECO') + dm('NORMAL') + dm('SPORT') + dm('SNOW') + '</div>' +
-        '<div class="a-grid" style="margin-top:5px">' + dm('CUSTOM') + '</div>' + energy + '</div>' + custom +
+        // 2.7.0 : les cinq modes en tuiles à pictogramme (ic_mode_*), sur une rangée.
+        '<div class="a-grid g5">' + DRIVE.map(dm).join('') + '</div>' + energy + '</div>' + custom +
         '<div class="a-sec" data-hl="regen"><div class="a-h">' + esc(S('drive_section_regen')) + '</div><div class="a-grid g2">' +
         rg('OFF', 'regen_off') + rg('LOW', 'regen_low') + rg('MEDIUM', 'regen_medium') + rg('HIGH', 'regen_high') + rg('ADAPTIVE', 'regen_adaptive_short') + rg('ONE_PEDAL', 'regen_one_pedal_short') +
         '</div></div>' + this.batHeatSection();
@@ -1796,6 +2330,11 @@
           '<div data-hl="heat-seats"><div class="a-sub">' + esc(S('climate_seat_right')) + '</div>' + seat('R', c.seatR) + '</div>' +
           '</div></div>';
       }
+      if (k.beam) {
+        const hb = (on, key) => '<button class="b' + (c.highBeam === on ? ' on' : '') + '" data-a="highBeam" data-v="' + (on ? 1 : 0) + '">' + esc(S(key)) + '</button>';
+        h += '<div class="a-card" data-hl="highbeam"><div class="a-h">' + esc(S('card_lighting')) + '</div><div class="a-sub">' + esc(S('lighting_auto_high_beam')) + '</div>' +
+          '<div class="a-grid g2">' + hb(true, 'common_on') + hb(false, 'common_off') + '</div></div>';
+      }
       if (k.clim) {
         const cl = c.clim;
         h += '<div class="a-card" data-hl="clim"><div class="a-h">' + esc(S('clim_card_title')) + '</div>' +
@@ -1805,23 +2344,18 @@
           range('climFan', cl.fMin, cl.fMax, cl.fan) + '</div></div></div>';
         const tg = (a, on, key) => '<button class="b' + (on ? ' on' : '') + '" data-a="' + a + '">' + esc(S(key)) + '</button>';
         const lp = (n, key) => '<button class="b' + (cl.loop === n ? ' on' : '') + '" data-a="climLoop" data-v="' + n + '">' + esc(S(key)) + '</button>';
-        h += '<div class="a-card" data-hl="climmodes"><div class="a-h">' + esc(S('clim_modes_title')) + '</div><div class="a-cols sep">' +
-          '<div><div class="a-sub">' + esc(S('clim_section_switches')) + '</div><div class="a-grid">' + tg('climPower', cl.power, 'clim_power') + tg('climAc', cl.ac, 'clim_ac') + tg('climAuto', cl.auto, 'clim_auto') + tg('climEco', cl.eco, 'clim_eco') + '</div></div>' +
-          '<div><div class="a-sub">' + esc(S('clim_section_loop')) + '</div><div class="a-grid">' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
-          '</div></div>';
-        // Débit d'air en mode AUTO (issue #178) : réglage de la voiture, 0 = fort, 1 = moyen, 2 = faible.
         const av = (n) => '<button class="b' + (cl.autoVol === n ? ' on' : '') + '" data-a="climAutoVol" data-v="' + n + '">' + esc(S(AUTOVOL_KEY[n])) + '</button>';
-        h += '<div class="a-card" data-hl="autovol"><div class="a-h">' + esc(S('clim_section_autovol')) + '</div><div class="a-grid g3">' + av(2) + av(1) + av(0) + '</div></div>';
+        h += '<div class="a-card" data-hl="climmodes"><div class="a-h">' + esc(S('clim_modes_title')) + '</div><div class="a-cols sep">' +
+          '<div><div class="a-sub">' + esc(S('clim_section_switches')) + '</div><div class="a-grid g1">' + tg('climPower', cl.power, 'clim_power') + tg('climAc', cl.ac, 'clim_ac') + tg('climAuto', cl.auto, 'clim_auto') + tg('climEco', cl.eco, 'clim_eco') + '</div></div>' +
+          '<div><div class="a-sub">' + esc(S('clim_section_loop')) + '</div><div class="a-grid g1">' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
+          // Débit d'air en mode AUTO (issue #178) : réglage de la voiture, 0 = fort, 1 = moyen, 2 = faible.
+          '<div data-hl="autovol"><div class="a-sub">' + esc(S('clim_section_autovol')) + '</div><div class="a-grid g1">' + av(0) + av(1) + av(2) + '</div></div>' +
+          '</div></div>';
         // Sens de l'air : boutons cumulables ; la lunette arrière est le dégivrage arrière.
         const ab = (a, on, key, icon) => '<button class="b air' + (on ? ' on' : '') + '" data-a="' + a + '">' + AIR_ICON[icon] + '<span>' + esc(S(key)) + '</span></button>';
         h += '<div class="a-card" data-hl="airflow"><div class="a-h">' + esc(S('clim_section_airflow')) + '</div><div class="a-grid g4">' +
           ab('airFace', cl.air.face, 'clim_air_face', 'face') + ab('airFeet', cl.air.feet, 'clim_air_feet', 'feet') +
           ab('airWs', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('climDefR', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div></div>';
-      }
-      if (k.beam) {
-        const hb = (on, key) => '<button class="b' + (c.highBeam === on ? ' on' : '') + '" data-a="highBeam" data-v="' + (on ? 1 : 0) + '">' + esc(S(key)) + '</button>';
-        h += '<div class="a-card" data-hl="highbeam"><div class="a-h">' + esc(S('card_lighting')) + '</div><div class="a-row"><span class="lbl">' + esc(S('lighting_auto_high_beam')) + '</span>' +
-          '<div class="a-grid g2" style="flex:0 0 260px">' + hb(true, 'common_on') + hb(false, 'common_off') + '</div></div></div>';
       }
       return h;
     }
@@ -1839,45 +2373,49 @@
       if (!parts.length) ['drive', 'safety', 'comfort'].forEach((c) => { if (catOn(p, c)) parts.push(S('profile_cat_' + c)); });
       return ': ' + parts.join(' · ');
     }
+    /** Profils 2.7.0 : grille de trois colonnes, profil appliqué marqué « Actif » (item_profile.xml). */
     profilesHtml() {
+      const grip = '<svg class="p-grip" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,18c0,1.1 -0.9,2 -2,2s-2,-0.9 -2,-2 0.9,-2 2,-2 2,0.9 2,2zM9,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM9,4c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM15,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM15,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM15,16c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" fill="currentColor"/></svg>';
       const items = state.profiles.map((p) => {
-        const def = p.id === state.defaultId;
-        return '<div class="p-item" data-hl="plist" data-pid="' + p.id + '"><div class="p-top">' + '<svg class="p-grip" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,18c0,1.1 -0.9,2 -2,2s-2,-0.9 -2,-2 0.9,-2 2,-2 2,0.9 2,2zM9,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM9,4c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM15,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM15,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM15,16c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" fill="currentColor"/></svg>' + '<span class="p-name' + (def ? ' def' : '') + '">' + esc(p.name) + '</span><span class="p-sum">' + esc(this.profileSummary(p)) + '</span>' +
-          (def ? '<span class="p-badge" data-hl="pdefault">' + esc(S('profile_default_badge')) + '</span>' : '') + '</div><div class="p-line"></div><div class="p-btns" data-hl="pbtns">' +
-          '<button class="b primary" data-a="pApply" data-v="' + p.id + '">' + esc(S('profile_apply_now')) + '</button>' +
-          '<button class="b" data-a="pEdit" data-v="' + p.id + '">' + esc(S('profile_edit')) + '</button>' +
-          '<button class="b" data-a="pDefault" data-v="' + p.id + '">' + esc(S('profile_set_default')) + '</button>' +
-          '<button class="b danger" data-a="pDel" data-v="' + p.id + '">' + esc(S('profile_delete')) + '</button></div></div>';
+        const def = p.id === state.defaultId, act = p.id === state.activeProfileId;
+        return '<div class="p-item' + (act ? ' act' : '') + '" data-hl="plist" data-pid="' + p.id + '"><div class="p-top">' + grip + '<span class="p-name">' + esc(p.name) + '</span>' +
+          (act ? '<span class="p-badge act">' + esc(S('overlay_profile_active')) + '</span>' : '') +
+          (def ? '<span class="p-badge" data-hl="pdefault">' + esc(S('profile_default_badge')) + '</span>' : '') +
+          '<button class="p-more" data-a="pMenu" data-v="' + p.id + '" aria-label="' + esc(S('profile_menu')) + '">⋮</button></div>' +
+          '<div class="p-sum">' + esc(this.profileSummary(p).replace(/^: /, '')) + '</div><div class="p-btns" data-hl="pbtns">' +
+          '<button class="b solid full" data-a="pApply" data-v="' + p.id + '">' + esc(S('profile_apply_now')) + '</button>' +
+          '<div class="p-row2"><button class="b" data-a="pEdit" data-v="' + p.id + '">' + esc(S('profile_edit')) + '</button>' +
+          '<button class="b" data-a="pDefault" data-v="' + p.id + '">' + esc(S('profile_set_default')) + '</button></div></div></div>';
       }).join('');
       const empty = '<div class="a-desc" style="text-align:center;padding:40px 0">' + esc(L('Aucun profil. Créez-en un avec « Nouveau profil ».', 'No profile yet. Create one with “New profile”.')) + '</div>';
-      return '<div class="a-page"><div class="a-scroll">' + (items || empty) + '</div>' +
-        '<button class="b green full" data-a="pNew" data-hl="pnew">' + esc(S('profile_add')) + ' (' + state.profiles.length + '/' + MAX_PROFILES + ')</button>' +
-        '<button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
+      return '<div class="a-page"><div class="a-scroll">' + (items ? '<div class="p-grid">' + items + '</div>' : empty) + '</div>' +
+        '<button class="b primary full up p-new" data-a="pNew" data-hl="pnew">' + esc(S('profile_add')) + '</button></div>';
     }
 
     /**
-     * Ordre des profils (ProfileFragment, ItemTouchHelper) : après l'appui long, la carte prend un
-     * anneau et suit le doigt, les autres s'écartent, la liste défile près de ses bords, un bandeau
-     * dit la position ; l'ordre est enregistré au relâcher. Le rendu attend la fin du geste.
+     * Ordre des profils (ProfileFragment, ItemTouchHelper dans les quatre directions) : après
+     * l'appui long, la carte prend un anneau et suit le doigt dans la grille, la grille défile près
+     * de ses bords, un bandeau dit la position ; l'ordre est enregistré au relâcher.
      */
     startProfileDrag(item) {
-      const list = item.parentNode, ids0 = state.profiles.map((p) => p.id);
+      const list = item.parentNode, scroller = list.parentNode, ids0 = state.profiles.map((p) => p.id);
       const name = (state.profiles.find((p) => p.id === item.getAttribute('data-pid')) || {}).name || '';
       this._drag = true; this._noClick = true;
       item.classList.add('p-lift');
-      list.parentNode.style.position = 'relative';
-      const hint = document.createElement('div'); hint.className = 'p-drag-hint'; list.parentNode.appendChild(hint);
+      scroller.style.position = 'relative';
+      const hint = document.createElement('div'); hint.className = 'p-drag-hint'; scroller.appendChild(hint);
       const maj = () => { hint.textContent = S('profile_drag_hint', name, Array.from(list.children).indexOf(item) + 1); };
       maj();
       const move = (ev) => {
-        const r = list.getBoundingClientRect();
-        if (ev.clientY < r.top + 30) list.scrollTop -= 10; else if (ev.clientY > r.bottom - 30) list.scrollTop += 10;
+        const r = scroller.getBoundingClientRect();
+        if (ev.clientY < r.top + 30) scroller.scrollTop -= 10; else if (ev.clientY > r.bottom - 30) scroller.scrollTop += 10;
         const items = Array.from(list.children), cur = items.indexOf(item);
         for (let i = 0; i < items.length; i++) {
           if (i === cur) continue;
-          const o = items[i].getBoundingClientRect(), mid = o.top + o.height / 2;
-          if (i < cur && ev.clientY < mid) { list.insertBefore(item, items[i]); break; }
-          if (i > cur && ev.clientY > mid) { list.insertBefore(item, items[i].nextSibling); break; }
+          const o = items[i].getBoundingClientRect();
+          if (ev.clientX < o.left || ev.clientX > o.right || ev.clientY < o.top || ev.clientY > o.bottom) continue;
+          list.insertBefore(item, i < cur ? items[i] : items[i].nextSibling);
+          break;
         }
         maj();
       };
@@ -1900,13 +2438,12 @@
     }
     editHtml() {
       const e = this.ui.edit; if (!e) return '';
-      const head = '<div class="a-card" style="padding:10px 14px;border-radius:12px"><div class="a-row" style="min-height:40px">' +
-        '<span class="a-title" style="flex:0 0 auto">' + esc(e._new ? S('profile_add') : S('profile_edit')) + '</span>' +
-        '<input class="a-input" style="flex:1" data-c="eName" data-fid="eName" maxlength="24" placeholder="' + esc(S('profile_name_hint')) + '" value="' + esc(e.name) + '" data-hl="ename">' +
-        '<span class="lbl" style="flex:0 0 auto;font-size:15px">' + esc(S('profile_set_as_default')) + '</span>' + sw(e._default, 'eDefault') + '</div></div>';
+      const head = '<div class="pe-head"><span class="a-title" style="flex:0 0 auto">' + esc(e._new ? S('profile_add') : S('profile_edit')) + '</span>' +
+        '<input class="a-input pe-name" data-c="eName" data-fid="eName" maxlength="30" placeholder="' + esc(S('profile_name_hint')) + '" value="' + esc(e.name) + '" data-hl="ename">' +
+        '<div class="pe-def"><span class="lbl">' + esc(S('profile_set_as_default')) + '</span>' + sw(e._default, 'eDefault') + '</div></div>';
       // Une page sans aucun réglage sur ce firmware reste absente du rail, comme avant.
       const cat = (key, content, tail) => ({
-        label: S('profile_cat_' + key), off: !catOn(e, key),
+        label: S('profile_cat_' + key), off: !catOn(e, key), icon: { drive: 'steering', safety: 'shield', comfort: 'armchair' }[key],
         page: content || tail ? this.catPage(e, key, content, tail) : ''
       });
       const body = this.railLayout('edit', [
@@ -1914,8 +2451,8 @@
         cat('safety', this.editSafety(e)),
         cat('comfort', this.editComfort(e), this.editBt(e))
       ]);
-      const foot = '<div class="a-grid g2"><button class="b" data-a="eCancel">' + esc(S('profile_cancel')) + '</button><button class="b green" data-a="eSave" data-hl="esave">' + esc(S('profile_save')) + '</button></div>';
-      return '<div class="a-page">' + head + body + foot + '</div>';
+      const foot = '<div class="pe-foot"><button class="b up" data-a="eCancel">' + esc(S('profile_cancel')) + '</button><button class="b primary up" data-a="eSave" data-hl="esave">' + esc(S('profile_save')) + '</button></div>';
+      return '<div class="a-page pe-page">' + head + body + foot + '</div>';
     }
     /**
      * Interrupteur général d'une catégorie : coupée, la page se replie sur une phrase et le
@@ -1934,7 +2471,7 @@
       const rg = (l, key) => { const en = regenOn && (ok || (l === 'ONE_PEDAL' && !snow)); return '<button class="b' + (e.regen === l ? ' on' : '') + (en ? '' : ' dis') + '" data-a="eRegen" data-v="' + l + '"' + (en ? '' : ' disabled') + '>' + esc(S(key)) + '</button>'; };
       const custom = e.driveMode === 'CUSTOM'
         ? this.customCard({ power: e.customPower, steer: e.customSteer, pedal: e.customPedal }, 'eCustom', 'p-custom') : '';
-      return '<div class="a-sec"><div class="a-h">' + esc(S('drive_section_mode')) + '</div><div class="a-grid g3">' + dm('ECO') + dm('NORMAL') + dm('SPORT') + dm('SNOW') + dm('CUSTOM') + '</div>' +
+      return '<div class="a-sec"><div class="a-h">' + esc(S('drive_section_mode')) + '</div><div class="a-grid g3">' + dm('ECO') + dm('NORMAL') + dm('SPORT') + '</div><div class="a-grid g2" style="margin-top:8px">' + dm('SNOW') + dm('CUSTOM') + '</div>' +
         (k.known ? '<button class="b full' + (e.energy ? ' on' : '') + (snow ? ' dis' : '') + '" style="margin-top:5px" data-a="eEnergy"' + (snow ? ' disabled' : '') + '>' + esc(S('drive_energy_saving')) + '</button>' : '') + '</div>' + custom +
         '<div class="a-sec" data-hl="p-regen"><div class="a-row"><span class="lbl"><b>' + esc(S('drive_section_regen')) + '</b></span>' + sw(regenOn, 'eRegenOn') + '</div><div class="a-grid g3">' +
         rg('OFF', 'regen_off') + rg('LOW', 'regen_low') + rg('MEDIUM', 'regen_medium') + rg('HIGH', 'regen_high') + rg('ADAPTIVE', 'regen_adaptive_short') + rg('ONE_PEDAL', 'regen_one_pedal_short') + '</div>' +
@@ -1979,6 +2516,12 @@
           '<div class="a-sub">' + esc(S('climate_seat_left')) + '</div><div class="a-grid g4">' + lv('eSeatL', e.seatL) + '</div>' +
           '<div class="a-sub" style="margin-top:8px">' + esc(S('climate_seat_right')) + '</div><div class="a-grid g4">' + lv('eSeatR', e.seatR) + '</div></div>';
       }
+      if (k.beam) {
+        const on = e.beam != null, cur = e.beam !== false;
+        const hb = (v, key) => '<button class="b' + (cur === v ? ' on' : '') + (on ? '' : ' dis') + '" data-a="eBeam" data-v="' + (v ? 1 : 0) + '"' + (on ? '' : ' disabled') + '>' + esc(S(key)) + '</button>';
+        h += '<div class="a-sec" data-hl="p-beam"><div class="a-row"><span class="lbl"><b>' + esc(S('lighting_auto_high_beam')) + '</b></span>' + sw(on, 'eBeamOn') + '</div>' +
+          '<div class="a-grid g2">' + hb(false, 'climate_off') + hb(true, 'climate_on') + '</div></div>';
+      }
       if (k.clim) h += this.editHvac(e.hvac);
       return h;
     }
@@ -1993,8 +2536,8 @@
       const on = hv.enabled, dimOff = on && hv.power ? '' : ' dim';
       const b = (a, active, label, v, dis) => '<button class="b sm' + (active ? ' on' : '') + (dis ? ' dis' : '') + '" data-a="' + a + '"' + (v != null ? ' data-v="' + v + '"' : '') + (dis ? ' disabled' : '') + '>' + label + '</button>';
       let h = '<div class="a-sec" data-hl="p-hvac"><div class="a-row"><span class="lbl"><b>' + esc(S('profile_hvac_title')) + '</b></span>' + sw(on, 'hvOn') + '</div>';
-      if (on) {
-        const off = !hv.power;
+      {
+        const off = !on || !hv.power;
         const air = hv.air;
         const has = (bit) => air != null && (air & bit) !== 0;
         // Comme fragment_profile_edit.xml : icône de 28 dp au-dessus d'un texte de 12 sp.
@@ -2020,68 +2563,89 @@
 
     // ── Réglages ───────────────────────────────────────────────────────────
     settingsHtml() {
-      const head = '<div class="a-head"><span class="a-title">' + esc(S('nav_settings')) + '</span></div>';
+      // 2.7.0 : plus de titre « Réglages » ni de bouton Fermer (le logo ramène au tableau de bord).
       const body = this.railLayout('set', [
-        { label: S('settings_cat_lang'), page: this.setLang() },
-        { label: S('settings_cat_ui'), page: this.setUi() },
-        { label: S('settings_cat_advanced'), page: this.setAdv() },
-        { label: S('settings_cat_info'), page: this.setInfo() }
-      ]);
-      return '<div class="a-page">' + head + body + '<button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
+        { label: S('settings_cat_lang'), icon: 'language', page: this.setLang() },
+        { label: S('settings_cat_ui'), icon: 'palette', page: this.setUi() },
+        { label: S('settings_cat_advanced'), icon: 'adjustments', page: this.setAdv() },
+        { label: S('settings_cat_info'), icon: 'info', page: this.setInfo() }
+      ], 'set-pages');
+      return '<div class="a-page">' + body + '</div>';
     }
     setLang() {
       const cur = appLang();
       const b = (code) => '<button class="b nc' + (cur === code ? ' on' : '') + '" data-a="lang" data-v="' + code + '">' + esc(S('settings_language_' + code)) + '</button>';
-      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g3">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + '</div></div>';
+      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g5">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + b('pl') + b('nb') + b('cs') + '</div></div>';
     }
     setUi() {
       const s = state.settings, k = caps();
       const ds = (v, key) => '<button class="b' + (s.defaultScreen === v ? ' on' : '') + '" data-a="defScreen" data-v="' + v + '">' + esc(S(key)) + '</button>';
       const th = (v, key) => '<button class="b' + (s.theme === v ? ' on' : '') + '" data-a="theme" data-v="' + v + '">' + esc(S(key)) + '</button>';
-      return '<div class="a-sec" data-hl="s-default"><div class="a-h">' + esc(S('settings_default_screen')) + '</div><div class="a-grid g3">' + ds('dashboard', 'settings_default_screen_dashboard') + ds('profiles', 'nav_profiles') + ds('shortcuts', 'nav_shortcuts') + '</div></div>' +
+      const desc = (key) => '<div class="a-desc">' + esc(S(key)) + '</div>';
+      return '<div class="set-2col">' +
+        '<div class="a-sec" data-hl="s-default"><div class="a-h">' + esc(S('settings_default_screen')) + '</div><div class="a-grid g3">' + ds('dashboard', 'settings_default_screen_dashboard') + ds('profiles', 'nav_profiles') + ds('shortcuts', 'nav_shortcuts') + '</div></div>' +
         '<div class="a-sec" data-hl="s-theme"><div class="a-h">' + esc(S('settings_theme')) + '</div><div class="a-grid g3">' + th('auto', 'settings_theme_auto') + th('dark', 'settings_theme_dark') + th('light', 'settings_theme_light') + '</div></div>' +
         '<div class="a-sec" data-hl="s-textsize"><div class="a-h">' + esc(S('settings_text_size')) + '</div><div class="a-grid g3">' +
           ['standard', 'large', 'xlarge'].map((v) => '<button class="b' + (s.textSize === v ? ' on' : '') + '" data-a="textSize" data-v="' + v + '">' + esc(S('settings_text_size_' + v)) + '</button>').join('') + '</div></div>' +
-        '<div class="a-sec" data-hl="s-popupdelay"><div class="a-h">' + esc(S('settings_popup_delay')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('popupDelay', 1, 60, popupDelay()) + '</div><span class="a-val" data-out="popupDelay">' + popupDelay() + ' s</span></div>' +
-          '<div class="a-desc">' + esc(S('settings_popup_delay_desc')) + '</div></div>' +
         '<div class="a-sec" data-hl="s-fullscreen"><div class="a-h">' + esc(S('settings_fullscreen')) + '</div>' +
-          '<div class="a-row"><span class="lbl">' + esc(S('settings_fullscreen_switch')) + '<small>' + esc(S('settings_fullscreen_desc')) + '</small></span>' + sw(s.fullscreen, 'fullscreen') + '</div></div>' +
+          '<div class="a-row"><span class="lbl">' + esc(S('settings_fullscreen_switch')) + '</span>' + sw(s.fullscreen, 'fullscreen') + '</div>' + desc('settings_fullscreen_desc') + '</div>' +
         '<div class="a-sec" data-hl="s-hvaczone"><div class="a-h">' + esc(S('floating_hvac_zone')) + '</div>' +
           '<div class="a-row"><span class="lbl">' + esc(S('floating_hvac_zone_desc')) + '</span>' + sw(s.hvacZone, 'hvacZone') + '</div></div>' +
+        '<div class="a-sec" data-hl="s-popupdelay"><div class="a-h">' + esc(S('settings_popup_delay')) + '</div>' +
+          '<div class="a-row"><div style="flex:1">' + range('popupDelay', 1, 60, popupDelay()) + '</div><span class="a-val" data-out="popupDelay">' + popupDelay() + ' s</span></div>' + desc('settings_popup_delay_desc') + '</div>' +
         // Pop-up de charge (ChargePopupSettings) : tous les firmwares, activé par défaut.
         '<div class="a-sec" data-hl="s-chargepopup"><div class="a-h">' + esc(S('settings_charge_popup')) + '</div>' +
-          '<div class="a-row"><span class="lbl">' + esc(S('settings_charge_popup_switch')) + '<small>' + esc(S('settings_charge_popup_desc')) + '</small></span>' + sw(s.chargePopup, 'chargePopup') + '</div></div>' +
-        (k.cluster ? this.setCluster() : '');
+          '<div class="a-row"><span class="lbl">' + esc(S('settings_charge_popup_switch')) + '</span>' + sw(s.chargePopup, 'chargePopup') + '</div>' + desc('settings_charge_popup_desc') + '</div>' +
+        // Côté du menu (NavSide) : Auto suit le volant lu sur la voiture.
+        '<div class="a-sec" data-hl="s-navside"><div class="a-h">' + esc(S('settings_nav_side')) + '</div><div class="a-grid g3">' +
+          ['auto', 'left', 'right'].map((v) => '<button class="b' + ((s.navSide || 'auto') === v ? ' on' : '') + '" data-a="navSide" data-v="' + v + '">' + esc(S('settings_nav_side_' + v)) + '</button>').join('') + '</div>' +
+          '<div class="a-desc">' + esc(S('settings_nav_side_desc', S(car().rhd ? 'settings_nav_side_detected_right' : 'settings_nav_side_detected_left'))) + '</div></div>' +
+        // Unité de distance (DistanceSetting) : statistiques, écran conducteur, bulles ; Auto suit la voiture.
+        '<div class="a-sec" data-hl="s-distance"><div class="a-h">' + esc(S('settings_distance_unit')) + '</div><div class="a-grid g3">' +
+          [['auto', S('cluster_distance_auto_value', S(car().distUnit === 'mi' ? 'cluster_distance_miles' : 'cluster_distance_km'))], ['km', S('cluster_distance_km')], ['mi', S('cluster_distance_miles')]]
+            .map(([v, lab]) => '<button class="b' + ((s.distUnit || 'auto') === v ? ' on' : '') + '" data-a="distUnit" data-v="' + v + '">' + esc(lab) + '</button>').join('') + '</div>' + desc('settings_distance_unit_desc') + '</div>' +
+        '</div>' + (k.cluster ? this.setCluster() : '');
     }
     /**
-     * Carte « Écran conducteur » : SWI133, SWI68 et SWI165 seulement, absente ailleurs
+     * Carte « Écran conducteur » : disponible sur les firmwares équipés.
      * (ClusterModuleSettings.SUPPORTED). Refonte du 2026-10-17 : l'aperçu à gauche — la vraie jauge
      * sur un trajet simulé, qui suit chaque réglage —, les réglages groupés à droite (Modules,
      * Apparence, Unités) et « Avancé » replié.
      */
     setCluster() {
-      const s = state.settings, u = this.ui, ref = Math.round(s.clusterRefresh / 100), anim = Math.round(s.clusterAnim / 100);
+      const u = this.ui;
       // « Réglage de : » — un ou plusieurs profils ; la carte montre le premier choisi, un
       // changement vaut pour tous (ClusterProfiles). Sans profil, les réglages communs.
       const ps = state.profiles;
       u.clSel = (u.clSel || []).filter((id) => ps.some((p) => p.id === id));
-      if (!u.clSel.length && ps.length) u.clSel = [state.profiles.some((p) => p.id === state.activeProfileId) ? state.activeProfileId : ps[0].id];
+      const followed = flFollowed();
+      if (!u.clSel.length && ps.length) u.clSel = [followed];
       const cfg = this.clEditCfg();
+      const selected = u.clSel.length ? ps.filter((p) => u.clSel.includes(p.id)).map((p) => clCfg(p.id)) : [cfg];
+      const mixed = (key) => selected.some((c) => c[key] !== cfg[key]);
+      const active = selected.some((c) => c.cluster);
+      const ref = Math.round(cfg.clusterRefresh / 100), anim = Math.round(cfg.clusterAnim / 100);
       clPrevCfg = cfg;
-      const mi = clMiles(cfg), power = cfg.clusterPowerMax || 'auto';
-      const seg = (a, cur, opts, x) => '<div class="a-grid g' + opts.length + '">' + opts.map(([v, key, raw]) => '<button class="b nc' + (String(cur) === String(v) ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '"' +
+      clPrevProfile = ps.find((p) => u.clSel.includes(p.id));
+      const mi = clMiles(), power = cfg.clusterPowerMax || 'auto';
+      const seg = (a, cur, opts, x) => '<div class="a-grid g' + opts.length + '">' + opts.map(([v, key, raw]) => '<button class="b nc' + (cur !== undefined && String(cur) === String(v) ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '"' +
         (x ? ' data-x="' + x + '"' : '') + '>' + esc(raw != null ? raw : S(key)) + '</button>').join('') + '</div>';
-      const line = (label, inner, hl) => '<div class="cls-row"' + (hl ? ' data-hl="' + hl + '"' : '') + '><span class="cls-lbl">' + esc(label) + '</span>' + inner + '</div>';
+      const line = (label, inner, hl, key) => '<div class="cls-row"' + (hl ? ' data-hl="' + hl + '"' : '') + '><span class="cls-lbl">' + esc(label) +
+        (key && mixed(key) ? '<small class="cls-mixed">' + esc(S('settings_cluster_mixed')) + '</small>' : '') + '</span>' + inner + '</div>';
+      const common = (key, value = cfg[key]) => mixed(key) ? undefined : value;
+      const timing = (key) => mixed(key) ? S('settings_cluster_mixed_short') : fmtS(cfg[key]) + ' s';
       const mods = [['none', 'settings_cluster_none'], ['consumption', 'settings_cluster_consumption'], ['power', 'settings_cluster_power']];
       const chips = ps.length ? '<div class="cls-profs" data-hl="s-cluster-profiles"><span class="cls-lbl">' + esc(S('settings_cluster_profiles_title')) + '</span><div class="cl-chips">' +
-        ps.map((p) => '<button class="cl-chip' + (u.clSel.includes(p.id) ? ' on' : '') + '" data-a="clSel" data-v="' + p.id + '">' + esc(p.name) + (p.id === state.activeProfileId ? ' <small>●</small>' : '') + '</button>').join('') +
-        (ps.length > 1 ? '<button class="cl-chip all" data-a="clSelAll">' + esc(S('settings_cluster_profiles_all')) + '</button>' : '') + '</div></div>' +
+        ps.map((p) => '<button class="cl-chip' + (u.clSel.includes(p.id) ? ' on' : '') + '" data-a="clSel" data-v="' + p.id + '">' + esc(p.name) + (p.id === followed ? ' <small>●</small>' : '') + '</button>').join('') +
+        (ps.length > 1 ? '<button class="cl-chip all" data-a="clSelAll">' + esc(S('settings_cluster_profiles_all')) + '</button><button class="cl-chip all" data-a="clSelCurrent">' +
+          esc(S('settings_cluster_profiles_current_only')) + '</button>' : '') + '</div></div>' +
         '<div class="a-desc">' + esc(u.clSel.length > 1 ? S('settings_cluster_profiles_many', u.clSel.length) : S('settings_cluster_profiles_one', (ps.find((p) => p.id === u.clSel[0]) || {}).name || '')) + '</div>' : '';
       const h = '<div class="a-sec" data-hl="s-cluster"><div class="a-h">' + esc(S('settings_cluster')) + '</div>' + chips +
-        '<div class="a-row"><span class="lbl">' + esc(S('settings_cluster_module')) + '<small>' + esc(S('settings_cluster_module_desc')) + '</small></span>' + sw(cfg.cluster, 'cluster') + '</div>';
+        '<div class="a-row"><span class="lbl">' + esc(S('settings_cluster_module')) + '<small>' + esc(S('settings_cluster_module_desc')) + '</small>' +
+        (mixed('cluster') ? '<small class="cls-mixed">' + esc(S('settings_cluster_mixed')) + '</small>' : '') +
+        '</span>' + sw(selected.every((c) => c.cluster), 'cluster') + '</div>';
       // Activer déplie : l'aperçu et les réglages.
-      if (!cfg.cluster) return h + '</div>';
+      if (!active) return h + '</div>';
       const tab = u.clPrevTab || 'nav', m = tab === 'media' ? cfg.clusterMedia : cfg.clusterNav;
       const prev = '<div class="cls-prev" data-hl="s-cluster-preview"><div class="a-sub">' + esc(S('settings_cluster_preview')) + '</div>' +
         (m === 'none' ? '<div class="cls-none">' + esc(S('settings_cluster_preview_none')) + '</div>' : '<svg class="cls-sq" viewBox="0 0 260 260" data-clprev="' + m + '" role="img"></svg>') +
@@ -2089,41 +2653,39 @@
           .map(([v, key]) => '<button class="b nc sm' + (tab === v ? ' on' : '') + '" data-a="clPrevTab" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div></div>';
       const set = '<div class="cls-set">' +
         '<div class="a-sub">' + esc(S('settings_cluster_sec_modules')) + '</div>' +
-        '<div class="cls-group" data-hl="s-cluster-tabs">' + line(S('settings_cluster_row_nav'), seg('clusterMod', cfg.clusterNav, mods, 'nav')) + line(S('settings_cluster_row_media'), seg('clusterMod', cfg.clusterMedia, mods, 'media')) + '</div>' +
+        '<div class="cls-group" data-hl="s-cluster-tabs">' + line(S('settings_cluster_row_nav'), seg('clusterMod', common('clusterNav'), mods, 'nav'), null, 'clusterNav') +
+        line(S('settings_cluster_row_media'), seg('clusterMod', common('clusterMedia'), mods, 'media'), null, 'clusterMedia') + '</div>' +
         '<div class="a-desc">' + esc(S('settings_cluster_tabs_note')) + '</div>' +
         '<div class="a-sub">' + esc(S('settings_cluster_sec_appearance')) + '</div>' +
-        line(S('settings_cluster_row_style'), seg('clusterStyle', cfg.clusterStyle, [['dynamic', 'settings_cluster_style_dynamic'], ['discreet', 'settings_cluster_style_discreet']]), 's-cluster-style') +
-        line(S('settings_cluster_row_pill'), seg('clusterPill', cfg.clusterPill, [['mode', 'settings_cluster_pill_mode'], ['profile', 'settings_cluster_pill_profile'], ['none', 'settings_cluster_pill_none']]), 's-cluster-pill') +
-        '<div class="a-desc">' + esc(S('settings_cluster_pill_desc')) + '</div>' +
+        line(S('settings_cluster_row_style'), seg('clusterStyle', common('clusterStyle'), [['dynamic', 'settings_cluster_style_dynamic'], ['discreet', 'settings_cluster_style_discreet']]), 's-cluster-style', 'clusterStyle') +
+        // Personnalisation avancée (issue #229) : jauge, couleurs, épaisseur, 4 informations.
+        '<button class="b cls-layout" data-a="clLayOpen" data-hl="s-cluster-layout">' + esc(S('cluster_layout_open')) + '</button>' +
+        '<div class="a-desc">' + esc(S('cluster_layout_open_desc')) + '</div>' +
         // Puissance maxi (issue #165) : Auto apprend les pointes ; sinon une fin d'échelle fixe.
-        line(S('settings_cluster_row_power'), seg('clusterPowerMax', power, [['auto', 'settings_cluster_power_auto'], ['125', null, '125'], ['150', null, '150'], ['180', null, '180'], ['320', null, '320']]), 's-cluster-power') +
-        (power === 'auto' ? '<div class="a-desc">' + esc(S('settings_cluster_power_desc', state.clLearned)) + '</div>' : '') +
+        line(S('settings_cluster_row_power'), seg('clusterPowerMax', common('clusterPowerMax', power), [['auto', 'settings_cluster_power_auto'], ['125', null, '125'], ['150', null, '150'], ['180', null, '180'], ['320', null, '320']]), 's-cluster-power', 'clusterPowerMax') +
+        '<div class="a-desc">' + esc(S('settings_cluster_power_desc', state.clLearned)) + '</div>' +
         '<div class="a-sub">' + esc(S('settings_cluster_sec_units')) + '</div>' +
-        // Distance : Auto suit l'unité de la voiture ; en miles, tout le module passe en miles.
-        line(S('settings_cluster_row_distance'), seg('clusterDist', cfg.clusterDist || 'auto', [['auto', null, S('cluster_distance_auto_value', S(car().distUnit === 'mi' ? 'cluster_distance_miles' : 'cluster_distance_km'))],
-          ['km', 'cluster_distance_km'], ['mi', 'cluster_distance_miles']]), 's-cluster-dist') +
-        // Unité de la jauge, puis celle de la moyenne du trajet : la même tant qu'on n'en choisit pas d'autre.
-        line(S('settings_cluster_row_gauge'), seg('clusterUnit', cfg.clusterUnit, [['wh', null, mi ? 'Wh/mi' : S('cluster_unit_wh_km')], ['kwh', null, mi ? 'kWh/100 mi' : S('cluster_unit_kwh_100km')]]), 's-cluster-unit') +
-        line(S('settings_cluster_row_average'), seg('clusterAvg', cfg.clusterAvg || cfg.clusterUnit, [['wh', null, mi ? 'Wh/mi' : S('cluster_unit_wh_km')], ['kwh', null, mi ? 'kWh/100 mi' : S('cluster_unit_kwh_100km')], ['km', null, mi ? 'mi/kWh' : S('cluster_unit_km_kwh')]]), 's-cluster-avg') +
-        '<button class="cls-adv" data-a="clAdv" data-hl="s-cluster-refresh"><span>' + esc(S('settings_cluster_advanced', fmtS(s.clusterRefresh) + ' s', fmtS(s.clusterAnim) + ' s')) + '</span><i>' + (u.clAdv ? '▴' : '▾') + '</i></button>' +
+        // Unité de la jauge ; la moyenne a la sienne dans sa case (personnalisation avancée).
+        line(S('settings_cluster_row_gauge'), seg('clusterUnit', common('clusterUnit'), [['wh', null, mi ? 'Wh/mi' : S('cluster_unit_wh_km')], ['kwh', null, mi ? 'kWh/100 mi' : S('cluster_unit_kwh_100km')]]), 's-cluster-unit', 'clusterUnit') +
+        '<button class="cls-adv" data-a="clAdv" data-hl="s-cluster-refresh"><span>' + esc(S('settings_cluster_advanced', timing('clusterRefresh'), timing('clusterAnim'))) + '</span><i>' + (u.clAdv ? '▴' : '▾') + '</i></button>' +
         (u.clAdv ? '<div class="cls-advbox">' +
           '<div class="a-sub">' + esc(S('settings_cluster_refresh')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('clusterRefresh', 1, 10, ref) + '</div><span class="a-val" data-out="clusterRefresh">' + outText('clusterRefresh', ref) + '</span></div>' +
+          '<div class="a-row"><div style="flex:1">' + range('clusterRefresh', 1, 10, ref) + '</div><span class="a-val" data-out="clusterRefresh">' + esc(timing('clusterRefresh')) + '</span></div>' +
           '<div class="a-desc">' + esc(S('settings_cluster_refresh_desc')) + '</div>' +
           '<div class="a-sub" style="margin-top:8px">' + esc(S('settings_cluster_animation')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('clusterAnim', 2, 20, anim) + '</div><span class="a-val" data-out="clusterAnim">' + outText('clusterAnim', anim) + '</span></div>' +
+          '<div class="a-row"><div style="flex:1">' + range('clusterAnim', 2, 20, anim) + '</div><span class="a-val" data-out="clusterAnim">' + esc(timing('clusterAnim')) + '</span></div>' +
           '<div class="a-desc">' + esc(S('settings_cluster_animation_desc')) + '</div></div>' : '') +
         '</div>';
       return h + '<div class="cls-wrap">' + prev + set + '</div></div>';
     }
     /** Réglages montrés par la carte : ceux du premier profil choisi. */
-    clEditCfg() { const sel = this.ui.clSel; return sel && sel.length ? clCfg(sel[0]) : state.settings; }
+    clEditCfg() { const p = state.profiles.find((p) => (this.ui.clSel || []).includes(p.id)); return p ? clCfg(p.id) : state.settings; }
     /** Un changement vaut pour chaque profil choisi ; à l'écran tout de suite si le profil actif en est. */
     clEditSet(key, v) {
       const sel = this.ui.clSel && this.ui.clSel.length ? this.ui.clSel : null;
       if (!sel) { state.settings[key] = v; return commit(); }
       sel.forEach((id) => { clCfg(id)[key] = v; });
-      if (sel.includes(state.activeProfileId)) state.settings[key] = v;
+      if (sel.includes(flFollowed())) state.settings[key] = v;
       commit();
     }
     setAdv() {
@@ -2137,33 +2699,53 @@
         row('s-update', S('settings_auto_update_desc'), '', sw(s.autoUpdate, 'autoUpdate')) +
         row('s-updoverlay', S('settings_update_overlay'), S('settings_update_overlay_desc'), sw(s.updOverlay && s.autoUpdate, 'updOverlay', !s.autoUpdate)) +
         row('s-beta', S('settings_beta_channel'), S('settings_beta_channel_desc'), sw(s.beta, 'beta'));
-      if (k.power) h += '<div class="a-row" data-hl="s-power" style="padding:6px 0;border-bottom:1px solid var(--dash-border)"><span class="lbl">' + esc(S('settings_vehicle_power_desc')) + '</span><button class="b danger sm" style="padding:0 18px" data-a="powerOff">' + esc(S('settings_vehicle_power_btn')) + '</button></div>';
+      if (k.power) h += '<div class="a-row" data-hl="s-power" style="padding:6px 0;border-bottom:1px solid var(--dash-border)"><span class="lbl">' + esc(S('settings_vehicle_power_desc')) + '</span><button class="b primary up" style="flex:0 0 auto;padding:0 18px" data-a="powerOff">' + esc(S('settings_vehicle_power_btn')) + '</button></div>';
       h += '<div data-hl="s-gate">' + row('s-gate', S('settings_speed_gate_desc'), '', sw(s.gate, 'gate')) +
         '<div class="a-row"><span class="lbl' + (s.gate ? '' : ' dim') + '">' + esc(S('settings_speed_gate_max_label')) + '</span><input class="a-input num" type="number" min="0" max="250" data-c="gateMax" data-fid="gateMax" value="' + s.gateMax + '"' + (s.gate ? '' : ' disabled') + ' placeholder="' + esc(S('settings_speed_gate_max_hint')) + '"></div></div></div>';
-      // Ce que règle AUTO (issue #160) : la ventilation toujours ; le sens de l'air et la recirculation au choix.
+      let top = '';
+      // Ce que règle AUTO (issue #160) : sens de l'air et recirculation au choix (la ventilation, toujours : ligne retirée le 2026-11-14).
       if (k.clim) {
-        h += '<div class="a-sec" data-hl="s-autoscope"><div class="a-h">' + esc(S('settings_auto_scope_title')) + '</div><div class="a-desc">' + esc(S('settings_auto_scope_desc')) + '</div>' +
-          row('s-autoscope', S('settings_auto_scope_fan'), S('settings_auto_scope_fan_desc'), sw(true, 'noop', true)) +
+        top += '<div class="a-sec" data-hl="s-autoscope"><div class="a-h">' + esc(S('settings_auto_scope_title')) + '</div><div class="a-desc">' + esc(S('settings_auto_scope_desc')) + '</div>' +
           row('s-autoscope', S('settings_auto_scope_air'), S(s.scopeAir ? 'settings_auto_scope_air_car' : 'settings_auto_scope_air_kept'), sw(s.scopeAir, 'scopeAir')) +
           row('s-autoscope', S('settings_auto_scope_loop'), S(s.scopeLoop ? 'settings_auto_scope_loop_car' : 'settings_auto_scope_loop_kept'), sw(s.scopeLoop, 'scopeLoop')) +
           '<div class="a-desc" style="margin-top:6px">' + esc(S('settings_auto_scope_note')) + '</div></div>';
       }
-      return h;
+      // Garder l'A/C coupé (#208) : désactivé par défaut.
+      if (k.clim) top += '<div class="a-sec" data-hl="s-keepac"><div class="a-h">' + esc(S('settings_keep_ac_title')) + '</div>' + row('s-keepac', S('settings_keep_ac'), S('settings_keep_ac_desc'), sw(s.keepAcOff, 'keepAc')) + '</div>';
+      // Relancer la détection du téléphone branché (#251) : démarrage et réveil, désactivé par défaut.
+      top += '<div class="a-sec" data-hl="s-projkick"><div class="a-h">' + esc(S('settings_projection_title')) + '</div>' + row('s-projkick', S('settings_projection_kick'), S('settings_projection_kick_desc'), sw(s.projKick, 'projKick')) + '</div>';
+      // Applications en plein écran (#248) : juste sous la carte Android Auto · CarPlay.
+      top += this.setImmersive();
+      return top + h;
+    }
+    /**
+     * Applications en plein écran (#248, ImmersiveApps) : interrupteur, rappel du glissement quand il est
+     * actif (bord du côté du volant), résumé « Nom (Mode) » et bouton « Choisir (n) ».
+     */
+    setImmersive() {
+      const s = state.settings, apps = s.immersiveApps;
+      const noms = Object.entries(apps).map(([nom, mode]) => nom + ' (' + S(IMMERSIVE_MODES[mode]) + ')').join(', ') || S('immersive_apps_none');
+      return '<div class="a-sec" data-hl="s-immersive"><div class="a-h">' + esc(S('immersive_title')) + '</div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('immersive_switch')) + '<small>' + esc(S('immersive_switch_desc')) + '</small></span>' + sw(s.immersive, 'immersive') + '</div>' +
+        (s.immersive ? '<div class="a-desc">' + esc(S(car().rhd ? 'immersive_reminder_right' : 'immersive_reminder_left')) + '</div>' : '') +
+        (car().mg4Dash === 'outdated' ? '<div class="a-desc a-imm-warning">' + esc(S('immersive_mg4dash_outdated')) + '</div>' : '') +
+        '<div class="a-row a-imm-selection"><span class="lbl">' + esc(S('immersive_apps')) + '<small>' + esc(noms) + '</small></span>' +
+        '<button class="b" style="flex:0 0 auto;padding:0 18px" data-a="immChoose">' + esc(S('immersive_choose', Object.keys(apps).length)) + '</button></div></div>';
     }
     setInfo() {
       const k = caps(), u = this.ui;
       const upd = u.updFb === 'ok' ? '<button class="b green" data-a="checkUpd">' + esc(S('update_up_to_date')) + '</button>' : '<button class="b" data-a="checkUpd" data-hl="s-checkupd">' + esc(S('btn_check_update')) + '</button>';
       const apk = u.apkFb ? '<button class="b green" data-a="cleanApk">' + esc(u.apkFb) + '</button>' : '<button class="b" data-a="cleanApk">' + esc(S('btn_clean_apk')) + '</button>';
       const unknownMode = state.fw === 'UNKNOWN';
-      const chips = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165'].map((g) =>
-        '<button class="fw-chip' + (gen() === g ? ' on' : '') + (unknownMode ? ' tap' : '') + '" ' + (unknownMode ? 'data-a="force" data-v="' + g + '"' : 'tabindex="-1"') + '>' + g + '</button>').join('');
+      const chips = FIRMWARES.filter((f) => f !== 'UNKNOWN' && (f !== 'SWI173' || !unknownMode)).map((g) =>
+        '<button class="fw-chip' + ((state.forced || state.fw) === g ? ' on' : '') + (unknownMode ? ' tap' : '') + '" ' + (unknownMode ? 'data-a="force" data-v="' + g + '"' : 'tabindex="-1"') + '>' + g + '</button>').join('');
       const du = [['data_usage_today', '38 Mo'], ['data_usage_week', '212 Mo'], ['data_usage_month', '0,9 Go'], ['data_usage_30d', '1,2 Go']]
-        .map(([key, v]) => '<div><small>' + esc(S(key)) + '</small><b>' + v + '</b></div>').join('');
-      return '<div class="a-sec" data-hl="s-maint"><div class="a-h">' + esc(S('settings_maintenance')) + '</div><div class="a-grid g2">' + upd + apk + '</div>' +
-        '<button class="b full" style="margin-top:5px" data-a="about" data-hl="s-about">' + esc(S('btn_infos')) + '</button>' +
-        '<button class="b full" style="margin-top:5px" data-a="androidSet" data-hl="s-androidset">' + esc(S('btn_android_settings')) + '</button>' +
-        (state.diagUnlocked ? '<button class="b full warn on" style="margin-top:5px" data-a="diag" data-hl="s-diag">' + esc(S('btn_diagnostic')) + '</button>' : '') + '</div>' +
-        '<div class="a-sec" data-hl="s-fw"><div class="a-h">' + esc(S('settings_firmware_version')) + '</div><div class="fw-chips">' + chips + '</div>' +
+        .map(([key, v]) => '<div class="du-row"><span>' + esc(S(key)) + '</span><b>' + (appLang() === 'fr' ? v : v.replace(',', '.').replace('Mo', 'MB').replace('Go', 'GB')) + '</b></div>').join('');
+      return '<div class="a-sec" data-hl="s-maint"><div class="a-h">' + esc(S('settings_maintenance')) + '</div><div class="a-grid g2 up2">' + upd + apk + '</div>' +
+        '<button class="b full up" style="margin-top:8px" data-a="about" data-hl="s-about">' + esc(S('btn_infos')) + '</button>' +
+        '<button class="b full up" style="margin-top:8px" data-a="androidSet" data-hl="s-androidset">' + esc(S('btn_android_settings')) + '</button>' +
+        (state.diagUnlocked ? '<button class="b full warn on" style="margin-top:5px" data-a="diag" data-hl="s-diag">' + esc(S('btn_diagnostic')) + '</button>' : '') +
+        '<div class="fw-box" data-hl="s-fw"><span>' + esc(S('settings_firmware_version')) + '</span><div class="fw-chips">' + chips + '</div></div>' +
         (unknownMode ? '<div class="a-desc" style="margin-top:6px">' + esc(L('Firmware non reconnu : touchez une pastille pour forcer un mode de compatibilité.', 'Unrecognised firmware: tap a chip to force a compatibility mode.')) + '</div>' : '') + '</div>' +
         '<div class="a-sec" data-hl="s-data"><div class="a-h">' + esc(S('data_usage_title')) + '</div><div class="du">' + du + '</div></div>';
     }
@@ -2176,6 +2758,7 @@
         return S('shortcuts_profile_prefix') + ' ' + (p ? p.name : '?');
       }
       if (action === 'CUSTOM' && extra && extra.customId) return S('shortcuts_custom_prefix') + ' ' + customName(extra.customId);
+      if (action === 'RUN_RULE' && extra && extra.ruleId) return S('rule_run_fmt', ruleName(extra.ruleId));
       return S(ACTION_KEY[action] || 'shortcuts_action_none');
     }
     actionSelect(cur, dataC, attrs, extra) {
@@ -2184,38 +2767,14 @@
       return '<select class="a-select" style="flex:1" data-c="' + dataC + '" ' + (attrs || '') + '>' + list.map((a) =>
         '<option value="' + a + '"' + (a === cur ? ' selected' : '') + '>' + esc(a === cur ? this.actionLabel(a, extra) : S(ACTION_KEY[a])) + '</option>').join('') + '</select>';
     }
-    shortcutsHtml() {
-      const sc = state.sc;
-      const head = '<div class="a-card" style="padding:8px 14px;border-radius:12px" data-hl="sc-master"><div class="a-row" style="min-height:36px"><span class="lbl" style="font-weight:700">' + esc(S('shortcuts_enabled_label')) + '</span>' + sw(sc.enabled, 'scOn') + '</div></div>';
-      const cur = String(this.ui.tabs.sc);
-      const inAdv = cur === 'adv' || cur === 'list';
-      // Chaque réglage d'action a sa page, révélée dès que la fonction est attribuée
-      // (emplacement classique, raccourci avancé, ou simple sélection dans le formulaire avancé).
-      const body = this.railLayout('sc', [
-        { id: 'classic', label: S('shortcuts_cat_classic'), page: this.scClassic() },
-        { id: 'adv', label: S('shortcuts_cat_advanced'), page: this.scAdvanced() },
-        { id: 'onepedal', label: S('shortcuts_cat_onepedal'), page: this.assigned('ONE_PEDAL') ? this.scOnePedal() : '', sub: true, hl: 'sc-sub-onepedal' },
-        { id: 'adas', label: S('shortcuts_cat_adas'), page: this.assigned('ADAS_CYCLE') && caps().known ? this.scAdasCfg() : '', sub: true, hl: 'sc-sub-adas' },
-        { id: 'regen', label: S('shortcuts_cat_regen_cycle'), page: this.assigned('REGEN_CYCLE') ? this.scRegen() : '', sub: true, hl: 'sc-sub-regen' },
-        { id: 'profiles', label: S('shortcuts_cat_profile_cycle'), page: this.assigned('PROFILE_CYCLE') ? this.scProfiles() : '', sub: true, hl: 'sc-sub-profiles' },
-        { id: 'sources', label: S('shortcuts_cat_audio_cycle'), page: this.assigned('AUDIO_SOURCE_CYCLE') ? this.scSources() : '', sub: true, hl: 'sc-sub-sources' },
-        { id: 'preclim', label: S('shortcuts_cat_preclim'), page: this.assigned('PRE_CLIMATE') ? this.scPreclim() : '', sub: true, hl: 'sc-sub-preclim' },
-        { id: 'list', label: S('adv_sc_list_title'), page: this.scList(), sub: true, hidden: !inAdv },
-        { id: 'floating', label: S('shortcuts_cat_floating'), page: this.scFloating(), hl: 'sc-floating' },
-        { id: 'custom', label: S('shortcuts_cat_custom'), page: this.scCustom(), hl: 'sc-custom' }
-      ]);
-      return '<div class="a-page">' + head + body + '<button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
-    }
-    /** Fonction attribuée quelque part (emplacement classique, raccourci avancé ou formulaire en cours). */
-    assigned(action) {
-      const sc = state.sc;
-      return Object.values(sc.map).includes(action) || sc.adv.some((x) => x.action === action) || this.ui.adv.action === action;
-    }
+    /** Raccourci One Pedal, second appui (issue #226) : « Comme avant » (défaut) ou un niveau fixe. */
     scOnePedal() {
-      const sc = state.sc;
-      const f = (l, key) => '<button class="b' + (sc.fallback === l ? ' on' : '') + '" data-a="scFallback" data-v="' + l + '">' + esc(S(key)) + '</button>';
-      return '<div class="a-sec" data-hl="sc-onepedal"><div class="a-h">' + esc(S('shortcuts_cfg_one_pedal')) + '</div><div class="a-row"><span class="a-sub" style="min-width:70px;margin:0">' + esc(S('shortcuts_cfg_retour')) + '</span><div class="a-grid g5" style="flex:1">' +
-        f('OFF', 'regen_off') + f('LOW', 'regen_low') + f('MEDIUM', 'regen_medium') + f('HIGH', 'regen_high') + f('ADAPTIVE', 'regen_adaptive_short') + '</div></div></div>';
+      const sc = state.sc, cur = ['LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE'].includes(sc.fallback) ? sc.fallback : 'PREV';
+      const f = (l, key) => '<button class="b' + (cur === l ? ' on' : '') + '" data-a="scFallback" data-v="' + l + '">' + esc(S(key)) + '</button>';
+      const desc = cur === 'PREV' ? S('shortcuts_onepedal_desc_prev') : S('shortcuts_onepedal_desc_fixed', regenName(cur));
+      return '<div class="a-sec" data-hl="sc-onepedal"><div class="a-h">' + esc(S('shortcuts_cfg_one_pedal')) + '</div>' +
+        '<div class="a-grid" style="grid-template-columns:1.8fr 1fr 1fr 1fr 1fr">' + f('PREV', 'shortcuts_onepedal_prev') + f('LOW', 'regen_low') + f('MEDIUM', 'regen_medium') + f('HIGH', 'regen_high') + f('ADAPTIVE', 'regen_adaptive') + '</div>' +
+        '<div class="a-desc" style="margin-top:8px">' + esc(desc) + '</div></div>';
     }
     scAdasCfg() {
       const sc = state.sc;
@@ -2276,14 +2835,39 @@
     /** Page « Garde-voiture » : apparaît quand l'action est attribuée (PreClimateSettings). */
     scPreclim() {
       const p = state.preclim, k = caps();
-      const sl = (id, label, min, max, val, step) => '<div class="a-row"><span class="lbl" style="flex:0 0 300px">' + esc(label) + '</span><div style="flex:1">' + range(id, min, max, val, false, '', step) + '</div><span class="a-val" data-out="' + id + '">' + esc(outText(id, val)) + '</span></div>';
+      const sl = (id, label, min, max, val, step) => '<div class="a-row"><span class="lbl">' + esc(label) + '</span><div class="pc-step">' +
+        '<button class="b" data-a="pcStep" data-v="' + id + ':-' + step + ':' + min + ':' + max + '"' + (val <= min ? ' disabled' : '') + '>−</button><b>' + esc(outText(id, val)) + '</b>' +
+        '<button class="b" data-a="pcStep" data-v="' + id + ':' + step + ':' + min + ':' + max + '"' + (val >= max ? ' disabled' : '') + '>+</button></div></div>';
       const scr = (v, key) => '<button class="b' + (p.screen === v ? ' on' : '') + '" data-a="pcScreenMode" data-v="' + v + '">' + esc(S(key)) + '</button>';
       return '<div class="a-sec" data-hl="sc-preclim"><div class="a-h">' + esc(S('shortcuts_cat_preclim')) + '</div><div class="a-desc">' + esc(S('preclim_cfg_hint')) + '</div>' +
         sl('pcLock', S('preclim_cfg_lock'), 10, 60, p.lock, 5) + sl('pcSoc', S('preclim_cfg_soc'), 10, 40, p.soc, 5) +
-        '<div class="a-row"><span class="lbl" style="flex:0 0 300px">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3" style="flex:1">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3" style="flex:0 0 470px">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
+        // La surveillance suit-elle ce réglage ? Non par défaut : l'écran rouge reste allumé (2026-11-13).
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_surv_screen')) + '<small>' + esc(S('preclim_cfg_surv_screen_desc')) + '</small></span>' + sw(p.survScreen, 'pcSurvScreen') + '</div>' +
         (k.cluster ? '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_cluster')) + '<small>' + esc(S('preclim_cfg_cluster_desc')) + '</small></span>' + sw(p.cluster, 'pcCluster') + '</div>' : '') +
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_unlock')) + '<small>' + esc(S('preclim_cfg_unlock_desc')) + '</small></span>' + sw(p.unlock, 'pcUnlockSw') + '</div>' +
-        '<div class="a-desc" style="margin-top:8px;color:var(--dash-warn)">⚠ ' + esc(S('preclim_cfg_warning')) + '</div></div>';
+        '<div class="a-desc" style="margin-top:8px;color:var(--dash-warn)">⚠ ' + esc(S('preclim_cfg_warning')) + '</div></div>' + this.camCard();
+    }
+    /** Carte « Caméra de surveillance » (2026-11-08) : application détectée, enregistrement auto, emplacement, test de la clé. */
+    camCard() {
+      const p = state.preclim, ok = p.cam === 'ok';
+      const st = { ok: ['ok', S('preclim_cam_found', 'MG4 360 Camera'), S('preclim_cam_found_desc', 'com.drivehub.kamera')],
+        old: ['warn', S('preclim_cam_old', 'MG4 360 Camera'), S('preclim_cam_old_desc')],
+        incompat: ['warn', S('preclim_cam_incompat', 'MG4 Dashcam'), S('preclim_cam_incompat_desc')],
+        none: ['lo', S('preclim_cam_none'), S('preclim_cam_none_desc')] }[p.cam];
+      const demo = '<div class="cam-demo"><span>' + esc(L('Démo — application installée :', 'Demo — installed app:')) + '</span>' +
+        [['ok', L('Pilotable', 'Controllable')], ['old', L('Trop ancienne', 'Too old')], ['incompat', L('Non compatible', 'Incompatible')], ['none', L('Aucune', 'None')]].map(([v, t]) =>
+          '<button class="b sm' + (p.cam === v ? ' on' : '') + '" data-a="pcCam" data-v="' + v + '">' + esc(t) + '</button>').join('') + '</div>';
+      const usb = p.usb === 'testing' ? S('preclim_cam_usb_testing') : p.usb === 'ok' ? S('preclim_cam_usb_ok', appLang() === 'fr' ? '41,2 Go' : '41.2 GB', appLang() === 'fr' ? '64 Go' : '64 GB', '9 h 09') : S('preclim_cam_usb_untested');
+      return '<div class="a-sec" data-hl="sc-preclim-cam"><div class="a-h">' + esc(S('preclim_cam_title')) + '</div>' +
+        '<div class="cam-st ' + st[0] + '">' + MW.cam + '<div><b>' + esc(st[1]) + '</b><span>' + esc(st[2]) + '</span></div></div>' +
+        // Sans application dashcam : surveillance permise après un avertissement « aucune vidéo » (2026-11-13).
+        (p.cam === 'none' ? '<div class="a-row" data-hl="sc-preclim-nocam"><span class="lbl">' + esc(S('preclim_cam_nocam')) + '<small>' + esc(S('preclim_cam_nocam_desc')) + '</small></span>' + sw(p.nocam, 'pcNoCam') + '</div>' : '') +
+        '<div class="cam-opts' + (ok ? '' : ' dis') + '">' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_auto')) + '<small>' + esc(S('preclim_cam_auto_desc')) + '</small></span>' + sw(p.camAuto && ok, 'pcCamAuto') + '</div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_place')) + '<small>' + esc(S('preclim_cam_place_desc')) + '</small></span></div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_usb')) + '<small' + (p.usb === 'ok' ? ' style="color:var(--dash-eco)"' : '') + '>' + esc(usb) + '</small></span>' +
+        '<button class="b" style="flex:0 0 auto;padding:0 18px" data-a="pcUsbTest"' + (ok ? '' : ' disabled') + '>' + esc(S('preclim_cam_usb_test')) + '</button></div></div>' + demo + '</div>';
     }
     /** Page « Boutons flottants » : un profil à la fois, ses bulles, l'édition, la copie, les options. */
     scFloating() {
@@ -2292,29 +2876,37 @@
       const pid = u.flEdit;
       if (!pid) return '<div class="a-sec" data-hl="sc-floating"><div class="a-desc">' + esc(S('shortcuts_no_profiles')) + '</div></div>';
       const set = flSet(pid), prof = ps.find((p) => p.id === pid);
-      const chips = '<div class="cl-chips">' + ps.map((p) => '<button class="cl-chip' + (p.id === pid ? ' on' : '') + '" data-a="flProf" data-v="' + p.id + '">' + esc(p.name) +
-        ' <small>' + flSet(p.id).list.length + '/6' + (p.id === state.activeProfileId ? ' ●' : '') + '</small></button>').join('') + '</div>';
-      let h = '<div class="a-sec" data-hl="sc-floating"><div class="a-row"><span class="lbl" style="font-weight:700;font-size:18px">' + esc(S('shortcuts_cat_floating')) + '</span>' + sw(set.on, 'flOn') + '</div>' +
-        '<div class="a-desc">' + esc(S('floating_desc')) + '</div><div class="a-sub" style="margin-top:8px">' + esc(S('floating_profiles_title')) + '</div>' + chips +
-        '<div class="a-desc">' + esc(S('floating_profiles_info')) + '</div></div>';
+      const chips = '<div class="fl-ptiles">' + ps.map((p) => '<button class="fl-ptile' + (p.id === pid ? ' on' : '') + '" data-a="flProf" data-v="' + p.id + '"><b>' + esc(p.name) + '</b>' +
+        '<small>' + (p.id === state.activeProfileId ? esc(S('settings_cluster_profile_current')) + ' · ' : '') + flSet(p.id).list.length + '/6</small></button>').join('') + '</div>';
+      let h = '<div class="a-sec" data-hl="sc-floating"><div class="a-h">' + esc(S('shortcuts_cat_floating')) + '</div>' +
+        '<div class="fl-for"><span class="lbl">' + esc(S('floating_profiles_title')) + '</span><span class="a-desc">' + esc(S('floating_profiles_info')) + '</span></div>' + chips +
+        '<div class="a-row fl-switch"><span class="lbl"><b>' + esc(prof ? S('floating_switch_title_profile', prof.name) : S('floating_switch_title')) + '</b><small>' + esc(S(set.on ? 'floating_state_on' : 'floating_state_off')) + '</small></span>' + sw(set.on, 'flOn') + '</div>';
       const sizeName = (b) => (b.size === 0 ? S('floating_size_small') : b.size === 50 ? S('floating_size_medium') : b.size === 100 ? S('floating_size_large') : S('floating_size_value', b.size));
-      h += '<div class="a-sec" data-hl="fl-list">' + (set.list.length ? set.list.map((b) => '<div class="fl-row"><span class="fl-dot' + (b.bold ? ' bold' : '') + '">' + esc(flTitle(b)) + '</span>' +
+      h += '<div data-hl="fl-list">' + (set.list.length ? set.list.map((b) => '<div class="fl-row"><span class="fl-dot' + (b.bold ? ' bold' : '') + '">' + esc(flTitle(b)) + '</span>' +
           '<span class="lbl">' + esc(flTitle(b)) + '<small>' + esc(b.bar ? S('floating_loc_bar') + ' · ' + this.actionLabel(b.action, b) : S('floating_summary', this.actionLabel(b.action, b), sizeName(b), b.text)) + '</small></span>' +
           '<button class="b sm' + (u.flEditing === b.id ? ' on' : '') + '" data-a="flEditB" data-v="' + b.id + '">' + esc(S('floating_edit')) + '</button><button class="b sm danger" data-a="flDel" data-v="' + b.id + '">' + esc(S('floating_delete')) + '</button></div>' +
           (u.flEditing === b.id ? this.flEditor(b, set.list.indexOf(b)) : '')).join('')
-        : '<div class="a-desc" style="padding:10px 0">' + esc(S('floating_empty')) + '</div>') +
-        '<button class="b primary full' + (set.list.length >= 6 ? ' dis' : '') + '" style="margin-top:8px" data-a="flAdd"' + (set.list.length >= 6 ? ' disabled' : '') + '>' + esc(set.list.length >= 6 ? S('floating_full') : S('floating_add')) + '</button></div>';
+        : '<div class="a-desc" style="padding:10px 0 4px">' + esc(S('floating_empty')) + '</div>') + '</div>' +
+        '<div class="a-grid g2" style="margin-top:8px"><button class="b' + (set.list.length >= 6 ? ' dis' : '') + '" data-a="flAdd"' + (set.list.length >= 6 ? ' disabled' : '') + '>' + esc(set.list.length >= 6 ? S('floating_full') : S('floating_add')) + '</button>' +
+        '<button class="b" data-a="flCopy" data-hl="fl-copy">' + esc(S('floating_copy')) + '</button></div>';
       // Copie vers d'autres profils : leurs bulles sont remplacées.
       const others = ps.filter((p) => p.id !== pid);
       if (others.length) {
-        h += '<div class="a-sec" data-hl="fl-copy"><button class="b full" data-a="flCopy">' + esc(S('floating_copy')) + '</button>' +
+        h += '<div>' +
           (u.flCopy ? '<div class="a-desc" style="margin-top:8px">' + esc(S('floating_copy_info', prof ? prof.name : '')) + '</div><div class="cl-chips">' +
             others.map((p) => '<button class="cl-chip' + (u.flCopy.includes(p.id) ? ' on' : '') + '" data-a="flCopyTo" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>' +
             '<div class="a-row"><span class="lbl" style="color:var(--text-secondary)">' + esc(S('floating_copy_note')) + '</span><button class="b sm primary" style="padding:0 16px" data-a="flCopyGo">' + esc(S('floating_copy_go')) + '</button></div>' : '') + '</div>';
       }
-      h += '<div class="a-sec" data-hl="fl-options"><div class="a-h">' + esc(S('floating_options')) + '</div>' +
+      const SW = COLOR_PALETTE;
+      const col = state.floating.color || SW[0];
+      h += '<div class="a-sub fl-opt" data-hl="fl-options">' + esc(S('floating_options')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('floating_hide_reverse')) + '</span>' + sw(state.floating.hideReverse, 'flReverse') + '</div>' +
-        '<div class="a-row"><span class="lbl">' + esc(S('floating_reset')) + '</span><button class="b sm" style="padding:0 16px" data-a="flReset">' + esc(S('floating_reset_btn')) + '</button></div></div>';
+        '<div data-hl="fl-color"><div class="lbl" style="margin-top:6px">' + esc(S('floating_color')) + '</div><div class="a-desc">' + esc(S('floating_color_desc')) + '</div><div class="fl-swatches">' +
+        SW.map((c) => '<button class="fl-sw' + (col.toUpperCase() === c ? ' on' : '') + '" style="background:' + c + '" data-a="flColor" data-v="' + c + '" aria-label="' + c + '"></button>').join('') +
+        '<label class="fl-sw wheel"><input type="color" data-c="flColorCode" value="' + esc(col) + '" aria-label="' + esc(S('color_custom')) + '"></label></div>' +
+        '<div class="a-row fl-code"><span class="lbl" style="flex:0 0 auto">' + esc(S('color_code')) + '</span><input class="a-input" style="width:130px" maxlength="7" data-c="flColorCode" data-fid="flColorCode" value="' + esc(col.toUpperCase()) + '">' +
+        '<button class="b primary sm" style="padding:0 16px" data-a="flColorDef">' + esc(S('color_default')) + '</button><span style="flex:1"></span></div></div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('floating_reset')) + '</span><button class="b" style="flex:0 0 auto;padding:0 26px" data-a="flReset">' + esc(S('floating_reset_btn')) + '</button></div></div>';
       return h;
     }
     /** Édition d'une bulle : la vraie bulle suit à l'écran (pas d'aperçu à part). */
@@ -2324,7 +2916,28 @@
       const loc = (bar, key) => '<button class="b sm' + (!!b.bar === bar ? ' on' : '') + '" data-a="flLoc" data-v="' + (bar ? 1 : 0) + '">' + esc(S(key)) + '</button>';
       const tick = (v, key) => '<button class="b sm' + (b.size === v ? ' on' : '') + '" data-a="flSizeSet" data-v="' + v + '">' + esc(S(key)) + '</button>';
       const tmax = b.bar ? 22 : 40;
-      return '<div class="fl-edit" data-hl="fl-edit"><div class="a-sub" style="margin:0 0 6px">' + esc(S('floating_edit_heading', i + 1)) + '</div>' +
+      const seg = (a, cur, list) => '<div class="a-grid g' + list.length + '" style="flex:1">' + list.map(([v, key]) => '<button class="b sm' + (cur === v ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div>';
+      const row = (key, inner) => '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S(key)) + '</span>' + inner + '</div>';
+      const info = b.content === 'info', icon = b.content === 'icon';
+      // Ligne « Icône » (2026-11-17) : l'icône montrée, Choisir… et Par défaut si une autre a été choisie.
+      const iconRow = (icon || (info && b.infoStyle === 'icon')) ? row('floating_field_icon', '<span class="fl-icoprev">' +
+        (flIconRef(b) ? flIconHtml(flIconRef(b), 34) : esc(FL_ICON[b.info] || '')) + '</span><button class="b sm" style="flex:1" data-a="flIconPick">' + esc(S('custom_choose')) + '</button>' +
+        (b.icon ? '<button class="b sm" style="flex:1" data-a="flIconDef">' + esc(S('color_default')) + '</button>' : '<span style="flex:1"></span>')) : '';
+      // Contenu (#236, 2026-11-17) : un titre, comme avant, une information lue sur la voiture, ou une icône.
+      const content = row('floating_field_content', seg('flContent', b.content || 'title', [['title', 'floating_content_title'], ['info', 'floating_content_info'], ['icon', 'floating_content_icon']])) +
+        (icon ? row('floating_field_info_style', seg('flIconTitle', b.iconTitle ? 'title' : 'only', [['only', 'floating_icon_only'], ['title', 'floating_icon_with_title']])) + iconRow : '') +
+        (info ? row('floating_field_info', '<select class="a-select" style="flex:1" data-c="flInfo">' + FL_INFOS.map((x) => '<option value="' + x + '"' + (b.info === x ? ' selected' : '') + '>' + esc(flInfoName(x)) + '</option>').join('') + '</select>') +
+          row('floating_field_info_style', seg('flInfoStyle', b.infoStyle || 'value', [['value', 'floating_info_style_value'], ['label', 'floating_info_style_label'], ['icon', 'floating_info_style_icon']])) + iconRow +
+          row('floating_field_tap', seg('flTap', b.tap || 'action', [['action', 'floating_tap_action'], ['none', 'floating_tap_none']])) : '');
+      // Apparence (#230) : opacité du fond, fond sombre / teinté / clair, bordure, atténuation au repos.
+      const look = '<div class="a-sub" style="margin:10px 0 4px">' + esc(S('floating_look_title')) + '</div>' +
+        row('floating_field_opacity', '<div style="flex:1">' + range('flOpacity', 0, 100, b.opacity == null ? 72 : b.opacity) + '</div><span class="a-val" data-out="flOpacity">' + esc(S('floating_opacity_value', b.opacity == null ? 72 : b.opacity)) + '</span>') +
+        row('floating_field_fill', seg('flFill', b.fill || 'dark', [['dark', 'floating_fill_dark'], ['tint', 'floating_fill_tint'], ['light', 'floating_fill_light'], ['black', 'floating_fill_black']])) +
+        row('floating_field_width', seg('flWidth', b.width ? 'fixed' : 'auto', [['auto', 'floating_width_auto'], ['fixed', 'floating_width_fixed']])) +
+        (b.width ? '<div class="a-row" style="margin-left:168px"><div style="flex:1">' + range('flWidthV', 60, 240, b.width, false, '', 10) + '</div><span class="a-val" data-out="flWidthV">' + esc(S('floating_width_value', b.width)) + '</span></div>' : '') +
+        row('floating_field_border', seg('flBorder', b.noBorder ? 'none' : 'color', [['color', 'floating_border_color'], ['none', 'floating_border_none']])) +
+        '<div class="a-row"><span class="lbl">' + esc(S('floating_field_dim')) + '<small>' + esc(S('floating_dim_hint')) + '</small></span>' + sw(!!b.dim, 'flDim') + '</div>';
+      return '<div class="fl-edit" data-hl="fl-edit"><div class="a-sub" style="margin:0 0 6px">' + esc(S('floating_edit_heading_name', flTitle(b))) + '</div>' + content +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_title')) + '</span><input class="a-input" style="flex:1" type="text" maxlength="24" data-c="flTitle" data-fid="flTitle" value="' + esc(flTitle(b)) + '">' +
           '<button class="b sm" style="padding:0 14px" data-a="flTitleReset" title="' + esc(S('floating_title_reset')) + '">↺</button></div>' +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_action')) + '</span><select class="a-select" style="flex:1" data-c="flAction">' +
@@ -2334,7 +2947,7 @@
           : '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_size')) + '</span><div style="flex:1">' + range('flSize', 0, 100, b.size) + '</div><span class="a-val" data-out="flSize">' + esc(S('floating_size_value', b.size)) + '</span></div>' +
             '<div class="a-grid g3" style="margin-left:168px">' + tick(0, 'floating_size_small') + tick(50, 'floating_size_medium') + tick(100, 'floating_size_large') + '</div>') +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_text')) + '</span><div style="flex:1">' + range('flText', 10, tmax, Math.min(b.text, tmax)) + '</div><span class="a-val" data-out="flText">' + esc(S('floating_text_value', Math.min(b.text, tmax))) + '</span></div>' +
-        '<div class="a-row"><span class="lbl">' + esc(S('floating_field_bold')) + '</span>' + sw(b.bold, 'flBold') + '</div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('floating_field_bold')) + '</span>' + sw(b.bold, 'flBold') + '</div>' + look +
         '<button class="b full" data-a="flEditB" data-v="' + b.id + '">' + esc(S('floating_close')) + '</button></div>';
     }
     /** Page « Raccourcis perso » : la liste, Tester / Modifier / Supprimer, et la création. */
@@ -2440,7 +3053,7 @@
         '<div class="a-row">' + check('briLights', b.lights, esc(S('autobri_lights')), b.lights && !b.forecast ? ' disabled' : '') + '</div>' +
         '<div class="a-row">' + check('briForecast', b.forecast, esc(S('autobri_forecast')) + ' <small>' + esc(S('autobri_forecast_warning')) + '</small>', b.forecast && !b.lights ? ' disabled' : '') + '</div>' +
         '<div class="a-row">' + check('briFollow', b.follow, esc(S('autobri_follow'))) + '</div>' +
-        slider('briDay', S('autobri_level_lights_off'), 5, 100, b.day, b.day + ' %', 5) + slider('briNight', S('autobri_level_lights_on'), 5, 100, b.night, b.night + ' %', 5) +
+        slider('briDay', S('autobri_level_lights_off'), briMin(), 100, b.day, b.day + ' %', 5) + slider('briNight', S('autobri_level_lights_on'), briMin(), 100, b.night, b.night + ' %', 5) +
         '<div class="a-row"><span class="lbl" style="color:var(--text-secondary)">' + esc(b.last || S('autobri_status_none')) + '</span><button class="b sm" style="padding:0 16px" data-a="briTest">' + esc(S('autobri_test')) + '</button></div>';
       const card3 = k.bri ? card('auto-bri', 'autobri_title', esc(S('autobri_desc')), b.on, 'autoBri', b.open, 'foldBri', body3) : '';
 
@@ -2485,8 +3098,7 @@
       // 6. Sons (issue #161) : là où le volume de la voiture se pilote.
       const sd = state.sound;
       const card6 = k.door ? card('auto-sound', 'sound_title', esc(S('sound_desc')), sd.on, 'sndOn', sd.open, 'foldSnd', this.soundBody()) : '';
-      return '<div class="a-page"><div class="a-scroll"><div class="a-stack">' + card1 + card2 + card3 + card4 + card5 + card6 + this.windowsCard() + this.doorCard() +
-        '</div></div><button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
+      return '<div class="a-page">' + this.automationTabs({ p1: card1, p2: card2, c3: card3, c4: card4, c5: card5, c6: card6 }) + '</div>';
     }
 
     /** Carte « Sons » : un son par emplacement, ses moments, son volume ; au plus un son par moment. */
@@ -2581,11 +3193,11 @@
     // ── Statistiques ───────────────────────────────────────────────
     statsHtml() {
       const body = this.railLayout('st', [
-        { label: S('stats_cat_general'), page: this.statsGeneral() },
-        { label: S('stats_cat_trips'), page: this.statsTrips() },
-        { label: S('stats_cat_charges'), page: this.statsCharges() }
+        { label: S('stats_cat_general'), icon: 'chart', page: this.statsGeneral() },
+        { label: S('stats_cat_trips'), icon: 'route', page: this.statsTrips() },
+        { label: S('stats_cat_charges'), icon: 'bolt', page: this.statsCharges() }
       ]);
-      return '<div class="a-page">' + body + '<button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
+      return '<div class="a-page">' + body + '</div>';
     }
     statsSummary() {
       const st = state.stats;
@@ -2611,14 +3223,30 @@
       };
     }
     num(v, d) { return v == null ? '—' : v.toLocaleString(appLang() === 'en' ? 'en-GB' : appLang(), { minimumFractionDigits: d, maximumFractionDigits: d }); }
+    statsUnit() { return clMiles() ? 'mi' : 'km'; }
+    statsDistance(km) {
+      const distance = km / (clMiles() ? MI_KM : 1);
+      return this.num(distance, distance < 100 ? 1 : 0) + ' ' + this.statsUnit();
+    }
+    statsSpeed(kmh) { return Math.trunc(kmh / (clMiles() ? MI_KM : 1)) + (clMiles() ? ' mph' : ' km/h'); }
+    statsPerDistance(value) { return value * (clMiles() ? MI_KM : 1); }
+    statsConsumption(value, approximate) {
+      return (approximate ? '≈ ' : '') + this.num(this.statsPerDistance(value), approximate ? 0 : 1) + ' kWh/100 ' + this.statsUnit();
+    }
+    statsPager(kind, shown, total) {
+      if (shown >= total) return '';
+      return '<div class="a-row st-pager"><span class="lbl">' + esc(S('stats_shown_' + kind, shown, total)) + '</span>' +
+        '<button class="b sm" data-a="stMore" data-v="' + kind + '">' + esc(S('stats_show_more_fmt', Math.min(ST_PAGE_SIZE, total - shown))) + '</button>' +
+        '<button class="b sm" data-a="stAll" data-v="' + kind + '">' + esc(S('stats_show_all')) + '</button></div>';
+    }
     money(v) { return v == null ? '—' : this.num(v, 2) + ' ' + state.stats.currency; }
     tiles(list) {
       return '<div class="st-tiles">' + list.map(([k, v]) => '<div class="st-tile"><small>' + esc(k) + '</small><b>' + esc(v) + '</b></div>').join('') + '</div>';
     }
     periodRow() {
       const p = state.stats.period;
-      return '<div class="a-grid g2" style="margin-bottom:8px"><button class="b sm' + (p ? ' on' : '') + '" data-a="stPeriod" data-v="30">' + esc(S('stats_period_short', 30)) + '</button>' +
-        '<button class="b sm' + (!p ? ' on' : '') + '" data-a="stPeriod" data-v="0">' + esc(S('stats_period_all')) + '</button></div>';
+      return '<div class="st-chips"><button class="st-chip' + (p ? ' on' : '') + '" data-a="stPeriod" data-v="30">' + esc(S('stats_period_short', 30)) + '</button>' +
+        '<button class="st-chip' + (!p ? ' on' : '') + '" data-a="stPeriod" data-v="0">' + esc(S('stats_period_all')) + '</button></div>';
     }
     statsGeneral() {
       const st = state.stats, s = this.statsSummary();
@@ -2627,11 +3255,11 @@
       if (!st.enabled) return h;
       const kwh = (v) => this.num(v, 1) + ' kWh';
       h += '<div class="a-sec" data-hl="st-summary"><div class="a-h">' + esc(S('stats_summary_title')) + '</div>' + this.periodRow() + this.tiles([
-        [S('stats_tile_distance'), this.num(s.km, 1) + ' km'],
-        [S('stats_tile_consumption'), s.cons != null ? this.num(s.cons, 1) + ' kWh/100 km' : '—'],
-        [S('stats_tile_speed'), s.speed != null ? Math.round(s.speed) + ' km/h' : '—'],
+        [S('stats_tile_distance'), this.statsDistance(s.km)],
+        [S('stats_tile_consumption'), s.cons != null ? this.statsConsumption(s.cons) : '—'],
+        [S('stats_tile_speed'), s.speed != null ? this.statsSpeed(s.speed) : '—'],
         [S('stats_tile_energy'), kwh(s.kwh)], [S('stats_tile_regen'), kwh(s.regen)], [S('stats_tile_charged'), kwh(s.charged)],
-        [S('stats_tile_cost'), this.money(s.driving)], [S('stats_tile_cost_per100'), this.money(s.per100)]
+        [S('stats_tile_cost'), this.money(s.driving)], [S('stats_tile_cost_per100', this.statsUnit()), this.money(s.per100 == null ? null : this.statsPerDistance(s.per100))]
       ]) + '</div>';
       // Batterie : menu des trois MG4. En changer recalcule les recharges enregistrées.
       h += '<div class="a-sec" data-hl="st-battery"><div class="a-h">' + esc(S('stats_battery_title')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_battery_label')) + '</span>' +
@@ -2650,13 +3278,14 @@
         '<div class="a-desc">' + esc(S('stats_price_note')) + '</div></div>';
       // Petits trajets : la distance minimale est grisée tant que le filtre est coupé.
       h += '<div class="a-sec" data-hl="st-skip"><div class="a-h">' + esc(S('stats_cat_trips')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_skip_short_label')) + '</span>' + sw(st.skipShort, 'stSkipShort') + '</div>' +
-        '<div class="a-row' + (st.skipShort ? '' : ' dim') + '"><span class="lbl">' + esc(S('stats_min_trip_label')) + '</span><input class="a-input num" style="width:120px" type="number" step="0.1" min="0.1" max="50" data-c="stMinTrip" data-fid="stMinTrip" value="' + st.minTrip + '"' + (st.skipShort ? '' : ' disabled') + '></div>' +
+        '<div class="a-row' + (st.skipShort ? '' : ' dim') + '"><span class="lbl">' + esc(S('stats_min_trip_label', this.statsUnit())) + '</span><input class="a-input num" style="width:120px" type="number" step="0.1" data-c="stMinTrip" data-fid="stMinTrip" value="' + +(st.minTrip / (clMiles() ? MI_KM : 1)).toFixed(2) + '"' + (st.skipShort ? '' : ' disabled') + '></div>' +
         '<div class="a-desc">' + esc(S('stats_skip_short_note')) + '</div></div>';
       const ret = [[30, 'stats_retention_30d'], [90, 'stats_retention_3m'], [182, 'stats_retention_6m'], [365, 'stats_retention_1y']];
       h += '<div class="a-sec" data-hl="st-retention"><div class="a-h">' + esc(S('stats_retention_title')) + '</div><div class="a-grid g4">' +
         ret.map(([d, k]) => '<button class="b sm' + (st.retention === d ? ' on' : '') + '" data-a="stRetention" data-v="' + d + '">' + esc(S(k)) + '</button>').join('') + '</div>' +
         '<div class="a-desc" style="margin-top:6px">' + esc(S('stats_retention_note')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('stats_history_size', st.trips.length, st.charges.length, Math.max(1, Math.round((st.trips.length * 380 + st.charges.length * 300) / 1024)))) + '</span>' +
+        '<button class="b sm primary" style="padding:0 16px" data-a="stExport" data-hl="st-export">' + esc(S('stats_export')) + '</button>' +
         '<button class="b danger sm" style="padding:0 16px" data-a="stClear">' + esc(S('stats_clear')) + '</button></div></div>';
       return h;
     }
@@ -2668,18 +3297,36 @@
     }
     // Comme StatsFragment.duration() : minutes tronquées, « 6 h 40 » dès une heure, sinon « 36 min ».
     dur(ms) { const m = Math.floor(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0') : m + ' min'; }
+    /**
+     * Trajets 2.7.0 : rangée « Profil » (#206, la part de chaque trajet), pastille du profil ou
+     * « Mixte », répartition et graphique de consommation dans le détail déplié.
+     */
     statsTrips() {
-      const s = this.statsSummary(), u = this.ui;
-      let h = '<div class="a-sec" data-hl="st-trips"><div class="a-h">' + esc(S('stats_cat_trips')) + '</div>' + this.periodRow() + this.tiles([
-        [S('stats_tile_trips'), String(s.trips.length)], [S('stats_tile_distance'), this.num(s.km, 1) + ' km'],
-        [S('stats_tile_longest'), this.num(s.longest, 1) + ' km'], [S('stats_tile_cost'), this.money(s.driving)]
+      const s = this.statsSummary(), u = this.ui, st = state.stats;
+      const pid = u.stProf && state.profiles.some((p) => p.id === u.stProf) ? u.stProf : null;
+      const part = (t) => { if (!pid) return t.km; const x = (t.segs || []).filter((g) => g.pid === pid).reduce((a, g) => a + g.km, 0); return x; };
+      const list = s.trips.map((t, i) => ({ t, i, km: part(t) })).filter((x) => x.km > 0);
+      const km = list.reduce((a, x) => a + x.km, 0), kmAll = s.trips.reduce((a, t) => a + t.km, 0) || 1;
+      const color = (id) => { const i = state.profiles.findIndex((p) => p.id === id); return ['#A6C8FF', '#7FD4A8', '#F7C873', '#E9A0D8', '#9FD6E8', '#F29E8E'][i % 6] || '#A6C8FF'; };
+      const seen = new Set(); s.trips.forEach((t) => (t.segs || []).forEach((g) => { if (g.pid) seen.add(g.pid); }));
+      const used = state.profiles.filter((p) => seen.has(p.id));
+      const chips = used.length ? '<div class="st-chips st-prof" data-hl="st-profile"><span class="st-cap">' + esc(S('stats_filter_profile')) + '</span>' +
+        [{ id: '', name: S('stats_filter_all') }].concat(used).map((p) => '<button class="st-chip' + ((pid || '') === p.id ? ' on' : '') + '" data-a="stProf" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>' : '';
+      let h = '<div class="a-sec" data-hl="st-trips"><div class="st-title">' + esc(S('stats_cat_trips')) + '</div>' + this.periodRow() + chips + this.tiles([
+        [S('stats_tile_trips'), String(list.length)], [S('stats_tile_distance'), this.statsDistance(km)],
+        [S('stats_tile_longest'), this.statsDistance(list.reduce((a, x) => Math.max(a, x.km), 0))], [S('stats_tile_cost'), this.money(s.driving * km / kmAll)]
       ]) + '</div>';
-      if (!s.trips.length) return h + '<div class="a-desc" style="text-align:center;padding:16px">' + esc(S('stats_no_trip')) + '</div>';
-      s.trips.forEach((t, i) => {
-        const cons = t.short ? '≈ ' + Math.round(t.kwh / t.km * 100) + ' kWh/100 km' : this.num(t.kwh / t.km * 100, 1) + ' kWh/100 km';
+      if (!list.length) return h + '<div class="a-sec st-empty">' + esc(S('stats_no_trip')) + '</div>';
+      const shown = u.stTripsShown ?? ST_PAGE_SIZE;
+      list.slice(0, shown).forEach(({ t, i, km: kp }) => {
+        const cons = this.statsConsumption(t.kwh / t.km * 100, t.short);
         const open = u.statsOpen === 't' + i;
-        h += '<div class="st-row" data-a="stOpen" data-v="t' + i + '" data-hl="st-trip-row"><div><b>' + esc(this.dateLine(t.start, t.end)) + '</b><small>' + esc(this.dur(t.end - t.start) + ' · ' + this.num(t.km, 1) + ' km') + '</small></div>' +
-          '<div class="st-r"><b>' + esc(cons) + '</b><small>' + esc(t.speed + ' km/h · ' + this.num(t.kwh, 1) + ' kWh') + '</small></div></div>';
+        const ids = Array.from(new Set((t.segs || []).map((g) => g.pid)));
+        const pill = ids.length > 1 ? '<span class="st-pill mixed">' + esc(S('stats_trip_mixed')) + '</span>'
+          : ids.length ? '<span class="st-pill" style="--pc:' + color(ids[0]) + '">' + esc(profName(ids[0])) + '</span>' : '';
+        const dist = pid && kp < t.km ? S('stats_portion', this.statsDistance(kp), this.statsDistance(t.km)) : this.statsDistance(t.km);
+        h += '<div class="st-row" data-a="stOpen" data-v="t' + i + '" data-hl="st-trip-row"><div><b>' + esc(this.dateLine(t.start, t.end)) + ' ' + pill + '</b><small>' + esc(this.dur(t.end - t.start) + ' · ' + dist) + '</small></div>' +
+          '<div class="st-r"><b>' + esc(cons) + '</b><small>' + esc(this.statsSpeed(t.speed) + ' · ' + this.num(t.kwh, 1) + ' kWh') + '</small></div></div>';
         if (open) {
           // Sans compteurs d'énergie (hors SWI132/133), l'énergie est calculée d'après la tension et
           // le courant de la batterie, et la répartition vient du compteur d'origine, au kWh entier.
@@ -2688,14 +3335,70 @@
           const energy = caps().counters
             ? [[S('stats_detail_motor'), this.num(t.motor, 1) + ' kWh'], [S('stats_detail_climate'), this.num(t.climate, 1) + ' kWh'], [S('stats_detail_accessories'), this.num(t.acc, 1) + ' kWh']]
             : [[S('stats_detail_origin'), S('stats_detail_origin_integrated')], [S('stats_detail_motor'), whole(Math.floor(t.kwh - aux))], [S('stats_detail_auxiliary'), whole(aux)]];
+          const split = ids.length > 1 ? '<div class="st-split" data-hl="st-split"><div class="a-sub">' + esc(S('stats_split_title')) + '</div>' +
+            t.segs.map((g) => '<div class="st-splitrow"><span class="st-pill" style="--pc:' + color(g.pid) + '">' + esc(profName(g.pid)) + '</span><span class="st-track"><i style="width:' + (g.km / t.km * 100).toFixed(1) + '%;background:' + color(g.pid) + '"></i></span><b>' + esc(this.statsDistance(g.km)) + '</b></div>').join('') + '</div>' : '';
           h += this.detailBox(energy.concat([
             [S('stats_detail_regen'), '− ' + this.num(t.regen, 1) + ' kWh'],
             [S('stats_detail_consumption'), t.short ? S('stats_detail_consumption_short') : cons],
             [S('stats_detail_battery'), t.soc[0] + ' % → ' + t.soc[1] + ' %'], [S('stats_detail_temp'), this.num(t.temp, 1) + ' °C']
-          ]));
+          ]), split + this.tripCurve(t));
         }
       });
-      return h;
+      return h + this.statsPager('trips', shown, list.length);
+    }
+    /**
+     * Graphique d'un trajet (TripCurveView) : une barre par tronçon, largeur choisie à l'affichage
+     * (120 barres au plus, jamais moins de 200 m), couleur selon la consommation, récupération sous
+     * zéro ; Vitesse et Dénivelé ajoutent chacun une bande dessous. Trajet d'exemple tiré au hasard
+     * à partir de sa graine.
+     */
+    tripCurve(t) {
+      let seed = t.seed || 1;
+      const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+      const n = Math.max(3, Math.min(120, Math.floor(t.km / 0.2))), avg = t.kwh / t.km * 100;
+      const bars = [], speed = [], alt = [];
+      let a = 80 + rnd() * 60, v = t.speed;
+      for (let i = 0; i < n; i++) {
+        v = clamp(v + (rnd() - 0.5) * 12, 15, 130); a = clamp(a + (rnd() - 0.48) * 4, 20, 400);
+        const slope = i ? alt[i - 1] - a : 0;
+        bars.push(rnd() < 0.07 ? -Math.round((2 + rnd() * 6) * 10) / 10 : Math.round((avg * (0.6 + v / t.speed * 0.4) - slope * 1.2 + (rnd() - 0.5) * 4) * 10) / 10);
+        speed.push(v); alt.push(a);
+      }
+      const W = 900, top = 10, H = 110, BH = 46;
+      const bands = state.stats.bands || {};
+      const shown = [['speed', speed, 'var(--dash-accent)'], ['elev', alt, '#A78BFA']].filter(([key]) => bands[key]);
+      const max = Math.max(30, ...bars), min = Math.min(0, ...bars), y0 = top + H * max / (max - min), bw = W / n;
+      const col = (x) => (x < 0 ? '#15803D' : x < 14 ? '#22C55E' : x <= 22 ? '#F59E0B' : '#F43F5E');
+      let svg = '<svg viewBox="0 0 ' + W + ' ' + (top + H + 8 + BH * shown.length) + '" class="st-curve" aria-hidden="true"><line x1="0" x2="' + W + '" y1="' + y0.toFixed(1) + '" y2="' + y0.toFixed(1) + '" stroke="var(--dash-border)"/>';
+      bars.forEach((x, i) => {
+        const y = top + H * (max - Math.max(x, 0)) / (max - min), hh = Math.abs(x) * H / (max - min);
+        svg += '<rect x="' + (i * bw + bw * 0.12).toFixed(1) + '" y="' + (x >= 0 ? y : y0).toFixed(1) + '" width="' + (bw * 0.76).toFixed(1) + '" height="' + Math.max(1, hh).toFixed(1) + '" rx="1.5" fill="' + col(x) + '"/>';
+      });
+      shown.forEach(([, vals, color], i) => {
+        const lo = Math.min(...vals), hi = Math.max(...vals), b0 = top + H + 8 + i * BH;
+        const pts = vals.map((x, i) => ((i + 0.5) * bw).toFixed(1) + ',' + (b0 + BH - 4 - (BH - 8) * (x - lo) / Math.max(1, hi - lo)).toFixed(1)).join(' ');
+        svg += '<line x1="0" x2="' + W + '" y1="' + (b0 + 4) + '" y2="' + (b0 + 4) + '" stroke="' + color + '" stroke-dasharray="4 4" opacity=".45"/>' +
+          '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2"/>';
+      });
+      svg += '</svg>';
+      let up = 0, down = 0; for (let i = 1; i < alt.length; i++) { const d = alt[i] - alt[i - 1]; if (d > 0) up += d; else down -= d; }
+      const btn = (b, key) => '<button class="b sm' + (bands[b] ? ' on' : '') + '" data-a="stBand" data-v="' + b + '" aria-pressed="' + !!bands[b] + '">' + esc(S(key)) + '</button>';
+      const legend = [S('stats_curve_legend_regen') + ' < 0'];
+      if (bands.speed) legend.push(S('stats_curve_legend_speed'));
+      if (bands.elev) legend.push(S('stats_curve_elevation_value', S('stats_curve_elevation'), Math.round(up), Math.round(down)));
+      return '<div class="st-graph" data-hl="st-curve"><div class="a-row" style="min-height:30px"><span class="a-sub" style="flex:1;margin:0">' + esc(S('stats_curve_title')) + '</span>' +
+        '<span class="a-desc">' + esc(S('stats_curve_summary', this.num(this.statsPerDistance(avg), 1), this.num(this.statsPerDistance(Math.max(...bars)), 0)) + ' ' + this.statsUnit()) + '</span></div>' + svg +
+        '<div class="a-row" style="min-height:36px">' + btn('speed', 'stats_curve_speed') + btn('elev', 'stats_curve_elevation') + '<span class="a-desc" style="flex:1;text-align:right">' +
+        esc(legend.join(' · ')) + '</span></div></div>';
+    }
+    /** Export (ExportDialog) : la maquette annonce les fichiers écrits, sans rien télécharger. */
+    exportGo() {
+      const d = this.ui.dialog; if (!d) return;
+      const where = d.dest === 'usb' ? L('Clé USB', 'USB drive') + '/MG4Control' : d.dest === 'other' ? L('dossier choisi', 'chosen folder') : 'Download/MG4Control';
+      const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const files = d.what === 'rules' ? ['mg4control_automations_' + stamp + '.json'] : ['trips', 'charges', 'trip_segments'].map((n) => 'mg4control_' + n + '_' + stamp + '.csv');
+      this.ui.dialog = null;
+      this.toast(d.what === 'rules' ? S('rule_export_done', state.rules.list.length, where) : S('stats_export_done') + ' · ' + where + ' : ' + files.join(', '), 4200);
     }
     statsCharges() {
       const s = this.statsSummary(), u = this.ui, st = state.stats;
@@ -2703,13 +3406,14 @@
       const banner = st.batteryConfirmed ? '' : '<div class="st-banner" data-hl="st-banner"><div class="a-row"><span class="lbl">' + esc(S('stats_battery_banner', st.battery + ' kWh')) + '</span>' +
         '<button class="b sm" style="padding:0 14px" data-a="stBatOk">' + esc(S('stats_battery_banner_ok')) + '</button>' +
         '<button class="b sm on warn" style="padding:0 14px" data-a="stBatChange">' + esc(S('stats_battery_banner_change')) + '</button></div></div>';
-      let h = banner + '<div class="a-sec" data-hl="st-charges"><div class="a-h">' + esc(S('stats_cat_charges')) + '</div>' + this.periodRow() + this.tiles([
+      let h = banner + '<div class="a-sec" data-hl="st-charges"><div class="st-title">' + esc(S('stats_cat_charges')) + '</div>' + this.periodRow() + this.tiles([
         [S('stats_tile_charged'), this.num(s.charged, 1) + ' kWh'], [S('stats_tile_cost_total'), this.money(s.chargeCost)],
         [S('stats_tile_avg_price'), s.avgPrice != null ? this.num(s.avgPrice, 3) + ' ' + st.currency : '—'],
         [S('stats_tile_sessions'), s.charges.length + ' · ' + s.ac + ' AC / ' + s.dc + ' DC']
       ]) + '</div>';
-      if (!s.charges.length) return h + '<div class="a-desc" style="text-align:center;padding:16px">' + esc(S('stats_no_charge')) + '</div>';
-      s.charges.forEach((c) => {
+      if (!s.charges.length) return h + '<div class="a-sec st-empty">' + esc(S('stats_no_charge')) + '</div>';
+      const shown = u.stChargesShown ?? ST_PAGE_SIZE;
+      s.charges.slice(0, shown).forEach((c) => {
         const i = st.charges.indexOf(c);
         const open = u.statsOpen === 'c' + i;
         const type = S(c.type === 'DC' ? 'stats_charge_dc' : c.type === 'AC' ? 'stats_charge_ac' : 'stats_charge_unknown');
@@ -2731,7 +3435,7 @@
             (c.reconstructed ? '<button class="b sm primary" data-a="stComplete" data-v="' + i + '">' + esc(S('stats_complete_session')) + '</button>' : '<span></span>') + '</div>');
         }
       });
-      return h;
+      return h + this.statsPager('charges', shown, s.charges.length);
     }
     detailBox(lines, extra) {
       return '<div class="st-detail">' + lines.map(([k, v, hl]) => '<div class="a-row"' + (hl ? ' data-hl="' + hl + '"' : '') + ' style="min-height:30px"><span class="lbl" style="font-size:14px;color:var(--text-secondary)">' + esc(k) + '</span><span style="font-size:14px">' + esc(v) + '</span></div>').join('') + (extra || '') + '</div>';
@@ -2852,7 +3556,7 @@
       const cl = car().clim;
       // On clampe, on ne boucle pas : comme dans l'application.
       if (dir === 'ok') setClimAuto(!cl.auto);
-      else if (dir === 'up' || dir === 'down') cl.temp = clamp(cl.temp + (dir === 'up' ? 1 : -1), cl.tMin, cl.tMax);
+      else if (dir === 'up' || dir === 'down') acAfterTemp(cl.ac), cl.temp = clamp(cl.temp + (dir === 'up' ? 1 : -1), cl.tMin, cl.tMax);
       // Régler la ventilation fait sortir d'AUTO, comme sur l'écran d'origine : on repart du
       // dernier niveau réglé à la main (celui que la maquette garde dans clim.fan).
       // Issue #147 : au cran 1, gauche ÉTEINT la clim ; éteinte, gauche ne la rallume pas et
@@ -2904,7 +3608,7 @@
       this.render();
     }
     /** Décompte : écrit en toutes lettres dans un pop-up, réduit à « 10 s » sur le bouton d'un bandeau. */
-    cdText(o) { return o.type === 'picker' || o.type === 'hvac' ? S('overlay_countdown', o.left) : S('win_auto_delay_value', o.left); }
+    cdText(o) { if (o.type === 'quick') return S('quick_closes_in', o.left); return o.type === 'picker' || o.type === 'hvac' ? S('overlay_countdown', o.left) : S('win_auto_delay_value', o.left); }
     startCountdown(onEnd) {
       clearInterval(this._cd);
       this._cd = setInterval(() => {
@@ -2930,6 +3634,7 @@
     }
     overlayHtml() {
       const o = this.ui.overlay, k = caps(), c = car();
+      if (o.type === 'quick') return this.quickHtml(o);
       // Sans service d'accessibilité, le joystick ne parvient pas à l'application.
       const nav = state.sc.advService && !garage();
       if (o.type === 'picker') {
@@ -2957,7 +3662,7 @@
         const bri = k.bri ? '<div class="ov-pan pkp-bri" data-hl="pk-bri"><div class="pkp-brirow">' + MW.brightness + '<div class="ov-seg">' +
           presets.map(([v, key]) => '<button class="' + (c.brightness === v ? 'on' : '') + kf('bri:' + v) + '" data-a="pkBri" data-v="' + v + '"' + at('bri:' + v) + '>' + esc(S(key)) + '</button>').join('') +
           '</div><span class="pkp-val" data-out="pkBri">' + c.brightness + '%</span></div>' +
-          '<div class="pkp-slider' + kf('slider') + '"' + at('slider') + '>' + range('pkBri', 5, 100, c.brightness, false, 'big') + '</div></div>' : '';
+          '<div class="pkp-slider' + kf('slider') + '"' + at('slider') + '>' + range('pkBri', briMin(), 100, c.brightness, false, 'big') + '</div></div>' : '';
         const tile = (cell, a, label, ico, tone) => '<button class="pkp-act' + (tone ? ' ' + tone : '') + kf(cell) + '" data-a="' + a + '"' + at(cell) + '>' + ico + '<span>' + esc(label) + '</span></button>';
         // Trois actions au plus : 600 dp, 430 à deux, 230 seule ; sans luminosité, tout le bandeau.
         const nAct = 1 + (k.known ? 1 : 0) + (k.power ? 1 : 0);
@@ -3036,45 +3741,67 @@
     /**
      * Fenêtre du Garde-voiture (PreClimatePopupOverlay) : « Maintenant » (durée, mode chien,
      * surveillance) ou « À une heure » (cycles) à gauche ; la clim, ou la surveillance clim coupée, à droite.
-     * La maquette suppose l'application caméra 360° installée : sans elle, le bouton Surveillance n'existe pas.
+     * Application caméra : celle choisie dans la carte « Caméra de surveillance » (démonstration) ; sans application, Démarrer est grisé.
      */
     /** « Démarrer » validé : la fenêtre se ferme, le décompte part. */
     pcLaunch() {
       const p = state.preclim, now = p.mode === 'now';
+      if (state.pc && state.pc.phase !== 'end') return;
+      if (!pcCanStart()) return this.toast(S('preclim_need_park'), 3000);
+      if (!caps().clim) return this.toast(S('preclim_clim_unreachable'), 3000);
+      if (now && p.surv && p.cam === 'none' && !p.nocam) return this.toast(S('preclim_surv_need_app'), 3000);
       clearInterval(this._cd); this.ui.overlay = null;
-      pcStart(Object.assign({}, p, { surv: now && p.surv, dog: now && p.dog && !p.surv }));
+      p.temp ??= car().clim.temp;
+      p.fan ??= car().clim.fan;
+      p.at.first = pcFirst(p.at, pcMinute());
+      pcStart({ ...p, surv: now && p.surv, dog: now && p.dog && !p.surv });
     }
     preclimPopupHtml() {
-      const p = state.preclim, cl = car().clim, now = p.mode === 'now';
+      const p = state.preclim, cl = car().clim, now = p.mode === 'now', minute = pcMinute();
       const surv = now && p.surv, dog = now && p.dog && !surv;
-      const two = (x) => String(x).padStart(2, '0');
-      const step = (label, val, act) => '<div class="pcp-step"><span>' + esc(label) + '</span><button class="mw-step" data-a="' + act + '" data-v="-1" data-rep>' + MW.minus + '</button><b>' + esc(val) + '</b><button class="mw-step" data-a="' + act + '" data-v="1" data-rep>' + MW.plus + '</button></div>';
+      const step = (label, val, act, min = false, max = false) => '<div class="pcp-step"><span>' + esc(label) + '</span><button class="mw-step" data-a="' + act + '" data-v="-1" data-rep' + (min ? ' disabled' : '') + '>' + MW.minus + '</button><b>' + esc(val) + '</b><button class="mw-step" data-a="' + act + '" data-v="1" data-rep' + (max ? ' disabled' : '') + '>' + MW.plus + '</button></div>';
       const tabs = '<div class="ov-seg pcp-tabs">' + [['now', 'preclim_mode_now'], ['at', 'preclim_mode_at']].map(([v, key]) => '<button' + (p.mode === v ? ' class="on"' : '') + ' data-a="pcMode" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div>';
       let left;
       if (now) {
         left = '<div class="ov-cap">' + esc(S(surv ? 'preclim_surv_caption' : 'preclim_now_caption')) + '</div><div class="ov-seg pcp-durs">' +
           [15, 30, 60, 120].map((m) => { const off = dog && m !== 120, on = dog ? m === 120 : p.dur === m; return '<button class="' + (on ? 'on' : '') + (off ? ' dis' : '') + '" data-a="pcDur" data-v="' + m + '"' + (off ? ' disabled' : '') + '>' + esc(clDur(m)) + '</button>'; }).join('') + '</div>' +
-          '<div class="pcp-modes"><button class="ov-tile pcp-mode' + (dog ? ' on' : '') + '" data-a="pcDog">' + MW.paw + '<span>' + esc(S('preclim_dog')) + '</span></button>' +
-          '<button class="ov-tile pcp-mode surv' + (surv ? ' on' : '') + '" data-a="pcSurv" data-hl="preclim-surv">' + MW.cam + '<span>' + esc(S('preclim_surv')) + '</span></button></div>' +
           (surv ? '<div class="pcp-text">' + esc(S('preclim_surv_stops', p.soc)) + '</div>' : '');
       } else {
         const a = p.at;
-        left = step(S('preclim_first'), two(a.h) + ':' + two(a.m), 'pcAtTime') + step(S('preclim_run'), clDur(a.run), 'pcAtRun') + step(S('preclim_runs'), String(a.runs), 'pcAtRuns') +
-          (a.runs > 1 ? step(S('preclim_pause'), clDur(a.pause), 'pcAtPause') : '');
+        left = step(S('preclim_first'), pcClock(pcFirst(a, minute)), 'pcAtTime') + step(S('preclim_run'), clDur(a.run), 'pcAtRun', a.run === 5, a.run === 60) +
+          step(S('preclim_runs'), String(a.runs), 'pcAtRuns', a.runs === 1, a.runs === 5) +
+          (a.runs > 1 ? step(S('preclim_pause'), clDur(a.pause), 'pcAtPause', a.pause === 10, a.pause === 120) : '');
       }
       const warn = (key, red) => '<div class="pcp-warn' + (red ? ' red' : '') + '">' + MW.warning + '<span>' + esc(S(key)) + '</span></div>';
+      const cam = p.cam, filmera = surv && cam === 'ok' && p.camAuto, camName = 'MG4 360 Camera';
+      const camLine = filmera ? '<div class="pcp-cam"><i></i>' + esc(S('preclim_surv_cam_on', camName)) + ' · ' + esc(S('preclim_surv_cam_usb_ok', appLang() === 'fr' ? '41 Go' : '41 GB')) + '</div>' : '';
+      const ban = !surv || filmera ? null : cam === 'ok' ? [S('preclim_surv_ban_off_title'), S('preclim_surv_ban_off_text', camName), false]
+        : cam === 'old' ? [S('preclim_surv_ban_old_title', camName), S('preclim_surv_ban_old_text'), false]
+        : cam === 'incompat' ? [S('preclim_surv_ban_incompat_title', 'MG4 Dashcam'), S('preclim_surv_ban_incompat_text'), false]
+        : p.nocam ? [S('preclim_cam_nocam_warn_title'), S('preclim_surv_ban_novideo_text'), false]
+        : [S('preclim_surv_ban_none_title'), S('preclim_surv_ban_none_text'), true];
+      const banner = ban ? '<div class="pcp-ban' + (ban[2] ? ' red' : '') + '" data-hl="preclim-cam-ban">' + (ban[2] ? MW.cam : MW.warning) + '<div><b>' + esc(ban[0]) + '</b><span>' + esc(ban[1]) + '</span></div></div>' : '';
+      const blocked = surv && cam === 'none' && !p.nocam;
+      const fan = p.fan ?? cl.fan;
+      const fanBar = '<div class="pcp-fan-bar" aria-hidden="true">' +
+        Array.from({ length: cl.fMax - cl.fMin + 1 }, (_, i) => '<i' + (i + cl.fMin <= fan ? ' class="on"' : '') + '></i>').join('') + '</div>';
       const right = surv
-        ? '<div class="ov-cap">' + esc(S('preclim_surv_off_title')) + '</div><div class="pcp-text">' + esc(S('preclim_surv_off_text')) + '</div>' + warn('preclim_surv_warning', true)
-        : '<div class="ov-cap">' + esc(S('preclim_clim_caption')) + '</div>' + step(S('preclim_temp'), S('preclim_value_celsius', p.temp), 'pcTemp') + step(S('preclim_fan'), String(p.fan), 'pcFan') +
-          '<div class="pcp-text">' + esc(S('preclim_current', S('preclim_summary', cl.temp + ' °C', cl.auto ? S('clim_auto') : cl.fan))) + '</div>' + (dog ? warn('preclim_dog_warning') : '');
-      const plan = pcPlan(Object.assign({}, p, { dog, surv })), off = hmIn(plan[plan.length - 1][1] + p.lock / 60);
-      const planTxt = surv ? S('preclim_plan_surv', off) : dog ? S('preclim_plan_dog', off) : now ? S('preclim_plan_now', off) : S('preclim_plan_at', hmIn(plan[0][0]), off);
-      const icon = surv ? MW.cam : dog ? MW.paw : MW.fan;
+        // L'avertissement caméra prend la place du texte « 0,2 kW » (proposition 1, 2026-11-08).
+        ? '<div class="ov-cap">' + esc(S('preclim_surv_off_title')) + '</div>' + (banner || '<div class="pcp-text">' + esc(S('preclim_surv_off_text')) + '</div>') + camLine + warn('preclim_surv_warning', true)
+        : '<div class="ov-cap">' + esc(S('preclim_clim_caption')) + '</div>' + step(S('preclim_temp'), S('preclim_value_celsius', p.temp ?? cl.temp), 'pcTemp') + step(S('preclim_fan'), String(fan), 'pcFan') + fanBar +
+          (dog ? warn('preclim_dog_warning') : '') + '<div class="pcp-text pcp-current">' + esc(S('preclim_current', S('preclim_summary', cl.temp + ' °C', cl.auto ? S('clim_auto') : cl.fan))) + '</div>';
+      const plan = pcPlan({ ...p, dog, surv }, minute), off = pcClock(minute + plan[plan.length - 1][1]);
+      const times = plan.map(([start]) => pcClock(minute + start)).join(' · ');
+      const starts = pcFirst(p.at, minute) - minute < 1 ? S('preclim_tomorrow', times) : times;
+      const planTxt = surv ? S('preclim_plan_surv', off) : dog ? S('preclim_plan_dog', off) : now ? S('preclim_plan_now', off) : S('preclim_plan_at', starts, off);
+      const modes = now ? '<button class="ov-tile pcp-mode' + (dog ? ' on' : '') + '" data-a="pcDog" aria-pressed="' + dog + '">' + MW.paw + '<span>' + esc(S('preclim_dog')) + '</span></button>' +
+        '<button class="ov-tile pcp-mode surv' + (surv ? ' on' : '') + '" data-a="pcSurv" data-hl="preclim-surv" aria-pressed="' + surv + '">' + MW.cam + '<span>' + esc(S('preclim_surv')) + '</span></button>' : '';
+      const icon = surv ? MW.cam : MW.fan;
       return '<div class="a-scrim" data-a="pcBg"><div class="ov-card pcp' + (surv ? ' surv' : '') + '" data-hl="preclim-popup">' +
-        '<div class="ov-head">' + icon + '<div class="ov-title">' + esc(S(surv ? 'preclim_surv' : dog ? 'preclim_dog' : 'preclim_title')) + '</div><button class="ov-x" data-a="pcClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
+        '<div class="ov-head">' + icon + '<div class="ov-title">' + esc(S(surv ? 'preclim_surv' : 'preclim_title')) + '</div><button class="ov-x" data-a="pcClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
         '<div class="pcp-body"><div class="ov-pan pcp-left">' + tabs + left + '</div><div class="ov-pan pcp-right">' + right + '</div></div>' +
-        '<div class="pcp-foot"><span>' + esc(planTxt) + '</span><button class="mw-b sm" data-a="pcClose"><span>' + esc(S('preclim_cancel')) + '</span></button>' +
-        '<button class="mw-b sm ' + (surv ? 'd' : 'p') + '" data-a="pcGo"><span>' + esc(S('preclim_start')) + '</span></button></div></div></div>';
+        '<div class="pcp-foot"><span>' + esc(planTxt) + '</span>' + modes + '<button class="mw-b sm" data-a="pcClose"><span>' + esc(S('preclim_cancel')) + '</span></button>' +
+        '<button class="mw-b sm ' + (blocked ? 'off' : surv ? 'd' : 'p') + '" data-a="pcGo"' + (blocked ? ' disabled' : '') + '><span>' + esc(S('preclim_start')) + '</span></button></div></div></div>';
     }
     /**
      * Pop-up de charge (overlay_charge_popup.xml, 1140 × 400 dp) : à gauche le niveau, la barre qui
@@ -3209,7 +3936,7 @@
           '<button class="bn-b p' + kf(1) + '" style="width:170px" data-a="cfYes"><b>' + esc(S('automation_confirm_yes')) + '</b></button>');
       }
       if (o.type === 'update') {
-        return box('upd-overlay', MW.update + '<div class="bn-main"><small>' + esc(S('update_overlay_title')) + '</small><div class="bn-line"><span class="mw-pillv">2.6.8</span>' + MW.arrow + '<span class="mw-pillv acc">2.x.x</span>' +
+        return box('upd-overlay', MW.update + '<div class="bn-main"><small>' + esc(S('update_overlay_title')) + '</small><div class="bn-line"><span class="mw-pillv">' + esc(APP_VERSION) + '</span>' + MW.arrow + '<span class="mw-pillv acc">2.x.x</span>' +
           '<button class="bn-link" data-a="upDisable">' + esc(S('update_overlay_disable')) + '</button></div></div>' +
           '<button class="bn-b" style="width:150px" data-a="upLater"><b>' + esc(S('update_later_btn')) + '</b>' + cd + '</button>' +
           '<button class="bn-b" style="width:200px" data-a="upSkip"><b>' + esc(S('update_overlay_skip')) + '</b></button>' +
@@ -3229,6 +3956,736 @@
     // Présentation de la 2.6.8 (AppDialog et dialog_*.xml) : une carte arrondie sans décor, dessinée
     // aux dimensions de l'application puis réduite d'un bloc (.mw, zoom) pour tenir dans la maquette.
     price(v) { return Math.abs(v) < 10 ? this.num(v, 3) : v.toLocaleString(appLang() === 'en' ? 'en-GB' : appLang(), { maximumFractionDigits: 2, useGrouping: false }); }
+    // ══ 2.7.0 : Raccourcis ═══════════════════════════════════════════════════
+    /**
+     * Onglet Raccourcis 2.7.0 : « Boutons physiques » d'abord, puis les pages de réglage des
+     * fonctions attribuées ; l'interrupteur « Activer » (touches du volant) au bout des pastilles.
+     */
+    shortcutsHtml() {
+      const sc = state.sc;
+      const cur = String(this.ui.tabs.sc || 'classic');
+      const master = cur === 'classic' ? '<div class="a-master" data-hl="sc-master"><span>' + esc(S('shortcuts_enabled_short')) + '</span>' + sw(sc.enabled, 'scOn') + '</div>' : '';
+      const cfg = ['onepedal', 'adas', 'regen', 'drivemode', 'profiles', 'sources', 'preclim'].includes(cur) ? 'sc-cfg' : '';
+      const body = this.railLayout('sc', [
+        { id: 'classic', label: S('shortcuts_cat_classic'), icon: 'steering', page: this.wheelPage(), hl: 'sc-wheel' },
+        { id: 'onepedal', label: S('shortcuts_cat_onepedal'), icon: 'pedal', page: this.assigned('ONE_PEDAL') ? this.scOnePedal() : '', hl: 'sc-sub-onepedal' },
+        { id: 'adas', label: S('shortcuts_cat_adas'), icon: 'shield', page: this.assigned('ADAS_CYCLE') && caps().known ? this.scAdasCfg() : '', hl: 'sc-sub-adas' },
+        { id: 'regen', label: S('shortcuts_cat_regen_cycle'), icon: 'repeat', page: this.assigned('REGEN_CYCLE') ? this.scRegen() : '', hl: 'sc-sub-regen' },
+        { id: 'drivemode', label: S('shortcuts_cat_drive_cycle'), icon: 'steering', page: this.assigned('DRIVE_MODE_CYCLE') ? this.scDriveCycle() : '', hl: 'sc-sub-drivemode' },
+        { id: 'profiles', label: S('shortcuts_cat_profile_cycle'), icon: 'users', page: this.assigned('PROFILE_CYCLE') ? this.scProfiles() : '', hl: 'sc-sub-profiles' },
+        { id: 'sources', label: S('shortcuts_cat_audio_cycle'), icon: 'music', page: this.assigned('AUDIO_SOURCE_CYCLE') ? this.scSources() : '', hl: 'sc-sub-sources' },
+        // Garde-voiture : page toujours là (réglages joignables avant d'attribuer l'action).
+        { id: 'preclim', label: S('shortcuts_cat_preclim'), icon: 'preclim', page: caps().known && caps().clim ? this.scPreclim() : '', hl: 'sc-sub-preclim' },
+        { id: 'quick', label: S('shortcuts_cat_quick'), icon: 'cat_adjust', page: this.assigned('QUICK_SETTINGS') || this.ui.qsPage ? this.scQuick() : '', hl: 'sc-sub-quick' },
+        { id: 'floating', label: S('shortcuts_cat_floating'), icon: 'circle_dot', page: this.scFloating(), hl: 'sc-floating' },
+        { id: 'custom', label: S('shortcuts_cat_custom'), icon: 'wand', page: this.scCustom(), hl: 'sc-custom' }
+      ], cfg, master);
+      return '<div class="a-page">' + body + '</div>';
+    }
+    /** Fonction attribuée à une touche, une bulle ou (Réglages rapides) une automatisation. */
+    assigned(action) {
+      const sc = state.sc;
+      if (Object.values(sc.map).includes(action) || sc.adv.some((x) => x.action === action)) return true;
+      if (Object.values(state.floating.sets).some((set) => set.list.some((b) => b.action === action))) return true;
+      return state.rules.list.some((r) => JSON.stringify(r.act).indexOf('"a":"' + action + '"') >= 0);
+    }
+    /** Touches des cartes : les deux ★, celles qui portent un raccourci avancé, celles ajoutées par capture. */
+    wheelKeys() {
+      const ks = [17, 286];
+      state.sc.adv.forEach((x) => { const c = x.key === 18 ? 286 : x.key; if (!ks.includes(c)) ks.push(c); });
+      (state.sc.keys || []).forEach((c) => { if (!ks.includes(c)) ks.push(c); });
+      return ks;
+    }
+    /** Une ★ passe en capture avancée dès qu'elle a un double appui ou un réglage par profil (WheelButtonsPage.migrer). */
+    starAdv(code) { return state.sc.adv.some((x) => x.key === code || (code === 286 && x.key === 18)); }
+    /** Ce que fait (touche, appui) pour la portée réglée : { action, extra, inherited, locked }. */
+    wheelSlot(code, press, scope) {
+      const sc = state.sc, capture = sc.advOn && sc.advService;
+      if (isStar(code) && !this.starAdv(code)) {
+        if (press === 'double' || scope) return { locked: !capture, action: 'NONE' };
+        const slot = starSlot(code) + '_' + press;
+        return { action: sc.map[slot] || 'NONE', extra: sc.extra[slot] };
+      }
+      if (!capture) return { locked: true, action: 'NONE' };
+      const list = sc.adv.filter((x) => (x.key === code || (code === 286 && x.key === 18)) && x.press === press);
+      const own = list.find((x) => (x.scope || '') === (scope || ''));
+      if (own) return { action: own.action, extra: own };
+      const all = scope ? list.find((x) => !x.scope) : null;
+      return { action: 'NONE', inherited: all || null };
+    }
+    /** Écrit (touche, appui, portée) ; une ★ réglée au-delà du simple / long recopie d'abord ses deux appuis. */
+    setWheel(code, press, scope, action, extra) {
+      const sc = state.sc;
+      if (isStar(code) && !this.starAdv(code)) {
+        if (press !== 'double' && !scope) {
+          const slot = starSlot(code) + '_' + press;
+          sc.map[slot] = action; if (extra) sc.extra[slot] = extra; else delete sc.extra[slot];
+          return commit();
+        }
+        ['single', 'long'].forEach((p) => {
+          const slot = starSlot(code) + '_' + p, a = sc.map[slot];
+          if (a && a !== 'NONE') sc.adv.push(Object.assign({ key: code, press: p, action: a, scope: null }, sc.extra[slot] || {}));
+          sc.map[slot] = 'NONE'; delete sc.extra[slot];
+        });
+      }
+      sc.adv = sc.adv.filter((x) => !((x.key === code || (code === 286 && x.key === 18)) && x.press === press && (x.scope || '') === (scope || '')));
+      if (action !== 'NONE') sc.adv.push(Object.assign({ key: code, press, action, scope: scope || null }, extra || {}));
+      commit();
+    }
+    wheelName(code) { return (state.sc.keyNames || {})[code] || keyName(code); }
+    /** Page « Boutons physiques » (WheelButtonsPage) : état de la capture, portée, une carte par touche. */
+    wheelPage() {
+      const sc = state.sc, u = this.ui, capture = sc.advOn && sc.advService;
+      if (!capture) u.wkScope = '';
+      const scope = u.wkScope || '';
+      const status = !sc.advService ? ['wheel_status_service_off', 'advGrant', 'wheel_open_settings', 'warn']
+        : sc.advOn ? ['wheel_status_on', 'advOn', 'wheel_disable', 'ok'] : ['wheel_status_off', 'advOn', 'wheel_enable', ''];
+      let h = '<div class="wk-status ' + status[3] + '" data-hl="adv-service"><span class="dot"></span><span class="lbl">' + esc(S(status[0])) + '</span>' +
+        '<button class="b sm' + (status[3] === 'ok' ? '' : ' primary') + '" data-a="' + status[1] + '">' + esc(S(status[2])) + '</button></div>';
+      if (capture && state.profiles.length) {
+        h += '<div class="wk-scope" data-hl="adv-scope"><span class="a-sub" style="margin:0">' + esc(S('wheel_scope_label')) + '</span><div class="cl-chips">' +
+          [{ id: '', name: S('adv_sc_all_profiles') }].concat(state.profiles).map((p) => '<button class="cl-chip' + (scope === p.id ? ' on' : '') + '" data-a="wkScope" data-v="' + p.id + '">' + esc(p.name) +
+            (p.id && p.id === state.activeProfileId ? ' ●' : '') + '</button>').join('') + '</div></div>';
+      }
+      const presses = [['single', 'shortcuts_press_single'], ['long', 'shortcuts_press_long'], ['double', 'wheel_press_double']];
+      h += '<div class="wk-grid">' + this.wheelKeys().map((code) => {
+        const rows = presses.map(([p, key]) => {
+          const sl = this.wheelSlot(code, p, scope);
+          const sel = sl.locked ? '<span class="wk-locked">🔒 ' + esc(S('wheel_locked')) + '</span>'
+            : this.actionSelect(sl.action, 'wkSel', 'data-key="' + code + '" data-press="' + p + '"', sl.extra) + (sl.inherited ? '<span class="wk-inh">' + esc(S('wheel_inherited_fmt', this.actionLabel(sl.inherited.action, sl.inherited))) + '</span>' : '');
+          return '<div class="wk-row' + (sl.locked ? ' locked' : '') + '"><span class="wk-p">' + esc(S(key)) + '</span><div class="wk-v">' + sel + '</div></div>';
+        }).join('');
+        return '<div class="a-card wk-card" data-hl="' + (code === 17 ? 'sc-btn1' : code === 286 ? 'sc-btn2' : 'wk-key') + '"><div class="wk-head"><span class="wk-t">' + esc(this.wheelName(code)) + '</span><small></small>' +
+          '<button class="wk-menu" data-a="wkMenu" data-v="' + code + '" aria-label="' + esc(S('rule_menu_title')) + '">⋮</button></div>' + rows + '</div>';
+      }).join('') +
+        '<button class="a-card wk-add' + (u.adv.rec ? ' rec' : '') + (sc.advService ? '' : ' dis') + '" data-a="wkAdd" data-hl="adv-key"' + (sc.advService ? '' : ' disabled') + '><b>' + esc(u.adv.rec ? S('wheel_capture_title') : '+ ' + S('wheel_add_key')) + '</b><small>' + esc(u.adv.rec ? S('wheel_capture_msg') : S('wheel_add_key_hint')) + '</small></button></div>';
+      if (capture) h += '<div class="a-desc" style="color:var(--dash-warn)">⚠ ' + esc(S('adv_sc_claimed_warning')) + '</div>';
+      return h;
+    }
+    /** Page « Cycle des modes » (#207) : même patron que le cycle de régénération. */
+    scDriveCycle() {
+      const u = this.ui;
+      if (!u.driveDraft) u.driveDraft = driveOrder().slice();
+      const d = u.driveDraft;
+      const btn = (m) => { const i = d.indexOf(m); return '<button class="b' + (i >= 0 ? ' on' : '') + '" data-a="dcToggle" data-v="' + m + '">' + (i >= 0 ? '<span class="rc-n">' + (i + 1) + '</span>' : '') + esc(driveName(m)) + '</button>'; };
+      const ok = d.length >= 2;
+      return '<div class="a-sec" data-hl="sc-drivemode"><div class="a-h">' + esc(S('shortcuts_action_drive_cycle')) + '</div>' +
+        '<div class="a-desc">' + esc(S('shortcuts_cfg_drive_hint')) + '</div>' +
+        '<div class="a-grid g5" style="margin-top:8px">' + DRIVE.map(btn).join('') + '</div>' +
+        '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map(driveName).join(' → '))) : '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_drive_min')) + '</span>') + '</span></div>' +
+        '<div class="a-grid g2"><button class="b" data-a="dcClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="dcSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
+    }
+    /** Page « Réglages rapides » (QuickSettingsPage) : tuiles du pop-up dans l'ordre, catalogue en pastilles. */
+    scQuick() {
+      const mine = qtTiles(), k = caps();
+      const row = (t, i) => '<div class="qs-row"><span class="qs-grip">⋮⋮</span><span class="lbl">' + esc(S(QT[t].key)) + (QT[t].stop ? '<small>' + esc(S('quick_stopped_only')) + '</small>' : '') + '</span><span class="qs-val">' + esc(qtValue(t)) + '</span>' +
+        '<button class="b sm" data-a="qsUp" data-v="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button class="b sm" data-a="qsDown" data-v="' + i + '"' + (i < mine.length - 1 ? '' : ' disabled') + '>↓</button>' +
+        '<button class="b sm danger" data-a="qsDel" data-v="' + t + '">−</button></div>';
+      const free = Object.keys(QT).filter((t) => QT[t].ok(k) && !mine.includes(t));
+      return '<div class="a-sec" data-hl="qs-mine"><div class="a-h">' + esc(S('quick_card_mine')) + ' · ' + mine.length + ' / ' + QT_MAX + '</div><div class="a-desc">' + esc(S('quick_hint_mine')) + '</div>' +
+        mine.map(row).join('') + '<div class="a-grid g2" style="margin-top:8px"><button class="b" data-a="qsDefaults">' + esc(S('quick_defaults')) + '</button><button class="b primary" data-a="qsOpen">' + esc(S('quick_card_preview')) + '</button></div></div>' +
+        '<div class="a-sec" data-hl="qs-add"><div class="a-h">' + esc(S('quick_card_add')) + '</div><div class="cl-chips">' +
+        free.map((t) => '<button class="cl-chip" data-a="qsAdd" data-v="' + t + '"' + (mine.length >= QT_MAX ? ' disabled' : '') + '>+ ' + esc(S(QT[t].key)) + '</button>').join('') + '</div></div>';
+    }
+
+    // ── Pop-up Réglages rapides (QuickSettingsOverlay) ───────────────────────
+    openQuick() {
+      this.closeOverlay();
+      this.ui.overlay = { type: 'quick', left: popupDelay(), total: popupDelay(), sel: null };
+      this.startCountdown(() => this.closeOverlay());
+      this.render();
+    }
+    toggleQuick() { const o = this.ui.overlay; if (o && o.type === 'quick') return this.closeOverlay(); this.openQuick(); }
+    quickHtml(o) {
+      const tiles = qtTiles(), moving = car().speed > 3;
+      const grid = tiles.map((t, i) => {
+        const off = moving && QT[t].stop, opts = QT[t].opts(), two = opts.length === 2, yn = two && opts.some(([v]) => v === true);
+        const lit = yn && QT[t].get() === true;
+        // Bulle des valeurs, accrochée à la tuile (au-dessus ; en dessous pour la première rangée).
+        const cur = QT[t].get();
+        const bub = o.sel === t ? '<div class="qs-bub' + (i < 4 ? ' below' : '') + '">' + opts.map(([v, lab]) => '<button class="' + (v === cur ? 'on' : '') + '" data-a="qsSet" data-v="' + esc(JSON.stringify(v)) + '">' + esc(lab) + '</button>').join('') + '</div>' : '';
+        return '<div class="qs-cell"><button class="qs-tile' + (o.sel === t ? ' on' : '') + (two ? ' two' : '') + (lit ? ' lit' : '') + (off ? ' dis' : '') + '" data-a="qsTile" data-v="' + t + '"' + (off ? ' disabled' : '') + '><span>' + esc(S(QT[t].key)) + (two ? ' <i class="qs-tg">⇄</i>' : '') + '</span><b>' + esc(qtValue(t)) + '</b>' +
+          (off ? '<small>' + esc(S('quick_stopped_only')) + '</small>' : '') + '</button>' + bub + '</div>';
+      }).join('') + (tiles.length < QT_MAX ? '<div class="qs-cell"><button class="qs-tile qs-add" data-a="qsConfigure">+ ' + esc(S('quick_choose_tiles')) + '</button></div>' : '');
+      return '<div class="a-scrim" data-a="qsBg"><div class="ov-card qs-card" data-a="qsCard" data-hl="quick-popup"><div class="ov-head">' + ico('cat_adjust') + '<div class="ov-title">' + esc(S('quick_title')) + '</div>' +
+        '<span class="ov-cd" data-cd>' + esc(S('quick_closes_in', o.left)) + '</span><button class="ov-x" data-a="qsClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
+        '<div class="qs-grid">' + grid + '</div></div></div>';
+    }
+
+    // ══ 2.7.0 : Automatisation (6 pastilles) et Mes automatisations ═══════════
+    automationTabs(cards) {
+      const k = caps();
+      return this.railLayout('auto', [
+        { label: S('nav_profiles'), icon: 'users', page: cards.p1 + cards.p2 },
+        { label: S('clim_card_title'), icon: 'temperature', page: cards.c5 + cards.c4 },
+        { label: S('automation_cat_screen'), icon: 'sun', page: cards.c3 },
+        { label: S('automation_cat_leave'), icon: 'door_exit', page: this.windowsCard() + this.doorCard() },
+        { label: S('sound_title'), icon: 'music', page: k.door ? cards.c6 : '' },
+        { id: 'rules', label: S('rule_page_title'), icon: 'branch', page: this.rulesPage(), hl: 'auto-rules' }
+      ]);
+    }
+    /** Page « Mes automatisations » (CustomRulesPage) : interrupteur général, liste, outils. */
+    rulesPage() {
+      const R = state.rules, u = this.ui;
+      const tool = (key, a) => '<button class="rl-tool" data-a="' + a + '">' + esc(S(key)) + '</button>';
+      const head = '<div class="rl-head" data-hl="rules-head"><div class="a-row"><span class="a-title" style="flex:1">' + esc(S('rule_page_title')) + ' <small class="rl-count">' + esc(S('rule_count_fmt', R.list.length, RULES_MAX)) + '</small></span>' +
+        '<button class="b solid rl-new" data-a="rNew" data-hl="rules-new">' + esc(S('rule_new')) + '</button></div>' +
+        '<div class="a-row rl-tools-row" data-hl="rules-tools"><span class="lbl" style="flex:0 0 auto">' + esc(S('rule_engine_switch')) + '</span>' + sw(R.engine, 'rEngine') + '<span style="flex:1"></span>' +
+        tool('rule_tool_history', 'rHist') + tool('rule_tool_variables', 'rVars') + tool('rule_tool_places', 'rPlaces') + tool('abrp_tool', 'rAbrp') +
+        tool('rule_tool_export', 'rExport') + tool('rule_tool_import', 'rImport') + '</div></div>';
+      const list = R.list.length ? R.list.map((r) => {
+        const off = !r.on || !R.engine;
+        // Compteurs en pastilles (lancées, ignorées en orange), cachés à zéro.
+        const pills = (r.runs ? '<span class="rl-pill">' + esc(P('rule_runs_count', r.runs)) + '</span>' : '') + (r.skips ? '<span class="rl-pill warn">' + esc(P('rule_skips_count', r.skips)) + '</span>' : '');
+        return '<div class="a-card rl-card' + (off ? ' off' : '') + '" data-hl="rule-card"><div class="a-row"><span class="a-title rl-name" data-a="rEdit" data-v="' + r.id + '">' + esc(r.name) + '</span>' + pills + sw(r.on, 'rOn', false, r.id) + '</div>' +
+          '<div class="rl-sum">' + esc(rSummary(r)) + '</div><div class="rl-foot"><span class="a-desc">' + esc(r.last ? S('rule_last_run_actions_fmt', r.last.at, P('rule_actions_ok', r.last.ok) + (r.last.sent ? ', ' + P('rule_actions_sent', r.last.sent) : ''), r.last.ko) : S('rule_never_run')) +
+          (r.missing ? '<span class="rl-skip" data-hl="rule-links">' + esc(P('rule_links_missing', r.missing)) + '</span>' : '') +
+          (r.skip ? '<span class="rl-skip">' + esc(S('rule_last_skip_fmt', r.skip.at, r.skip.why)) + '</span>' : '') + '</span>' +
+          '<button class="b sm primary" data-a="rEdit" data-v="' + r.id + '">' + esc(S('rule_menu_edit')) + '</button><button class="b sm" data-a="rTest" data-v="' + r.id + '">' + esc(S('rule_test')) + '</button>' +
+          '<button class="b sm danger" data-a="rDel" data-v="' + r.id + '">' + esc(S('rule_delete')) + '</button></div></div>';
+      }).join('') : '<div class="a-desc" style="text-align:center;padding:20px">' + esc(S('rule_empty')) + '</div>';
+      return head + list;
+    }
+    /** Éditeur (CustomRuleEditFragment) : une colonne Quand / Et si / Alors / Options, rien d'écrit avant Enregistrer. */
+    ruleEditHtml() {
+      const e = this.ui.rEdit; if (!e) return '';
+      const r = e.rule;
+      const line = (kind, path, i, it, depth) => {
+        const pv = kind + '|' + path + '|' + i;
+        // Un seul ⋮ par ligne, comme l'éditeur : Modifier, Monter, Descendre, Dupliquer, Copier, Couper, Supprimer.
+        const tools = '<button class="rl-more" data-a="rLineMenu" data-v="' + pv + '" aria-label="⋮">⋮</button>';
+        let h = '<div class="rl-line" style="margin-left:' + depth * 26 + 'px"><button class="rl-txt" data-a="rEditLine" data-v="' + kind + '|' + path + '|' + i + '">' + esc(rTxt(kind, it)) + '</button>' + tools + '</div>';
+        // « Bouton, bulle ou automatisation » : ce qui la lance (RuleLaunchers), ou comment la lancer.
+        if (kind === 'trg' && it.k === 'manual') {
+          const by = this.ruleLaunchers(r.id);
+          h += '<div class="a-desc rl-by" style="margin-left:' + (depth * 26 + 12) + 'px">' + esc(by.length ? S('rule_manual_by_fmt', by.join(', ')) : S('rule_manual_none')) + '</div>';
+        }
+        if (kind === 'act' && it.k === 'if') {
+          ['then', 'else'].forEach((b) => {
+            const p = path + '.' + i + '.' + b;
+            h += '<div class="rl-branch" style="margin-left:' + (depth + 1) * 26 + 'px">' + esc(b === 'then' ? S('rule_if_condition') : S('rule_if_else')) + '</div>' +
+              it[b].map((x, j) => line('act', p, j, x, depth + 2)).join('') +
+              '<button class="rl-add" style="margin-left:' + (depth + 2) * 26 + 'px" data-a="rAdd" data-v="act|' + p + '">+ ' + esc(S('rule_add_action')) + '</button>' + paste('act', p, depth + 2);
+          });
+        }
+        return h;
+      };
+      // « Coller » n'apparaît que là où l'élément copié a sa place (même section).
+      const clip = this.ui.rClip;
+      function paste(kind, path, depth) {
+        return clip && clip.kind === kind ? '<button class="rl-add paste" style="margin-left:' + (depth || 0) * 26 + 'px" data-a="rPaste" data-v="' + kind + '|' + path + '">📋 ' + esc(S('rule_paste')) + ' · ' + esc(rTxt(kind, clip.item)) + '</button>' : '';
+      }
+      const sec = (kind, titleKey, hintKey, emptyKey, addKey) => '<div class="a-card rl-sec" data-hl="rule-' + kind + '"><div class="rl-sh">' + esc(S(titleKey)) + '</div><div class="a-desc">' + esc(S(hintKey)) + '</div>' +
+        (r[kind].length ? r[kind].map((it, i) => line(kind, kind, i, it, 0)).join('') : '<div class="a-desc rl-empty">' + esc(S(emptyKey)) + '</div>') +
+        '<button class="rl-add" data-a="rAdd" data-v="' + kind + '|' + kind + '">+ ' + esc(S(addKey)) + '</button>' + paste(kind, kind, 0) + '</div>';
+      const o = r.opt;
+      const opts = '<div class="a-card rl-sec" data-hl="rule-opt"><div class="rl-sh">' + esc(S('rule_sec_options')) + '</div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('rule_opt_if_running')) + '</span><div class="a-grid g2" style="flex:0 0 360px"><button class="b sm' + (o.restart ? '' : ' on') + '" data-a="rOptRestart" data-v="0">' + esc(S('rule_opt_ignore')) + '</button>' +
+        '<button class="b sm' + (o.restart ? ' on' : '') + '" data-a="rOptRestart" data-v="1">' + esc(S('rule_opt_restart')) + '</button></div></div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('rule_opt_ready')) + '</span>' + sw(o.ready, 'rOptReady') + '</div></div>';
+      const head = '<div class="a-card rl-ehead"><div class="a-row"><input class="a-input" style="flex:1" data-c="rName" data-fid="rName" maxlength="40" placeholder="' + esc(S('rule_name_hint')) + '" value="' + esc(r.name) + '">' +
+        '<span class="lbl" style="flex:0 0 auto">' + esc(S('rule_enabled')) + '</span>' + sw(r.on, 'rEditOn') + '</div></div>';
+      const foot = '<div class="a-grid g3"><button class="b" data-a="rCancel">' + esc(S('profile_cancel')) + '</button><button class="b" data-a="rTestDraft">' + esc(S('rule_test')) + '</button>' +
+        '<button class="b green" data-a="rSave" data-hl="rule-save">' + esc(S('rule_save')) + '</button></div>';
+      return '<div class="a-page">' + head + '<div class="a-scroll"><div class="a-stack">' + sec('trg', 'rule_sec_when', 'rule_sec_when_hint', 'rule_none_triggers', 'rule_add_trigger') +
+        sec('cond', 'rule_sec_if', 'rule_sec_if_hint', 'rule_none_conditions', 'rule_add_condition') + sec('act', 'rule_sec_then', 'rule_sec_then_hint', 'rule_none_actions', 'rule_add_action') + opts + '</div></div>' + foot + '</div>';
+    }
+    /** Ce qui lance l'automatisation [id] : touches du volant, bulles, autres automatisations. */
+    ruleLaunchers(id) {
+      const sc = state.sc, out = [], press = (p) => S(p === 'long' ? 'shortcuts_press_long' : p === 'double' ? 'wheel_press_double' : 'shortcuts_press_single').toLowerCase();
+      Object.keys(sc.map || {}).forEach((slot) => {
+        if (sc.map[slot] !== 'RUN_RULE' || ((sc.extra || {})[slot] || {}).ruleId !== id) return;
+        const [btn, p] = slot.split('_');
+        out.push(S('rule_manual_wheel_fmt', this.wheelName(btn === 'btn1' ? 17 : 286), press(p)));
+      });
+      (sc.adv || []).forEach((m) => { if (m.action === 'RUN_RULE' && m.ruleId === id) out.push(S('rule_manual_wheel_fmt', this.wheelName(m.key), press(m.press))); });
+      Object.keys(state.floating.sets).forEach((pid) => state.floating.sets[pid].list.forEach((b) => {
+        if (b.action === 'RUN_RULE' && (b.ruleId || (b.extra || {}).ruleId) === id) out.push(S('rule_manual_bubble_fmt', b.title || S(ACTION_KEY.RUN_RULE)));
+      }));
+      const lance = (l) => l.some((a) => (a.k === 'run_rule' && a.id === id) || (a.k === 'if' && (lance(a.then) || lance(a.else))));
+      state.rules.list.forEach((x) => { if (x.id !== id && lance(x.act)) out.push(S('rule_manual_rule_fmt', x.name)); });
+      return Array.from(new Set(out));
+    }
+    /** Question Oui / Non d'une automatisation (bandeau en bas de l'écran) : sans réponse, Non. */
+    ruleAsk(msg) {
+      return new Promise((ok) => {
+        this.ui.dialog = { type: 'rAsk', msg, done: ok };
+        clearTimeout(this._askT);
+        this._askT = setTimeout(() => { const d = this.ui.dialog; if (d && d.type === 'rAsk') { this.ui.dialog = null; this.render(); d.done(false); } }, popupDelay() * 1000);
+        this.render();
+      });
+    }
+
+    // ── Fenêtres 2.7.0 (grande fenêtre de choix, valeurs sans clavier, historique…) ──
+    extDialog(d, h) {
+      const { B, win, head, confirm } = h;
+      switch (d.type) {
+        case 'rTpl':
+          return win(1000, head(MW.list, S('rule_templates_title'), S('rule_templates_subtitle')) + '<div class="mw-grid" data-sk="tpl">' +
+            rTemplates().map((t) => '<button class="mw-choice" data-a="rTplPick" data-v="' + t.id + '"><b>' + esc(t.name) + '</b><small>' + esc(t.trg.length ? rTxt('trg', t.trg[0]) : '—') + '</small></button>').join('') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + '</div>', '', 'rule-tpl');
+        case 'rPick': {
+          // Grande fenêtre (Assistant.afficherGrand) : catégories à gauche, recherche, grille à droite.
+          // Une tuile par option ; la recherche la trouve aussi par les mots de ses modes (2026-11-12).
+          const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          const subs = rSubjects(d.kind).filter((x) => !(d.kind === 'act' && x.id === 'if' && d.path !== 'act')), q = norm((d.q || '').trim());
+          const words = (x) => norm(x.name + ' ' + x.modes.map((m) => m.label + ' ' + (m.w || '')).join(' '));
+          const hit = subs.filter((x) => !q || q.split(/\s+/).every((w) => words(x).includes(w)));
+          const cats = R_CATS.filter((c) => subs.some((x) => x.cat === c));
+          const cat = d.cat && hit.some((x) => x.cat === d.cat) ? d.cat : null;
+          const shown = hit.filter((x) => !cat || x.cat === cat);
+          const title = S({ trg: 'rule_choose_trigger', cond: 'rule_choose_condition', act: 'rule_choose_action' }[d.kind]);
+          return win(1180, '<div class="rp-top"><span class="mw-t">' + esc(title) + '</span><input class="a-input rp-q" data-c="rQ" data-fid="rQ" placeholder="🔍" value="' + esc(d.q || '') + '">' + B(S('profile_cancel'), 'dlgClose') + '</div>' +
+            '<div class="rp-body"><div class="rp-cats"><button class="rp-cat' + (cat ? '' : ' on') + '" data-a="rCat" data-v="">' + esc(L('Tout', 'All')) + ' <small>' + hit.length + '</small></button>' +
+            cats.map((c) => { const n = hit.filter((x) => x.cat === c).length; return '<button class="rp-cat' + (cat === c ? ' on' : '') + (n ? '' : ' dis') + '" data-a="rCat" data-v="' + c + '">' + esc(S('rule_cat_' + c)) + ' <small>' + n + '</small></button>'; }).join('') + '</div>' +
+            '<div class="rp-grid" data-sk="rp">' + shown.map((x) => '<button class="mw-choice" data-a="rPickOk" data-v="' + esc(x.id) + '"><b>' + esc(x.name) + '</b>' +
+              (x.modes.length > 1 ? '<small>' + esc(S('rule_act_modes_fmt', x.modes.length)) + '</small>' : '') + '</button>').join('') + '</div></div>', 'rp', 'rule-pick');
+        }
+        case 'clLayout': {
+          // Aperçu animé à gauche (toucher une case ou la jauge pour la régler), réglages à droite.
+          const c = this.ui.clLay; if (!c) return null;
+          clLayDraft = c; const L = c.L;
+          const opt = (a, cur, list) => '<div class="ov-seg mw-seg">' + list.map(([v, lab]) => '<button' + (String(cur) === String(v) ? ' class="on"' : '') + ' data-a="' + a + '" data-v="' + v + '">' + esc(lab) + '</button>').join('') + '</div>';
+          const cap = (key) => '<div class="mw-cap">' + esc(S(key)) + '</div>';
+          const swRow = (key, on, a) => '<div class="a-row"><span class="lbl">' + esc(S(key)) + '</span>' + sw(on, a) + '</div>';
+          const hpOpt = (a, cur) => opt(a, cur === 'hp' ? 'hp' : 'kw', [['kw', 'kW'], ['hp', S('cluster_unit_hp')]]);
+          const color = (key, field, fallback) => {
+            const cur = L[field] || fallback, label = esc(S(key));
+            return cap(key) + '<div class="fl-swatches">' +
+              COLOR_PALETTE.map((v) => '<button class="fl-sw' + (L[field] === v ? ' on' : '') + '" style="background:' + v + '" data-a="clLayColor" data-x="' + field + '" data-v="' + v + '" aria-label="' + label + ' ' + v + '"></button>').join('') +
+              '<label class="fl-sw wheel"><input type="color" data-c="clLayColor" data-x="' + field + '" value="' + esc(cur) + '" aria-label="' + label + '"></label></div>' +
+              '<div class="a-row fl-code"><span>' + esc(S('color_code')) + '</span><input class="a-input" size="8" maxlength="7" data-c="clLayColor" data-x="' + field + '" value="' + esc(cur) + '" aria-label="' + label + '"> ' +
+              '<button class="b sm' + (!L[field] ? ' on' : '') + '" data-a="clLayColor" data-x="' + field + '">' + esc(S('color_default')) + '</button></div>';
+          };
+          let panel;
+          if (c.sel === 'g') {
+            // Les options propres à une jauge suivent la jauge choisie (2026-11-12) ; l'unité de
+            // puissance ne s'affiche que là où elle se voit.
+            panel = '<div class="mw-t">' + esc(S('cluster_layout_gauge')) + '</div>' + cap('cluster_layout_gauge_preview') +
+              opt('clLayMod', c.mod, [['consumption', S('settings_cluster_consumption')], ['power', S('settings_cluster_power')]]) +
+              '<div class="mw-hint">' + esc(S('cluster_layout_gauge_preview_note')) + '</div>' + cap('settings_cluster_row_style') +
+              opt('clLayStyle', c.style, [['dynamic', S('settings_cluster_style_dynamic')], ['discreet', S('settings_cluster_style_discreet')]]) + cap('cluster_layout_position') +
+              opt('clLayPos', L.gauge || 'middle', [['top', S('cluster_layout_position_top')], ['middle', S('cluster_layout_position_middle')], ['bottom', S('cluster_layout_position_bottom')]]) +
+              cap('cluster_layout_thickness') + opt('clLayThickness', L.thickness || 'normal', ['thin', 'normal', 'thick'].map((x) => [x, S('cluster_layout_thickness_' + x)])) +
+              color('cluster_layout_color_consumption', 'consumptionColor', CL.warn) + color('cluster_layout_color_regen', 'regenColor', CL.accent) +
+              (c.mod === 'consumption' ? swRow('cluster_layout_average_cursor', L.averageCursor ?? (c.style === 'discreet'), 'clLayAverage') +
+                swRow('cluster_layout_consumption_kw', !!L.consKw, 'clLayConsKw') + (L.consKw ? cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) : '')
+                : cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) + swRow('cluster_layout_power_consumption', L.powerCons !== false, 'clLayPowerCons'));
+          } else {
+            const b = L.slots[c.sel];
+            const units = b ? clBlockUnits(b.info, clBlockMiles(b, clMiles())) : [];
+            const dist = b && CL_DIST_INFOS.includes(b.info);
+            panel = '<div class="mw-t">' + esc(S('cluster_layout_slot_fmt', c.sel + 1)) + '</div>' + cap('cluster_layout_info') +
+              '<button class="b full cll-info" data-a="clLayPick">' + esc(b ? clInfoName(b.info) : S('cluster_layout_info_none')) + '</button>' +
+              (b ? cap('cluster_layout_display') + opt('clLayBStyle', clStyleOf(b), clInfoStyles(b.info).map((x) => [x, S(x === 'pill' ? 'cluster_layout_style_pill' : x === 'value' ? 'floating_info_style_value' : x === 'icon' ? 'floating_info_style_icon' : 'floating_info_style_label')])) +
+                cap('cluster_layout_size') + opt('clLayBSize', b.size || 'M', ['S', 'M', 'L'].map((v) => [v, v])) +
+                (units.length ? cap('cluster_layout_unit') + opt('clLayBUnit', b.unit || units[0][0], units) : '') +
+                (dist ? cap('settings_distance_unit') + opt('clLayBDist', b.distance || 'auto', [['auto', S('cluster_layout_distance_auto')], ['km', S('cluster_distance_km')], ['mi', S('cluster_distance_miles')]]) : '') +
+                (c.sel % 2 === 0 ? (L.slots[c.sel + 1] ? '<div class="mw-hint">' + esc(S('cluster_layout_wide_busy', c.sel + 2)) + '</div>' : swRow('cluster_layout_wide', !!b.wide, 'clLayBWide')) : '') +
+                B(S('cluster_layout_clear'), 'clLayInfo', 'sm') : '<div class="mw-hint">' + esc(S('cluster_layout_empty_note')) + '</div>');
+          }
+          const sel = this.ui.clSel || [];
+          const subtitle = sel.length > 1 ? S('settings_cluster_profiles_many', sel.length) :
+            sel.length ? S('settings_cluster_profiles_one', profName(sel[0])) : '';
+          return win(1440, '<div class="mw-t">' + esc(S('cluster_layout_title')) + '</div>' +
+            (subtitle ? '<div class="mw-s">' + esc(subtitle) + '</div>' : '') +
+            '<div class="cll-body"><div class="cll-left"><svg class="cll-sq" viewBox="0 0 260 260" data-clprev="' + c.mod + '" data-cllay role="img"></svg>' +
+            '<div class="mw-hint">' + esc(S('cluster_layout_hint')) + '</div></div><div class="cll-panel" data-sk="clpanel">' + panel + '</div></div>' +
+            '<div class="mw-acts cll-acts">' + B(S('cluster_layout_reset'), 'clLayReset') + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'clLaySave', 'p') + '</div>', 'cll-modal', 'cl-layout');
+        }
+        case 'clLayoutPick': {
+          const c = this.ui.clLay, cur = c.L.slots[c.sel]?.info ?? null;
+          const items = [null, ...clInfoChoices()].map((info) => '<button class="mw-choice' + (cur === info ? ' on' : '') + '" data-a="clLayInfo" data-v="' + (info || '') + '"><b>' +
+            esc(info ? clInfoName(info) : S('cluster_layout_info_none')) + '</b></button>').join('');
+          return win(920, head(MW.list, S('floating_info_pick_title')) + '<div class="mw-grid three long" data-sk="clinfo">' + items + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'clLayPickClose') + '</div>', '', 'cl-layout-pick');
+        }
+        case 'rLineMenu': {
+          // Menu ⋮ d'une ligne (CustomRuleEditFragment.menu) : seuls les gestes possibles à cette place.
+          const e = this.ui.rEdit; if (!e) return null;
+          const l = rList(e.rule, d.path), it = l[d.i]; if (!it) return null;
+          const g = [['edit', 'rule_menu_edit']].concat(d.i > 0 ? [['up', 'rule_menu_up']] : [], d.i < l.length - 1 ? [['down', 'rule_menu_down']] : [],
+            [['dup', 'rule_menu_duplicate'], ['copy', 'rule_menu_copy'], ['cut', 'rule_menu_cut'], ['del', 'rule_delete']]);
+          return win(760, head(MW.edit, rTxt(d.kind, it), null) + '<div class="mw-grid" data-sk="rlmenu">' +
+            g.map(([v, key]) => '<button class="mw-choice' + (v === 'del' ? ' danger' : '') + '" data-a="rLineDo" data-v="' + v + '"><b>' + esc(S(key)) + '</b></button>').join('') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + '</div>', '', 'rule-menu');
+        }
+        case 'rMode': {
+          // Le mode, après le toucher : « Régler sur… », « Bascule », un sens, un seuil…
+          const x = rSubjects(d.kind).find((y) => y.id === d.sid); if (!x) return null;
+          return win(900, head(MW.list, x.name, null) + '<div class="mw-grid" data-sk="rmode">' + x.modes.map((m, i) => '<button class="mw-choice" data-a="rModeOk" data-v="' + i + '"><b>' + esc(m.label) + '</b></button>').join('') + '</div>' +
+            '<div class="mw-acts">' + B('←', 'rvBack') + B(S('profile_cancel'), 'dlgClose') + '</div>', '', 'rule-mode');
+        }
+        case 'rVal': return this.ruleValueDialog(d, h);
+        case 'rHist': {
+          // Toutes / Exécutées / Ignorées (2026-11-08) ; une entrée ignorée dit pourquoi.
+          const all = state.rules.hist, f = d.f || 'all';
+          const H = all.filter((x) => f === 'all' || (f === 'skip' ? !!x.skipped : !x.skipped));
+          const seg = '<div class="ov-seg mw-seg mt12">' + [['all', 'rule_hist_filter_all'], ['runs', 'rule_hist_filter_runs'], ['skip', 'rule_hist_filter_skipped']]
+            .map(([v, k]) => '<button' + (f === v ? ' class="on"' : '') + ' data-a="rHistF" data-v="' + v + '">' + esc(S(k)) + '</button>').join('') + '</div>';
+          const row = (x) => '<div class="rl-hrow' + (x.skipped ? ' skip' : '') + '"><b>' + esc(x.at + ' · ' + x.name) + '</b>' +
+            (x.skipped ? (x.skipped.by ? '<div>' + esc(S('rule_hist_by_fmt', x.skipped.by)) + '</div>' : '') + '<div class="rl-skip">' + esc(S('rule_hist_skipped_fmt', x.skipped.long || S('rule_skip_short_conditions'))) + '</div>'
+              : x.journal.map((l) => '<div>' + esc(l) + '</div>').join('')) + '</div>';
+          return win(1000, head(MW.list, S('rule_tool_history'), S('rule_hist_count_fmt', all.length, 20)) + seg + '<div class="mw-scroll rl-hist mt12" data-sk="hist">' +
+            (H.length ? H.map(row).join('') : '<div class="a-desc">' + esc(all.length ? S('rule_hist_empty_filter') : S('rule_never_run')) + '</div>') + '</div>' +
+            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
+        }
+        case 'rImport': {
+          // Fin d'import (RuleImportReport) : reliés automatiquement, puis à réassocier avec le choix sur place.
+          const I = this.ui.rImp || { n: 0, rows: [] };
+          const tag = (row) => '<span class="ri-tag' + (row.ok ? ' ok' : '') + '">' + esc(S(row.kind)) + '</span>';
+          const line = (row, i) => '<div class="ri-row">' + tag(row) + '<div class="ri-txt"><b>' + esc(row.ok ? row.text : S('rule_import_missing_fmt', row.name)) + '</b>' +
+            ((row.ok ? row.sub : S('rule_import_in_fmt', row.rname)) ? '<span>' + esc(row.ok ? row.sub : S('rule_import_in_fmt', row.rname)) + '</span>' : '') + '</div>' +
+            (row.ok ? '' : B(S(row.pick), 'rImpChoose', 'sm', i)) + '</div>';
+          const auto = I.rows.map((row, i) => [row, i]).filter(([row]) => row.ok && !row.pick);
+          const todo = I.rows.map((row, i) => [row, i]).filter(([row]) => row.pick);
+          const left = todo.filter(([row]) => !row.ok).length;
+          return win(900, head(MW.list, S('rule_import_done', I.n).replace(/\.$/, ''), I.n ? S('rule_import_report_sub') : '') +
+            '<div class="mw-scroll ri-list mt12">' +
+            (I.skipped ? '<div class="mw-warn">' + esc(P('rule_import_skipped', I.skipped, RULES_MAX)) + '</div>' : '') +
+            (auto.length ? '<div class="ri-sec">' + esc(S('rule_import_auto')) + '</div>' + auto.map(([row, i]) => line(row, i)).join('') : '') +
+            (todo.length ? '<div class="ri-sec">' + esc(S('rule_import_todo_fmt', left)) + '</div>' + todo.map(([row, i]) => line(row, i)).join('') : '') + '</div>' +
+            '<div class="mw-acts">' + B(S(left ? 'rule_import_later' : 'rule_import_finished'), 'dlgClose', 'p') + '</div>', '', 'rule-import');
+        }
+        case 'rImpPick': {
+          const row = this.ui.rImp.rows[d.row];
+          return win(760, head(MW.list, S(row.pick)) + '<div class="mw-grid">' +
+            row.items.map((it, i) => '<button class="mw-choice" data-a="rImpPick" data-v="' + i + '"><b>' + esc(it) + '</b></button>').join('') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'rImpBack') + '</div>', '', 'mw-pick');
+        }
+        case 'rInfo':
+          return confirm({ ico: MW.info, title: d.title, msg: d.msg, yes: S('nav_close') });
+        case 'rAbrp': {
+          // AbrpDialogs.comptes : un compte d'exemple, les trois tuiles, puis Fermer.
+          const tile = (key) => '<button class="mw-choice" data-a="rAbrpDemo"><b>' + esc(S(key)) + '</b></button>';
+          return win(900, head(MW.list, S('abrp_title'), S('abrp_subtitle_fmt', 1, 5)) +
+            '<div class="mw-pan mt14"><div class="a-row"><span class="lbl"><b>' + esc(L('Ma MG4', 'My MG4')) + '</b><br><small>••••1a2b · ' + esc(S('abrp_key_mg4')) + '</small></span>' +
+            '<button class="b sm" data-a="rAbrpDemo">' + esc(S('abrp_edit')) + '</button></div></div>' +
+            '<div class="mw-grid three mt14">' + tile('abrp_add') + tile('abrp_import_usb') + tile('abrp_template') + '</div>' +
+            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose', 'p') + '</div>');
+        }
+        case 'rAsk':
+          return confirm({ title: d.msg || '?', yes: S('rule_on'), no: S('rule_off'), yesAct: 'rAskYes', noAct: 'rAskNo' });
+        case 'rDelete':
+          return confirm({ tone: 'danger', title: S('rule_delete_confirm_fmt', ruleName(d.id)), yes: S('rule_delete'), no: S('profile_cancel'), yesAct: 'rDelOk' });
+        case 'wkMenu': {
+          const star = isStar(d.code);
+          return win(560, head(MW.list, this.wheelName(d.code), String(d.code)) + '<div class="mw-col">' + B(S('wheel_rename'), 'wkRename', '', d.code) +
+            B(S('wheel_name_reset'), 'wkNameReset', '', d.code) + (star ? '' : B(S('wheel_remove_key'), 'wkRemove', 'd', d.code)) + B(S('profile_cancel'), 'dlgClose') + '</div>');
+        }
+        case 'wkRename':
+          return win(620, head(MW.list, S('wheel_name_title'), String(d.code)) + '<input class="a-input" style="width:100%" data-c="wkName" data-fid="wkName" maxlength="24" value="' + esc(d.name) + '">' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'wkNameOk', 'p') + '</div>');
+        case 'pickRule': {
+          const items = state.rules.list;
+          return win(1000, head(MW.list, S('rule_choose_rule'), null) + (items.length ? '<div class="mw-grid" data-sk="pick">' + items.map((r) => '<button class="mw-choice" data-a="pickRuleOk" data-v="' + r.id + '"><b>' + esc(r.name) + '</b></button>').join('') + '</div>'
+            : '<div class="mw-cm">' + esc(S('rule_none_to_pick')) + '</div>') + '<div class="mw-acts">' + B(S('profile_cancel'), 'pickCancel') + '</div>');
+        }
+        case 'export': {
+          // Fenêtre d'export (ExportDialog) : Téléchargements, clé USB, autre dossier.
+          const tile = (v, t, s) => '<button class="mw-choice' + (d.dest === v ? ' on' : '') + '" data-a="expDest" data-v="' + v + '"><b>' + esc(t) + '</b><small>' + esc(s) + '</small></button>';
+          return win(900, head(MW.download, d.title, d.sub) + '<div class="mw-grid three">' + tile('dl', S('stats_export_downloads'), 'Download/MG4Control') +
+            tile('usb', L('Clé USB', 'USB drive'), 'MG4Control') + tile('other', L('Autre dossier…', 'Other folder…'), L('Parcourir', 'Browse')) + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(d.go, 'expGo', 'p') + '</div>');
+        }
+        default: return null;
+      }
+    }
+    /** Valeur d'une ligne (RuleValueDialogs) : boutons − / + maintenus, segments, texte ; rien au clavier sauf un message. */
+    ruleValueDialog(d, h) {
+      const { B, win, head } = h, it = d.item, k = caps();
+      const stepper = (field, label, unit, min, max) => '<div class="rv-row"><span class="mw-cap">' + esc(label) + '</span><button class="mw-b" data-rep data-a="rvStep" data-v="' + field + ':-1:' + min + ':' + max + '">−</button>' +
+        '<b class="rv-v">' + esc(String(it[field]) + (unit || '')) + '</b><button class="mw-b" data-rep data-a="rvStep" data-v="' + field + ':1:' + min + ':' + max + '">+</button></div>';
+      const seg = (field, opts) => '<div class="ov-seg rv-seg">' + opts.map(([v, lab]) => '<button class="' + (JSON.stringify(it[field]) === JSON.stringify(v) ? 'on' : '') + '" data-a="rvSet" data-v="' + esc(field + '=' + JSON.stringify(v)) + '">' + esc(lab) + '</button>').join('') + '</div>';
+      let body = '';
+      switch (it.k) {
+        case 'soc_below': case 'soc_above': body = stepper('v', S('rule_sig_soc'), ' %', 5, 95); break;
+        case 'seat_above': case 'seat_below': body = stepper('v', S('rule_key_seat_left'), '', 0, 3); break;
+        case 'temp_below': case 'temp_above': body = stepper('v', S('rule_sig_outside_temp'), ' °C', -20, 45); break;
+        case 'alt_below': case 'alt_above': body = stepper('v', S('rule_sig_altitude'), ' m', 0, 4000); break;
+        case 'steering_for': case 'seat_for': body = stepper('min', S('rule_for_title'), ' min', 1, 60); break;
+        case 'every': body = stepper('min', S('rule_every_title'), ' min', 1, 120) + '<div class="mw-hint">' + esc(S('rule_every_hint')) + '</div>'; break;
+        case 'time': body = '<div class="mw-cap">' + esc(S('rule_time_title')) + '</div>' + stepper('h', 'h', '', 0, 23) + stepper('m', 'min', '', 0, 59); break;
+        case 'time_range': body = '<div class="mw-cap">' + esc(S('rule_range_from')) + '</div>' + stepper('a0', 'h', '', 0, 23) + stepper('a1', 'min', '', 0, 59) +
+          '<div class="mw-cap">' + esc(S('rule_range_to')) + '</div>' + stepper('b0', 'h', '', 0, 23) + stepper('b1', 'min', '', 0, 59) + '<div class="mw-hint">' + esc(S('rule_range_hint')) + '</div>'; break;
+        case 'days': body = '<div class="mw-cap">' + esc(S('rule_days_title')) + '</div><div class="ov-seg rv-seg">' + DAY_KEYS.map((x) => '<button class="' + (it.d.includes(x) ? 'on' : '') + '" data-a="rvDay" data-v="' + x + '">' + esc(dayName(x)) + '</button>').join('') + '</div>'; break;
+        case 'sun_up': case 'ready': body = seg('is', [[true, S('rule_on')], [false, S('rule_off')]]); break;
+        case 'random': body = stepper('p', S('rule_cond_random'), ' %', 5, 95) + '<div class="mw-hint">' + esc(S('rule_random_hint')) + '</div>'; break;
+        case 'drive_mode': body = seg('m', DRIVE.map((m) => [m, driveName(m)])); break;
+        case 'set': {
+          const keys = Object.keys(SET_KEYS).filter((x) => SET_KEYS[x].ok(k)), sk = SET_KEYS[it.key];
+          body = (d.lockKey ? '' : '<div class="mw-cap">' + esc(S('rule_choose_setting')) + '</div><div class="ov-seg rv-seg wrap">' + keys.map((x) => '<button class="' + (it.key === x ? 'on' : '') + '" data-a="rvKey" data-v="' + x + '">' + esc(S('rule_key_' + x)) + '</button>').join('') + '</div>') +
+            (sk.bool ? seg('v', [[true, S('rule_on')], [false, S('rule_off')]]) : sk.opts ? seg('v', sk.opts.map((n) => [n, valTxt(it.key, n)])) : stepper('v', S('rule_key_' + it.key), ' °C', sk.min, sk.max));
+          break;
+        }
+        case 'brightness': body = stepper('v', S('rule_sig_brightness'), ' %', briMin(), 100); break;
+        case 'volume': body = stepper('v', S('rule_sig_volume'), '', 0, car().volMax); break;
+        case 'wait': body = stepper('s', S('rule_wait_title'), ' s', 1, 30); break;
+        case 'windows': body = seg('close', [[true, S('shortcuts_action_windows_close')], [false, S('shortcuts_action_windows_open')]]); break;
+        case 'media': body = seg('play', [[true, S('rule_act_media_play')], [false, S('rule_act_media_pause')]]); break;
+        case 'abrp': body = seg('on', [[true, S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4'))], [false, S('abrp_rule_stop')]]); break;
+        case 'profile': body = '<div class="mw-grid" data-sk="rvp">' + state.profiles.map((p) => '<button class="mw-choice' + (it.id === p.id ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('id=' + JSON.stringify(p.id)) + '">' + modePill(p) + '<b>' + esc(p.name) + '</b></button>').join('') + '</div>'; break;
+        case 'stop_rule':
+        case 'run_rule': body = '<div class="mw-grid" data-sk="rvr">' + state.rules.list.filter((r) => !this.ui.rEdit || r.id !== this.ui.rEdit.rule.id).map((r) => '<button class="mw-choice' + (it.id === r.id ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('id=' + JSON.stringify(r.id)) + '"><b>' + esc(r.name) + '</b></button>').join('') + '</div>'; break;
+        case 'shortcut': body = '<div class="mw-grid long" data-sk="rvs">' + availableActions().filter((a) => !['NONE', 'APPLY_PROFILE', 'OPEN_CUSTOM_APP', 'CUSTOM', 'RUN_RULE'].includes(a)).map((a) =>
+          '<button class="mw-choice' + (it.a === a ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('a=' + JSON.stringify(a)) + '"><b>' + esc(S(ACTION_KEY[a])) + '</b></button>').join('') + '</div>'; break;
+        case 'notify': case 'speak': case 'confirm':
+          body = '<div class="mw-cap">' + esc(S(it.k === 'notify' ? 'rule_notify_title' : it.k === 'speak' ? 'rule_speak_title' : 'rule_confirm_title')) + '</div><input class="a-input" style="width:100%" data-c="rvMsg" data-fid="rvMsg" maxlength="80" value="' + esc(it.msg) + '">'; break;
+        case 'if': body = '<div class="mw-cap">' + esc(S('rule_if_condition')) + '</div><div class="ov-seg rv-seg wrap">' + ['sun_up', 'ready', 'temp_below', 'temp_above', 'soc_below', 'drive_mode', 'random'].map((x) =>
+          '<button class="' + (it.c.k === x ? 'on' : '') + '" data-a="rvIf" data-v="' + x + '">' + esc(R_COND[x].name()) + '</button>').join('') + '</div><div class="mw-hint">' + esc(R_COND[it.c.k].txt(it.c)) + '</div>'; break;
+        default: body = '<div class="mw-cm">' + esc(rTxt(d.kind, it)) + '</div>';
+      }
+      // « Pendant combien de temps ? » pour chaque déclencheur qui suit un état (2026-11-12).
+      if (d.kind === 'trg' && !R_MOMENTS.includes(it.k)) {
+        const f = it.for || 0;
+        body += '<div class="rv-row"><span class="mw-cap">' + esc(S('rule_for_title')) + '</span><button class="mw-b" data-rep data-a="rvStep" data-v="for:-1:0:3600">−</button>' +
+          '<b class="rv-v">' + esc(f ? rDur(f) : S('rule_for_now')) + '</b><button class="mw-b" data-rep data-a="rvStep" data-v="for:1:0:3600">+</button></div><div class="mw-hint">' + esc(S('rule_for_hint')) + '</div>';
+      }
+      return win(900, head(MW.list, d.title || rItem(d.kind, it).name(), rTxt(d.kind, it)) + '<div class="rv-body">' + body + '</div>' +
+        '<div class="mw-acts">' + (d.back ? B(S('rule_keep_editing').replace(/.*/, '←'), 'rvBack') : '') + B(S('profile_cancel'), 'dlgClose') + B('OK', 'rvOk', 'p') + '</div>', '', 'rule-val');
+    }
+    /** Une ligne neuve à régler avant d'entrer dans la règle ; sans réglage à faire, elle entre tout de suite. */
+    rulePicked(kind, path, k, pre, title) {
+      const d = R_DEF[kind][k], it = Object.assign({ k }, rClone(d.def || {}), rClone(pre || {}));
+      if (kind === 'act' && k === 'profile' && !it.id) it.id = (state.profiles[0] || {}).id;
+      if (kind === 'act' && (k === 'run_rule' || k === 'stop_rule')) { const o = state.rules.list.find((r) => !this.ui.rEdit || r.id !== this.ui.rEdit.rule.id); it.id = o ? o.id : null; }
+      if (kind === 'act' && k === 'if') Object.assign(it, { c: { k: 'sun_up', is: true }, then: [], else: [] });
+      if ((kind === 'act' && (k === 'notify' || k === 'speak' || k === 'confirm'))) it.msg = '';
+      if (kind === 'act' && k === 'set') { const sk = SET_KEYS[it.key]; it.v = sk.bool ? true : sk.opts ? sk.opts[sk.opts.length - 1] : 21; }
+      if (kind === 'cond' && k === 'time_range') { it.a0 = 22; it.a1 = 0; it.b0 = 6; it.b1 = 0; }
+      if (kind === 'trg' && !R_MOMENTS.includes(k)) it.for = 0;
+      // Rien à régler : la ligne entre tout de suite. Un état demande toujours « Pendant ».
+      const simple = kind === 'trg' ? R_MOMENTS.includes(k) && !d.def
+        : d.def ? Object.keys(d.def).every((f) => pre && f in pre) : !['run_rule', 'stop_rule', 'if'].includes(k);
+      if (simple) { rList(this.ui.rEdit.rule, path).push(it); this.ui.dialog = null; return this.render(); }
+      this.ui.dialog = { type: 'rVal', kind, path, idx: null, item: it, back: { kind, path }, lockKey: kind === 'act' && k === 'set', title };
+      this.render();
+    }
+    /** Ce qu'une ligne range vraiment (time_range garde ses heures en a/b). */
+    ruleFix(it) {
+      if (it.k === 'time_range' && it.a0 != null) { it.a = [it.a0, it.a1]; it.b = [it.b0, it.b1]; delete it.a0; delete it.a1; delete it.b0; delete it.b1; }
+      return it;
+    }
+
+    extAct(a, v, el) {
+      const u = this.ui, sc = state.sc, R = state.rules, e = u.rEdit;
+      const pathIdx = () => { const [p, i] = v.split('|'); return [p, +i]; };
+      switch (a) {
+        // Réglages 2.7.0
+        case 'navSide': state.settings.navSide = v; commit(); return true;
+        case 'keepAc': state.settings.keepAcOff = !state.settings.keepAcOff; commit(); return true;
+        case 'flColor': state.floating.color = v; commit(); return true;
+        case 'flColorDef': state.floating.color = null; commit(); return true;
+        case 'stProf': u.stProf = v || null; u.statsOpen = null; u.stTripsShown = u.stChargesShown = ST_PAGE_SIZE; this.render(); return true;
+        case 'stBand': {
+          const bands = state.stats.bands ??= {};
+          bands[v] = !bands[v]; commit(); return true;
+        }
+        case 'stExport':
+          if (!state.stats.trips.length && !state.stats.charges.length) { this.toast(S('stats_export_empty')); return true; }
+          u.dialog = { type: 'export', what: 'stats', dest: 'dl', title: S('stats_export_title'), sub: S('stats_export_subtitle', state.stats.trips.length, state.stats.charges.length), go: S('stats_export') };
+          this.render(); return true;
+        // Boutons physiques
+        case 'wkScope': u.wkScope = v; this.render(); return true;
+        case 'wkAdd':
+          if (u.adv.rec) { u.adv.rec = false; u.wkCapture = false; clearTimeout(this._recT); this.render(); return true; }
+          u.adv.rec = true; u.wkCapture = true; clearTimeout(this._recT);
+          this._recT = setTimeout(() => { if (u.adv.rec) { u.adv.rec = false; u.wkCapture = false; this.render(); } }, 15000);
+          this.render(); emit('recording', { on: true }); return true;
+        case 'wkMenu': u.dialog = { type: 'wkMenu', code: +v }; this.render(); return true;
+        case 'wkRename': u.dialog = { type: 'wkRename', code: +v, name: (sc.keyNames || {})[v] || keyName(+v) }; this.render(); return true;
+        case 'wkNameOk': { const d = u.dialog; sc.keyNames = sc.keyNames || {}; const n = (d.name || '').trim(); if (n) sc.keyNames[d.code] = n; u.dialog = null; commit(); return true; }
+        case 'wkNameReset': if (sc.keyNames) delete sc.keyNames[v]; u.dialog = null; commit(); return true;
+        case 'wkRemove': { const c = +v; sc.adv = sc.adv.filter((x) => x.key !== c); sc.keys = (sc.keys || []).filter((x) => x !== c); if (sc.keyNames) delete sc.keyNames[c]; u.dialog = null; commit(); return true; }
+        case 'pickRuleOk': { const t = u.dialog && u.dialog.then; u.dialog = null; if (t) this.setWheel(t.code, t.press, t.scope, 'RUN_RULE', { ruleId: v }); else this.render(); return true; }
+        // Cycle des modes
+        case 'dcToggle': { const d = u.driveDraft || (u.driveDraft = driveOrder().slice()); const i = d.indexOf(v); if (i >= 0) d.splice(i, 1); else d.push(v); this.render(); return true; }
+        case 'dcClear': u.driveDraft = []; this.render(); return true;
+        case 'dcSave': if (u.driveDraft && u.driveDraft.length >= 2) { sc.driveCycle = u.driveDraft.slice(); commit(); this.toast(S('shortcuts_cfg_regen_saved')); } return true;
+        // Réglages rapides
+        case 'qsAdd': { const t = qtTiles(); if (t.length < QT_MAX) { state.quick.tiles = t.concat([v]); commit(); } return true; }
+        case 'qsDel': state.quick.tiles = qtTiles().filter((x) => x !== v); commit(); return true;
+        case 'qsUp': case 'qsDown': { const t = qtTiles(), i = +v, j = a === 'qsUp' ? i - 1 : i + 1; if (j >= 0 && j < t.length) { [t[i], t[j]] = [t[j], t[i]]; state.quick.tiles = t; commit(); } return true; }
+        case 'qsDefaults': state.quick.tiles = null; commit(); return true;
+        case 'qsOpen': this.openQuick(); return true;
+        case 'qsClose': case 'qsBg': this.closeOverlay(); return true;
+        case 'qsCard':
+          if (u.overlay?.type === 'quick') { u.overlay.left = popupDelay(); u.overlay.sel = null; this.render(); }
+          return true;
+        case 'qsConfigure':
+          this.closeOverlay(); u.qsPage = true; this.go('shortcuts', 'quick'); return true;
+        case 'qsTile': {
+          const o = u.overlay; if (!o) return true;
+          o.left = popupDelay();
+          const opts = QT[v].opts();
+          // Deux valeurs proposées : un toucher bascule, sans bulle.
+          if (opts.length === 2) { o.sel = null; const cur = QT[v].get(), nx = opts.find(([x]) => x !== cur) || opts[0]; if (QT[v].set(nx[0]) === false) this.toast(S('quick_write_failed')); commit(); return true; }
+          o.sel = o.sel === v ? null : v; this.render(); return true;
+        }
+        case 'qsSet': {
+          const o = u.overlay; if (!o || !o.sel) return true;
+          const val = JSON.parse(v), ok = QT[o.sel].set(val);
+          o.left = popupDelay(); o.sel = null;   // la valeur choisie part, la bulle se referme
+          if (ok === false) this.toast(S('quick_write_failed')); commit(); return true;
+        }
+        // Mes automatisations : liste
+        case 'rEngine': R.engine = !R.engine; commit(); return true;
+        case 'rOn': { const r = R.list.find((x) => x.id === (el && el.getAttribute('data-x'))); if (r) { r.on = !r.on; commit(); } return true; }
+        case 'rNew': if (R.list.length >= RULES_MAX) { this.toast(S('rule_max_reached', RULES_MAX)); return true; } u.dialog = { type: 'rTpl' }; this.render(); return true;
+        case 'rTplPick': { const t = rTemplates().find((x) => x.id === v); u.dialog = null; u.rEdit = { rule: rNew(t), isNew: true }; u.screen = 'ruleEdit'; this.render(); return true; }
+        case 'rEdit': { const r = R.list.find((x) => x.id === v); if (r) { u.rEdit = { rule: rClone(r), isNew: false }; u.screen = 'ruleEdit'; this.render(); } return true; }
+        case 'rTest': { const r = R.list.find((x) => x.id === v); if (r) { runRule(r, S('rule_test'), true); this.toast(S('rule_test_started', r.name)); } return true; }
+        case 'rDel': u.dialog = { type: 'rDelete', id: v }; this.render(); return true;
+        case 'rDelOk': R.list = R.list.filter((x) => x.id !== u.dialog.id); u.dialog = null; commit(); return true;
+        case 'rHist': u.dialog = { type: 'rHist', f: 'all' }; this.render(); return true;
+        case 'rHistF': if (u.dialog) u.dialog.f = v; this.render(); return true;
+        // Variables et lieux : la maquette n'en crée pas, la fenêtre « vide » de l'application s'affiche.
+        case 'rVars': u.dialog = { type: 'rInfo', title: S('rule_tool_variables'), msg: S('rule_vars_empty') }; this.render(); return true;
+        case 'rPlaces': u.dialog = { type: 'rInfo', title: S('rule_tool_places'), msg: S('rule_places_empty') }; this.render(); return true;
+        case 'rAbrp': u.dialog = { type: 'rAbrp' }; this.render(); return true;
+        case 'rAbrpDemo': this.toast(L('Démonstration : dans l\'application, le compte se saisit au clavier ou s\'importe depuis la clé USB.', 'Demo: in the app, the account is typed in or imported from the USB drive.'), 3200); return true;
+        case 'rExport': u.dialog = { type: 'export', what: 'rules', dest: 'dl', title: S('rule_export_title'), sub: S('rule_export_subtitle', R.list.length), go: S('rule_tool_export') }; this.render(); return true;
+        case 'rImport': {
+          // Démonstration (2026-11-14) : un fichier venu d'une autre voiture, deux automatisations coupées ;
+          // les liens vers le fichier et « Maison » sont refaits, « Travail » et le son restent à réassocier.
+          const a = { id: 'ri' + Date.now(), name: L('Arrivée au travail', 'Arriving at work'), on: false, trg: [{ k: 'app_start' }], cond: [],
+            act: [{ k: 'notify', msg: L('Bonne journée', 'Have a good day') }], opt: { ready: false, restart: false }, last: null, missing: 1 };
+          const b = { id: 'ri' + (Date.now() + 1), name: L('Rappel câble', 'Cable reminder'), on: false, trg: [{ k: 'app_start' }], cond: [],
+            act: [{ k: 'sound' }], opt: { ready: false, restart: false }, last: null, missing: 1 };
+          const imported = [a, b].slice(0, Math.max(0, RULES_MAX - R.list.length));
+          R.list.push(...imported);
+          const rows = imported.length ? [
+            { kind: 'rule_ref_place', ok: true, text: S('rule_import_by_name_fmt', L('Maison', 'Home')), sub: S('rule_import_in_fmt', a.name) },
+            { kind: 'rule_ref_place', ok: false, name: L('Travail', 'Work'), rule: a.id, rname: a.name, pick: 'rule_import_choose_place',
+              items: [L('Bureau', 'Office'), L('Salle de sport', 'Gym'), L('Maison', 'Home')] },
+          ] : [];
+          if (imported.length === 2) {
+            rows.unshift({ kind: 'rule_ref_rule', ok: true, text: P('rule_import_from_file', 2) });
+            rows.push({ kind: 'rule_ref_sound', ok: false, name: 'carillon.mp3', rule: b.id, rname: b.name, pick: 'rule_import_choose_sound', items: USB_SOUNDS.map((x) => x[0]) });
+          }
+          u.rImp = { n: imported.length, skipped: 2 - imported.length, rows };
+          u.dialog = { type: 'rImport' }; commit(); return true;
+        }
+        case 'rImpChoose': { const row = u.rImp && u.rImp.rows[+v]; if (row) { u.dialog = { type: 'rImpPick', row: +v }; this.render(); } return true; }
+        case 'rImpPick': {
+          const d = u.dialog, row = u.rImp && u.rImp.rows[d.row];
+          if (row) {
+            const nom = row.items[+v]; row.ok = true; row.text = S('rule_import_linked_fmt', nom); row.sub = S('rule_import_in_fmt', row.rname);
+            const r = R.list.find((x) => x.id === row.rule); if (r) r.missing = Math.max(0, (r.missing || 0) - 1);
+            commit();
+          }
+          u.dialog = { type: 'rImport' }; this.render(); return true;
+        }
+        case 'rImpBack': u.dialog = { type: 'rImport' }; this.render(); return true;
+        case 'rAskYes': case 'rAskNo': { const d = u.dialog; clearTimeout(this._askT); u.dialog = null; this.render(); if (d && d.done) d.done(a === 'rAskYes'); return true; }
+        // Éditeur
+        case 'rEditOn': if (e) { e.rule.on = !e.rule.on; this.render(); } return true;
+        case 'rOptReady': if (e) { e.rule.opt.ready = !e.rule.opt.ready; this.render(); } return true;
+        case 'rOptRestart': if (e) { e.rule.opt.restart = v === '1'; this.render(); } return true;
+        case 'rCancel': u.rEdit = null; u.screen = 'automation'; u.tabs.auto = 'rules'; this.render(); return true;
+        case 'rTestDraft': if (e) { runRule(e.rule, S('rule_test'), true); this.toast(S('rule_test_started', e.rule.name)); } return true;
+        case 'rSave': {
+          if (!e) return true;
+          if (!e.rule.trg.length) { this.toast(S('rule_need_trigger'), 3200); return true; }
+          if (!e.rule.act.length) { this.toast(S('rule_need_action')); return true; }
+          const i = R.list.findIndex((x) => x.id === e.rule.id);
+          if (i >= 0) R.list[i] = e.rule; else R.list.push(e.rule);
+          u.rEdit = null; u.screen = 'automation'; u.tabs.auto = 'rules'; commit(); return true;
+        }
+        case 'rAdd': { const [kind, path] = v.split('|'); u.dialog = { type: 'rPick', kind, path, q: '', cat: null }; this.render(); return true; }
+        case 'rCat': if (u.dialog) { u.dialog.cat = v || null; this.render(); } return true;
+        case 'rPickOk': {
+          const d = u.dialog, x = rSubjects(d.kind).find((y) => y.id === v); if (!x) return true;
+          if (x.modes.length === 1) { this.rulePicked(d.kind, d.path, x.modes[0].k, x.modes[0].pre, x.name); return true; }
+          u.dialog = { type: 'rMode', kind: d.kind, path: d.path, sid: v, back: { kind: d.kind, path: d.path } }; this.render(); return true;
+        }
+        case 'rModeOk': {
+          const d = u.dialog, x = rSubjects(d.kind).find((y) => y.id === d.sid), m = x && x.modes[+v];
+          if (m) this.rulePicked(d.kind, d.path, m.k, m.pre, x.name); return true;
+        }
+        case 'rEditLine': {
+          const [kind, path, i] = v.split('|'), it = rList(e.rule, path)[+i];
+          const copy = rClone(it); if (copy.k === 'time_range') { copy.a0 = copy.a[0]; copy.a1 = copy.a[1]; copy.b0 = copy.b[0]; copy.b1 = copy.b[1]; }
+          u.dialog = { type: 'rVal', kind, path, idx: +i, item: copy }; this.render(); return true;
+        }
+        case 'rDelLine': { const [p, i] = pathIdx(); rList(e.rule, p).splice(i, 1); this.render(); return true; }
+        case 'rLineMenu': { const [kind, path, i] = v.split('|'); u.dialog = { type: 'rLineMenu', kind, path, i: +i }; this.render(); return true; }
+        case 'rLineDo': {
+          const d = u.dialog; if (!d || !e) return true;
+          const pv = d.kind + '|' + d.path + '|' + d.i, pi = d.path + '|' + d.i;
+          u.dialog = null;
+          switch (v) {
+            case 'edit': return this.extAct('rEditLine', pv);
+            case 'up': return this.extAct('rUp', pi);
+            case 'down': return this.extAct('rDown', pi);
+            case 'dup': { const l = rList(e.rule, d.path); l.splice(d.i + 1, 0, rClone(l[d.i])); this.render(); return true; }
+            case 'copy': return this.extAct('rCopy', pv);
+            case 'cut': return this.extAct('rCut', pv);
+            default: return this.extAct('rDelLine', pi);
+          }
+        }
+        case 'rCopy': case 'rCut': {
+          const [kind, p, i] = v.split('|'), l = rList(e.rule, p), it = l[+i];
+          u.rClip = { kind, item: rClone(it) };
+          if (a === 'rCut') l.splice(+i, 1);
+          this.toast(S('rule_copied', rTxt(kind, it))); this.render(); return true;
+        }
+        case 'rPaste': {
+          const [kind, p] = v.split('|'), c = u.rClip; if (!c || c.kind !== kind) return true;
+          // Une automatisation ne peut pas se lancer elle-même.
+          if (c.item.k === 'run_rule' && c.item.id === e.rule.id) { this.toast(S('rule_paste_self'), 3000); return true; }
+          rList(e.rule, p).push(rClone(c.item)); this.render(); return true;
+        }
+        case 'rUp': case 'rDown': { const [p, i] = pathIdx(), l = rList(e.rule, p), j = a === 'rUp' ? i - 1 : i + 1; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; this.render(); return true; }
+        // Fenêtre de valeur
+        case 'rvStep': {
+          const [f, dir, min, max] = v.split(':'), it = u.dialog.item;
+          if (f === 'for') {
+            // Comme l'éditeur : par 5 s jusqu'à une minute, par 15 s jusqu'à 10 min, puis par minute.
+            const cur = +it.for || 0, sens = +dir, pas = sens > 0 ? (cur < 60 ? 5 : cur < 600 ? 15 : 60) : (cur <= 60 ? 5 : cur <= 600 ? 15 : 60);
+            it.for = clamp(cur + sens * pas, 0, 3600); this.render(); return true;
+          }
+          const step = f === 'v' && it.k === 'brightness' ? 5 : f === 'v' && (it.k === 'alt_above' || it.k === 'alt_below') ? 50 : f === 'min' && it.k === 'every' ? 5 : 1;
+          it[f] = clamp((+it[f] || 0) + (+dir) * step, +min, +max); this.render(); return true;
+        }
+        case 'rvSet': { const i = v.indexOf('='), it = u.dialog.item; it[v.slice(0, i)] = JSON.parse(v.slice(i + 1)); this.render(); return true; }
+        case 'rvKey': { const it = u.dialog.item, sk = SET_KEYS[v]; it.key = v; it.v = sk.bool ? true : sk.opts ? sk.opts[sk.opts.length - 1] : 21; this.render(); return true; }
+        case 'rvDay': { const it = u.dialog.item, x = +v, i = it.d.indexOf(x); if (i >= 0) { if (it.d.length > 1) it.d.splice(i, 1); } else { it.d.push(x); it.d.sort(); } this.render(); return true; }
+        case 'rvIf': { const it = u.dialog.item; it.c = Object.assign({ k: v }, rClone(R_COND[v].def || {})); this.render(); return true; }
+        case 'rvBack': { const b = u.dialog.back; u.dialog = { type: 'rPick', kind: b.kind, path: b.path, q: '', cat: null }; this.render(); return true; }
+        case 'rvOk': {
+          const d = u.dialog, it = this.ruleFix(d.item), l = rList(e.rule, d.path);
+          if (d.idx == null) l.push(it); else l[d.idx] = it;
+          u.dialog = null; this.render(); return true;
+        }
+        // Export (statistiques, automatisations)
+        case 'expDest': u.dialog.dest = v; this.render(); return true;
+        case 'expGo': return this.exportGo(), true;
+        default: return false;
+      }
+    }
+    extChange(id, t) {
+      const u = this.ui;
+      switch (id) {
+        case 'wkSel': {
+          const code = +t.getAttribute('data-key'), press = t.getAttribute('data-press'), scope = u.wkScope || '', val = t.value;
+          const then = { kind: 'wheel', code, press, scope, action: val };
+          if (val === 'RUN_RULE') { u.dialog = { type: 'pickRule', then }; this.render(); return true; }
+          if (val === 'OPEN_CUSTOM_APP' || val === 'APPLY_PROFILE') {
+            if (val === 'APPLY_PROFILE' && !state.profiles.length) { u.dialog = { type: 'noProfiles' }; this.render(); return true; }
+            u.dialog = { type: val === 'OPEN_CUSTOM_APP' ? 'pickApp' : 'pickProfile', then }; this.render(); return true;
+          }
+          if (val === 'CUSTOM') { u.dialog = state.sc.custom.length ? { type: 'pickCustom', then } : { type: 'custom', cs: { id: null, name: '', kind: 'APP' }, then }; this.render(); return true; }
+          this.setWheel(code, press, scope, val); return true;
+        }
+        case 'wkName': case 'pName': if (u.dialog) u.dialog.name = t.value; return true;
+        case 'rName': if (u.rEdit) u.rEdit.rule.name = t.value; return true;
+        case 'rQ': if (u.dialog) { u.dialog.q = t.value; this.render(); } return true;
+        case 'rvMsg': if (u.dialog) u.dialog.item.msg = t.value; return true;
+        default: return false;
+      }
+    }
+
     dialogHtml(d) {
       const B = (label, a, cls, v, ico) => '<button class="mw-b ' + (cls || '') + '" data-a="' + a + '"' + (v != null ? ' data-v="' + esc(v) + '"' : '') + '>' + (ico || '') + '<span>' + esc(label) + '</span></button>';
       const win = (w, inner, cls, hl) => '<div class="a-scrim"><div class="mw ' + (cls || '') + '"' + (hl ? ' data-hl="' + hl + '"' : '') + ' style="width:' + w + 'px" role="dialog">' + inner + '</div></div>';
@@ -3243,6 +4700,8 @@
         return win(640, '<span class="mw-badge big ' + tone + '">' + (o.ico || (tone ? MW.warning : MW.question)) + '</span><div class="mw-ct">' + esc(o.title) + '</div>' + body +
           '<div class="mw-acts tall">' + (o.no ? B(o.no, o.noAct || 'dlgClose') : '') + B(o.yes, o.yesAct || 'dlgClose', tone === 'danger' ? 'd' : tone === 'warn' ? 'w' : 'p') + '</div>', 'c');
       };
+      const ext = this.extDialog(d, { B, win, head, confirm });
+      if (ext) return ext;
       const press = { single: 'adv_sc_press_short', long: 'adv_sc_press_long_lbl', double: 'adv_sc_press_double' };
       switch (d.type) {
         case 'fwUnknown':
@@ -3256,18 +4715,18 @@
           const tile = (code) => '<button class="mw-lang" data-a="pickLang" data-v="' + code + '"><b>' + esc(S('settings_language_' + code)) + '</b><span>' + code.toUpperCase() + '</span></button>';
           const title = S('settings_language_pick_title'), en = 'Choose your language';
           return win(820, '<span class="mw-badge mid">' + MW.language + '</span><div class="mw-ct">' + esc(title) + '</div>' + (title !== en ? '<div class="mw-s center">' + en + '</div>' : '') +
-            '<div class="mw-langs">' + ['fr', 'en', 'de', 'es'].map(tile).join('') + '</div><div class="mw-langs three">' + ['pt', 'it', 'tr'].map(tile).join('') + '</div>', 'c');
+            [['fr', 'en', 'de', 'es', 'pt'], ['it', 'tr', 'pl', 'nb', 'cs']].map((r) => '<div class="mw-langs">' + r.map(tile).join('') + '</div>').join(''), 'c');
         }
         case 'update': {
           // Trois états sous le même en-tête (UpdateDialogManager) : les nouveautés et les actions,
           // le téléchargement, l'installation à la main. Hors Wi-Fi, une confirmation passe devant.
           if (d.step === 'data') return confirm({ tone: 'warn', title: S('update_data_warn_title'), msg: S('update_data_warn_message'), yes: S('update_continue'), no: S('update_cancel'), yesAct: 'updDownload', noAct: 'updBack' });
-          const top = head(MW.download, S('update_available_title'), null, '<span class="mw-vers"><span class="mw-pillv">v2.6.8</span>' + MW.arrow + '<span class="mw-pillv acc">v2.x.x</span></span>');
+          const top = head(MW.download, S('update_available_title'), null, '<span class="mw-vers"><span class="mw-pillv">v' + esc(APP_VERSION) + '</span>' + MW.arrow + '<span class="mw-pillv acc">v2.x.x</span></span>');
           if (d.step === 'progress') return win(1100, top + '<div class="mw-pan mt16"><div class="mw-status">' + esc(S('update_downloading_pct', d.pct || 0)) + '</div><div class="mw-prog"><i style="width:' + (d.pct || 0) + '%"></i></div></div>' +
             '<div class="mw-acts">' + B(S('update_cancel'), 'dlgClose') + '</div>');
           if (d.step === 'manual' || d.step === 'done') return win(1100, top + '<div class="mw-cols mt16"><div class="mw-pan grow"><div class="mw-cap">' + esc(S('update_manual_title')) + '</div>' +
             '<div class="mw-text">' + esc(S(d.step === 'done' ? 'update_downloaded_instructions' : 'update_manual_instructions')) + '</div></div>' +
-            '<div class="mw-pan mw-qr" style="width:240px">' + qrBox(160) + '<span>' + esc(S('update_gh_releases_link')) + '</span></div></div><div class="mw-acts">' + B(S('update_close'), 'dlgClose') + '</div>');
+            '<div class="mw-pan" style="width:240px">' + qrBox('releases', S('update_gh_releases_link'), 'https://github.com/SliDeeN/MG4Control/releases/latest', 160) + '</div></div><div class="mw-acts">' + B(S('update_close'), 'dlgClose') + '</div>');
           const notes = L('(exemple : le texte des notes de version de GitHub s\'affiche ici)\n\n• Pop-up HVAC : nouvelle présentation\n• Sélecteur de profils en cartes\n• Bandeaux de confirmation en bas de l\'écran\n• Délai de fermeture des pop-ups réglable\n• Interrupteur par catégorie dans les profils\n• Automatisation selon le niveau de batterie\n• Luminosité automatique\n• Chauffage intelligent de la batterie\n• Feux de route automatiques\n• Cycle de profils au volant',
             '(example: the GitHub release notes are shown here)\n\n• HVAC pop-up: new look\n• Profile picker as cards\n• Confirmation banners at the bottom of the screen\n• Adjustable pop-up closing delay\n• Per-category switch in profiles\n• Automation based on battery level\n• Automatic brightness\n• Smart battery heating\n• Automatic high beams\n• Profile cycle on the steering wheel');
           return win(1100, top + '<div class="mw-cols mt16" style="height:320px"><div class="mw-col grow"><div class="mw-pan grow"><div class="mw-cap">' + esc(S('update_release_notes_label')) + '</div>' +
@@ -3287,10 +4746,10 @@
             html: '<b class="red">' + esc(S('external_api_confirm_warn')) + '</b>\n\n' + esc(S('external_api_confirm_msg')) + '\n\n<span class="red">' + esc(S('external_api_confirm_risk')) + '</span>' });
         case 'advWarn':
           return confirm({ tone: 'warn', title: S('adv_sc_enable_warn_title'), msg: S('adv_sc_enable_warn_msg'), yes: S('adv_sc_enable_warn_ok'), no: S('profile_cancel'), yesAct: 'advWarnOk' });
-        case 'launcherWarn':
-          return confirm({ tone: 'warn', title: S('shortcuts_warning_title'), msg: S('shortcuts_warning_message'), yes: S('shortcuts_warning_ok') });
         case 'noProfiles':
           return confirm({ tone: 'warn', title: S('shortcuts_no_profiles'), yes: S('nav_close') });
+        case 'pcNoCam':
+          return confirm({ tone: 'warn', title: S('preclim_cam_nocam_warn_title'), msg: S('preclim_cam_nocam_warn_text'), yes: S('preclim_cam_nocam_confirm'), no: S('preclim_cancel'), yesAct: 'pcNoCamOk' });
         case 'pcUnlock': {
           const row = (ico, t, dsc) => '<div class="mw-unl"><span class="mw-badge warn">' + ico + '</span><div><b>' + esc(S(t)) + '</b><span>' + esc(S(dsc)) + '</span></div></div>';
           return win(780, '<span class="mw-badge big warn">' + MW.key + '</span><div class="mw-ct">' + esc(S('preclim_unlock_title')) + '</div>' +
@@ -3298,6 +4757,49 @@
             row(MW.handle, 'preclim_unlock_handle', 'preclim_unlock_handle_desc') + row(MW.key, 'preclim_unlock_key', 'preclim_unlock_key_desc') +
             row(MW.phone, 'preclim_unlock_app', 'preclim_unlock_app_desc') + '</div>' +
             '<div class="mw-acts tall">' + B(S('preclim_unlock_never'), 'pcUnlockNever') + B(S('preclim_unlock_ok'), 'pcUnlockOk', 'w') + '</div>', 'c', 'pc-unlock');
+        }
+        case 'immWarn': {
+          // Avertissement (conflits possibles) puis l'astuce du glissement, « Astuce » en gras.
+          const tip = S(car().rhd ? 'immersive_tip_right' : 'immersive_tip_left');
+          return confirm({ tone: 'warn', title: S('immersive_title'), yes: S('immersive_confirm_ok'), no: S('profile_cancel'), yesAct: 'immOk',
+            html: esc(S('immersive_confirm_msg')) + '\n\n<b>' + esc(S('immersive_tip_label')) + '</b> — ' + esc(tip) });
+        }
+        case 'immApps': {
+          const query = d.query.trim().toLowerCase();
+          const apps = APPS.filter((name) => name !== 'MG Launcher');
+          const visible = apps.filter((name) => name.toLowerCase().includes(query) || IMMERSIVE_PACKAGES[name]?.includes(query));
+          const ligne = (name) => '<div class="mw-imrow">' + appIcon(name) + '<div class="mw-imname"><span>' + esc(name) + '</span>' +
+            (car().mg4Dash === 'compatible' && name === 'Waze' ? '<small class="a-imm-warning">' + esc(S('immersive_by_mg4dash')) + '</small>' : '') +
+            '</div><div class="ov-seg mw-seg" role="group" aria-label="' + esc(name) + '">' +
+            Object.entries(IMMERSIVE_MODES).map(([mode, key]) => {
+              const selected = (d.draft[name] || 'NORMAL') === mode;
+              return '<button' + (selected ? ' class="on"' : '') + ' aria-pressed="' + selected + '" data-a="immMode" data-v="' + esc(name + '|' + mode) + '">' + esc(S(key)) + '</button>';
+            }).join('') + '</div></div>';
+          const search = esc(S('dialog_search'));
+          return win(1040, head(ico('cat_adjust'), S('immersive_title'), S('immersive_dialog_count', Object.keys(d.draft).length)) +
+            (apps.length > 6 ? '<input class="a-input mw-imsearch" data-c="immQuery" data-fid="immQuery" aria-label="' + search + '" placeholder="' + search + '" value="' + esc(d.query) + '">' : '') +
+            '<div class="mw-imhint">' + esc(S('immersive_hint')) + '</div>' +
+            '<div class="mw-imlist" data-sk="imm">' + (visible.length ? visible.map(ligne).join('') : '<div class="mw-imempty">' + esc(S('immersive_empty')) + '</div>') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('profile_save'), 'immSave', 'p') + '</div>', 'mw-immersive', 'imm-apps');
+        }
+        case 'flIcon': {
+          // Choix de l'icône (BubbleIcons.choisir) : catégories à gauche, recherche, grille.
+          const b = flFind(this.ui.flEditing); if (!b) return '';
+          const cur = flIconRef(b), q = d.q.trim().toLowerCase();
+          const recents = flSet(this.floatProfileId() || '').list.filter((o) => o.id !== b.id && o.icon && (b.content === 'icon' || o.icon.startsWith('sym:'))).map((o) => o.icon);
+          const cats = [];
+          if (b.content === 'icon' && flApps(b).length) cats.push(['app', S('floating_icon_cat_app'), flApps(b).map((a) => 'app:' + a)]);
+          if (recents.length) cats.push(['recent', S('rule_cat_recent'), [...new Set(recents)]]);
+          FL_SYM_CATS.forEach(([k, key, ns]) => cats.push([k, S(key), ns.map((n) => 'sym:' + n)]));
+          const words = (ref) => (ref.slice(4).replace(/_/g, ' ') + ' ' + cats.filter((c) => c[2].includes(ref)).map((c) => c[1]).join(' ')).toLowerCase();
+          const refs = q ? [...new Set(cats.flatMap((c) => c[2]))].filter((ref) => q.split(' ').every((w) => words(ref).includes(w))) : (cats.find((c) => c[0] === d.cat) || cats[0])[2];
+          const search = esc(S('dialog_search'));
+          return win(1180, head(MW.list, S('floating_icon_pick_title'), null,
+              '<input class="a-input mw-imsearch" style="flex:0 0 340px;margin:0" data-c="flIconQ" data-fid="flIconQ" aria-label="' + search + '" placeholder="' + search + '" value="' + esc(d.q) + '">') +
+            '<div class="mw-icwrap"><div class="mw-iccats">' + cats.map(([k, label, list]) => '<button class="mw-iccat' + (!q && k === d.cat ? ' on' : '') + '" data-a="flIconCat" data-v="' + k + '"><span>' + esc(label) + '</span><small>' + list.length + '</small></button>').join('') + '</div>' +
+            '<div class="mw-icgrid">' + (refs.length ? refs.map((ref) => '<button class="mw-ic' + (ref === cur ? ' on' : '') + '" data-a="flIconSet" data-v="' + esc(ref) + '" aria-label="' + esc(ref.slice(4).replace(/_/g, ' ')) + '">' + flIconHtml(ref, ref.startsWith('app:') ? 40 : 30) + '</button>').join('')
+              : '<div class="mw-imempty">' + esc(S('dialog_search_none')) + '</div>') + '</div></div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + '</div>', 'mw-iconpick', 'fl-icon');
         }
         case 'powerOff':
           return confirm({ tone: 'danger', ico: MW.power, title: S('vehicle_power_dialog_title'), msg: S('vehicle_power_dialog_msg'), yes: S('vehicle_power_dialog_confirm'), no: S('vehicle_power_dialog_cancel'), yesAct: 'powerOk' });
@@ -3406,6 +4908,16 @@
             '<div class="mw-cols mt12">' + time('start', 'stats_complete_start') + time('end', 'stats_complete_end') + '</div>' +
             '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + B(S('stats_save'), 'stCompleteOk', 'p') + '</div>');
         }
+        case 'pMenu': {
+          // AppDialog.choisir : le nom du profil en titre, les trois gestes en tuiles.
+          const p = state.profiles.find((x) => x.id === d.id);
+          return win(760, head(MW.list, p ? p.name : '', null) + '<div class="mw-grid three">' +
+            [['profile_duplicate', 'pDup'], ['profile_rename', 'pRename'], ['profile_delete', 'pDel']].map(([k, a]) => '<button class="mw-choice" data-a="' + a + '" data-v="' + d.id + '"><b>' + esc(S(k)) + '</b></button>').join('') +
+            '</div><div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + '</div>');
+        }
+        case 'pRename':
+          return win(620, head(MW.list, S('profile_rename_title'), null) + '<input class="a-input" style="width:100%" data-c="pName" data-fid="pName" maxlength="30" value="' + esc(d.name) + '">' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'pRenameOk', 'p') + '</div>');
         case 'delProfile': {
           const p = state.profiles.find((x) => x.id === d.id);
           return confirm({ tone: 'danger', ico: MW.trash, title: S('profile_delete_title', p ? p.name : ''), yes: S('profile_delete'), no: S('profile_cancel'), yesAct: 'delOk' });
@@ -3413,15 +4925,15 @@
         case 'about': {
           // Deux colonnes (dialog_app_info.xml) : l'application et ses crédits, puis les QR codes des dépôts.
           const pill = (key, v) => '<span class="mw-pillv"><i>' + esc(S(key)) + '</i>' + esc(v) + '</span>';
-          const qr = (nm) => '<div class="mw-qr">' + qrBox(150) + '<span>' + nm + '</span></div>';
           return win(1000, '<div class="mw-cols"><div class="mw-col grow">' + head(MW.info, S('app_name'), S('info_based_on')) +
-            '<div class="mw-pills">' + pill('info_version_label', '2.6.8') + pill('info_firmware_label', gen() === 'UNKNOWN' ? 'SWI???-00000' : gen() + '-xxxxx') + '</div>' +
+            '<div class="mw-pills">' + pill('info_version_label', APP_VERSION) + pill('info_firmware_label', state.fw === 'UNKNOWN' ? 'SWI???-00000' : state.fw + '-xxxxx') + '</div>' +
             '<div class="mw-credit">' + esc(S('info_made_with_love')) + '</div><div class="mw-thanks">' + esc(S('info_special_thanks')) + '</div></div>' +
-            '<div class="mw-pan mw-qrs">' + qr('GitHub') + qr('GitLab') + '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
+            '<div class="mw-pan mw-qrs">' + qrBox('github', 'GitHub', 'https://github.com/SliDeeN/MG4Control', 150) +
+            qrBox('gitlab', 'GitLab', 'https://gitlab.com/SliDeeN/mg4control', 150) + '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
         }
         case 'diag':
           // Le journal plein cadre (dialog_diagnostic.xml) : les actions restent en haut, le reste défile.
-          return win(1320, head(MW.bug, S('diag_title'), null, '<div class="mw-tools">' + B(S(d.copied ? 'diag_copied' : 'diag_copy'), 'diagCopy', 'sm') + B(S('diag_download'), 'diagDl', 'sm') +
+          return win(1320, head(MW.bug, S('diag_title'), null, '<div class="mw-tools">' + B(S(d.copied ? 'diag_copied' : 'diag_copy'), 'diagCopy', 'sm') + B(S('diag_save'), 'diagDl', 'sm') +
             '<button class="mw-round" data-a="dlgClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>') +
             '<div class="mw-pan mw-log" data-sk="diag"><pre>' + esc(diagSample()) + '</pre></div>');
         default: return '';
@@ -3429,11 +4941,65 @@
     }
 
     // ── Événements ─────────────────────────────────────────────────────────
+    bindClusterDrag() {
+      this.app.addEventListener('pointerdown', (e) => {
+        const hit = e.target.closest('.cll-hit'), draft = this.ui.clLay;
+        if (!hit || !draft || e.button !== 0 || !e.isPrimary) return;
+        const svg = hit.ownerSVGElement, start = hit.dataset.v === 'g' ? 'g' : +hit.dataset.v;
+        const bounds = svg.getBoundingClientRect(), side = Math.min(bounds.width, bounds.height);
+        const left = bounds.left + (bounds.width - side) / 2, top = bounds.top + (bounds.height - side) / 2;
+        let dragging = false, moved = false;
+        svg.setPointerCapture(e.pointerId);
+        const update = (ev) => {
+          const x = (ev.clientX - left) / side * 260, y = (ev.clientY - top) / side * 260;
+          const cell = clGeo(draft.L, true).cells.find((c) => x >= c.x && x <= c.x + c.w && y >= c.y && y < c.y + c.h);
+          const inside = x >= 0 && x <= 260 && y >= 0 && y <= 260;
+          const pos = y < 260 / 3 ? 'top' : y > 520 / 3 ? 'bottom' : 'middle';
+          draft.drop = inside ? start === 'g' ? pos : cell?.slot : null;
+          clPreviewSvg(svg);
+        };
+        const hold = setTimeout(() => {
+          if (start !== 'g' && !draft.L.slots[start]) return;
+          dragging = true; this._drag = true;
+          update(e);
+        }, 400);
+        const move = (ev) => {
+          if (dragging) update(ev);
+          else if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) > 9) { moved = true; clearTimeout(hold); }
+        };
+        const finish = (ev) => {
+          clearTimeout(hold);
+          svg.removeEventListener('pointermove', move);
+          svg.removeEventListener('pointerup', finish);
+          svg.removeEventListener('pointercancel', finish);
+          this._drag = false;
+          if (ev.type === 'pointerup' && this.ui.clLay === draft && this.ui.dialog?.type === 'clLayout') {
+            if (dragging) {
+              update(ev);
+              if (start === 'g' && draft.drop) { draft.L.gauge = draft.drop; draft.sel = 'g'; }
+              else if (Number.isInteger(draft.drop) && draft.drop !== start) {
+                const slots = draft.L.slots, target = draft.drop;
+                [slots[start], slots[target]] = [slots[target], slots[start]];
+                clTidySlots(slots); draft.sel = target;
+              }
+            } else if (!moved) draft.sel = start;
+          }
+          draft.drop = null;
+          this.render();
+        };
+        svg.addEventListener('pointermove', move);
+        svg.addEventListener('pointerup', finish);
+        svg.addEventListener('pointercancel', finish);
+      });
+    }
     bind() {
+      this.bindClusterDrag();
       this.app.addEventListener('click', (e) => {
         const t = e.target.closest('[data-a]');
         if (!t || !this.app.contains(t)) return;
         if (t.disabled || t.classList.contains('dis')) return;
+        const segment = e.target.closest('[data-segment]');
+        if (segment && t.getAttribute('role') === 'switch' && t.getAttribute('aria-checked') === segment.dataset.segment) return;
         if (['pkBg', 'hpBg', 'cgBg', 'pcBg'].includes(t.getAttribute('data-a')) && e.target !== t) return; // clic dans la carte
         this.act(t.getAttribute('data-a'), t.getAttribute('data-v'), t);
       });
@@ -3447,6 +5013,15 @@
           if (id === 'pkBri' && this.ui.overlay) this.ui.overlay.left = popupDelay();
         } else if (t.getAttribute('data-c') === 'eName' && this.ui.edit) {
           this.ui.edit.name = t.value;
+        } else if (t.getAttribute('data-c') === 'rQ' && this.ui.dialog) {
+          this.ui.dialog.q = t.value; this.render();   // recherche de la grande fenêtre, à chaque lettre
+        } else if (t.getAttribute('data-c') === 'flIconQ' && this.ui.dialog?.type === 'flIcon') {
+          this.ui.dialog.q = t.value;
+          this.render();
+        } else if (t.getAttribute('data-c') === 'immQuery' && this.ui.dialog?.type === 'immApps') {
+          this.ui.dialog.query = t.value;
+          this.app.querySelector('.mw-imlist').scrollTop = 0;
+          this.render();
         }
       });
       this.app.addEventListener('change', (e) => {
@@ -3496,12 +5071,12 @@
       this.app.addEventListener('pointerdown', (e) => {
         const item = e.target.closest('.p-item');
         if (!item || this.ui.screen !== 'profiles' || this.ui.dialog || this.ui.overlay) return;
-        const y0 = e.clientY;
+        const y0 = e.clientY, x0 = e.clientX;
         const annuler = () => {
           clearTimeout(minuterie);
           window.removeEventListener('pointermove', bouge); window.removeEventListener('pointerup', annuler); window.removeEventListener('pointercancel', annuler);
         };
-        const bouge = (ev) => { if (Math.abs(ev.clientY - y0) > 10) annuler(); };
+        const bouge = (ev) => { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 10) annuler(); };
         const minuterie = setTimeout(() => { annuler(); this.startProfileDrag(item); }, LONG_MS);
         window.addEventListener('pointermove', bouge); window.addEventListener('pointerup', annuler); window.addEventListener('pointercancel', annuler);
       });
@@ -3551,17 +5126,26 @@
       const c = car(), s = state.settings, u = this.ui, e = u.edit, sc = state.sc;
       const n = v != null ? +v : null;
       const r = () => { commit(); };
+      if (this.extAct(a, v, el)) return;
       switch (a) {
         // Navigation
-        case 'nav': this.ui.screen = u.screen === v ? 'dashboard' : v; if (v === 'profileEdit') this.startEdit(null); return this.render();
+        case 'nav': this.ui.rEdit = null; return this.go(u.screen === v ? 'dashboard' : v);
         case 'close': this.ui.screen = 'dashboard'; return this.render();
-        case 'tab': { const [key, i] = v.split(':'); u.tabs[key] = key === 'sc' ? i : +i; const sc2 = this.app.querySelector('.a-scroll'); if (sc2) sc2.scrollTop = 0; this._lastKey = null; return this.render(); }
+        case 'tab': {
+          const [key, i] = v.split(':');
+          if (key === 'sc') this.resetShortcutDraft(i);
+          u.tabs[key] = key === 'sc' || isNaN(+i) ? i : +i;
+          const sc2 = this.app.querySelector('.a-scroll');
+          if (sc2) sc2.scrollTop = 0;
+          this._lastKey = null; return this.render();
+        }
         case 'logo':
-          if (state.diagUnlocked) return;
-          u.logoTaps++;
-          if (u.logoTaps >= 5) { u.logoTaps = 0; state.diagUnlocked = true; commit(); this.toast(S('diagnostic_unlocked')); }
+          // Comme MainActivity : le logo ramène au tableau de bord ; cinq appuis ouvrent le diagnostic.
+          if (!state.diagUnlocked && ++u.logoTaps >= 5) { u.logoTaps = 0; state.diagUnlocked = true; commit(); this.toast(S('diagnostic_unlocked')); }
+          if (u.screen !== 'dashboard') { u.screen = 'dashboard'; u.rEdit = null; this.render(); }
           return;
         case 'reopen':
+          setTimeout(() => ruleEvent('app_start'), 600);
           // Relancer l'app sans avoir forcé de mode : le firmware est toujours inconnu, l'avertissement revient.
           if (state.fw === 'UNKNOWN' && !state.forced) state.fwDismissed = false;
           soundFire('app_start');
@@ -3604,10 +5188,41 @@
         case 'pDefault': {
           // Toast écrit en dur en français dans l'app (ProfileFragment), quelle que soit la langue.
           const p = state.profiles.find((x) => x.id === v);
-          state.defaultId = v; r(); return this.toast('Profil par défaut : ' + (p ? p.name : ''));
+          state.defaultId = v; clSync(); r(); return this.toast('Profil par défaut : ' + (p ? p.name : ''));
         }
         case 'pDel': u.dialog = { type: 'delProfile', id: v }; return this.render();
-        case 'delOk': state.profiles = state.profiles.filter((x) => x.id !== u.dialog.id); if (state.defaultId === u.dialog.id) state.defaultId = null; u.dialog = null; return r();
+        // Menu ⋮ de la carte (ProfileFragment.menuProfil) : Dupliquer, Renommer, Supprimer.
+        case 'pMenu': u.dialog = { type: 'pMenu', id: v }; return this.render();
+        case 'pDup': {
+          u.dialog = null;
+          const p = state.profiles.find((x) => x.id === v);
+          if (!p) return this.render();
+          if (state.profiles.length >= MAX_PROFILES) { this.render(); return this.toast(S('profile_max_reached', MAX_PROFILES)); }
+          // ProfileCopy.name : « <nom> Copie », puis « Copie 2 »… ; le tout tient en 30 caractères.
+          const taken = state.profiles.map((x) => x.name.toLowerCase()), word = S('profile_copy_word');
+          let name = '';
+          for (let n = 1; ; n++) {
+            const suf = ' ' + word + (n > 1 ? ' ' + n : '');
+            name = p.name.trim().slice(0, Math.max(1, 30 - suf.length)).trimEnd() + suf;
+            if (!taken.includes(name.toLowerCase())) break;
+          }
+          const copy = Object.assign(JSON.parse(JSON.stringify(p)), { id: uid(), name, bt: null });   // sans téléphone (ProfileCopy.duplicate)
+          state.clCfg[copy.id] = rClone(clCfg(p.id));
+          state.profiles.splice(state.profiles.indexOf(p) + 1, 0, copy);
+          r(); return this.toast(S('profile_duplicated_fmt', name));
+        }
+        case 'pRename': { const p = state.profiles.find((x) => x.id === v); u.dialog = p ? { type: 'pRename', id: v, name: p.name } : null; return this.render(); }
+        case 'pRenameOk': {
+          const d = u.dialog, p = d && state.profiles.find((x) => x.id === d.id), n = ((d && d.name) || '').trim().slice(0, 30);
+          u.dialog = null; if (p && n) p.name = n; return r();
+        }
+        case 'delOk': {
+          const id = u.dialog.id;
+          state.profiles = state.profiles.filter((x) => x.id !== id);
+          delete state.clCfg[id];
+          if (state.defaultId === id) state.defaultId = null;
+          clSync(); u.dialog = null; return r();
+        }
         case 'pNew':
           if (state.profiles.length >= MAX_PROFILES) return this.toast(S('profile_max_reached', MAX_PROFILES));
           this.startEdit(null); u.screen = 'profileEdit'; return this.render();
@@ -3633,6 +5248,8 @@
         case 'eDms': e.dms = n === 1; return this.render();
         case 'eDmsSen': e.dmsSen = n; return this.render();
         case 'eSteerApply': e.steeringApply = !e.steeringApply; return this.render();
+        case 'eBeamOn': e.beam = e.beam == null ? true : null; return this.render();
+        case 'eBeam': e.beam = v === '1'; return this.render();
         case 'eSteer': e.steeringOn = n === 1; return this.render();
         case 'eSeatApply': e.seatApply = !e.seatApply; return this.render();
         case 'eSeatL': e.seatL = n; return this.render();
@@ -3648,8 +5265,9 @@
           const isDef = p._default; delete p._new; delete p._default;
           const i = state.profiles.findIndex((x) => x.id === p.id);
           if (i >= 0) state.profiles[i] = p;
-          else { state.profiles.push(p); state.clCfg[p.id] = Object.assign(clPick(state.settings), { cluster: false }); flSet(p.id); }
+          else { state.profiles.push(p); flSet(p.id); }
           if (isDef) state.defaultId = p.id; else if (state.defaultId === p.id) state.defaultId = null;
+          clSync();
           u.edit = null; u.screen = 'profiles'; return r();
         }
         // Réglages
@@ -3673,10 +5291,10 @@
         case 'about': u.dialog = { type: 'about' }; return this.render();
         case 'diag': u.dialog = { type: 'diag' }; return this.render();
         case 'diagCopy': if (u.dialog) u.dialog.copied = true; return this.render();   // le bouton dit « Copié ! », la fenêtre reste
-        case 'diagDl': return this.toast(S('diag_downloaded', 'Download/MG4Control_diag.txt'));
+        case 'diagDl': return this.toast(S('diag_saved'));
         case 'force': state.forced = v; state.fwDismissed = true; return r();
         // Raccourcis
-        case 'scOn': sc.enabled = !sc.enabled; if (sc.enabled) u.dialog = { type: 'launcherWarn' }; return r();
+        case 'scOn': sc.enabled = !sc.enabled; return r();
         case 'scFallback': sc.fallback = v; return r();
         case 'scAdasA': sc.adasA = n; return r();
         case 'scAdasB': sc.adasB = n; return r();
@@ -3760,14 +5378,16 @@
         case 'pcDur': state.preclim.dur = n; return r();
         case 'pcDog': state.preclim.dog = !state.preclim.dog; if (state.preclim.dog) state.preclim.surv = false; return r();
         case 'pcSurv': state.preclim.surv = !state.preclim.surv; if (state.preclim.surv) state.preclim.dog = false; return r();
-        case 'pcTemp': { const cl = c.clim; state.preclim.temp = clamp(state.preclim.temp + n, cl.tMin, cl.tMax); return r(); }
-        case 'pcFan': { const cl = c.clim; state.preclim.fan = clamp(state.preclim.fan + n, cl.fMin, cl.fMax); return r(); }
-        case 'pcAtTime': { const a = state.preclim.at, t = ((a.h * 60 + a.m + n * 5) % 1440 + 1440) % 1440; a.h = Math.floor(t / 60); a.m = t % 60; return r(); }
+        case 'pcTemp': { const cl = c.clim; state.preclim.temp = clamp((state.preclim.temp ?? cl.temp) + n, cl.tMin, cl.tMax); return r(); }
+        case 'pcFan': { const cl = c.clim; state.preclim.fan = clamp((state.preclim.fan ?? cl.fan) + n, cl.fMin, cl.fMax); return r(); }
+        case 'pcAtTime': { const a = state.preclim.at; a.first = (pcFirst(a, pcMinute()) + n * 5 + PC_DAY) % PC_DAY; return r(); }
         case 'pcAtRun': state.preclim.at.run = clamp(state.preclim.at.run + n * 5, 5, 60); return r();
-        case 'pcAtRuns': state.preclim.at.runs = clamp(state.preclim.at.runs + n, 1, 6); return r();
-        case 'pcAtPause': state.preclim.at.pause = clamp(state.preclim.at.pause + n * 5, 5, 60); return r();
+        case 'pcAtRuns': state.preclim.at.runs = clamp(state.preclim.at.runs + n, 1, 5); return r();
+        case 'pcAtPause': state.preclim.at.pause = clamp(state.preclim.at.pause + n * 10, 10, 120); return r();
         case 'pcGo': {
-          if (c.speed > 0) return this.toast(S('preclim_need_park'), 3000);
+          if (!pcCanStart()) return this.toast(S('preclim_need_park'), 3000);
+          // Surveillance sans aucune application dashcam : refusée, sauf « Surveillance sans caméra » permis.
+          if (state.preclim.mode === 'now' && state.preclim.surv && state.preclim.cam === 'none' && !state.preclim.nocam) return this.toast(S('preclim_surv_need_app'), 3000);
           // Rappel avant le départ : la clé, et les trois façons de déverrouiller.
           if (state.preclim.unlock) { u.dialog = { type: 'pcUnlock' }; return r(); }
           return this.pcLaunch();
@@ -3775,12 +5395,28 @@
         case 'pcUnlockNever': state.preclim.unlock = false; u.dialog = null; return this.pcLaunch();
         case 'pcUnlockOk': u.dialog = null; return this.pcLaunch();
         case 'pcUnlockSw': state.preclim.unlock = !state.preclim.unlock; return r();
+        case 'pcCam': state.preclim.cam = v; state.preclim.usb = null; return r();
+        case 'pcCamAuto': if (state.preclim.cam === 'ok') state.preclim.camAuto = !state.preclim.camAuto; return r();
+        case 'pcUsbTest': state.preclim.usb = 'testing'; r(); setTimeout(() => { state.preclim.usb = 'ok'; commit(); }, 1200); return;
         // Garde-voiture : écran de suivi
         case 'pcHide': if (state.pc) state.pc.hidden = true; return r();
-        case 'pcStop': if (state.pc) pcEnd(state.pc.phase === 'cd' ? 'cancelled' : 'stopped'); return;
+        case 'pcStop': {
+          const pc = state.pc;
+          if (!pc) return;
+          if (pc.phase !== 'cd') return pcEnd('stopped');
+          pcEnd('cancelled'); state.pc = null;
+          return this.toast(S(pc.req.surv ? 'preclim_surv_cancelled' : 'preclim_cancelled'));
+        }
         case 'pcWake': if (state.pc) state.pc.wake = Date.now(); return r();
         case 'pcDone': state.pc = null; return r();
         case 'pcScreenMode': state.preclim.screen = v; return r();
+        case 'pcSurvScreen': state.preclim.survScreen = !state.preclim.survScreen; return r();
+        case 'pcNoCam': if (state.preclim.nocam) { state.preclim.nocam = false; return r(); } u.dialog = { type: 'pcNoCam' }; return r();
+        case 'pcNoCamOk': state.preclim.nocam = true; u.dialog = null; return r();
+        case 'pcStep': {
+          const [id, d, min, max] = v.split(':'), key = id === 'pcLock' ? 'lock' : 'soc';
+          state.preclim[key] = clamp(state.preclim[key] + +d, +min, +max); return r();
+        }
         case 'pcCluster': state.preclim.cluster = !state.preclim.cluster; return r();
         case 'hpAc': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.ac = !c.clim.ac; return r();
         // Chauffages : le niveau d'un siège se choisit d'un toucher — l'application y amène la voiture
@@ -3818,7 +5454,11 @@
         case 'updManual': u.dialog = { type: 'update', step: 'manual' }; return this.render();
         case 'updDownload': {
           u.dialog = { type: 'update', step: 'progress', pct: 0 }; this.render();
-          const tick = () => { if (!u.dialog || u.dialog.step !== 'progress') return; u.dialog.pct += 12; if (u.dialog.pct >= 100) { u.dialog = { type: 'update', step: 'done' }; this.render(); return; } this.render(); setTimeout(tick, 220); };
+          const tick = () => { if (!u.dialog || u.dialog.step !== 'progress') return; u.dialog.pct += 12; if (u.dialog.pct >= 100) {
+            u.dialog = null; this.toast(S('update_installing'), 2400);
+            setTimeout(() => { this.toast(S('update_installed', 'v2.x.x'), 3000); }, 2600);
+            return;
+          } this.render(); setTimeout(tick, 220); };
           setTimeout(tick, 220); return;
         }
         case 'restoreYes': u.dialog = null; this.render(); return this.toast(S('profile_restore_done', state.profiles.length || 3));
@@ -3847,7 +5487,7 @@
         }
         case 'garage': s.garage = !s.garage; return r();
         case 'readyDefault': s.readyDefault = !s.readyDefault; return r();
-        case 'cluster': return this.clEditSet('cluster', !this.clEditCfg().cluster);
+        case 'cluster': return this.clEditSet('cluster', !(u.clSel?.length ? u.clSel.every((id) => clCfg(id).cluster) : s.cluster));
         case 'clusterUnit': return this.clEditSet('clusterUnit', v);
         case 'clusterStyle': return this.clEditSet('clusterStyle', v);
         case 'clusterPill': return this.clEditSet('clusterPill', v);
@@ -3860,11 +5500,70 @@
           u.clSel = sel; return this.render();
         }
         case 'clSelAll': u.clSel = state.profiles.map((p) => p.id); return this.render();
+        case 'clSelCurrent': u.clSel = [flFollowed()]; return this.render();
+        case 'distUnit': s.distUnit = v; return r();
+        // Personnalisation avancée (ClusterLayoutEditor) : rien d'écrit avant « Enregistrer ».
+        case 'clLayOpen': {
+          if (!u.clSel?.length && flFollowed()) u.clSel = [flFollowed()];
+          const cfg = this.clEditCfg();
+          const mod = u.clPrevTab === 'media' ? cfg.clusterMedia : cfg.clusterNav;
+          u.clLay = { L: rClone(clLayoutOf(cfg)), sel: 'g', style: cfg.clusterStyle,
+            mod: s.clLayMod || (mod !== 'none' ? mod : cfg.clusterNav !== 'none' ? cfg.clusterNav : 'consumption') };
+          u.dialog = { type: 'clLayout' }; return this.render();
+        }
+        case 'clLaySel': if (u.clLay) u.clLay.sel = v === 'g' ? 'g' : +v; return this.render();
+        // La jauge choisie est retenue : la fenêtre s'y rouvre (2026-11-12).
+        case 'clLayMod': u.clLay.mod = v; s.clLayMod = v; return this.render();
+        case 'clLayStyle': u.clLay.style = v; return this.render();
+        case 'clLayPos': u.clLay.L.gauge = v; return this.render();
+        case 'clLayThickness': u.clLay.L.thickness = v === 'normal' ? null : v; return this.render();
+        case 'clLayColor': u.clLay.L[el.dataset.x] = v || null; return this.render();
+        case 'clLayAverage': {
+          const { L, style } = u.clLay;
+          L.averageCursor = !(L.averageCursor ?? (style === 'discreet')); return this.render();
+        }
+        case 'clLayConsKw': u.clLay.L.consKw = !u.clLay.L.consKw || null; return this.render();
+        case 'clLayPowerCons': u.clLay.L.powerCons = u.clLay.L.powerCons === false ? null : false; return this.render();
+        case 'clLayHp': u.clLay.L.powerUnit = v === 'hp' ? 'hp' : null; return this.render();
+        case 'clLayPick': u.dialog = { type: 'clLayoutPick' }; return this.render();
+        case 'clLayPickClose': u.dialog = { type: 'clLayout' }; return this.render();
+        case 'clLayInfo': {
+          const { L, sel } = u.clLay, before = L.slots[sel];
+          if (before?.info !== v) {
+            L.slots[sel] = v ? { info: v, style: clPillOk(v) ? 'pill' : 'label', wide: before?.wide } : null;
+            clTidySlots(L.slots);
+          }
+          u.dialog = { type: 'clLayout' }; return this.render();
+        }
+        case 'clLayBStyle': u.clLay.L.slots[u.clLay.sel].style = v; return this.render();
+        case 'clLayBSize': u.clLay.L.slots[u.clLay.sel].size = v; return this.render();
+        case 'clLayBUnit': u.clLay.L.slots[u.clLay.sel].unit = v; return this.render();
+        case 'clLayBDist': u.clLay.L.slots[u.clLay.sel].distance = v === 'auto' ? null : v; return this.render();
+        case 'clLayBWide': {
+          const b = u.clLay.L.slots[u.clLay.sel];
+          b.wide = !b.wide; return this.render();
+        }
+        case 'clLayReset': u.clLay.L = clLayoutOf({ ...this.clEditCfg(), clusterLayout: null }); u.clLay.sel = 'g'; return this.render();
+        case 'clLaySave': {
+          const c = u.clLay; u.dialog = null; u.clLay = null;
+          this.clEditSet('clusterStyle', c.style); return this.clEditSet('clusterLayout', rClone(c.L));
+        }
         case 'fullscreen':
           s.fullscreen = !s.fullscreen; r();
           if (s.fullscreen) this.toast(L('Simulation : sur la voiture, la barre d\'état et la barre de navigation disparaissent.', 'Simulation: in the car, the status and navigation bars disappear.'), 3200);
           return;
         case 'hvacZone': s.hvacZone = !s.hvacZone; return r();
+        case 'projKick': s.projKick = !s.projKick; return r();
+        // Applications en plein écran : avertissement à CHAQUE activation ; Annuler laisse l'option coupée.
+        case 'immersive': if (s.immersive) { s.immersive = false; return r(); } u.dialog = { type: 'immWarn' }; return this.render();
+        case 'immOk': s.immersive = true; u.dialog = null; return r();
+        case 'immChoose': u.dialog = { type: 'immApps', draft: { ...s.immersiveApps }, query: '' }; return this.render();
+        case 'immMode': {
+          const d = u.dialog, i = v.lastIndexOf('|'), app = v.slice(0, i), m = v.slice(i + 1);
+          if (m === 'NORMAL') delete d.draft[app]; else d.draft[app] = m;
+          return this.render();
+        }
+        case 'immSave': s.immersiveApps = u.dialog.draft; u.dialog = null; return r();
         case 'androidSet': return this.toast(L('Simulation : sur la voiture, l\'écran des paramètres Android s\'ouvre (le launcher de la voiture n\'y donne pas accès).',
           'Simulation: in the car, the Android settings screen opens (the car\'s launcher offers no way there).'), 3600);
         case 'rescue': s.rescue = !s.rescue; return r();
@@ -3886,6 +5585,28 @@
         case 'flLoc': { const b = flFind(u.flEditing); if (b) { b.bar = v === '1'; if (b.bar) b.text = Math.min(b.text, 22); } return r(); }
         case 'flSizeSet': { const b = flFind(u.flEditing); if (b) b.size = n; return r(); }
         case 'flBold': { const b = flFind(u.flEditing); if (b) b.bold = !b.bold; return r(); }
+        case 'flContent': {
+          const b = flFind(u.flEditing);
+          if (b && (b.content || 'title') !== v) { b.content = v === 'info' || v === 'icon' ? v : null; b.icon = null; if (v === 'info' && !b.info) b.info = 'SOC'; }
+          return r();
+        }
+        case 'flIconTitle': { const b = flFind(u.flEditing); if (b) b.iconTitle = v === 'title'; return r(); }
+        case 'flIconDef': { const b = flFind(u.flEditing); if (b) b.icon = null; return r(); }
+        case 'flIconPick': {
+          const b = flFind(u.flEditing); if (!b) return true;
+          const cur = flIconRef(b);
+          const cat = b.content === 'icon' && flApps(b).length ? 'app' : (FL_SYM_CATS.find((c) => cur && c[2].includes(cur.slice(4))) || FL_SYM_CATS[0])[0];
+          u.dialog = { type: 'flIcon', cat, q: '' }; return this.render();
+        }
+        case 'flIconCat': if (u.dialog) { u.dialog.cat = v; u.dialog.q = ''; } return this.render();
+        case 'flIconSet': { const b = flFind(u.flEditing); if (b) b.icon = v; u.dialog = null; return r(); }
+        case 'flInfoStyle': { const b = flFind(u.flEditing); if (b) b.infoStyle = v; return r(); }
+        case 'flTap': { const b = flFind(u.flEditing); if (b) b.tap = v === 'none' ? 'none' : null; return r(); }
+        case 'flFill': { const b = flFind(u.flEditing); if (b) b.fill = v === 'dark' ? null : v; return r(); }
+        // Largeur (#222) : Automatique = celle du texte ; Fixe = 60 à 240 dp par pas de 10, 110 au départ.
+        case 'flWidth': { const b = flFind(u.flEditing); if (b) b.width = v === 'fixed' ? (b.width || 110) : null; return r(); }
+        case 'flBorder': { const b = flFind(u.flEditing); if (b) b.noBorder = v === 'none' || null; return r(); }
+        case 'flDim': { const b = flFind(u.flEditing); if (b) b.dim = !b.dim || null; return r(); }
         case 'flReverse': state.floating.hideReverse = !state.floating.hideReverse; return r();
         case 'flReset': flSet(u.flEdit).list.forEach((b, i) => { b.x = 0.86; b.y = clamp(0.25 + i * 0.13, 0.2, 0.9); }); r(); return this.toast(S('floating_reset_done'));
         case 'flCopy': u.flCopy = u.flCopy ? null : []; return this.render();
@@ -3949,7 +5670,9 @@
           s.chargePopup = !s.chargePopup;
           if (!s.chargePopup) instances.forEach((i) => { const o = i.ui.overlay; if (o && o.type === 'charge') i.ui.overlay = null; });
           return r();
-        case 'clusterMod': s[el && el.getAttribute('data-x') === 'media' ? 'clusterMedia' : 'clusterNav'] = v; return r();
+        case 'clusterMod':
+          u.clPrevTab = el?.getAttribute('data-x') === 'media' ? 'media' : 'nav';
+          return this.clEditSet(u.clPrevTab === 'media' ? 'clusterMedia' : 'clusterNav', v);
         case 'updOverlay': s.updOverlay = !s.updOverlay; return r();
         case 'textSize': s.textSize = v; return r();
         case 'rcToggle': {
@@ -4013,7 +5736,12 @@
         case 'calRedo': u.dialog = { type: 'cal', w: u.dialog.w, step: 1 }; return this.render();
         case 'calSave': state.winCal[u.dialog.w] = { down: u.dialog.down, up: u.dialog.up }; u.dialog = null; r(); return this.toast(S('win_cal_saved'));
         case 'stEnable': state.stats.enabled = !state.stats.enabled; return r();
-        case 'stPeriod': state.stats.period = +v; return r();
+        case 'stPeriod': state.stats.period = +v; u.statsOpen = null; u.stTripsShown = u.stChargesShown = ST_PAGE_SIZE; return r();
+        case 'stMore': case 'stAll': {
+          const key = v === 'trips' ? 'stTripsShown' : 'stChargesShown';
+          u[key] = a === 'stAll' ? Infinity : (u[key] ?? ST_PAGE_SIZE) + ST_PAGE_SIZE;
+          return this.render();
+        }
         case 'stRetention': state.stats.retention = +v; return r();
         case 'stOpen': u.statsOpen = u.statsOpen === v ? null : v; return this.render();
         case 'stClear': u.dialog = { type: 'stClear' }; return this.render();
@@ -4062,17 +5790,27 @@
     }
 
     change(id, t) {
+      if (this.extChange(id, t)) return;
       const c = car(), u = this.ui, sc = state.sc;
       const num = (min, max, def) => { const x = parseInt(t.value, 10); return isNaN(x) ? def : clamp(x, min, max); };
       if (id.startsWith('sndVol')) { const sl = state.sound.slots[+id.slice(6)]; if (sl) sl.vol = +t.value; return commit(); }
       const d = u.dialog, fb = flFind(u.flEditing);
       switch (id) {
-        case 'climTemp': c.clim.temp = +t.value; return commit();
+        case 'climTemp': acAfterTemp(c.clim.ac); c.clim.temp = +t.value; return commit();
         case 'climFan': setClimAuto(false); c.clim.fan = +t.value; return commit();
         case 'pcLock': state.preclim.lock = +t.value; return commit();
         case 'pcSoc': state.preclim.soc = +t.value; return commit();
+        case 'flColorCode': state.floating.color = parseColor(t.value) ?? state.floating.color; return commit();
+        case 'clLayColor': {
+          const color = parseColor(t.value);
+          if (u.clLay && color) u.clLay.L[t.dataset.x] = color;
+          return this.render();
+        }
         case 'flTitle': if (fb) { const v = t.value.trim().slice(0, 24); fb.title = !v || v === flActionName(fb) ? null : v; } return commit();
         case 'flAction': if (fb) { const [act, cid] = t.value.split(':'); fb.action = act; fb.customId = cid || null; } return commit();
+        case 'flInfo': if (fb) fb.info = t.value; return commit();
+        case 'flOpacity': if (fb) fb.opacity = clamp(Math.round(+t.value / 5) * 5, 0, 100); return commit();
+        case 'flWidthV': if (fb) fb.width = clamp(Math.round(+t.value / 10) * 10, 60, 240); return commit();
         // Taille de la bulle : aimantée à ±3 % autour de Petit, Moyen et Grand.
         case 'flSize': if (fb) { let v = +t.value; [0, 50, 100].forEach((m) => { if (Math.abs(v - m) <= 3) v = m; }); fb.size = v; } return commit();
         case 'flText': if (fb) fb.text = +t.value; return commit();
@@ -4107,8 +5845,8 @@
         case 'waTime': state.winAuto.time = +t.value; return commit();
         case 'waDelay': state.winAuto.delay = +t.value; return commit();
         case 'popupDelay': state.settings.popupDelay = clamp(+t.value, 1, 60); return commit();
-        case 'clusterRefresh': state.settings.clusterRefresh = clamp(Math.round(+t.value), 1, 10) * 100; return commit();
-        case 'clusterAnim': state.settings.clusterAnim = clamp(Math.round(+t.value), 2, 20) * 100; return commit();
+        case 'clusterRefresh': return this.clEditSet('clusterRefresh', clamp(Math.round(+t.value), 1, 10) * 100);
+        case 'clusterAnim': return this.clEditSet('clusterAnim', clamp(Math.round(+t.value), 2, 20) * 100);
         case 'waBeepVol': state.winAuto.beepVol = +t.value; return commit();
         case 'winCourse': state.winCourse = Math.round(+t.value * 1000); return commit();
         case 'stCurrency': state.stats.currency = (t.value || '').slice(0, 3) || '€'; return commit();
@@ -4118,7 +5856,7 @@
           return commit();
         }
         case 'stBattery': setBattery(+t.value); return commit();
-        case 'stMinTrip': { const x = parseFloat(String(t.value).replace(',', '.')); if (!isNaN(x)) state.stats.minTrip = clamp(x, 0.1, 50); return commit(); }
+        case 'stMinTrip': { const x = parseFloat(String(t.value).replace(',', '.')); if (!isNaN(x)) state.stats.minTrip = clamp(x * (clMiles() ? MI_KM : 1), 0.1, 50); return commit(); }
         case 'batThr': state.auto.b.thr = +t.value; return commit();
         case 'batProfile': state.auto.b.profileId = t.value; return commit();
         case 'batExec': state.auto.b.autoExec = t.checked; return commit();
@@ -4150,6 +5888,7 @@
       u.dialog = null;
       const extra = a === 'pickApp' ? { app: v } : a === 'pickCustom' ? { customId: v } : { profileId: v };
       if (!then) return this.render();
+      if (then.kind === 'wheel') return this.setWheel(then.code, then.press, then.scope, then.action, extra);
       if (then.kind === 'slot') { sc.map[then.slot] = then.action; sc.extra[then.slot] = extra; return commit(); }
       if (then.kind === 'advNew') return this.saveAdv(Object.assign({ key: then.key, press: then.press, action: then.action, scope: then.scope || null }, extra));
       if (then.kind === 'advEdit') {
@@ -4181,14 +5920,81 @@
       state.sc.adv.push(item); commit(); this.toast(S('adv_sc_saved'));
     }
     captureKey(code) {
+      // « Ajouter un bouton » (Boutons physiques) : la touche reçue rejoint les cartes.
+      if (this.ui.wkCapture) {
+        this.ui.wkCapture = false;
+        const c = code === 18 ? 286 : code, sc = state.sc;
+        if (!this.wheelKeys().includes(c)) sc.keys = (sc.keys || []).concat([c]);
+        commit(); this.toast(S('wheel_capture_added', this.wheelName(c)));
+      }
       this.ui.adv.rec = false; this.ui.adv.key = code; clearTimeout(this._recT);
       emit('recording', { on: false }); this.render();
     }
     startEditById(id) { const p = state.profiles.find((x) => x.id === id) || state.profiles[0]; this.startEdit(p); }
 
     /** Démonstrations déclenchées depuis le texte de la page. */
+    /** Démonstrations 2.7.0 appelées depuis le texte du site. */
+    extDemo(name) {
+      const u = this.ui, sc = state.sc;
+      const give = (action, slot, extra) => { if (!this.assigned(action)) { sc.map[slot] = action; if (extra) sc.extra[slot] = extra; else delete sc.extra[slot]; } };
+      const stats = (tab) => { state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = tab; };
+      switch (name) {
+        case 'newLook': u.screen = 'dashboard'; u.tabs.dash = 0; commit(); this.highlight('topbar'); return true;
+        case 'navSide': u.screen = 'settings'; u.tabs.set = 1; commit(); this.highlight('s-navside'); return true;
+        case 'wheel': u.screen = 'shortcuts'; u.tabs.sc = 'classic'; commit(); this.highlight('adv-service'); return true;
+        case 'quick':
+          give('QUICK_SETTINGS', 'btn2_long');
+          u.screen = 'shortcuts'; u.tabs.sc = 'quick'; commit();
+          setTimeout(() => this.openQuick(), 350); return true;
+        case 'driveCycle': give('DRIVE_MODE_CYCLE', 'btn2_single'); u.screen = 'shortcuts'; u.tabs.sc = 'drivemode'; commit(); this.highlight('sc-drivemode'); return true;
+        case 'runRule':
+          give('RUN_RULE', 'btn1_long', { ruleId: (state.rules.list[0] || {}).id });
+          u.screen = 'shortcuts'; u.tabs.sc = 'classic'; commit(); this.highlight('sc-btn1'); return true;
+        case 'rules': u.screen = 'automation'; u.tabs.auto = 'rules'; commit(); this.highlight('rules-head'); return true;
+        case 'ruleTpl': u.screen = 'automation'; u.tabs.auto = 'rules'; u.dialog = { type: 'rTpl' }; commit(); return true;
+        case 'ruleImport': u.screen = 'automation'; u.tabs.auto = 'rules'; commit(); return this.extAct('rImport', null, null);
+        case 'ruleEdit': {
+          const r = state.rules.list.find((x) => x.id === 'r3') || state.rules.list[0];
+          u.screen = 'automation'; u.tabs.auto = 'rules'; commit();
+          if (r) this.extAct('rEdit', r.id);
+          return true;
+        }
+        case 'bubbleColor': u.screen = 'shortcuts'; u.tabs.sc = 'floating'; commit(); this.highlight('fl-color'); return true;
+        // Bulle d'information (#236) et apparence (#230) : une bulle d'exemple, ouverte en édition.
+        case 'infoBubble': case 'bubbleLook': case 'altitude': case 'iconBubble': {
+          this.demo('floating');
+          const set = flSet(flFollowed() || ''), b = set.list[0]; if (!b) return true;
+          if (name === 'infoBubble') { b.content = 'info'; b.info = 'SOC'; b.infoStyle = 'icon'; b.tap = 'none'; }
+          else if (name === 'altitude') { b.content = 'info'; b.info = 'ALTITUDE'; b.infoStyle = 'icon'; b.tap = 'none'; }
+          else if (name === 'iconBubble') {
+            // Bulle-icône (2026-11-17) : YouTube, lancée par un raccourci perso, avec son icône.
+            let cs = state.sc.custom.find((c) => c.kind === 'APP' && c.app === 'YouTube');
+            if (!cs) { cs = { id: 'cs_yt', name: 'YouTube', kind: 'APP', app: 'YouTube' }; state.sc.custom.push(cs); }
+            Object.assign(b, { action: 'CUSTOM', customId: cs.id, content: 'icon', icon: null, iconTitle: false, title: '' });
+          }
+          else { b.fill = 'tint'; b.opacity = 55; b.dim = true; }
+          u.flEditing = b.id; commit(); this.highlight('fl-edit'); return true;
+        }
+        case 'keepAc': u.screen = 'settings'; u.tabs.set = 2; commit(); this.highlight('s-keepac'); return true;
+        case 'projKick': u.screen = 'settings'; u.tabs.set = 2; commit(); this.highlight('s-projkick'); return true;
+        case 'immersive': u.screen = 'settings'; u.tabs.set = 2; commit(); this.highlight('s-immersive'); return true;
+        case 'bri0': car().brightness = briMin(); commit(); this.openPicker(); return true;
+        case 'statsProfile': {
+          stats(1); const p = state.profiles[1] || state.profiles[0]; u.stProf = p ? p.id : null; commit(); this.highlight('st-profile'); return true;
+        }
+        case 'tripGraph': {
+          stats(1); u.stProf = null;
+          const i = state.stats.trips.findIndex((t) => t.segs && new Set(t.segs.map((g) => g.pid)).size > 1);
+          u.statsOpen = 't' + Math.max(0, i); commit(); this.highlight('st-curve'); return true;
+        }
+        case 'statsExport': stats(0); commit(); this.extAct('stExport'); return true;
+        default: return undefined;
+      }
+    }
     demo(name) {
       const u = this.ui;
+      if (this.extDemo(name) !== undefined) return;
+      const auto = (tab) => { u.screen = 'automation'; u.tabs.auto = tab; return commit(); };
       switch (name) {
         case 'picker': return this.openPicker();
         case 'hvacPopup':
@@ -4196,7 +6002,7 @@
           return this.openHvacPopup();
         case 'confirm': { const p = state.profiles.find((x) => x.id === state.auto.p.profileId) || state.profiles[0]; if (p) this.showConfirm(p, () => {}); return; }
         case 'fwUnknown': state.fwDismissed = false; if (state.fw !== 'UNKNOWN') { u.dialog = { type: 'fwUnknown' }; return this.render(); } return commit();
-        case 'lang': case 'restore': case 'about': case 'launcherWarn': case 'advWarn': case 'apiConfirm':
+        case 'lang': case 'restore': case 'about': case 'advWarn': case 'apiConfirm':
           u.dialog = { type: name }; return this.render();
         case 'update': u.dialog = { type: 'update', step: 'info' }; return this.render();
         case 'diag': state.diagUnlocked = true; u.dialog = { type: 'diag' }; return commit();
@@ -4224,18 +6030,18 @@
           u.edit.customPower = u.edit.customPower == null ? 2 : u.edit.customPower; u.tabs.edit = 0; u.screen = 'profileEdit'; return this.render();
         }
         case 'customMode': if (W.drive('CUSTOM')) { u.screen = 'dashboard'; u.tabs.dash = 0; commit(); } return;
-        case 'windows': u.screen = 'automation'; u.winOpen = true; return this.render();
-        case 'doorVolume': state.door.open = true; u.screen = 'automation'; return commit();
-        case 'autoBattery': state.auto.b.open = true; u.screen = 'automation'; return commit();
-        case 'autoBri': state.auto.bri.open = true; u.screen = 'automation'; return commit();
-        case 'autoBatHeat': state.auto.bh.open = true; u.screen = 'automation'; return commit();
-        case 'acOnce': state.auto.c.open = true; u.screen = 'automation'; return commit();
+        case 'windows': u.winOpen = true; return auto(3);
+        case 'doorVolume': state.door.open = true; return auto(3);
+        case 'autoBattery': state.auto.b.open = true; return auto(0);
+        case 'autoBri': state.auto.bri.open = true; return auto(2);
+        case 'autoBatHeat': state.auto.bh.open = true; return auto(1);
+        case 'acOnce': state.auto.c.open = true; return auto(1);
         case 'statsBattery': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 0; return commit();
         case 'cluster':
-          // Le module n'existe que sur SWI133, SWI68 et SWI165 : ailleurs, la carte est absente.
+          // La carte est absente sur les firmwares sans module.
           u.screen = 'settings'; u.tabs.set = 1;
           if (caps().cluster) clSet('cluster', true);
-          else this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600);
+          else this.toast(clusterUnavailable(), 3600);
           return commit();
         case 'statsCharges': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 2; return commit();
         case 'statsEnergy': {
@@ -4246,7 +6052,7 @@
         case 'clusterDiscreet':
           u.screen = 'settings'; u.tabs.set = 1;
           if (caps().cluster) { clSet('cluster', true); clSet('clusterStyle', 'discreet'); }
-          else this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600);
+          else this.toast(clusterUnavailable(), 3600);
           return commit();
         case 'chargeCluster':
           // Le module de charge se voit dans l'aperçu sous les cartes : une borne rapide est branchée.
@@ -4278,7 +6084,7 @@
           u.profileDraft = null;
           u.screen = 'shortcuts'; u.tabs.sc = 'profiles'; return commit();
         // L'assistant vit dans l'option avancée « Calibrage par vitre » : on l'allume d'abord.
-        case 'calibrate': state.winCalAdv = true; u.screen = 'automation'; u.winOpen = true; u.dialog = { type: 'cal', w: 'FR', step: 1 }; return commit();
+        case 'calibrate': state.winCalAdv = true; u.winOpen = true; u.dialog = { type: 'cal', w: 'FR', step: 1 }; return auto(3);
         case 'statsOn': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 0; return commit();
         case 'garageOn': state.settings.garage = true; u.screen = 'settings'; u.tabs.set = 2; return commit();
         // ── Nouveautés de la 2.6.10 ──
@@ -4286,11 +6092,11 @@
           if (!caps().clim) return this.toast(L('Garde-voiture : climatisation non exposée par ce firmware. Changez de firmware au-dessus de la maquette.', 'Car keeper: climate not exposed by this firmware. Switch firmware above the mockup.'), 3600);
           if (!this.assigned('PRE_CLIMATE')) { state.sc.map.btn2_single = 'PRE_CLIMATE'; delete state.sc.extra.btn2_single; }
           if (name === 'preclimCfg') { u.screen = 'shortcuts'; u.tabs.sc = 'preclim'; return commit(); }
-          if (state.pc) { clearInterval(pcTimer); pcTimer = null; state.pc = null; }
-          const c = car(); c.speed = 0; c.locked = false; if (!c.on) { c.on = true; c.ready = true; }
+          if (state.pc) { pcEnd(state.pc.phase === 'cd' ? 'cancelled' : 'stopped'); state.pc = null; }
+          const c = car(); c.speed = 0; c.inPark = true; c.locked = false; if (!c.on) { c.on = true; c.ready = true; }
           state.preclim.dog = name === 'dogMode'; state.preclim.surv = name === 'surveillance';
           this.closeOverlay();
-          if (name === 'preclimRun') { state.preclim.mode = 'now'; pcStart(Object.assign({}, state.preclim, { lock: 8, dur: 15 })); return; }
+          if (name === 'preclimRun') { state.preclim.mode = 'now'; pcStart({ ...state.preclim, lock: 8, dur: 15, temp: state.preclim.temp ?? c.clim.temp, fan: state.preclim.fan ?? c.clim.fan }); return; }
           state.preclim.mode = 'now'; u.overlay = { type: 'preclim' }; return commit();
         }
         case 'floating': {
@@ -4312,8 +6118,8 @@
           state.settings.hvacZone = true;
           car().projection = null; projectionToggle(); return;
         }
-        case 'sounds': state.sound.open = true; u.screen = 'automation'; return commit();
-        case 'acAir': state.auto.c.open = true; u.screen = 'automation'; return commit();
+        case 'sounds': state.sound.open = true; return auto(4);
+        case 'acAir': state.auto.c.open = true; return auto(1);
         case 'hvacEco': u.screen = 'dashboard'; u.tabs.dash = 2; return this.render();
         case 'autoVolPopup':
           if (caps().clim && !this.assigned('HVAC_POPUP')) { state.sc.map.btn2_single = 'HVAC_POPUP'; delete state.sc.extra.btn2_single; }
@@ -4322,14 +6128,17 @@
             'Tap AUTO: AUTO on or off. Hold it 1 s: the airflow steps up one notch (the notches under AUTO show it).'), 4200);
           return;
         case 'autoScope': case 'rescue': u.screen = 'settings'; u.tabs.set = 2; return this.render();
-        case 'doorPause': state.door.open = true; state.door.mode = 'pause'; u.screen = 'automation'; return commit();
-        case 'clusterProfile': case 'clusterMiles': case 'clusterPower':
+        case 'doorPause': state.door.open = true; state.door.mode = 'pause'; return auto(3);
+        case 'distance': u.screen = 'settings'; u.tabs.set = 1; state.settings.distUnit = 'mi'; return commit();
+        case 'clusterProfile': case 'clusterMiles': case 'clusterPower': case 'clusterLayout':
           u.screen = 'settings'; u.tabs.set = 1; u.clSel = null;
-          if (!caps().cluster) { this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600); return commit(); }
+          if (!caps().cluster) { this.toast(clusterUnavailable(), 3600); return commit(); }
           clSet('cluster', true);
-          if (name === 'clusterMiles') clSet('clusterDist', 'mi');
+          if (name === 'clusterMiles') state.settings.distUnit = 'mi';
           if (name === 'clusterPower') { clSet('clusterNav', 'power'); clSet('clusterPowerMax', 'auto'); }
-          return commit();
+          commit();
+          if (name === 'clusterLayout') return this.act('clLayOpen');
+          return;
         case 'fullscreen': u.screen = 'settings'; u.tabs.set = 1; return this.render();
         case 'androidSettings': u.screen = 'settings'; u.tabs.set = 3; return this.render();
         default: return;
@@ -4355,6 +6164,60 @@
   /** Nom du raccourci de la bulle (titre par défaut : il suit l'action tant qu'il n'a pas été modifié). */
   const flActionName = (b) => (b.action === 'CUSTOM' ? customName(b.customId) : S(ACTION_KEY[b.action] || 'floating_unknown_action'));
   const flTitle = (b) => b.title || flActionName(b);
+  /** Symboles des bulles (2026-11-17) : un extrait des 190 de l'appli (Material Icons outlined, Apache 2.0), tracés recopiés. */
+  const FL_SYM = {"directions_car":["M18.92,6.01C18.72,5.42 18.16,5 17.5,5h-11c-0.66,0 -1.21,0.42 -1.42,1.01L3,12v8c0,0.55 0.45,1 1,1h1c0.55,0 1,-0.45 1,-1v-1h12v1c0,0.55 0.45,1 1,1h1c0.55,0 1,-0.45 1,-1v-8l-2.08,-5.99zM6.85,7h10.29l1.08,3.11H5.77L6.85,7zM19,17H5v-5h14v5z","M7.5,14.5m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0","M16.5,14.5m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0"],"electric_car":["M18.92,2.01C18.72,1.42 18.16,1 17.5,1h-11C5.84,1 5.29,1.42 5.08,2.01L3,8v8c0,0.55 0.45,1 1,1h1c0.55,0 1,-0.45 1,-1v-1h12v1c0,0.55 0.45,1 1,1h1c0.55,0 1,-0.45 1,-1V8L18.92,2.01zM6.85,3h10.29l1.08,3.11H5.77L6.85,3zM19,13H5V8h14V13z","M7.5,10.5m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0","M16.5,10.5m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0","M7,20l4,0l0,-2l6,3l-4,0l0,2z"],"speed":["M20.38,8.57l-1.23,1.85a8,8 0,0 1,-0.22 7.58H5.07A8,8 0,0 1,15.58 6.85l1.85,-1.23A10,10 0,0 0,3.35 19a2,2 0,0 0,1.72 1h13.85a2,2 0,0 0,1.74 -1,10 10,0 0,0 -0.27,-10.44z","M10.59,15.41a2,2 0,0 0,2.83 0l5.66,-8.49 -8.49,5.66a2,2 0,0 0,0 2.83z"],"garage":["M20,2H4C2.9,2 2,2.9 2,4v16c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V4C22,2.9 21.1,2 20,2zM20,20H4V4h16V20z","M9,13m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0","M15,13m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0","M5.78,18.5h0.44C6.65,18.5 7,18.14 7,17.69V16.5h10v1.19c0,0.45 0.34,0.81 0.78,0.81h0.44c0.43,0 0.78,-0.36 0.78,-0.81v-6.5c-0.82,-2.46 -1.34,-4.03 -1.56,-4.69c-0.05,-0.16 -0.12,-0.29 -0.19,-0.4c-0.02,-0.02 -0.03,-0.04 -0.05,-0.07c-0.38,-0.52 -0.92,-0.53 -0.92,-0.53H7.72c0,0 -0.54,0.01 -0.92,0.54C6.78,6.06 6.77,6.08 6.75,6.1C6.68,6.21 6.61,6.34 6.56,6.5C6.34,7.16 5.82,8.72 5,11.19v6.5C5,18.14 5.35,18.5 5.78,18.5zM8.33,7.5h7.34l0.23,0.69l0.43,1.31H7.67L8.33,7.5zM7,11.51V11.5h10v0.01v2.99H7V11.51z"],"local_parking":["M13,3L6,3v18h4v-6h3c3.31,0 6,-2.69 6,-6s-2.69,-6 -6,-6zM13.2,11L10,11L10,7h3.2c1.1,0 2,0.9 2,2s-0.9,2 -2,2z"],"key":["M21,10h-8.35C11.83,7.67 9.61,6 7,6c-3.31,0 -6,2.69 -6,6s2.69,6 6,6c2.61,0 4.83,-1.67 5.65,-4H13l2,2l2,-2l2,2l4,-4.04L21,10zM7,15c-1.65,0 -3,-1.35 -3,-3c0,-1.65 1.35,-3 3,-3s3,1.35 3,3C10,13.65 8.65,15 7,15z"],"lock":["M18,8h-1L17,6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2L6,8c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2L20,10c0,-1.1 -0.9,-2 -2,-2zM9,6c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2L9,8L9,6zM18,20L6,20L6,10h12v10zM12,17c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2z"],"warning":["M1,21h22L12,2 1,21zM13,18h-2v-2h2v2zM13,14h-2v-4h2v4z"],"highlight":["M6,14l3,3v5h6v-5l3,-3L18,9L6,9v5zM8,11h8v2.17l-3,3L13,20h-2v-3.83l-3,-3L8,11zM11,2h2v3h-2zM3.502,5.874L4.916,4.46l2.122,2.12 -1.414,1.415zM16.96,6.582l2.123,-2.12 1.413,1.416 -2.123,2.12z"],"videocam":["M15,8v8H5V8h10m1,-2H4c-0.55,0 -1,0.45 -1,1v10c0,0.55 0.45,1 1,1h12c0.55,0 1,-0.45 1,-1v-3.5l4,4v-11l-4,4V7c0,-0.55 -0.45,-1 -1,-1z"],"ac_unit":["M22,11h-4.17l3.24,-3.24 -1.41,-1.42L15,11h-2V9l4.66,-4.66 -1.42,-1.41L13,6.17V2h-2v4.17L7.76,2.93 6.34,4.34 11,9v2H9L4.34,6.34 2.93,7.76 6.17,11H2v2h4.17l-3.24,3.24 1.41,1.42L9,13h2v2l-4.66,4.66 1.42,1.41L11,17.83V22h2v-4.17l3.24,3.24 1.42,-1.41L13,15v-2h2l4.66,4.66 1.41,-1.42L17.83,13H22v-2z"],"air":["M14.5,17c0,1.65 -1.35,3 -3,3s-3,-1.35 -3,-3h2c0,0.55 0.45,1 1,1s1,-0.45 1,-1s-0.45,-1 -1,-1H2v-2h9.5C13.15,14 14.5,15.35 14.5,17zM19,6.5C19,4.57 17.43,3 15.5,3S12,4.57 12,6.5h2C14,5.67 14.67,5 15.5,5S17,5.67 17,6.5S16.33,8 15.5,8H2v2h13.5C17.43,10 19,8.43 19,6.5zM18.5,11H2v2h16.5c0.83,0 1.5,0.67 1.5,1.5S19.33,16 18.5,16v2c1.93,0 3.5,-1.57 3.5,-3.5S20.43,11 18.5,11z"],"thermostat":["M15,13L15,5c0,-1.66 -1.34,-3 -3,-3S9,3.34 9,5v8c-1.21,0.91 -2,2.37 -2,4 0,2.76 2.24,5 5,5s5,-2.24 5,-5c0,-1.63 -0.79,-3.09 -2,-4zM11,5c0,-0.55 0.45,-1 1,-1s1,0.45 1,1h-1v1h1v2h-1v1h1v2h-2L11,5z"],"whatshot":["M11.57,13.16c-1.36,0.28 -2.17,1.16 -2.17,2.41 0,1.34 1.11,2.42 2.49,2.42 2.05,0 3.71,-1.66 3.71,-3.71 0,-1.07 -0.15,-2.12 -0.46,-3.12 -0.79,1.07 -2.2,1.72 -3.57,2zM13.5,0.67s0.74,2.65 0.74,4.8c0,2.06 -1.35,3.73 -3.41,3.73 -2.07,0 -3.63,-1.67 -3.63,-3.73l0.03,-0.36C5.21,7.51 4,10.62 4,14c0,4.42 3.58,8 8,8s8,-3.58 8,-8C20,8.61 17.41,3.8 13.5,0.67zM12,20c-3.31,0 -6,-2.69 -6,-6 0,-1.53 0.3,-3.04 0.86,-4.43 1.01,1.01 2.41,1.63 3.97,1.63 2.66,0 4.75,-1.83 5.28,-4.43C17.34,8.97 18,11.44 18,14c0,3.31 -2.69,6 -6,6z"],"water_drop":["M12,2c-5.33,4.55 -8,8.48 -8,11.8c0,4.98 3.8,8.2 8,8.2s8,-3.22 8,-8.2C20,10.48 17.33,6.55 12,2zM12,20c-3.35,0 -6,-2.57 -6,-6.2c0,-2.34 1.95,-5.44 6,-9.14c4.05,3.7 6,6.79 6,9.14C18,17.43 15.35,20 12,20zM7.83,14c0.37,0 0.67,0.26 0.74,0.62c0.41,2.22 2.28,2.98 3.64,2.87c0.43,-0.02 0.79,0.32 0.79,0.75c0,0.4 -0.32,0.73 -0.72,0.75c-2.13,0.13 -4.62,-1.09 -5.19,-4.12C7.01,14.42 7.37,14 7.83,14z"],"severe_cold":["M12,10.41l4,-4l-1.41,-1.41l-2.59,2.59l0,-3.59l-2,0l0,3.59l-2.59,-2.59l-1.41,1.41l4,4l0,1.59l-1.59,0l-4,-4l-1.41,1.41l2.59,2.59l-3.59,0l0,2l3.59,0l-2.59,2.59l1.41,1.41l4,-4l1.59,0l0,1.59l-4,4l1.41,1.41l2.59,-2.59l0,3.59l2,0l0,-3.59l2.59,2.59l1.41,-1.41l-4,-4l0,-1.59l1.59,0l4,4l1.41,-1.41l-2.59,-2.59l3.59,0l0,-2l-8,0z","M19,2h2v5h-2z","M19,8h2v2h-2z"],"wb_sunny":["M6.76,4.84l-1.8,-1.79 -1.41,1.41 1.79,1.79zM1,10.5h3v2L1,12.5zM11,0.55h2L13,3.5h-2zM19.04,3.045l1.408,1.407 -1.79,1.79 -1.407,-1.408zM17.24,18.16l1.79,1.8 1.41,-1.41 -1.8,-1.79zM20,10.5h3v2h-3zM12,5.5c-3.31,0 -6,2.69 -6,6s2.69,6 6,6 6,-2.69 6,-6 -2.69,-6 -6,-6zM12,15.5c-2.21,0 -4,-1.79 -4,-4s1.79,-4 4,-4 4,1.79 4,4 -1.79,4 -4,4zM11,19.5h2v2.95h-2zM3.55,18.54l1.41,1.41 1.79,-1.8 -1.41,-1.41z"],"hvac":["M19,3H5C3.9,3 3,3.9 3,5v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5C21,3.9 20.1,3 19,3zM19,19H5V5h14V19z","M12,18c3.31,0 6,-2.69 6,-6s-2.69,-6 -6,-6s-6,2.69 -6,6S8.69,18 12,18zM15.44,10c0.26,0.45 0.44,0.96 0.51,1.5h-7.9c0.07,-0.54 0.24,-1.05 0.51,-1.5H15.44zM15.95,12.5c-0.07,0.54 -0.24,1.05 -0.51,1.5H8.56c-0.26,-0.45 -0.44,-0.96 -0.51,-1.5H15.95zM9.38,15h5.24c-0.7,0.61 -1.61,1 -2.62,1S10.09,15.61 9.38,15zM14.62,9H9.38c0.7,-0.61 1.61,-1 2.62,-1S13.91,8.39 14.62,9z"],"battery_full":["M15.67,4H14V2h-4v2H8.33C7.6,4 7,4.6 7,5.33v15.33C7,21.4 7.6,22 8.33,22h7.33c0.74,0 1.34,-0.6 1.34,-1.33V5.33C17,4.6 16.4,4 15.67,4z"],"battery_charging_full":["M15.67,4H14V2h-4v2H8.33C7.6,4 7,4.6 7,5.33v15.33C7,21.4 7.6,22 8.33,22h7.33c0.74,0 1.34,-0.6 1.34,-1.33V5.33C17,4.6 16.4,4 15.67,4zM11,20v-5.5H9L13,7v5.5h2L11,20z"],"bolt":["M11,21h-1l1,-7H7.5c-0.88,0 -0.33,-0.75 -0.31,-0.78C8.48,10.94 10.42,7.54 13.01,3h1l-1,7h3.51c0.4,0 0.62,0.19 0.4,0.66C12.97,17.55 11,21 11,21z"],"ev_station":["M19.77,7.23l0.01,-0.01 -3.72,-3.72L15,4.56l2.11,2.11c-0.94,0.36 -1.61,1.26 -1.61,2.33 0,1.38 1.12,2.5 2.5,2.5 0.36,0 0.69,-0.08 1,-0.21v7.21c0,0.55 -0.45,1 -1,1s-1,-0.45 -1,-1L17,14c0,-1.1 -0.9,-2 -2,-2h-1L14,5c0,-1.1 -0.9,-2 -2,-2L6,3c-1.1,0 -2,0.9 -2,2v16h10v-7.5h1.5v5c0,1.38 1.12,2.5 2.5,2.5s2.5,-1.12 2.5,-2.5L20.5,9c0,-0.69 -0.28,-1.32 -0.73,-1.77zM12,11v8L6,19L6,5h6v6zM18,10c-0.55,0 -1,-0.45 -1,-1s0.45,-1 1,-1 1,0.45 1,1 -0.45,1 -1,1zM10,6l-4,7.5h2L8,18l4,-7h-2z"],"power":["M16,9v4.66l-3.5,3.51V19h-1v-1.83L8,13.65V9h8m0,-6h-2v4h-4V3H8v4h-0.01C6.9,6.99 6,7.89 6,8.98v5.52L9.5,18v3h5v-3l3.5,-3.51V9c0,-1.1 -0.9,-2 -2,-2V3z"],"power_settings_new":["M13,3h-2v10h2L13,3zM17.83,5.17l-1.42,1.42C17.99,7.86 19,9.81 19,12c0,3.87 -3.13,7 -7,7s-7,-3.13 -7,-7c0,-2.19 1.01,-4.14 2.58,-5.42L6.17,5.17C4.23,6.82 3,9.26 3,12c0,4.97 4.03,9 9,9s9,-4.03 9,-9c0,-2.74 -1.23,-5.18 -3.17,-6.83z"],"play_arrow":["M10,8.64L15.27,12 10,15.36V8.64M8,5v14l11,-7L8,5z"],"pause":["M6,19h4L10,5L6,5v14zM14,5v14h4L18,5h-4z"],"skip_next":["M6,18l8.5,-6L6,6v12zM8,9.86L11.03,12 8,14.14L8,9.86zM16,6h2v12h-2z"],"music_note":["M12,3l0.01,10.55c-0.59,-0.34 -1.27,-0.55 -2,-0.55C7.79,13 6,14.79 6,17s1.79,4 4.01,4S14,19.21 14,17L14,7h4L18,3h-6zM10.01,19c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2z"],"headphones":["M12,3c-4.97,0 -9,4.03 -9,9v7c0,1.1 0.9,2 2,2h4v-8H5v-1c0,-3.87 3.13,-7 7,-7s7,3.13 7,7v1h-4v8h4c1.1,0 2,-0.9 2,-2v-7C21,7.03 16.97,3 12,3zM7,15v4H5v-4H7zM19,19h-2v-4h2V19z"],"radio":["M20,6L8.3,6l8.26,-3.34L15.88,1 3.24,6.15C2.51,6.43 2,7.17 2,8v12c0,1.1 0.89,2 2,2h16c1.11,0 2,-0.9 2,-2L22,8c0,-1.11 -0.89,-2 -2,-2zM20,8v3h-2L18,9h-2v2L4,11L4,8h16zM4,20v-7h16v7L4,20z","M8,16.48m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0"],"podcasts":["M14,12c0,0.74 -0.4,1.38 -1,1.72V22h-2v-8.28c-0.6,-0.35 -1,-0.98 -1,-1.72c0,-1.1 0.9,-2 2,-2S14,10.9 14,12zM12,6c-3.31,0 -6,2.69 -6,6c0,1.74 0.75,3.31 1.94,4.4l1.42,-1.42C8.53,14.25 8,13.19 8,12c0,-2.21 1.79,-4 4,-4s4,1.79 4,4c0,1.19 -0.53,2.25 -1.36,2.98l1.42,1.42C17.25,15.31 18,13.74 18,12C18,8.69 15.31,6 12,6zM12,2C6.48,2 2,6.48 2,12c0,2.85 1.2,5.41 3.11,7.24l1.42,-1.42C4.98,16.36 4,14.29 4,12c0,-4.41 3.59,-8 8,-8s8,3.59 8,8c0,2.29 -0.98,4.36 -2.53,5.82l1.42,1.42C20.8,17.41 22,14.85 22,12C22,6.48 17.52,2 12,2z"],"volume_up":["M3,9v6h4l5,5L12,4L7,9L3,9zM10,8.83v6.34L7.83,13L5,13v-2h2.83L10,8.83zM16.5,12c0,-1.77 -1.02,-3.29 -2.5,-4.03v8.05c1.48,-0.73 2.5,-2.25 2.5,-4.02zM14,3.23v2.06c2.89,0.86 5,3.54 5,6.71s-2.11,5.85 -5,6.71v2.06c4.01,-0.91 7,-4.49 7,-8.77 0,-4.28 -2.99,-7.86 -7,-8.77z"],"mic":["M12,14c1.66,0 3,-1.34 3,-3V5c0,-1.66 -1.34,-3 -3,-3S9,3.34 9,5v6C9,12.66 10.34,14 12,14z","M17,11c0,2.76 -2.24,5 -5,5s-5,-2.24 -5,-5H5c0,3.53 2.61,6.43 6,6.92V21h2v-3.08c3.39,-0.49 6,-3.39 6,-6.92H17z"],"smart_display":["M9.5,7.5l0,9l7,-4.5z","M20,4H4C2.9,4 2,4.9 2,6v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6C22,4.9 21.1,4 20,4zM20,18.01H4V5.99h16V18.01z"],"map":["M20.5,3l-0.16,0.03L15,5.1 9,3 3.36,4.9c-0.21,0.07 -0.36,0.25 -0.36,0.48L3,20.5c0,0.28 0.22,0.5 0.5,0.5l0.16,-0.03L9,18.9l6,2.1 5.64,-1.9c0.21,-0.07 0.36,-0.25 0.36,-0.48L21,3.5c0,-0.28 -0.22,-0.5 -0.5,-0.5zM10,5.47l4,1.4v11.66l-4,-1.4L10,5.47zM5,6.46l3,-1.01v11.7l-3,1.16L5,6.46zM19,17.54l-3,1.01L16,6.86l3,-1.16v11.84z"],"navigation":["M12,7.27l4.28,10.43 -3.47,-1.53 -0.81,-0.36 -0.81,0.36 -3.47,1.53L12,7.27M12,2L4.5,20.29l0.71,0.71L12,18l6.79,3 0.71,-0.71L12,2z"],"home":["M12,5.69l5,4.5V18h-2v-6H9v6H7v-7.81l5,-4.5M12,3L2,12h3v8h6v-6h2v6h6v-8h3L12,3z"],"work":["M20,6h-4L16,4c0,-1.11 -0.89,-2 -2,-2h-4c-1.11,0 -2,0.89 -2,2v2L4,6c-1.11,0 -1.99,0.89 -1.99,2L2,19c0,1.11 0.89,2 2,2h16c1.11,0 2,-0.89 2,-2L22,8c0,-1.11 -0.89,-2 -2,-2zM14,6h-4L10,4h4v2z"],"restaurant":["M16,6v8h3v8h2L21,2c-2.76,0 -5,2.24 -5,4zM11,9L9,9L9,2L7,2v7L5,9L5,2L3,2v7c0,2.21 1.79,4 4,4v9h2v-9c2.21,0 4,-1.79 4,-4L13,2h-2v7z"],"local_cafe":["M16,5v8c0,1.1 -0.9,2 -2,2L8,15c-1.1,0 -2,-0.9 -2,-2L6,5h10m4,-2L4,3v10c0,2.21 1.79,4 4,4h6c2.21,0 4,-1.79 4,-4v-3h2c1.11,0 2,-0.89 2,-2L22,5c0,-1.11 -0.89,-2 -2,-2zM18,8L18,5h2v3h-2zM20,19L2,19v2h18v-2z"],"flag":["M12.36,6l0.4,2H18v6h-3.36l-0.4,-2H7V6h5.36M14,4H5v17h2v-7h5.6l0.4,2h7V6h-5.6L14,4z"],"terrain":["M14,6l-4.22,5.63 1.25,1.67L14,9.33 19,16h-8.46l-4.01,-5.37L1,18h22L14,6zM5,16l1.52,-2.03L8.04,16H5z"],"phone":["M6.54,5c0.06,0.89 0.21,1.76 0.45,2.59l-1.2,1.2c-0.41,-1.2 -0.67,-2.47 -0.76,-3.79h1.51m9.86,12.02c0.85,0.24 1.72,0.39 2.6,0.45v1.49c-1.32,-0.09 -2.59,-0.35 -3.8,-0.75l1.2,-1.19M7.5,3H4c-0.55,0 -1,0.45 -1,1 0,9.39 7.61,17 17,17 0.55,0 1,-0.45 1,-1v-3.49c0,-0.55 -0.45,-1 -1,-1 -1.24,0 -2.45,-0.2 -3.57,-0.57 -0.1,-0.04 -0.21,-0.05 -0.31,-0.05 -0.26,0 -0.51,0.1 -0.71,0.29l-2.2,2.2c-2.83,-1.45 -5.15,-3.76 -6.59,-6.59l2.2,-2.2c0.28,-0.28 0.36,-0.67 0.25,-1.02C8.7,6.45 8.5,5.25 8.5,4c0,-0.55 -0.45,-1 -1,-1z"],"bluetooth":["M17.71,7.71L12,2h-1v7.59L6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 11,14.41L11,22h1l5.71,-5.71 -4.3,-4.29 4.3,-4.29zM13,5.83l1.88,1.88L13,9.59L13,5.83zM14.88,16.29L13,18.17v-3.76l1.88,1.88z"],"wifi":["M1,9l2,2c4.97,-4.97 13.03,-4.97 18,0l2,-2C16.93,2.93 7.08,2.93 1,9zM9,17l3,3 3,-3c-1.65,-1.66 -4.34,-1.66 -6,0zM5,13l2,2c2.76,-2.76 7.24,-2.76 10,0l2,-2C15.14,9.14 8.87,9.14 5,13z"],"apps":["M4,8h4L8,4L4,4v4zM10,20h4v-4h-4v4zM4,20h4v-4L4,16v4zM4,14h4v-4L4,10v4zM10,14h4v-4h-4v4zM16,4v4h4L20,4h-4zM10,8h4L14,4h-4v4zM16,14h4v-4h-4v4zM16,20h4v-4h-4v4z"],"star":["M12,17.27L18.18,21l-1.64,-7.03L22,9.24l-7.19,-0.61L12,2L9.19,8.63L2,9.24l5.46,4.73L5.82,21L12,17.27z"],"favorite":["M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z"],"settings":["M19.43,12.98c0.04,-0.32 0.07,-0.64 0.07,-0.98 0,-0.34 -0.03,-0.66 -0.07,-0.98l2.11,-1.65c0.19,-0.15 0.24,-0.42 0.12,-0.64l-2,-3.46c-0.09,-0.16 -0.26,-0.25 -0.44,-0.25 -0.06,0 -0.12,0.01 -0.17,0.03l-2.49,1c-0.52,-0.4 -1.08,-0.73 -1.69,-0.98l-0.38,-2.65C14.46,2.18 14.25,2 14,2h-4c-0.25,0 -0.46,0.18 -0.49,0.42l-0.38,2.65c-0.61,0.25 -1.17,0.59 -1.69,0.98l-2.49,-1c-0.06,-0.02 -0.12,-0.03 -0.18,-0.03 -0.17,0 -0.34,0.09 -0.43,0.25l-2,3.46c-0.13,0.22 -0.07,0.49 0.12,0.64l2.11,1.65c-0.04,0.32 -0.07,0.65 -0.07,0.98 0,0.33 0.03,0.66 0.07,0.98l-2.11,1.65c-0.19,0.15 -0.24,0.42 -0.12,0.64l2,3.46c0.09,0.16 0.26,0.25 0.44,0.25 0.06,0 0.12,-0.01 0.17,-0.03l2.49,-1c0.52,0.4 1.08,0.73 1.69,0.98l0.38,2.65c0.03,0.24 0.24,0.42 0.49,0.42h4c0.25,0 0.46,-0.18 0.49,-0.42l0.38,-2.65c0.61,-0.25 1.17,-0.59 1.69,-0.98l2.49,1c0.06,0.02 0.12,0.03 0.18,0.03 0.17,0 0.34,-0.09 0.43,-0.25l2,-3.46c0.12,-0.22 0.07,-0.49 -0.12,-0.64l-2.11,-1.65zM17.45,11.27c0.04,0.31 0.05,0.52 0.05,0.73 0,0.21 -0.02,0.43 -0.05,0.73l-0.14,1.13 0.89,0.7 1.08,0.84 -0.7,1.21 -1.27,-0.51 -1.04,-0.42 -0.9,0.68c-0.43,0.32 -0.84,0.56 -1.25,0.73l-1.06,0.43 -0.16,1.13 -0.2,1.35h-1.4l-0.19,-1.35 -0.16,-1.13 -1.06,-0.43c-0.43,-0.18 -0.83,-0.41 -1.23,-0.71l-0.91,-0.7 -1.06,0.43 -1.27,0.51 -0.7,-1.21 1.08,-0.84 0.89,-0.7 -0.14,-1.13c-0.03,-0.31 -0.05,-0.54 -0.05,-0.74s0.02,-0.43 0.05,-0.73l0.14,-1.13 -0.89,-0.7 -1.08,-0.84 0.7,-1.21 1.27,0.51 1.04,0.42 0.9,-0.68c0.43,-0.32 0.84,-0.56 1.25,-0.73l1.06,-0.43 0.16,-1.13 0.2,-1.35h1.39l0.19,1.35 0.16,1.13 1.06,0.43c0.43,0.18 0.83,0.41 1.23,0.71l0.91,0.7 1.06,-0.43 1.27,-0.51 0.7,1.21 -1.07,0.85 -0.89,0.7 0.14,1.13zM12,8c-2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4 -1.79,-4 -4,-4zM12,14c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2z"],"schedule":["M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8zM12.5,7L11,7v6l5.25,3.15 0.75,-1.23 -4.5,-2.67z"],"dark_mode":["M9.37,5.51C9.19,6.15 9.1,6.82 9.1,7.5c0,4.08 3.32,7.4 7.4,7.4c0.68,0 1.35,-0.09 1.99,-0.27C17.45,17.19 14.93,19 12,19c-3.86,0 -7,-3.14 -7,-7C5,9.07 6.81,6.55 9.37,5.51zM12,3c-4.97,0 -9,4.03 -9,9s4.03,9 9,9s9,-4.03 9,-9c0,-0.46 -0.04,-0.92 -0.1,-1.36c-0.98,1.37 -2.58,2.26 -4.4,2.26c-2.98,0 -5.4,-2.42 -5.4,-5.4c0,-1.81 0.89,-3.42 2.26,-4.4C12.92,3.04 12.46,3 12,3L12,3z"],"light_mode":["M12,9c1.65,0 3,1.35 3,3s-1.35,3 -3,3s-3,-1.35 -3,-3S10.35,9 12,9M12,7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5s5,-2.24 5,-5S14.76,7 12,7L12,7zM2,13l2,0c0.55,0 1,-0.45 1,-1s-0.45,-1 -1,-1l-2,0c-0.55,0 -1,0.45 -1,1S1.45,13 2,13zM20,13l2,0c0.55,0 1,-0.45 1,-1s-0.45,-1 -1,-1l-2,0c-0.55,0 -1,0.45 -1,1S19.45,13 20,13zM11,2v2c0,0.55 0.45,1 1,1s1,-0.45 1,-1V2c0,-0.55 -0.45,-1 -1,-1S11,1.45 11,2zM11,20v2c0,0.55 0.45,1 1,1s1,-0.45 1,-1v-2c0,-0.55 -0.45,-1 -1,-1C11.45,19 11,19.45 11,20zM5.99,4.58c-0.39,-0.39 -1.03,-0.39 -1.41,0c-0.39,0.39 -0.39,1.03 0,1.41l1.06,1.06c0.39,0.39 1.03,0.39 1.41,0s0.39,-1.03 0,-1.41L5.99,4.58zM18.36,16.95c-0.39,-0.39 -1.03,-0.39 -1.41,0c-0.39,0.39 -0.39,1.03 0,1.41l1.06,1.06c0.39,0.39 1.03,0.39 1.41,0c0.39,-0.39 0.39,-1.03 0,-1.41L18.36,16.95zM19.42,5.99c0.39,-0.39 0.39,-1.03 0,-1.41c-0.39,-0.39 -1.03,-0.39 -1.41,0l-1.06,1.06c-0.39,0.39 -0.39,1.03 0,1.41s1.03,0.39 1.41,0L19.42,5.99zM7.05,18.36c0.39,-0.39 0.39,-1.03 0,-1.41c-0.39,-0.39 -1.03,-0.39 -1.41,0l-1.06,1.06c-0.39,0.39 -0.39,1.03 0,1.41s1.03,0.39 1.41,0L7.05,18.36z"],"pets":["M4.5,9.5m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0","M9,5.5m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0","M15,5.5m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0","M19.5,9.5m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0","M17.34,14.86c-0.87,-1.02 -1.6,-1.89 -2.48,-2.91 -0.46,-0.54 -1.05,-1.08 -1.75,-1.32 -0.11,-0.04 -0.22,-0.07 -0.33,-0.09 -0.25,-0.04 -0.52,-0.04 -0.78,-0.04s-0.53,0 -0.79,0.05c-0.11,0.02 -0.22,0.05 -0.33,0.09 -0.7,0.24 -1.28,0.78 -1.75,1.32 -0.87,1.02 -1.6,1.89 -2.48,2.91 -1.31,1.31 -2.92,2.76 -2.62,4.79 0.29,1.02 1.02,2.03 2.33,2.32 0.73,0.15 3.06,-0.44 5.54,-0.44h0.18c2.48,0 4.81,0.58 5.54,0.44 1.31,-0.29 2.04,-1.31 2.33,-2.32 0.31,-2.04 -1.3,-3.49 -2.61,-4.8z"],"person":["M12,6c1.1,0 2,0.9 2,2s-0.9,2 -2,2 -2,-0.9 -2,-2 0.9,-2 2,-2m0,10c2.7,0 5.8,1.29 6,2L6,18c0.23,-0.72 3.31,-2 6,-2m0,-12C9.79,4 8,5.79 8,8s1.79,4 4,4 4,-1.79 4,-4 -1.79,-4 -4,-4zM12,14c-2.67,0 -8,1.34 -8,4v2h16v-2c0,-2.66 -5.33,-4 -8,-4z"],"shopping_cart":["M15.55,13c0.75,0 1.41,-0.41 1.75,-1.03l3.58,-6.49c0.37,-0.66 -0.11,-1.48 -0.87,-1.48L5.21,4l-0.94,-2L1,2v2h2l3.6,7.59 -1.35,2.44C4.52,15.37 5.48,17 7,17h12v-2L7,15l1.1,-2h7.45zM6.16,6h12.15l-2.76,5L8.53,11L6.16,6zM7,18c-1.1,0 -1.99,0.9 -1.99,2S5.9,22 7,22s2,-0.9 2,-2 -0.9,-2 -2,-2zM17,18c-1.1,0 -1.99,0.9 -1.99,2s0.89,2 1.99,2 2,-0.9 2,-2 -0.9,-2 -2,-2z"],"lightbulb":["M9,21c0,0.55 0.45,1 1,1h4c0.55,0 1,-0.45 1,-1v-1L9,20v1zM12,2C8.14,2 5,5.14 5,9c0,2.38 1.19,4.47 3,5.74L8,17c0,0.55 0.45,1 1,1h6c0.55,0 1,-0.45 1,-1v-2.26c1.81,-1.27 3,-3.36 3,-5.74 0,-3.86 -3.14,-7 -7,-7zM14.85,13.1l-0.85,0.6L14,16h-4v-2.3l-0.85,-0.6C7.8,12.16 7,10.63 7,9c0,-2.76 2.24,-5 5,-5s5,2.24 5,5c0,1.63 -0.8,3.16 -2.15,4.1z"],"touch_app":["M18.19,12.44l-3.24,-1.62c1.29,-1 2.12,-2.56 2.12,-4.32c0,-3.03 -2.47,-5.5 -5.5,-5.5s-5.5,2.47 -5.5,5.5c0,2.13 1.22,3.98 3,4.89v3.26c-2.15,-0.46 -2.02,-0.44 -2.26,-0.44c-0.53,0 -1.03,0.21 -1.41,0.59L4,16.22l5.09,5.09C9.52,21.75 10.12,22 10.74,22h6.3c0.98,0 1.81,-0.7 1.97,-1.67l0.8,-4.71C20.03,14.32 19.38,13.04 18.19,12.44zM17.84,15.29L17.04,20h-6.3c-0.09,0 -0.17,-0.04 -0.24,-0.1l-3.68,-3.68l4.25,0.89V6.5c0,-0.28 0.22,-0.5 0.5,-0.5c0.28,0 0.5,0.22 0.5,0.5v6h1.76l3.46,1.73C17.69,14.43 17.91,14.86 17.84,15.29zM8.07,6.5c0,-1.93 1.57,-3.5 3.5,-3.5s3.5,1.57 3.5,3.5c0,0.95 -0.38,1.81 -1,2.44V6.5c0,-1.38 -1.12,-2.5 -2.5,-2.5c-1.38,0 -2.5,1.12 -2.5,2.5v2.44C8.45,8.31 8.07,7.45 8.07,6.5z"],"rocket_launch":["M6,15c-0.83,0 -1.58,0.34 -2.12,0.88C2.7,17.06 2,22 2,22s4.94,-0.7 6.12,-1.88C8.66,19.58 9,18.83 9,18C9,16.34 7.66,15 6,15zM6.71,18.71c-0.28,0.28 -2.17,0.76 -2.17,0.76s0.47,-1.88 0.76,-2.17C5.47,17.11 5.72,17 6,17c0.55,0 1,0.45 1,1C7,18.28 6.89,18.53 6.71,18.71zM17.42,13.65L17.42,13.65c6.36,-6.36 4.24,-11.31 4.24,-11.31s-4.95,-2.12 -11.31,4.24l-2.49,-0.5C7.21,5.95 6.53,6.16 6.05,6.63L2,10.69l5,2.14L11.17,17l2.14,5l4.05,-4.05c0.47,-0.47 0.68,-1.15 0.55,-1.81L17.42,13.65zM7.41,10.83L5.5,10.01l1.97,-1.97l1.44,0.29C8.34,9.16 7.83,10.03 7.41,10.83zM13.99,18.5l-0.82,-1.91c0.8,-0.42 1.67,-0.93 2.49,-1.5l0.29,1.44L13.99,18.5zM16,12.24c-1.32,1.32 -3.38,2.4 -4.04,2.73l-2.93,-2.93c0.32,-0.65 1.4,-2.71 2.73,-4.04c4.68,-4.68 8.23,-3.99 8.23,-3.99S20.68,7.56 16,12.24zM15,11c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2s-2,0.9 -2,2S13.9,11 15,11z"]};
+  const FL_SYM_CATS = [["car","rule_cat_car",["directions_car","electric_car","speed","garage","local_parking","key","lock","warning","highlight","videocam"]],["climate","rule_cat_climate",["ac_unit","air","thermostat","whatshot","water_drop","severe_cold","wb_sunny","hvac"]],["battery","rule_cat_battery",["battery_full","battery_charging_full","bolt","ev_station","power","power_settings_new"]],["media","rule_cat_media",["play_arrow","pause","skip_next","music_note","headphones","radio","podcasts","volume_up","mic","smart_display"]],["places","rule_cat_places",["map","navigation","home","work","restaurant","local_cafe","flag","terrain","phone","bluetooth","wifi","apps"]],["misc","floating_icon_cat_misc",["star","favorite","settings","schedule","dark_mode","light_mode","pets","person","shopping_cart","lightbulb","touch_app","rocket_launch"]]];
+  /** Bulles d'information (#236) : des valeurs lues par les automatisations, et l'heure. */
+  const FL_INFOS = ['SOC', 'RANGE', 'OUTSIDE_TEMP', 'SPEED', 'HVAC_TEMP', 'DRIVE_MODE', 'REGEN', 'PROFILE', 'VOLUME', 'AC_ON', 'TIME', 'ALTITUDE'];
+  const flInfoName = (i) => S({ SOC: 'rule_sig_soc', RANGE: 'rule_sig_range', OUTSIDE_TEMP: 'rule_sig_outside_temp', SPEED: 'rule_sig_speed', HVAC_TEMP: 'rule_key_hvac_temp',
+    DRIVE_MODE: 'rule_sig_drive_mode', REGEN: 'rule_key_regen', PROFILE: 'rule_sig_profile', VOLUME: 'rule_sig_volume', AC_ON: 'rule_key_ac', TIME: 'floating_info_time', ALTITUDE: 'rule_sig_altitude' }[i]);
+  const FL_ICON = { SOC: '🔋', RANGE: '🛣', OUTSIDE_TEMP: '🌡', SPEED: '⏱', HVAC_TEMP: '🌡', DRIVE_MODE: '⚙', REGEN: '♻', PROFILE: '☆', VOLUME: '🔊', AC_ON: '❄', TIME: '🕒', ALTITUDE: '⛰' };
+  function flInfoValue(i) {
+    const c = car(), mi = clMiles();
+    switch (i) {
+      case 'SOC': return Math.round(c.soc) + ' %';
+      case 'RANGE': return Math.round(rangeKm(c.soc) / (mi ? MI_KM : 1)) + (mi ? ' mi' : ' km');
+      case 'OUTSIDE_TEMP': return Math.round(c.outside) + ' °C';
+      case 'SPEED': return Math.round(c.speed / (mi ? MI_KM : 1)) + (mi ? ' mph' : ' km/h');
+      case 'HVAC_TEMP': return c.clim.temp + ' °C';
+      case 'DRIVE_MODE': return driveName(c.driveMode);
+      case 'REGEN': return regenName(c.regen);
+      case 'PROFILE': { const p = activeProfile(); return p ? p.name : '—'; }
+      case 'VOLUME': return String(c.volume);
+      case 'AC_ON': return c.clim.ac ? 'ON' : 'OFF';
+      case 'TIME': return nowHM();
+      case 'ALTITUDE': return altTxt(mi).join(' ');
+      default: return '—';
+    }
+  }
+  /** Bulle-icône (2026-11-17) : un symbole en SVG, ou l'icône (simulée) d'une application, à [px]. */
+  const flSymSvg = (n, px) => (FL_SYM[n] ? '<svg class="fl-sym" viewBox="0 0 24 24" width="' + px + '" height="' + px + '" aria-hidden="true">' +
+    FL_SYM[n].map((d) => '<path fill="currentColor" d="' + d + '"/>').join('') + '</svg>' : '');
+  const flAppIco = (name, px) => appIcon(name).replace('class="mw-appico" style="', 'class="mw-appico" style="width:' + px + 'px;height:' + px + 'px;font-size:' +
+    Math.round(px * 0.5) + 'px;border-radius:' + Math.round(px * 0.25) + 'px;flex:none;');
+  const flIconHtml = (ref, px) => (ref && ref.startsWith('app:') ? flAppIco(ref.slice(4), px) : ref && ref.startsWith('sym:') ? flSymSvg(ref.slice(4), px) : '');
+  /** Les applis que lance une bulle (BubbleIcon.apps) : raccourci perso Application, projection, MG4Control. */
+  function flApps(b) {
+    if (b.action === 'CUSTOM') { const cs = state.sc.custom.find((c) => c.id === b.customId); return cs && cs.kind === 'APP' && cs.app ? [cs.app] : []; }
+    if (b.action === 'PROJECTION') return ['Android Auto', 'CarPlay'];
+    if (b.action === 'OPEN_APP') return ['MG4Control'];
+    return [];
+  }
+  /** L'icône montrée (BubbleIcon.resolve) ; `null` pour une information sans icône choisie (la sienne). */
+  const flIconRef = (b) => (b.content === 'icon' ? b.icon || (flApps(b)[0] ? 'app:' + flApps(b)[0] : 'sym:touch_app') : b.content === 'info' && b.icon ? b.icon : null);
+  /** Une valeur oui / non colore la bulle comme une bascule. */
+  const flInfoBool = (i) => (i === 'AC_ON' ? !!car().clim.ac : null);
+  /** Apparence d'une bulle (#230) : fond (opacité, sombre / teinté / clair / noir #222), bordure ; rien de réglé = l'allure d'avant. */
+  function flLookStyle(b, lit) {
+    if (b.opacity == null && !b.fill && !b.noBorder) return '';
+    const a = (b.opacity == null ? 72 : lit ? Math.max(60, b.opacity) : b.opacity) / 100, fill = b.fill || 'dark';
+    let st = '';
+    if (!lit) st += 'background:' + (fill === 'light' ? 'rgba(238,242,248,' + a + ');color:#0B1220' : fill === 'black' ? 'rgba(0,0,0,' + a + ')' : fill === 'tint' ? 'color-mix(in srgb, var(--fl, #A6C8FF) ' + Math.round(40 * a) + '%, rgba(28,28,32,' + a + '))' : 'rgba(28,28,32,' + a + ')') + ';';
+    if (b.noBorder) st += 'border-color:transparent;';
+    // Sous 35 %, le texte prend un contour pour rester lisible.
+    if (a < 0.35 && fill !== 'light') st += 'text-shadow:0 0 3px #000,0 0 2px #000;';
+    return st;
+  }
   /** Ligne Air des règles de climatisation : mêmes boutons que la page Clim et les profils. */
   const AIR_ROW = [[AIR.FACE, 'clim_air_face'], [AIR.FEET, 'clim_air_feet'], [AIR.WS, 'clim_air_windshield_front'], [AIR.REAR, 'clim_air_windshield_rear']];
   /**
@@ -4363,6 +6226,13 @@
    * qu'elle reprenne là où elle en était au lieu de repartir de zéro.
    */
   let pcParts = null;
+  /** Puissance tirée de la batterie pendant le Garde-voiture (#210) : lissée, arrondie à 10 W. */
+  function pcPowerW() {
+    const pc = state.pc; if (!pc) return '';
+    const r = pc.req, on = !r.surv && pc.plan.some(([a, b]) => pc.min >= a && pc.min < b);
+    const w = Math.round(((on ? 900 + Math.abs(r.temp - car().outside) * 90 + r.fan * 55 : 0) + (r.surv ? 210 : 170) + Math.sin(Date.now() / 7000) * 25) / 10) * 10;
+    return w.toLocaleString(appLang() === 'en' ? 'en-GB' : appLang()) + ' W';
+  }
   function pcParticles() {
     if (!pcParts) {
       let seed = 7;
@@ -4375,9 +6245,54 @@
   }
 
   // ── Petits composants HTML ────────────────────────────────────────────────
+  /**
+   * Interrupteur 2.7.0 (SegmentSwitch) : « Non | Oui » en segments au lieu d'un Switch ; le
+   * segment allumé dit l'état et chaque moitié choisit sa valeur.
+   */
   function sw(on, a, disabled, x) {
-    return '<button type="button" class="sw' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" data-a="' + a + '"' + (x ? ' data-x="' + x + '"' : '') + (disabled ? ' disabled' : '') + '></button>';
+    return '<button type="button" class="sw' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" data-a="' + a + '"' + (x ? ' data-x="' + x + '"' : '') + (disabled ? ' disabled' : '') + '>' +
+      '<span class="n" data-segment="false">' + esc(S('segment_no')) + '</span><span class="y" data-segment="true">' + esc(S('segment_yes')) + '</span></button>';
   }
+  /** Pictogrammes Tabler (MIT) du menu et des pastilles : ic_nav_* et ic_rail_* de l'application. */
+  const ICONS = {
+    nav_automation: 'M7,8h10a2,2 0,0 1,2 2v7a2,2 0,0 1,-2 2h-10a2,2 0,0 1,-2 -2v-7a2,2 0,0 1,2 -2z M12,8v-3 M2.5,12.5v3 M21.5,12.5v3 M8.5,11.5h2v2h-2z M13.5,11.5h2v2h-2z M10,16.5h4 M11,4a1,1 0,1 0,2 0a1,1 0,1 0,-2 0',
+    nav_profiles: 'M3,12a9,9 0,1 0,18 0a9,9 0,1 0,-18 0 M9,10a3,3 0,1 0,6 0a3,3 0,1 0,-6 0 M6.168,18.849a4,4 0,0 1,3.832 -2.849h4a4,4 0,0 1,3.834 2.855',
+    nav_settings: 'M10.325,4.317c0.426,-1.756 2.924,-1.756 3.35,0a1.724,1.724 0,0 0,2.573 1.066c1.543,-0.94 3.31,0.826 2.37,2.37a1.724,1.724 0,0 0,1.065 2.572c1.756,0.426 1.756,2.924 0,3.35a1.724,1.724 0,0 0,-1.066 2.573c0.94,1.543 -0.826,3.31 -2.37,2.37a1.724,1.724 0,0 0,-2.572 1.065c-0.426,1.756 -2.924,1.756 -3.35,0a1.724,1.724 0,0 0,-2.573 -1.066c-1.543,0.94 -3.31,-0.826 -2.37,-2.37a1.724,1.724 0,0 0,-1.065 -2.572c-1.756,-0.426 -1.756,-2.924 0,-3.35a1.724,1.724 0,0 0,1.066 -2.573c-0.94,-1.543 0.826,-3.31 2.37,-2.37c1,0.608 2.296,0.07 2.572,-1.065z M9,12a3,3 0,1 0,6 0a3,3 0,0 0,-6 0',
+    nav_shortcuts: 'M3,12l3,0 M12,3l0,3 M7.8,7.8l-2.2,-2.2 M16.2,7.8l2.2,-2.2 M7.8,16.2l-2.2,2.2 M12,12l9,3l-4,2l-2,4l-3,-9',
+    nav_stats: 'M3,13a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v6a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M15,9a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v10a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M9,5a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v14a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M4,20h14',
+    adjustments: 'M4,10a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M6,4v4 M6,12v8 M10,16a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M12,4v10 M12,18v2 M16,7a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M18,4v1 M18,9v11',
+    armchair: 'M5,11a2,2 0,0 1,2 2v2h10v-2a2,2 0,1 1,4 0v4a2,2 0,0 1,-2 2h-14a2,2 0,0 1,-2 -2v-4a2,2 0,0 1,2 -2z M5,11v-5a3,3 0,0 1,3 -3h8a3,3 0,0 1,3 3v5 M6,19v2 M18,19v2',
+    bolt: 'M13,3v7h6l-8,11v-7h-6l8,-11',
+    branch: 'M5,18a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M5,6a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M15,6a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M7,8v8 M9,18h6a2,2 0,0 0,2 -2v-5 M14,14l3,-3l3,3',
+    chart: 'M3,13a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v6a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M15,9a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v10a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M9,5a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v14a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M4,20h14',
+    circle_dot: 'M12,12m-1,0a1,1 0,1 0,2 0a1,1 0,1 0,-2 0 M12,12m-9,0a9,9 0,1 0,18 0a9,9 0,1 0,-18 0',
+    door_exit: 'M13,12v0.01 M3,21h18 M5,21v-16a2,2 0,0 1,2 -2h7.5 M17,13.5v7.5 M14,7h7 M18,4l3,3l-3,3',
+    info: 'M12,12m-9,0a9,9 0,1 0,18 0a9,9 0,1 0,-18 0 M12,8h0.01 M11,12h1v4h1',
+    keyboard: 'M4,6h16a2,2 0,0 1,2 2v8a2,2 0,0 1,-2 2h-16a2,2 0,0 1,-2 -2v-8a2,2 0,0 1,2 -2z M6,10v0.01 M10,10v0.01 M14,10v0.01 M18,10v0.01 M6,14v0.01 M18,14v0.01 M10,14h4',
+    language: 'M4,5h7 M9,3v2c0,4.418 -2.239,8 -5,8 M5,9c0,2.144 2.952,3.908 6.7,4 M12,20l4,-9l4,9 M19.1,18h-6.2',
+    list: 'M9,6h11 M9,12h11 M9,18h11 M5,6v0.01 M5,12v0.01 M5,18v0.01',
+    music: 'M3,17a3,3 0,1 0,6 0a3,3 0,0 0,-6 0 M13,17a3,3 0,1 0,6 0a3,3 0,0 0,-6 0 M9,17v-13h10v13 M9,8h10',
+    palette: 'M12,21a9,9 0,0 1,0 -18c4.97,0 9,3.582 9,8c0,1.06 -0.474,2.078 -1.318,2.828c-0.844,0.75 -1.989,1.172 -3.182,1.172h-2.5a2,2 0,0 0,-1 3.75a1.3,1.3 0,0 1,-1 2.25 M8.5,10.5m-1,0a1,1 0,1 0,2 0a1,1 0,1 0,-2 0 M12.5,7.5m-1,0a1,1 0,1 0,2 0a1,1 0,1 0,-2 0 M16.5,10.5m-1,0a1,1 0,1 0,2 0a1,1 0,1 0,-2 0',
+    pedal: 'M8,4h8a2,2 0,0 1,2 2v12a2,2 0,0 1,-2 2h-8a2,2 0,0 1,-2 -2v-12a2,2 0,0 1,2 -2z M9,8h6 M9,12h6 M9,16h6',
+    repeat: 'M4,12v-3a3,3 0,0 1,3 -3h13m-3,-3l3,3l-3,3 M20,12v3a3,3 0,0 1,-3 3h-13m3,3l-3,-3l3,-3',
+    route: 'M3,19a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M19,7a2,2 0,1 0,0 -4a2,2 0,0 0,0 4z M11,19h5.5a3.5,3.5 0,0 0,0 -7h-8a3.5,3.5 0,0 1,0 -7h4.5',
+    shield: 'M12,3a12,12 0,0 0,8.5 3a12,12 0,0 1,-8.5 15a12,12 0,0 1,-8.5 -15a12,12 0,0 0,8.5 -3 M9,12l2,2l4,-4',
+    steering: 'M12,12m-9,0a9,9 0,1 0,18 0a9,9 0,1 0,-18 0 M12,12m-2,0a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M12,14v7 M10,12l-6.75,-2 M14,12l6.75,-2',
+    sun: 'M12,12m-4,0a4,4 0,1 0,8 0a4,4 0,1 0,-8 0 M3,12h1 M12,3v1 M20,12h1 M12,20v1 M5.6,5.6l0.7,0.7 M18.4,5.6l-0.7,0.7 M17.7,17.7l0.7,0.7 M6.3,17.7l-0.7,0.7',
+    temperature: 'M10,13.5a4,4 0,1 0,4 0v-8.5a2,2 0,0 0,-4 0v8.5 M10,9h4',
+    users: 'M9,7m-4,0a4,4 0,1 0,8 0a4,4 0,1 0,-8 0 M3,21v-2a4,4 0,0 1,4 -4h4a4,4 0,0 1,4 4v2 M16,3.13a4,4 0,0 1,0 7.75 M21,21v-2a4,4 0,0 0,-3 -3.85',
+    wand: 'M6,21l15,-15l-3,-3l-15,15l3,3 M15,6l3,3 M9,3a2,2 0,0 0,2 2a2,2 0,0 0,-2 2a2,2 0,0 0,-2 -2a2,2 0,0 0,2 -2 M19,13a2,2 0,0 0,2 2a2,2 0,0 0,-2 2a2,2 0,0 0,-2 -2a2,2 0,0 0,2 -2',    overlay_preclim: 'M12,3a12,12 0,0 0,8.5 3a12,12 0,0 1,-8.5 15a12,12 0,0 1,-8.5 -15a12,12 0,0 0,8.5 -3 M11,11a1,1 0,1 0,2 0a1,1 0,1 0,-2 0 M12,12v2.5',
+    cat_adjust: 'M4,10a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M6,4v4 M6,12v8 M10,16a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M12,4v10 M12,18v2 M16,7a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M18,4v1 M18,9v11'
+  };
+  ICONS.preclim = ICONS.shield;
+  ICONS.mode_eco = 'M5,21c0.5,-4.5 2.5,-8 7,-10 M9,18c6.218,0 10.5,-3.288 11,-12v-2h-4.014c-9,0 -11.986,4 -12,9c0,1 0,3 2,5h3z';
+  ICONS.mode_normal = 'M7,17m-2,0a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M17,17m-2,0a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M5,17h-2v-6l2,-5h9l4,5h1a2,2 0,0 1,2 2v4h-2m-4,0h-6m-6,-6h15m-6,0v-5';
+  ICONS.mode_sport = 'M12,12c2,-2.96 0,-7 -1,-8c0,3.038 -1.773,4.741 -3,6c-1.226,1.26 -2,3.24 -2,5a6,6 0,1 0,12 0c0,-1.532 -1.056,-3.94 -2,-5c-1.786,3 -2.791,3 -4,2z';
+  ICONS.mode_snow = 'M10,4l2,1l2,-1 M12,2v6.5l3,1.72 M17.928,6.268l0.134,2.232l1.866,1.232 M20.66,7l-5.629,3.25l0.01,3.458 M19.928,14.268l-1.866,1.232l-0.134,2.232 M20.66,17l-5.629,-3.25l-2.99,1.738 M14,20l-2,-1l-2,1 M12,22v-6.5l-3,-1.72 M6.072,17.732l-0.134,-2.232l-1.866,-1.232 M3.34,17l5.629,-3.25l-0.01,-3.458 M4.072,9.732l1.866,-1.232l0.134,-2.232 M3.34,7l5.629,3.25l2.99,-1.738';
+  ICONS.mode_custom = 'M14,6m-2,0a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M4,6h8 M16,6h4 M8,12m-2,0a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M4,12h2 M10,12h10 M17,18m-2,0a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M4,18h11 M19,18h1';
+  const ico = (k) => (ICONS[k] ? '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + ICONS[k] + '"/></svg>' : '');
+  /** Côté du menu (NavSide) : Auto suit le volant lu sur la voiture simulée (à gauche par défaut). */
+  function navRight() { const v = state.settings.navSide || 'auto'; return v === 'right' || (v === 'auto' && state.car.rhd); }
   function range(id, min, max, val, disabled, cls, step) {
     const p = max > min ? ((val - min) / (max - min)) * 100 : 0;
     return '<input type="range" class="a-slider ' + (cls || '') + '" min="' + min + '" max="' + max + '" step="' + (step || 1) + '" value="' + val + '" data-c="' + id + '" style="--p:' + p + '%"' + (disabled ? ' disabled' : '') + '>';
@@ -4389,6 +6304,8 @@
       case 'pcLock': return S('preclim_value_seconds', +v);
       case 'pcSoc': return S('preclim_value_percent', +v);
       case 'flSize': return S('floating_size_value', +v);
+      case 'flOpacity': return S('floating_opacity_value', Math.round(+v / 5) * 5);
+      case 'flWidthV': return S('floating_width_value', Math.round(+v / 10) * 10);
       case 'flText': return S('floating_text_value', +v);
       case 'climTemp': return v + '°';
       case 'pkBri': return v + '%';
@@ -4512,18 +6429,20 @@
     t.style.setProperty('--p', (max > min ? ((v - min) / (max - min)) * 100 : 0) + '%');
   }
   function keyName(code) {
-    const n = KEY_NAMES[code];
-    if (n) return appLang() === 'fr' ? n[0] : n[1];
+    const k = { 17: 'wheel_key_star_left', 286: 'wheel_key_star_right', 18: 'wheel_key_star_right', 297: 'wheel_key_joy_up', 298: 'wheel_key_joy_down',
+      299: 'wheel_key_joy_left', 300: 'wheel_key_joy_right', 301: 'wheel_key_joy_center' }[code];
+    if (k) return S(k);
     return S('adv_sc_key_unknown', code);
   }
-  function qrBox(size) {
-    return '<svg width="' + (size || 110) + '" height="' + (size || 110) + '" viewBox="0 0 110 110" aria-hidden="true" style="border-radius:8px;background:#fff"><rect x="8" y="8" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><rect x="74" y="8" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><rect x="8" y="74" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><text x="55" y="62" text-anchor="middle" font-size="13" font-family="Roboto,sans-serif" fill="#111">QR</text></svg>';
+  function qrBox(asset, label, url, size) {
+    const src = new URL('qr-' + asset + '.png', SIM_ASSETS);
+    return '<a class="mw-qr" href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(src.href) + '" width="' + size + '" height="' + size + '" alt=""><span>' + esc(label) + '</span></a>';
   }
   function diagSample() {
     const g = gen();
     return [
       '── ' + L('Rapport de diagnostic (exemple)', 'Diagnostic report (example)') + ' ──',
-      'app=2.6.8  firmware=' + g + (state.forced ? ' (forcé)' : ''),
+      'app=' + APP_VERSION + '  firmware=' + g + (state.forced ? ' (forcé)' : ''),
       'MG4_GATE   sécurité=' + (state.settings.gate ? 'ON max=' + state.settings.gateMax + ' km/h' : 'OFF') + '  vitesse=' + state.car.speed + ' km/h',
       'MG4_API    API externe=' + (state.settings.api ? 'activée' : 'désactivée'),
       'MG4_VOL    volume média=' + state.car.volume + '/' + state.car.volMax,
@@ -4541,7 +6460,8 @@
   function setDoor(side, open) {
     const c = car(), d = state.door;
     c.doors[side] = open;
-    if (open && caps().doorSensor) soundFire('door');
+    if (open && caps().doorSensor) { soundFire('door'); ruleEvent('door'); }
+    if (!open && caps().doorSensor && !c.doors.L && !c.doors.R) ruleEvent('door_close');
     if (!caps().doorSensor || !d.on || garage()) return commit();
     if (open && d[side]) hud(L('Porte ouverte : ', 'Door open: ') + doorDrop());
     else if (!open && !c.doors.L && !c.doors.R) { const m = doorRestore(); if (m) hud(L('Portes fermées : ', 'Doors closed: ') + m); }
@@ -4648,6 +6568,7 @@
       '<div class="dock-grid">' +
       '<label class="dock-f"><span data-l10n="dock-fw"></span><select data-d="fw">' + FIRMWARES.map((f) => '<option value="' + f + '">' + f + '</option>').join('') + '</select></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-speed"></span> <b data-o="speed"></b></span><input type="range" min="0" max="130" step="5" data-d="speed"></label>' +
+      '<div class="dock-f"><span data-l10n="dock-gear"></span><div class="dock-row"><button type="button" class="dock-btn" data-d="park" data-v="P">P</button><button type="button" class="dock-btn" data-d="park" data-v="D">D</button></div></div>' +
       '<label class="dock-f"><span><span data-l10n="dock-temp"></span> <b data-o="temp"></b></span><input type="range" min="-15" max="45" step="1" data-d="temp"></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-soc"></span> <b data-o="soc"></b></span><input type="range" min="5" max="100" step="1" data-d="soc"></label>' +
       '<div class="dock-f"><span data-l10n="dock-lights"></span><div class="dock-row"><button type="button" class="dock-btn" data-d="lights"></button></div></div>' +
@@ -4656,6 +6577,11 @@
       '<div class="dock-f"><span data-l10n="dock-doors"></span><div class="dock-row"><button type="button" class="dock-btn" data-door="L"></button><button type="button" class="dock-btn" data-door="R"></button></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-media"></span><div class="dock-row dock-media"><b data-o="vol"></b></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-active"></span><div class="dock-row dock-media"><b data-o="active"></b></div></div>' +
+      '<label class="dock-f"><span>MG4Dash</span><select data-d="mg4Dash">' +
+      '<option value="absent">' + L('Non installé', 'Not installed') + '</option><option value="outdated">' + L('Ancienne version', 'Older version') + '</option>' +
+      '<option value="compatible">' + L('Version compatible', 'Compatible version') + '</option></select></label>' +
+      '<label class="dock-f"><span>' + L('Côté du volant', 'Steering wheel side') + '</span><select data-d="driverSide">' +
+      '<option value="left">' + L('Gauche', 'Left') + '</option><option value="right">' + L('Droite', 'Right') + '</option></select></label>' +
       '</div>' +
       '<div class="dock-wheel"><span class="dock-lbl" data-l10n="dock-wheel"></span>' + wheelHtml('sm') + '</div>' +
       '<div class="dock-log" aria-live="polite"></div>' +
@@ -4667,15 +6593,23 @@
     el.querySelector('.dock-x').addEventListener('click', () => toggle(false));
     const q = (s) => el.querySelector(s);
     q('[data-d=fw]').addEventListener('change', (e) => setFirmware(e.target.value));
+    q('[data-d=mg4Dash]').addEventListener('change', (e) => { car().mg4Dash = e.target.value; commit(); });
+    q('[data-d=driverSide]').addEventListener('change', (e) => { car().rhd = e.target.value === 'right'; commit(); });
     q('[data-d=speed]').addEventListener('input', (e) => {
       const c = car();
       // Rouler débranche la borne.
       if (c.charge && +e.target.value > 0) stopCharge();
       const was = c.speed;
       c.speed = +e.target.value; c.maxSpeed = Math.max(c.maxSpeed || 0, c.speed);
+      if (c.speed > 0) c.inPark = false;
       if (was === 0 && c.speed > 0) soundFire('drive'); else if (was > 0 && c.speed === 0) soundFire('park');
       commit();
     });
+    el.querySelectorAll('[data-d=park]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.v === 'P' && car().speed > 0) return;
+      car().inPark = b.dataset.v === 'P';
+      commit();
+    }));
     q('[data-d=temp]').addEventListener('input', (e) => { car().outside = +e.target.value; commit(); });
     // Batterie : franchir le seuil en roulant déclenche le profil, une fois par épisode.
     q('[data-d=soc]').addEventListener('input', (e) => { car().soc = +e.target.value; batteryAutomation(null); commit(); });
@@ -4717,6 +6651,7 @@
       const c = car(), k = caps();
       const L10N = {
         'dock-title': L('Véhicule virtuel', 'Virtual vehicle'), 'dock-fw': 'Firmware', 'dock-speed': L('Vitesse', 'Speed'),
+        'dock-gear': L('Position du levier', 'Gear selector'),
         'dock-temp': L('Temp. extérieure', 'Outside temp.'), 'dock-bt': L('Bluetooth connecté', 'Bluetooth connected'),
         'dock-doors': L('Portes avant', 'Front doors'), 'dock-media': L('Volume média', 'Media volume'), 'dock-wheel': L('Volant', 'Steering wheel'),
         'dock-active': L('Profil en cours (dernier appliqué)', 'Current profile (last applied)'),
@@ -4725,7 +6660,15 @@
       el.querySelectorAll('[data-l10n]').forEach((n) => { n.textContent = L10N[n.getAttribute('data-l10n')] || ''; });
       q('.dock-sum').textContent = L('Véhicule virtuel', 'Virtual vehicle') + ' · ' + (state.fw === 'UNKNOWN' && state.forced ? 'UNKNOWN→' + state.forced : state.fw) + ' · ' + c.speed + ' km/h · ' + c.outside + ' °C';
       q('[data-d=fw]').value = state.fw;
+      q('[data-d=mg4Dash]').value = c.mg4Dash;
+      q('[data-d=driverSide]').value = c.rhd ? 'right' : 'left';
       q('[data-d=speed]').value = c.speed; q('[data-o=speed]').textContent = c.speed + ' km/h';
+      el.querySelectorAll('[data-d=park]').forEach((b) => {
+        const park = b.dataset.v === 'P';
+        b.disabled = park && c.speed > 0;
+        b.setAttribute('aria-pressed', String(park === c.inPark));
+        b.classList.toggle('on', park === c.inPark);
+      });
       q('[data-d=temp]').value = c.outside; q('[data-o=temp]').textContent = c.outside + ' °C';
       q('[data-d=soc]').value = c.soc; q('[data-o=soc]').textContent = c.soc + ' %';
       q('[data-d=soc]').disabled = !!c.charge;
@@ -4761,6 +6704,8 @@
   }
 
   // ── Écran conducteur : aperçu du module (ClusterGauge + ClusterGaugeView) ──
+  const clusterUnavailable = () => L('Écran conducteur : choisissez SWI133, SWI68, SWI165 ou SWI173 dans la maquette.',
+    'Driver display: choose SWI133, SWI68, SWI165 or SWI173 in the mockup.');
   /** Bornes de ClusterGauge, les mêmes que l'app. */
   const CG = { STOP_KMH: 5, WH_KM_FULL: 3000, WH_KM_CURVE: 100, REGEN_FULL_KW: 60, STOPPED_FULL_KW: 20, POWER_FULL_KW: 320,
                 POWER_CURVE_KW: 20, REGEN_CURVE_KW: 10, SMOOTHING: 0.5, DISCREET_ZERO: 0.3, DISCREET_TAU_MS: 2000 };
@@ -4791,6 +6736,17 @@
   /** Style discret : les crans, et un chiffre seulement assez loin de la fin (discreetPowerLabels). */
   const dPowerTicks = (full) => [-60, -20, 0, 20, 50, 100, 200].filter((t) => t < full).concat([full]);
   const dPowerLabel = (k, full) => k <= 0 || k === full || 1 - powerFraction(k, full) >= 0.2;
+  /** Chevaux par kW, comme les blocs d'information et la jauge de l'app (2026-11-12). */
+  const CH_KW = 1.36;
+  /** Graduations [position en kW, chiffre] en chevaux : des valeurs rondes, la fin de l'échelle convertie. */
+  const powerTicksHp = (full) => [25, 50, 100, 200, 300].map((h) => h / CH_KW).filter((k) => k < full && 1 - powerFraction(k, full) >= 0.1)
+    .map((k) => [k, Math.round(k * CH_KW)]).concat([[full, Math.round(full * CH_KW)]]);
+  /** Barre discrète en chevaux : un chiffre trop près du précédent garde son trait seul (50 ch à côté de 25). */
+  function dPowerTicksHp(full) {
+    let last = -Infinity;
+    return [[-80 / CH_KW, -80], [-25 / CH_KW, -25], [0, 0]].concat(powerTicksHp(full).map(([k, c]) => [k, k === full || 1 - powerFraction(k, full) >= 0.2 ? c : null]))
+      .map(([k, c]) => { const x = discreetPowerFraction(k, full); if (c == null || (x - last < 0.11 && k !== full)) return [k, null]; last = x; return [k, c]; });
+  }
   const regenFraction = (kw) => part01(Math.log(1 + Math.max(0, kw) / CG.REGEN_CURVE_KW) / Math.log(1 + CG.REGEN_FULL_KW / CG.REGEN_CURVE_KW));
   /** Module B : puissance signée, de −60 kW (récupération, à gauche) à 320 kW (à droite). */
   function gaugePower(kw, full) {
@@ -4838,10 +6794,10 @@
     return { text: name.toLocaleUpperCase(appLang()), mode: catOn(p, 'drive') ? p.driveMode : mode };
   }
 
-  function clArc(cx, cy, r, start, sweep, col) {
+  function clArc(cx, cy, r, start, sweep, col, width) {
     if (Math.abs(sweep) < 0.5) return '';
     const p = (a) => (cx + r * Math.cos(a * Math.PI / 180)).toFixed(2) + ' ' + (cy + r * Math.sin(a * Math.PI / 180)).toFixed(2);
-    return '<path d="M' + p(start) + 'A' + r + ' ' + r + ' 0 ' + (Math.abs(sweep) > 180 ? 1 : 0) + ' ' + (sweep > 0 ? 1 : 0) + ' ' + p(start + sweep) + '" fill="none" stroke="' + col + '" stroke-width="13" stroke-linecap="round"/>';
+    return '<path d="M' + p(start) + 'A' + r + ' ' + r + ' 0 ' + (Math.abs(sweep) > 180 ? 1 : 0) + ' ' + (sweep > 0 ? 1 : 0) + ' ' + p(start + sweep) + '" fill="none" stroke="' + col + '" stroke-width="' + width + '" stroke-linecap="round"/>';
   }
   /** Un texte : sans graisse, un léger espacement (petit()) ; [ls] le fixe. */
   const clTxt = (t, x, y, size, col, weight, anchor, ls) => (t ? '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="' + size + '" fill="' + col + '" text-anchor="' + (anchor || 'middle') + '"' +
@@ -4870,85 +6826,103 @@
   /** Module B : l'arc de puissance (issues #152 et #158). */
   function clPower(g) {
     const cx = 130, cy = 122, R = 88, st = g.st;
+    const thickness = 13 * g.thicknessFactor;
     let h = '';
-    powerTicks(g.full).forEach((k) => { h += clGrad(cx, cy, R, 270 + 120 * powerFraction(k, g.full), String(k)); });
-    CG_TICKS.regen.forEach((k) => { h += clGrad(cx, cy, R, 270 - 120 * regenFraction(k), String(k)); });
-    h += clArc(cx, cy, R, 150, 240, CL.track);
+    (g.hp ? powerTicksHp(g.full) : powerTicks(g.full).map((k) => [k, k])).forEach(([k, c]) => { h += clGrad(cx, cy, R, 270 + 120 * powerFraction(k, g.full), String(c)); });
+    (g.hp ? [15, 40, 80].map((x) => [x / CH_KW, x]) : CG_TICKS.regen.map((k) => [k, k])).forEach(([k, c]) => { h += clGrad(cx, cy, R, 270 - 120 * regenFraction(k), String(c)); });
+    h += clArc(cx, cy, R, 150, 240, CL.track, thickness);
     // Le remplissage s'arrête net au zéro : son bout arrondi ne passe pas de l'autre côté.
     if (st) h += '<defs><clipPath id="' + g.id + 'P"><rect x="130" y="0" width="130" height="260"/></clipPath><clipPath id="' + g.id + 'R"><rect x="0" y="0" width="130" height="260"/></clipPath></defs>' +
-      '<g clip-path="url(#' + g.id + (g.part >= 0 ? 'P' : 'R') + ')">' + clArc(cx, cy, R, 270, 120 * g.part, st.regen ? CL.accent : CL.warn) + '</g>';
+      '<g clip-path="url(#' + g.id + (g.part >= 0 ? 'P' : 'R') + ')">' + clArc(cx, cy, R, 270, 120 * g.part, st.regen ? g.regen : g.conso, thickness) + '</g>';
     h += '<line x1="130" y1="' + (cy - R - 8) + '" x2="130" y2="' + (cy - R + 8) + '" stroke="' + CL.text2 + '" stroke-width="2"/>' + clTxt('0', 130, cy - R - 12, 11, CL.text2);
     const v = g.value != null ? g.value : st && st.value;
     const recup = !!st && v != null && v < 0;
     // Des kW entiers en roulant, une décimale à l'arrêt (issue #152).
-    const big = !st || v == null ? '–' : (recup ? '−' : '') + (g.kmh != null && g.kmh >= CG.STOP_KMH ? String(Math.round(Math.abs(v))) : clKw(v));
-    h += clTxt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? CL.accent : CL.text, 500);
-    if (st) h += clTxt('kW', cx, cy + 28, 13, recup ? CL.accent : CL.text2, 500);
+    const vu = v == null ? v : g.hp ? v * CH_KW : v;
+    const big = !st || v == null ? '–' : (recup ? '−' : '') + (g.kmh != null && g.kmh >= CG.STOP_KMH ? String(Math.round(Math.abs(vu))) : clKw(vu));
+    h += clTxt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? g.regen : CL.text, 500);
+    if (st) h += clTxt(g.hp ? S('cluster_unit_hp') : 'kW', cx, cy + 28, 13, recup ? g.regen : CL.text2, 500);
     // La consommation instantanée en grand sous les kW (issue #152), négative et bleue en
     // récupération (issue #158) ; sous 5 km/h, le mot qui en tient lieu.
     const wh = !st || recup || g.kw == null ? null : whPerKm(g.kw, g.kmh);
     const whR = !st || !recup || g.kw == null ? null : regenWhPerKm(g.kw, g.kmh);
-    if (wh != null) h += clValue(cx, cy + 64, clCons(wh, g.unit, g.mi), CL.text, 28, 12);
-    else if (whR != null) h += clValue(cx, cy + 64, clCons(whR, g.unit, g.mi), CL.accent, 28, 12);
-    else if (recup) h += clTxt(S('cluster_regen_word'), cx, cy + 58, 13, CL.accent);
+    if (g.powerCons === false) { /* consommation masquée sous les kW (issue #229) */ }
+    else if (wh != null) h += clValue(cx, cy + 64, clCons(wh, g.unit, g.mi), CL.text, 28, 12);
+    else if (whR != null) h += clValue(cx, cy + 64, clCons(whR, g.unit, g.mi), g.regen, 28, 12);
+    else if (recup) h += clTxt(S('cluster_regen_word'), cx, cy + 58, 13, g.regen);
     else if (st) h += clTxt(S('cluster_stopped_word'), cx, cy + 58, 13, CL.text2);
     // La batterie est déjà sur le combiné : seule reste la moyenne du trajet, centrée.
+    if (g.noFoot) return h;
     return h + clFootCentre(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit, g.mi));
   }
   /** Module A : l'anneau de consommation. */
   function clConsumption(g) {
     const cx = 130, cy = 120, st = g.st;
+    const thickness = 13 * g.thicknessFactor;
     let h = '';
     // Graduations en Wh/km, libellées dans l'unité choisie : l'anneau, lui, ne change pas.
     CG_TICKS.cons.forEach((w) => { h += clGrad(cx, cy, 80, 135 + 270 * consFraction(w), clTick(w, g.unit)); });
-    h += clArc(cx, cy, 80, 135, 270, CL.track);
-    if (st) h += clArc(cx, cy, 80, 135, 270 * g.part, st.regen ? CL.accent : CL.warn);
+    h += clArc(cx, cy, 80, 135, 270, CL.track, thickness);
+    if (st) h += clArc(cx, cy, 80, 135, 270 * g.part, st.regen ? g.regen : g.conso, thickness);
+    if (g.averageCursor && g.avgWh > 0) {
+      const angle = (135 + 270 * consFraction(g.avgWh * (g.mi ? MI_KM : 1))) * Math.PI / 180;
+      const radius = 80 - thickness / 2 - 7;
+      h += '<circle cx="' + (cx + radius * Math.cos(angle)).toFixed(1) + '" cy="' + (cy + radius * Math.sin(angle)).toFixed(1) + '" r="3.5" fill="' + CL.text + '"/>';
+    }
     const v = g.value != null ? g.value : st ? st.value : 0;
     let big = ['–', ''];
     if (st && st.unit === 'WH_PER_KM') big = clCons(v, g.unit, g.mi);
     // En roulant, la récupération s'écrit en consommation négative (issue #158) ; sous 5 km/h, les kW.
-    else if (st && st.unit === 'KW_REGEN') { const w = regenWhPerKm(-v, g.kmh); big = w != null ? clCons(w, g.unit, g.mi) : ['↓' + clKw(v), S('cluster_regen_kw')]; }
-    else if (st) big = [clKw(v), S('cluster_stopped_kw')];
+    else if (st && st.unit === 'KW_REGEN') { const w = regenWhPerKm(-v, g.kmh); big = w != null ? clCons(w, g.unit, g.mi) : ['↓' + clKw(g.hp ? v * CH_KW : v), hpWord(g, S('cluster_regen_kw'))]; }
+    else if (st) big = [clKw(g.hp ? v * CH_KW : v), hpWord(g, S('cluster_stopped_kw'))];
     const recup = !!st && st.unit === 'KW_REGEN';
-    h += clTxt(big[0], cx, cy + 16, big[0].length > 3 ? 46 : 54, recup ? CL.accent : CL.text, 500);
-    h += clTxt(big[1], cx, cy + 40, 13, recup ? CL.accent : CL.text2);
+    h += clTxt(big[0], cx, cy + 16, big[0].length > 3 ? 46 : 54, recup ? g.regen : CL.text, 500);
+    h += clTxt(big[1], cx, cy + 40, 13, recup ? g.regen : CL.text2);
+    // Les kW sous l'unité, en roulant (issue #229), en chevaux si choisi.
+    if (g.consKw && g.kw != null && st && (st.unit === 'WH_PER_KM' || st.unit === 'KW_REGEN'))
+      h += clTxt(clKw(g.hp ? Math.abs(g.kw) * CH_KW : Math.abs(g.kw)) + ' ' + (g.hp ? S('cluster_unit_hp') : 'kW'), cx, cy + 58, 13, recup ? g.regen : CL.text2);
+    if (g.noFoot) return h;
     return h + clFoot(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit, g.mi), CL.text, S('cluster_regen'), g.regenWh != null ? ['+' + Math.round(g.regenWh), 'Wh'] : ['–', null], CL.accent);
   }
   // Style discret (issue #153, variante A) : une barre fine graduée, des chiffres fixes sous les crans.
-  const clBar = (x0, x1, col) => (x1 - x0 < 0.5 ? '' : '<line x1="' + x0.toFixed(1) + '" y1="124" x2="' + x1.toFixed(1) + '" y2="124" stroke="' + col + '" stroke-width="6" stroke-linecap="round"/>');
+  const clBar = (x0, x1, col, width) => (x1 - x0 < 0.5 ? '' : '<line x1="' + x0.toFixed(1) + '" y1="124" x2="' + x1.toFixed(1) + '" y2="124" stroke="' + col + '" stroke-width="' + width + '" stroke-linecap="round"/>');
   const clNotch = (x, lab, main) => '<line x1="' + x.toFixed(1) + '" y1="131" x2="' + x.toFixed(1) + '" y2="136" stroke="' + (main ? CL.text : CL.cran) + '" stroke-width="' + (main ? 2 : 1) + '"/>' +
     (lab == null ? '' : clTxt(lab, x, 152, 13, main ? CL.text2 : CL.discret, main ? 500 : null, 'middle', 0));
   const clTitle = (t) => clTxt(t.toLocaleUpperCase(appLang()), 130, 70, 11, CL.discret, null, 'middle', 1.5);
   function clDiscreetPower(g) {
     const X = (f) => 30 + 200 * f, zero = X(CG.DISCREET_ZERO), st = g.st;
-    let h = clTitle(S('settings_cluster_power')) + clBar(30, 230, CL.track);
+    const thickness = 6 * g.thicknessFactor;
+    let h = clTitle(S('settings_cluster_power')) + clBar(30, 230, CL.track, thickness);
     const v = g.value != null ? g.value : st && st.value;
     if (st && v != null) {
       const xv = X(discreetPowerFraction(v, g.full));
-      if (v < -0.5) h += clBar(xv, zero, CL.accent);
-      else if (v > 0.5) h += clBar(zero, xv, CL.clair);
+      if (v < -0.5) h += clBar(xv, zero, g.regen, thickness);
+      else if (v > 0.5) h += clBar(zero, xv, g.discreteConso, thickness);
     }
-    dPowerTicks(g.full).forEach((k) => { h += clNotch(X(discreetPowerFraction(k, g.full)), dPowerLabel(k, g.full) ? String(k) : null, k === 0); });
+    (g.hp ? dPowerTicksHp(g.full) : dPowerTicks(g.full).map((k) => [k, dPowerLabel(k, g.full) ? k : null])).forEach(([k, c]) => { h += clNotch(X(discreetPowerFraction(k, g.full)), c == null ? null : String(c), k === 0); });
     // Le zéro, repère de toute la barre.
-    h += '<line x1="' + zero + '" y1="113" x2="' + zero + '" y2="135" stroke="' + CL.text + '" stroke-width="2"/>' + clTxt('kW', 230, 110, 11, CL.discret, null, 'end', 0);
+    h += '<line x1="' + zero + '" y1="113" x2="' + zero + '" y2="135" stroke="' + CL.text + '" stroke-width="2"/>' + clTxt(g.hp ? S('cluster_unit_hp') : 'kW', 230, 110, 11, CL.discret, null, 'end', 0);
+    if (g.noFoot) return h;
     return h + clFootCentre(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit, g.mi));
   }
   function clDiscreetCons(g) {
     const st = g.st, X = (wh) => 72 + 158 * consFraction(wh), avg = g.avgWh, f = g.mi ? MI_KM : 1;
+    const thickness = 6 * g.thicknessFactor;
     // À gauche, une courte zone pour la récupération ; puis l'échelle de consommation.
-    let h = clTitle(S('settings_cluster_consumption')) + clBar(30, 66, CL.track) + clBar(72, 230, CL.track);
+    let h = clTitle(S('settings_cluster_consumption')) + clBar(30, 66, CL.track, thickness) + clBar(72, 230, CL.track, thickness);
     const v = g.value != null ? g.value : st && st.value;
     if (st && v != null) {
-      if (st.unit === 'KW_REGEN') h += clBar(66 - 36 * regenFraction(v), 66, CL.accent);
-      else if (st.unit === 'WH_PER_KM') h += clBar(72, X(v * f), avg != null && v > avg ? CL.warn : CL.eco);
+      if (st.unit === 'KW_REGEN') h += clBar(66 - 36 * regenFraction(v), 66, g.regen, thickness);
+      else if (st.unit === 'WH_PER_KM') h += clBar(72, X(v * f), avg != null && v > avg ? g.conso : CL.eco, thickness);
     }
     CG_TICKS.cons.forEach((w) => { h += clNotch(X(w), CG_TICKS.dConsLab.includes(w) ? clTick(w, g.unit) : null, false); });
-    h += clTxt(S('cluster_regen'), 48, 152, 11, CL.accent, null, 'middle', 0) + clTxt((g.unit === 'kwh' ? 'kWh/100 ' : 'Wh/') + (g.mi ? 'mi' : 'km'), 230, 168, 11, CL.discret, null, 'end', 0);
+    h += clTxt(S('cluster_regen'), 48, 152, 11, g.regen, null, 'middle', 0) + clTxt((g.unit === 'kwh' ? 'kWh/100 ' : 'Wh/') + (g.mi ? 'mi' : 'km'), 230, 168, 11, CL.discret, null, 'end', 0);
     // La moyenne du trajet : un triangle au-dessus de la barre, et son mot.
-    if (avg != null) {
+    if (avg != null && g.averageCursor) {
       const xm = X(avg * f);
       h += '<path d="M' + (xm - 5).toFixed(1) + ' 108L' + (xm + 5).toFixed(1) + ' 108L' + xm.toFixed(1) + ' 116Z" fill="' + CL.text + '"/>' + clTxt(S('cluster_avg_short'), xm, 103, 11, CL.text2, null, 'middle', 0);
     }
+    if (g.noFoot) return h;
     return h + clFootCentre(S('cluster_trip_avg'), clAvg(avg, g.avgUnit, g.mi));
   }
   // Pictogrammes du module de charge (ic_cluster_*) : Material Icons bolt, battery_charging_full et
@@ -5031,10 +7005,214 @@
     const h = '<rect width="260" height="260" fill="' + CL.bg + '"/>';
     if (g.preclim) return h + clPreclimSvg(g.preclim);
     if (g.charge) return h + clChargeSvg(g.charge);
+    if (g.layout) return h + clLayoutSvg(g);
+    g = { ...g, thicknessFactor: 1, averageCursor: g.style === 'discreet', conso: CL.warn, regen: CL.accent, discreteConso: CL.clair };
     const pill = g.pill ? clPillSvg(g.pill) : '';
     if (g.style === 'discreet') return h + pill + (g.mod === 'power' ? clDiscreetPower(g) : clDiscreetCons(g));
     return h + pill + (g.mod === 'power' ? clPower(g) : clConsumption(g));
   }
+
+  /** Un libellé qui contient « kW » (« RÉCUP. kW »…), passé en chevaux si la jauge compte ainsi. */
+  const hpWord = (g, t) => (g.hp ? t.replace('kW', S('cluster_unit_hp')) : t);
+
+  // ── Écran conducteur V2 (issue #229) : la jauge et jusqu'à 4 cases d'information ──
+  /**
+   * Informations proposées pour une case, dans l'ordre de l'application (ClusterInfo.choices) : les 5 du
+   * combiné, puis les plus utiles des bulles (BubbleInfo.FIRST), puis les autres signaux. Sans
+   * firmware, réseau Wi-Fi, téléphone, données, soleil, clé, projection, média ni appel.
+   */
+  const CL_INFOS = ['TRIP_AVERAGE', 'TRIP_DISTANCE', 'TRIP_ENERGY', 'TRIP_REGEN', 'POWER',
+    'SOC', 'RANGE', 'OUTSIDE_TEMP', 'TIME', 'SPEED', 'HVAC_TEMP', 'DRIVE_MODE', 'REGEN', 'PROFILE', 'VOLUME', 'CHARGE_LIMIT', 'ALTITUDE',
+    'READY', 'GEAR', 'CHARGING', 'HVAC_ON', 'ONE_PEDAL', 'ENERGY_SAVING', 'AEB', 'TSR', 'ESC', 'DROWSINESS', 'OVERSPEED_ALARM',
+    'AC_ON', 'HVAC_AUTO', 'HVAC_ECO', 'FAN', 'RECIRC', 'DEFROST_FRONT', 'DEFROST_REAR', 'SEAT_HEAT_LEFT', 'SEAT_HEAT_RIGHT',
+    'STEERING_HEAT', 'BATTERY_HEAT', 'FRONT_DOOR', 'LOCKED', 'BRIGHTNESS', 'NIGHT', 'DRIVE_MINUTES', 'PLUGGED', 'CHARGE_DC',
+    'WIFI_ON', 'BT_ON', 'HOTSPOT_ON'];
+  /** Ce que la voiture lit (InfoIcons.readable) : clim, ESC/somnolence, luminosité, chauffages, portes. */
+  function clInfoChoices() {
+    const k = caps(), CLIM = ['HVAC_ON', 'AC_ON', 'HVAC_AUTO', 'HVAC_ECO', 'HVAC_TEMP', 'FAN', 'RECIRC', 'DEFROST_FRONT', 'DEFROST_REAR'];
+    return CL_INFOS.filter((i) => !(CLIM.includes(i) && !k.clim) && !(['ESC', 'DROWSINESS'].includes(i) && !k.esc) && !(i === 'BRIGHTNESS' && !k.bri) &&
+      !(i === 'BATTERY_HEAT' && !k.batHeat) && !(i === 'FRONT_DOOR' && !k.doorSensor) && !(['SEAT_HEAT_LEFT', 'SEAT_HEAT_RIGHT', 'STEERING_HEAT'].includes(i) && !k.heat));
+  }
+  /** Nom (AndroidRuleWords.signalRes) et valeur (BubbleInfo.format) des signaux venus des automatisations. */
+  const clOnOff = (v) => [S(v ? 'rule_on' : 'rule_off'), null];
+  const CL_SIG = {
+    HVAC_TEMP: ['rule_key_hvac_temp', (c) => [c.clim.temp.toLocaleString(clLoc()), '°C']],
+    REGEN: ['rule_key_regen', (c) => [regenName(c.regen), null]],
+    VOLUME: ['rule_sig_volume', (c) => [String(c.volume), null]],
+    CHARGE_LIMIT: ['rule_sig_charge_limit', (c) => [String(c.chargeLimit), '%']],
+    READY: ['rule_sig_ready', (c) => clOnOff(c.ready)],
+    GEAR: ['rule_sig_gear', (c) => [c.inPark && !c.speed ? 'P' : 'D', null]],
+    CHARGING: ['rule_sig_charging', (c) => clOnOff(!!c.charge && !c.charge.done)],
+    HVAC_ON: ['rule_sig_hvac', (c) => clOnOff(c.clim.power)],
+    ONE_PEDAL: ['rule_sig_one_pedal', (c) => clOnOff(c.regen === 'ONE_PEDAL')],
+    ENERGY_SAVING: ['rule_sig_energy_saving', (c) => clOnOff(c.energy)],
+    AEB: ['rule_sig_aeb', (c) => clOnOff(c.aebOn)],
+    TSR: ['rule_sig_tsr', (c) => clOnOff(c.tsr)],
+    ESC: ['rule_sig_esc', (c) => clOnOff(c.esc)],
+    DROWSINESS: ['rule_sig_drowsiness', (c) => clOnOff(c.dms)],
+    OVERSPEED_ALARM: ['rule_sig_overspeed', (c) => clOnOff(c.overspeed)],
+    AC_ON: ['rule_key_ac', (c) => clOnOff(c.clim.ac)],
+    HVAC_AUTO: ['rule_key_hvac_auto', (c) => clOnOff(c.clim.auto)],
+    HVAC_ECO: ['rule_sig_hvac_eco', (c) => clOnOff(c.clim.eco)],
+    FAN: ['rule_key_hvac_fan', (c) => [String(c.clim.fan), null]],
+    RECIRC: ['rule_key_recirc', (c) => [S(['rule_recirc_inner', 'rule_recirc_outside', 'rule_recirc_auto'][c.clim.loop] || 'rule_recirc_auto'), null]],
+    DEFROST_FRONT: ['rule_key_defrost_front', (c) => clOnOff(c.clim.defF)],
+    DEFROST_REAR: ['rule_key_defrost_rear', (c) => clOnOff(c.clim.defR)],
+    SEAT_HEAT_LEFT: ['rule_key_seat_left', (c) => [String(c.seatL), null]],
+    SEAT_HEAT_RIGHT: ['rule_key_seat_right', (c) => [String(c.seatR), null]],
+    STEERING_HEAT: ['rule_key_steering', (c) => clOnOff(c.steering)],
+    BATTERY_HEAT: ['rule_key_battery_heat', (c) => clOnOff(c.batHeat)],
+    FRONT_DOOR: ['rule_sig_front_door', (c) => clOnOff(c.doors.L)],
+    LOCKED: ['rule_sig_locked', (c) => clOnOff(c.locked)],
+    BRIGHTNESS: ['rule_sig_brightness', (c) => [String(c.brightness), '%']],
+    NIGHT: ['rule_sig_night', (c) => clOnOff(c.lights)],
+    DRIVE_MINUTES: ['rule_sig_drive_minutes', (c) => [c.ready ? '12' : '0', 'min']],
+    PLUGGED: ['rule_sig_plugged', (c) => clOnOff(!!c.charge)],
+    CHARGE_DC: ['rule_sig_charge_dc', (c) => clOnOff(!!c.charge && c.charge.type === 'DC')],
+    WIFI_ON: ['rule_sig_wifi_on', () => clOnOff(true)],
+    BT_ON: ['rule_sig_bt_on', () => clOnOff(true)],
+    HOTSPOT_ON: ['rule_sig_hotspot', () => clOnOff(false)],
+  };
+  const clInfoName = (i) => S({ PROFILE: 'rule_sig_profile', DRIVE_MODE: 'rule_sig_drive_mode', TRIP_AVERAGE: 'cluster_info_trip_average', TRIP_REGEN: 'cluster_info_trip_regen',
+    TRIP_DISTANCE: 'cluster_info_trip_distance', TRIP_ENERGY: 'cluster_info_trip_energy', POWER: 'cluster_info_power', SOC: 'rule_sig_soc', RANGE: 'rule_sig_range',
+    OUTSIDE_TEMP: 'rule_sig_outside_temp', SPEED: 'rule_sig_speed', TIME: 'floating_info_time', ALTITUDE: 'rule_sig_altitude' }[i] || CL_SIG[i]?.[0]);
+  /** Affichages proposés (ClusterInfo.styles) : pastille, valeur, icône pour le profil et le mode ; valeur, libellé, icône sinon. */
+  const clPillOk = (i) => i === 'PROFILE' || i === 'DRIVE_MODE';
+  const clInfoStyles = (i) => (clPillOk(i) ? ['pill', 'value', 'icon'] : ['value', 'label', 'icon']);
+  const CL_DIST_INFOS = ['TRIP_AVERAGE', 'TRIP_DISTANCE', 'SPEED', 'RANGE', 'ALTITUDE'];
+  const clBlockMiles = (b, general) => b.distance ? b.distance === 'mi' : general;
+  function clBlockUnits(info, miles) {
+    if (info === 'TRIP_AVERAGE') {
+      const unit = miles ? 'mi' : 'km';
+      return [['wh', 'Wh/' + unit], ['kwh', 'kWh/100 ' + unit], ['km', unit + '/kWh']];
+    }
+    if (info === 'TRIP_REGEN' || info === 'TRIP_ENERGY') return [['kwh', 'kWh'], ['wh', 'Wh']];
+    if (info === 'POWER') return [['kw', 'kW'], ['hp', S('cluster_unit_hp')]];
+    return [];
+  }
+  function clTidySlots(slots) {
+    slots.forEach((b, i) => { if (b?.wide && (i % 2 === 1 || slots[i + 1])) b.wide = false; });
+  }
+  /** Style d'une case : le sien s'il est permis, sinon la pastille ou « libellé + valeur » (ClusterInfo.style). */
+  const clStyleOf = (b) => (b.style && clInfoStyles(b.info).includes(b.style) ? b.style : clPillOk(b.info) ? 'pill' : 'label');
+  /** Pictogrammes des cases (InfoIcons.of), tracés recopiés des drawables ic_cat_* / ic_info_* (24 × 24, trait de 2). */
+  const CL_INFO_ICON = {
+    PROFILE: 'M12,17.75l-6.172,3.245l1.179,-6.873l-5,-4.867l6.9,-1l3.086,-6.253l3.086,6.253l6.9,1l-5,4.867l1.179,6.873z',
+    DRIVE_MODE: 'M5,17a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M15,17a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M5,17h-2v-6l2,-5h9l4,5h1a2,2 0,0 1,2 2v4h-2m-4,0h-6m-6,-6h15m-6,0v-5',
+    TRIP_AVERAGE: 'M4,19l16,0 M4,15l4,-6l4,2l4,-5l4,4',
+    TRIP_REGEN: 'M9,14l-4,-4l4,-4 M5,10h11a4,4 0,1 1,0 8h-1',
+    TRIP_DISTANCE: 'M3,19a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M19,7a2,2 0,1 0,0 -4a2,2 0,0 0,0 4z M11,19h5.5a3.5,3.5 0,0 0,0 -7h-8a3.5,3.5 0,0 1,0 -7h4.5',
+    TRIP_ENERGY: 'M13,3l0,7l6,0l-8,11l0,-7l-6,0l8,-11',
+    POWER: 'M13,3l0,7l6,0l-8,11l0,-7l-6,0l8,-11',
+    SOC: 'M16,7h1a2,2 0,0 1,2 2v0.5a0.5,0.5 0,0 0,0.5 0.5a0.5,0.5 0,0 1,0.5 0.5v3a0.5,0.5 0,0 1,-0.5 0.5a0.5,0.5 0,0 0,-0.5 0.5v0.5a2,2 0,0 1,-2 2h-2 M8,7h-2a2,2 0,0 0,-2 2v6a2,2 0,0 0,2 2h1 M12,8l-2,4h3l-2,4',
+    OUTSIDE_TEMP: 'M10,13.5a4,4 0,1 0,4 0v-8.5a2,2 0,0 0,-4 0v8.5 M10,9h4',
+    TIME: 'M3,12a9,9 0,1 0,18 0a9,9 0,0 0,-18 0 M12,7v5l3,3'
+  };
+  CL_INFO_ICON.RANGE = CL_INFO_ICON.SOC;
+  CL_INFO_ICON.ALTITUDE = 'M3,20h18l-6.921,-14.612a2.3,2.3 0,0 0,-4.158 0l-6.921,14.612z M7.5,11l2,2.5l2.5,-2.5l2,3l2.5,-2';
+  CL_INFO_ICON.SPEED = 'M4,17a8,8 0,1 1,16 0 M12,14l4,-4 M12,17m-1,0a1,1 0,1 0,2 0a1,1 0,1 0,-2 0';
+  /** La disposition d'un profil, ou celle d'avant : pastille en Info 1, moyenne et récupération en bas. */
+  function clLayoutOf(cfg) {
+    const c = cfg || state.settings;
+    if (c.clusterLayout) return c.clusterLayout;
+    const pill = c.clusterPill || 'profile';
+    return { gauge: 'middle', slots: [pill === 'none' ? null : { info: pill === 'mode' ? 'DRIVE_MODE' : 'PROFILE', style: 'pill' }, null,
+      { info: 'TRIP_AVERAGE', style: 'label', unit: c.clusterAvg || c.clusterUnit || 'wh' }, { info: 'TRIP_REGEN', style: 'label', unit: 'wh' }] };
+  }
+  /** Places (ClusterLayouts.geometry) : rangées de 40 px ; une rangée vide disparaît, sauf en édition. */
+  function clGeo(L, edit) {
+    const sl = L.slots || [], A = edit || sl[0] || sl[1], B = edit || sl[2] || sl[3];
+    const order = L.gauge === 'top' ? 'GAB' : L.gauge === 'bottom' ? 'ABG' : 'AGB';
+    const rows = order.split('').filter((x) => x === 'G' || (x === 'A' ? A : B)), gh = 260 - (rows.length - 1) * 40, out = { cells: [], gauge: null };
+    let y = 0;
+    rows.forEach((x) => {
+      if (x === 'G') { out.gauge = { y, h: gh }; y += gh; return; }
+      const base = x === 'A' ? 0 : 2;
+      if (sl[base]?.wide && !sl[base + 1]) out.cells.push({ slot: base, x: 4, y, w: 252, h: 40 });
+      else out.cells.push({ slot: base, x: 4, y, w: 124, h: 40 }, { slot: base + 1, x: 132, y, w: 124, h: 40 });
+      y += 40;
+    });
+    return out;
+  }
+  /** Ce que chaque case affiche, prêt à dessiner. */
+  function clBlocks(L, d) {
+    const c = car(), hpU = S('cluster_unit_hp');
+    return (L.slots || []).map((b) => {
+      if (!b) return null;
+      const st = clStyleOf(b), mi = clBlockMiles(b, d.mi), factor = mi ? MI_KM : 1, dist = mi ? 'mi' : 'km';
+      const energy = (kwh, sign) => kwh == null ? ['–', null] : b.unit === 'wh' ? [sign + Math.round(kwh * 1000), 'Wh'] : [sign + kwh.toLocaleString(clLoc(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 'kWh'];
+      const label = st === 'label' ? ({ TRIP_AVERAGE: S('cluster_trip_avg'), TRIP_REGEN: S('cluster_regen') }[b.info] || clInfoName(b.info)) : null;
+      let value = ['–', null], col = null, pill = null;
+      switch (b.info) {
+        case 'PROFILE': { const p = d.profile ?? activeProfile(), n = p ? p.name.trim() : '–'; value = [n, null];
+          if (st === 'pill') pill = { text: n.toLocaleUpperCase(appLang()), mode: p && catOn(p, 'drive') ? p.driveMode : c.driveMode }; break; }
+        case 'DRIVE_MODE': value = [DRIVE_LABEL[c.driveMode] || c.driveMode, null]; if (st === 'pill') pill = { text: value[0].toUpperCase(), mode: c.driveMode }; break;
+        case 'TRIP_AVERAGE': value = clAvg(d.avgWh, b.unit || 'wh', mi); break;
+        case 'TRIP_REGEN': value = energy(d.regenWh == null ? null : d.regenWh / 1000, '+'); col = L.regenColor || CL.accent; break;
+        case 'TRIP_DISTANCE': if (d.km != null) value = [cl1(d.km / factor), dist]; break;
+        case 'TRIP_ENERGY': value = energy(d.kwh, ''); break;
+        case 'POWER': value = d.kw == null ? ['–', null] : b.unit === 'hp' ? [String(Math.round(d.kw * CH_KW)), hpU] : [clKw(d.kw), 'kW']; break;
+        case 'SOC': value = [String(Math.round(c.soc)), '%']; break;
+        case 'RANGE': value = [String(Math.round(rangeKm(c.soc) / factor)), dist]; break;
+        case 'SPEED': value = [String(Math.round((d.kmh ?? c.speed) / factor)), mi ? 'mph' : 'km/h']; break;
+        case 'OUTSIDE_TEMP': value = [String(Math.round(c.outside)), '°C']; break;
+        case 'TIME': value = [nowHM(), null]; break;
+        case 'ALTITUDE': value = altTxt(mi); break;
+        default: if (CL_SIG[b.info]) value = CL_SIG[b.info][1](c);
+      }
+      return { style: st, info: b.info, size: b.size, label, value, col, pill };
+    });
+  }
+  function clBlockSvg(b, c) {
+    const left = c.slot % 2 === 0, cx = c.x + c.w / 2, mid = c.y + c.h / 2;
+    if (b.pill) {
+      // La pastille : à gauche dans une case de gauche, à droite dans une case de droite.
+      const col = MODE_COL[b.pill.mode] || CL.text2, name = b.pill.text.length > 8 ? b.pill.text.slice(0, 7) + '…' : b.pill.text, w = name.length * 7.7 + 30, x0 = left ? c.x + 6 : c.x + c.w - 6 - w;
+      return '<rect x="' + x0.toFixed(1) + '" y="' + (mid - 11) + '" width="' + w.toFixed(1) + '" height="22" rx="11" fill="' + col + '" fill-opacity=".25"/><circle cx="' + (x0 + 12).toFixed(1) + '" cy="' + mid + '" r="3.5" fill="' + col + '"/>' +
+        '<text x="' + (x0 + 21).toFixed(1) + '" y="' + (mid + 4.5) + '" font-size="11" font-weight="500" letter-spacing="1" fill="' + col + '">' + esc(name) + '</text>';
+    }
+    const [valueSize, unitSize, labelSize] = b.size === 'S' ? [13, 10, 10] : b.size === 'L' ? [21, 12, 11] : [16, 11, 11];
+    const val = (x, y, anchor) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="' + anchor + '" font-size="' + valueSize + '" font-weight="500" fill="' + (b.col || CL.text) + '">' + esc(b.value[0]) +
+      (b.value[1] ? '<tspan font-size="' + unitSize + '" font-weight="400" fill="' + CL.text2 + '"> ' + esc(b.value[1]) + '</tspan>' : '') + '</text>';
+    if (b.style === 'label') return clTxt(b.label.toLocaleUpperCase(appLang()), cx, c.y + 15, labelSize, CL.text2, null, 'middle', 0.5) + val(cx, c.y + c.h - 5, 'middle');
+    if (b.style === 'icon') {
+      // L'icône (côté = valeur + 3) à gauche de la valeur, l'ensemble centré.
+      const side = valueSize + 3, l = b.value[0].length * valueSize * .55 + (b.value[1] ? (b.value[1].length + 1) * unitSize * .55 : 0), total = side + 6 + l, x0 = cx - total / 2;
+      const path = CL_INFO_ICON[b.info] || CL_INFO_ICON.TIME;
+      return '<g transform="translate(' + x0.toFixed(1) + ' ' + (mid - side / 2).toFixed(1) + ') scale(' + (side / 24).toFixed(3) + ')"><path d="' + path + '" fill="none" stroke="' + CL.text2 + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>' +
+        val(x0 + side + 6, mid + valueSize * .36, 'start');
+    }
+    return val(cx, mid + valueSize * .36, 'middle');
+  }
+  /** La jauge, réduite dans sa zone (sans son pied), puis les cases ; en édition, les cases libres et la sélection. */
+  function clLayoutSvg(g) {
+    const L = g.layout, ed = g.edit, geo = clGeo(L, !!ed), z = geo.gauge;
+    const [top, bot] = g.style === 'discreet' ? [54, 174] : g.mod === 'power' ? [6, 194] : [4, 200];
+    const thicknessFactor = L.thickness === 'thin' ? 0.6 : L.thickness === 'thick' ? 1.45 : 1;
+    const inner = { ...g, noFoot: true, thicknessFactor, averageCursor: L.averageCursor ?? (g.style === 'discreet'),
+      conso: L.consumptionColor || CL.warn, regen: L.regenColor || CL.accent, discreteConso: L.consumptionColor || CL.clair };
+    const gauge = g.style === 'discreet' ? (g.mod === 'power' ? clDiscreetPower(inner) : clDiscreetCons(inner)) : (g.mod === 'power' ? clPower(inner) : clConsumption(inner));
+    const e = Math.min(z.h / (bot - top), 1), tx = (260 - 260 * e) / 2, ty = z.y + (z.h - (bot - top) * e) / 2 - top * e;
+    let h = '<defs><clipPath id="' + g.id + 'Z"><rect x="0" y="' + z.y + '" width="260" height="' + z.h + '"/></clipPath></defs><g clip-path="url(#' + g.id + 'Z)"><g transform="translate(' +
+      tx.toFixed(1) + ' ' + ty.toFixed(1) + ') scale(' + e.toFixed(3) + ')">' + gauge + '</g></g>';
+    geo.cells.forEach((c) => {
+      const b = (g.blocks || [])[c.slot];
+      if (b) h += clBlockSvg(b, c);
+      else if (ed) h += '<rect x="' + (c.x + 1) + '" y="' + (c.y + 3) + '" width="' + (c.w - 2) + '" height="' + (c.h - 6) + '" rx="8" fill="none" stroke="' + CL.cran + '" stroke-dasharray="4 3"/>' +
+        clTxt('+ ' + S('cluster_layout_slot_fmt', c.slot + 1), c.x + c.w / 2, c.y + 24, 11, CL.discret);
+      if (ed) h += '<rect class="cll-hit" x="' + c.x + '" y="' + c.y + '" width="' + c.w + '" height="' + c.h + '" rx="8" fill="transparent" stroke="' + (ed.drop === c.slot ? CL.warn : ed.sel === c.slot ? CL.accent : 'none') + '" stroke-width="2" data-a="clLaySel" data-v="' + c.slot + '"/>';
+    });
+    if (ed) h += '<rect class="cll-hit" x="2" y="' + (z.y + 2) + '" width="256" height="' + (z.h - 4) + '" rx="10" fill="transparent" stroke="' + (ed.sel === 'g' ? CL.accent : 'none') + '" stroke-width="2" data-a="clLaySel" data-v="g"/>';
+    if (ed && typeof ed.drop === 'string') {
+      const box = clGeo({ ...L, gauge: ed.drop }, true).gauge;
+      h += '<rect x="2" y="' + (box.y + 2) + '" width="256" height="' + (box.h - 4) + '" rx="10" fill="none" stroke="' + CL.warn + '" stroke-width="2" stroke-dasharray="5 4" pointer-events="none"/>';
+    }
+    return h;
+  }
+  /** La disposition en cours d'édition (fenêtre « Personnalisation avancée »), pour son aperçu. */
+  let clLayDraft = null;
+  /** Ce que la jauge reçoit d'une disposition : cases, chevaux, options. */
+  const clLayoutArgs = (L, d) => ({ layout: L, blocks: clBlocks(L, d), hp: L.powerUnit === 'hp', consKw: !!L.consKw, powerCons: L.powerCons !== false });
 
   // Aperçu de la carte de réglages (ClusterSettingsPreview) : un trajet simulé de 24 s, en boucle,
   // redessiné à chaque pas avec tous les réglages du moment. [s, km/h, kW]
@@ -5043,17 +7221,21 @@
   let prevN = 0, prevTimer = null;
   /** Réglages montrés dans la carte « Écran conducteur » (le profil réglé) : l'aperçu les suit. */
   let clPrevCfg = null;
+  let clPrevProfile = null;
   function clPreviewSvg(svg) {
     const s = clPrevCfg || state.settings, mod = svg.getAttribute('data-clprev'), t = ((performance.now() - prevT0) / 1000) % 24;
     let i = 0;
     while (i < PREV_TRIP.length - 2 && PREV_TRIP[i + 1][0] <= t) i++;
     const a = PREV_TRIP[i], b = PREV_TRIP[i + 1], f = (t - a[0]) / (b[0] - a[0]);
     const kmh = Math.round(a[1] + (b[1] - a[1]) * f), kw = a[2] + (b[2] - a[2]) * f;
-    const mi = clMiles(s), full = clPowerFull(s);
+    const mi = clMiles(), full = clPowerFull(s);
     const st = mod === 'power' ? gaugePower(kw, full) : gaugeConsumption(kw, kmh, mi);
     if (!svg.id) svg.id = 'clp' + (++prevN);
-    svg.innerHTML = clusterSvg({ id: svg.id + 'c', mod, style: s.clusterStyle, unit: s.clusterUnit, avgUnit: s.clusterAvg || s.clusterUnit, pill: clusterPill(),
-      st, part: st.fraction, value: st.value, kw, kmh, avgWh: 168, regenWh: 180, mi, full, preclim: pcClusterInfo() });
+    // Dans la personnalisation avancée : la disposition en cours d'édition, ses cases libres et la sélection.
+    const draft = svg.hasAttribute('data-cllay') && clLayDraft, L = draft ? draft.L : clLayoutOf(s), avgUnit = s.clusterAvg || s.clusterUnit;
+    svg.innerHTML = clusterSvg(Object.assign({ id: svg.id + 'c', mod, style: draft ? draft.style : s.clusterStyle, unit: s.clusterUnit, avgUnit,
+      st, part: st.fraction, value: st.value, kw, kmh, avgWh: 168, regenWh: 180, mi, full, preclim: draft ? null : pcClusterInfo(), edit: draft },
+      clLayoutArgs(L, { avgWh: 168, regenWh: 180, km: 12.4, kwh: 2.1, kw, kmh, mi, profile: clPrevProfile })));
     if (!prevTimer) prevTimer = setInterval(() => instances.forEach((x) => x.app.querySelectorAll('svg[data-clprev]').forEach(clPreviewSvg)), 250);
   }
 
@@ -5087,10 +7269,12 @@
 
     function draw() {
       const s = state.settings;
-      svg.innerHTML = clusterSvg({ id: 'clw', mod, style: s.clusterStyle, unit: s.clusterUnit, avgUnit: s.clusterAvg || s.clusterUnit, pill: clusterPill(),
+      const avgWh = trip.km < 0.2 ? null : trip.kwh * 1000 / trip.km, avgUnit = s.clusterAvg || s.clusterUnit, mi = clMiles();
+      svg.innerHTML = clusterSvg(Object.assign({ id: 'clw', mod, style: s.clusterStyle, unit: s.clusterUnit, avgUnit,
         st: target, part: shown.part, value: shown.value, kw: smoothed, kmh: speed,
-        avgWh: trip.km < 0.2 ? null : trip.kwh * 1000 / trip.km, regenWh: trip.regenKwh * 1000, charge: clChargeInfo('clw'),
-        mi: clMiles(), full: clPowerFull(), preclim: pcClusterInfo() });
+        avgWh, regenWh: trip.regenKwh * 1000, charge: clChargeInfo('clw'),
+        mi, full: clPowerFull(), preclim: pcClusterInfo() },
+        clLayoutArgs(clLayoutOf(s), { avgWh, regenWh: trip.regenKwh * 1000, km: trip.km, kwh: trip.kwh, kw: smoothed, kmh: speed, mi })));
     }
 
     /** Nouveau relevé : la jauge et le chiffre partent de ce qui est à l'écran (ClusterGaugeView.montrer). */
@@ -5191,12 +7375,12 @@
       q('[data-run=accel]').disabled = speed >= 130 && !boost;
       q('[data-run=brake]').disabled = speed < 10 && !boost;
       q('.cl-msg').textContent = !k.cluster
-        ? L('Sur ' + k.g + ', ce module ne peut pas s’afficher : le combiné dessine tout lui-même. Il existe sur SWI133, SWI68 et SWI165.', 'On ' + k.g + ', this module cannot show: the cluster draws everything itself. It exists on SWI133, SWI68 and SWI165.')
+        ? clusterUnavailable()
         : ch ? L('Une charge est en cours : le module de charge remplace la jauge. Débranchez pour la retrouver.', 'A charge is in progress: the charge module replaces the gauge. Unplug to get it back.')
         : L('Relevé toutes les ' + fmtS(s.clusterRefresh) + ' s, glissement en ' + fmtS(s.clusterAnim) + ' s : la jauge et le chiffre vont d’une valeur à la suivante.', 'Reading every ' + fmtS(s.clusterRefresh) + ' s, gliding over ' + fmtS(s.clusterAnim) + ' s: the gauge and the number move from one value to the next.');
       schedule();
       // Un autre réglage de la maquette ne relance pas la jauge ; ceux qui changent son dessin, si.
-      const key = [s.clusterUnit, s.clusterStyle, s.clusterAvg, s.clusterPill, s.clusterDist, s.clusterPowerMax, state.clLearned, appLang(), state.activeProfileId, car().driveMode, !!ch].join('|');
+      const key = [s.clusterUnit, s.clusterStyle, s.clusterAvg, s.clusterPill, s.distUnit, s.clusterPowerMax, JSON.stringify(s.clusterLayout), state.clLearned, appLang(), state.activeProfileId, car().driveMode, !!ch].join('|');
       if (key !== lastKey) { lastKey = key; if (!ch) show(); else draw(); }
     }
     listeners.add(paint);
@@ -5318,7 +7502,12 @@
   // ── API publique ──────────────────────────────────────────────────────────
   const byId = {};
   window.MG4Sim = {
-    mount(el, opts) { const s = new Sim(el, opts || {}); byId[s.id] = s; return s; },
+    mount(el, opts) {
+      const s = new Sim(el, opts || {}); byId[s.id] = s;
+      // « Démarrage de l'écran » (Mes automatisations) : une fois, quand la première maquette s'affiche.
+      if (instances.length === 1) setTimeout(() => ruleEvent('app_start'), 1800);
+      return s;
+    },
     get: (id) => byId[id],
     all: () => instances.slice(),
     mountDock, mountPressLab, mountApi, mountCluster,

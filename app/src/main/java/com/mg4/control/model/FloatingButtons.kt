@@ -42,6 +42,39 @@ data class FloatingButton(
     val bold: Boolean? = null,
     /** Raccourci perso lancé ([action] = CUSTOM, issue #172) ; son nom sert de [actionLabel]. */
     val customId: String? = null,
+    /** Couleur de la bulle, ARGB (2026-11-04) ; `null` = la couleur générale ([BubbleColors]). */
+    val color: Int? = null,
+    // Apparence (issue #230, 2026-11-09), par bulle ; `null` = comme avant la fonction ([BubbleLook]).
+    /** Opacité du fond, 0 à 100 ; `null` = [BubbleLook.OPACITY_DEFAULT]. */
+    val opacity: Int? = null,
+    /** Fond : [BubbleLook.FILL_DARK], [BubbleLook.FILL_TINT], [BubbleLook.FILL_LIGHT] ou [BubbleLook.FILL_BLACK] ; `null` = sombre. */
+    val fill: String? = null,
+    /** Bordure de la couleur de la bulle ; `null` = oui. */
+    val border: Boolean? = null,
+    /** Atténuée au repos ([BubbleLook.DIM_ALPHA] après [BubbleLook.DIM_AFTER_MS]) ; `null` = non. */
+    val dimIdle: Boolean? = null,
+    /**
+     * Largeur fixe, en dp (issue #222, 2026-11-14) : la bulle ne change plus de largeur avec sa
+     * valeur (« 6 °C » / « −3,5 °C ») ; `null` = automatique, la largeur de son texte.
+     */
+    val widthDp: Int? = null,
+    // Bulle d'information (issue #236, 2026-11-10) ; `null` partout = bulle-titre d'avant ([BubbleInfo]).
+    /** Information affichée : nom d'un [RuleSignal] ou [BubbleInfo.TIME] ; `null` = le titre. */
+    val info: String? = null,
+    /** [BubbleInfo.STYLE_VALUE], [BubbleInfo.STYLE_LABEL] (défaut) ou [BubbleInfo.STYLE_ICON]. */
+    val infoStyle: String? = null,
+    /** Au toucher : `false` = rien (affichage seul) ; `null` = l'action, comme avant. */
+    val tapAction: Boolean? = null,
+    // Bulle-icône (2026-11-17) ; `null` partout = comme avant ([BubbleIcon]).
+    /** Contenu « Icône » : la bulle montre une icône à la place du titre ; `null` = non. */
+    val iconContent: Boolean? = null,
+    /** Bulle-icône : le titre en plus de l'icône ; `null` = l'icône seule. */
+    val iconTitle: Boolean? = null,
+    /**
+     * Icône choisie : [BubbleIcon.APP_PREFIX] + paquet (l'icône d'une appli) ou [BubbleIcon.SYM_PREFIX]
+     * + nom d'un symbole. `null` = celle par défaut (l'appli lancée, ou l'icône de l'information).
+     */
+    val icon: String? = null,
 )
 
 object FloatingButtons {

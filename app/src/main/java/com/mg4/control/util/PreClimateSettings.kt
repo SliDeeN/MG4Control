@@ -22,6 +22,8 @@ object PreClimateSettings {
     /** Ancien réglage à deux choix (atténué / éteint), relu une fois pour la migration. */
     private const val KEY_SCREEN_OFF = "preclim_screen_off"
     private const val KEY_SCREEN_MODE = "preclim_screen_mode"
+    private const val KEY_SURV_SCREEN = "preclim_surv_follows_screen"
+    private const val KEY_SURV_NOCAM = "preclim_surv_without_camera"
     private const val KEY_MAX = "preclim_max_min"
     private const val KEY_FIRST = "preclim_first_minute"
     private const val KEY_RUN = "preclim_run_min"
@@ -35,6 +37,8 @@ object PreClimateSettings {
     private const val KEY_CLUSTER = "preclim_cluster"
     /** Rappel « gardez la clé sur vous » avant le décompte (2026-10-31) : activé par défaut. */
     private const val KEY_UNLOCK = "preclim_unlock_reminder"
+    /** Surveillance : demander à l'appli caméra de filmer en continu (2026-11-08) : activé par défaut. */
+    private const val KEY_DASHCAM_AUTO = "preclim_dashcam_auto"
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -55,6 +59,20 @@ object PreClimateSettings {
     fun setScreenMode(ctx: Context, mode: PreClimateScreenMode) =
         prefs(ctx).edit().putString(KEY_SCREEN_MODE, mode.name).apply()
 
+    /**
+     * La surveillance suit-elle [screenMode] ? Non par défaut (2026-11-13) : l'écran rouge reste
+     * allumé pour dissuader les passants. Le mode chien, lui, reste toujours allumé.
+     */
+    fun survFollowsScreen(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_SURV_SCREEN, false)
+    fun setSurvFollowsScreen(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_SURV_SCREEN, on).apply()
+
+    /**
+     * Surveillance permise sans appli dashcam (2026-11-13) : écran d'avertissement et clim coupée,
+     * aucune vidéo. Non par défaut ; activé seulement après l'avertissement de la page Garde-voiture.
+     */
+    fun survWithoutCamera(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_SURV_NOCAM, false)
+    fun setSurvWithoutCamera(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_SURV_NOCAM, on).apply()
+
     /** Réglage seul : la fiche ne s'affiche en plus que sur les firmwares du module (`ClusterModuleSettings.isSupported`). */
     fun showOnCluster(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_CLUSTER, true)
     fun setShowOnCluster(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_CLUSTER, on).apply()
@@ -62,6 +80,10 @@ object PreClimateSettings {
     /** Coupé par « Ne plus me rappeler », rallumé par l'interrupteur de la page Garde-voiture. */
     fun unlockReminder(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_UNLOCK, true)
     fun setUnlockReminder(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_UNLOCK, on).apply()
+
+    /** Interrupteur « Lancer l'enregistrement automatiquement » de la carte caméra (issue #180). */
+    fun dashcamAuto(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_DASHCAM_AUTO, true)
+    fun setDashcamAuto(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_DASHCAM_AUTO, on).apply()
 
     /**
      * Derniers choix du pop-up, mode « Maintenant ». Jamais vus : durée 1 h, premier cycle dans une

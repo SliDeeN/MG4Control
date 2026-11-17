@@ -25,6 +25,13 @@ class FirmwareParseTest {
     }
 
     @Test
+    fun `SWI173 est traite en SWI131`() {
+        // Chaîne relevée dans l'extraction du firmware (issue #175).
+        assertEquals(Gen.SWI131, FirmwareInfo.parseGeneration("SWI173-29958-1100R08"))
+        assertEquals(Gen.UNKNOWN, FirmwareInfo.parseGeneration("SWI1730-1"))
+    }
+
+    @Test
     fun `un numero ou un prefixe inconnu reste inconnu`() {
         assertEquals(Gen.UNKNOWN, FirmwareInfo.parseGeneration(null))
         assertEquals(Gen.UNKNOWN, FirmwareInfo.parseGeneration(""))

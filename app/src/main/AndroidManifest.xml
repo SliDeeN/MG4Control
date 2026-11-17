@@ -52,6 +52,25 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+    <!-- Mes automatisations, étape 3 (2026-11-02) : lieux et soleil (position), Wi-Fi, Bluetooth et
+         partage de connexion à allumer / couper, export et import du fichier des automatisations.
+         Accordées d'office à l'identité système (android.uid.system). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.TETHER_PRIVILEGED"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Export des Statistiques sur la clé USB (issue #206) : l'écriture directe à la racine de la
+         clé est refusée (essai du 2026-11-03) ; l'appli passe par le fournisseur de documents
+         d'Android, sans sélecteur, ce que cette permission autorise. Signature|privileged :
+         accordée à l'appli signée plateforme. -->
+    <uses-permission android:name="android.permission.MANAGE_DOCUMENTS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
     <!-- [T-902] "com.saic.keyevent.hardkey.report" n'est pas un broadcast protégé :
          n'importe quelle app installée peut le forger et piloter les raccourcis, donc
          écrire mode de conduite / régen / ADAS / AEB. Le receiver exige désormais cette
@@ -70,13 +89,20 @@
     <queries>
         <package android:name="com.tommasov.mg4dashcam" />
         <package android:name="com.drivehub.kamera" />
+        <!-- Appli SAIC du combiné : l'écran conducteur n'est proposé que si elle est là (issue #231). -->
+        <package android:name="com.saicmotor.hmi.clusterprojection" />
+        <package android:name="com.saicmotor.caripk" />
+        <!-- Applis qui déclarent des fonctions pour MG4Control (dont la caméra pilotable). -->
+        <intent>
+            <action android:name="com.mg4.control.action.SHORTCUT" />
+        </intent>
     </queries>
 
     <application
         android:name=".MG4App"
         android:label="@string/app_name"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@mipmap/brand_launcher_blue"
+        android:roundIcon="@mipmap/brand_launcher_blue"
         android:theme="@style/Theme.MG4Control"
         android:supportsRtl="true">
 
@@ -183,6 +209,24 @@
             android:name=".api.StateProvider"
             android:authorities="${applicationId}.state"
             android:exported="true" />
+
+        <!-- Mise à jour (2026-11-04) : résultat de la session d'installation silencieuse, puis
+             relance du service (et de l'écran) une fois la nouvelle version en place. -->
+        <receiver
+            android:name=".update.InstallResultReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.mg4.control.UPDATE_INSTALL_RESULT" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".receiver.PackageReplacedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".receiver.BootReceiver"

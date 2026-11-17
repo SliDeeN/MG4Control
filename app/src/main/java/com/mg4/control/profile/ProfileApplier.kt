@@ -139,6 +139,10 @@ object ProfileApplier {
                     val rlOk = MG4Hardware.setRegenLevel(profile.regenLevel)
                     AppLogger.i(TAG, "  RegenLevel=${profile.regenLevel.label} → $rlOk")
                     ok = ok && rlOk
+                    // Discussion #219 : la voiture peut remettre One Pedal à zéro au passage en
+                    // READY (vu après un pré-chauffage iSmart) — relu et réécrit si besoin.
+                    if (profile.regenLevel == com.mg4.control.model.RegenLevel.ONE_PEDAL) OnePedalGuard.arm(profile.name)
+                    else OnePedalGuard.disarm("profil '${profile.name}' sans One Pedal")
                 } else {
                     AppLogger.i(TAG, "  RegenLevel non pris en compte par ce profil — inchangée")
                 }
@@ -213,7 +217,7 @@ object ProfileApplier {
 
                 // ELK — page Sécurité, commun à tous les firmwares connus
                 if (securite) {
-                    applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder)
+                    applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder, profile.soundWarning)
                 }
 
                 // Feux de route automatiques — page Confort. Ici et non dans la première partie :
@@ -388,7 +392,7 @@ object ProfileApplier {
                 return
             }
             AppLogger.w(TAG, "  [VERIFY] ElkMode ÉCART (lu=$actual, attendu=${profile.elkMode}) → réécriture (tentative ${i + 1}/3)")
-            applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder)
+            applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder, profile.soundWarning)
             try { Thread.sleep(300) } catch (_: InterruptedException) {}
         }
         val finalVal = MG4Hardware.getElkMode()
@@ -490,7 +494,8 @@ object ProfileApplier {
         AppLogger.i(TAG, "  AutoHighBeam=$voulu → ${MG4Hardware.setAutoHighBeam(voulu)}")
     }
 
-    private fun applyElk(elkMode: Int, elkSensitivity: Int, lasAudibleWarning: Boolean = true, lasVibrationReminder: Boolean = true) {
+    private fun applyElk(elkMode: Int, elkSensitivity: Int, lasAudibleWarning: Boolean = true, lasVibrationReminder: Boolean = true,
+                         soundWarning: Boolean? = null) {
         if (elkMode == 0) {
             AppLogger.i(TAG, "  ELK — valeurs par défaut, skip (évite modification involontaire)")
             return
@@ -510,6 +515,13 @@ object ProfileApplier {
             AppLogger.i(TAG, "  LasAudibleWarning=$lasAudibleWarning → $soundOk")
             val vibrOk = MG4Hardware.setLasWarningVibration(lasVibrationReminder)
             AppLogger.i(TAG, "  LasVibrationReminder=$lasVibrationReminder → $vibrOk")
+        }
+        // SWI69 / SWI131 (SWI173) : même remise à zéro possible au changement de mode ELK
+        // (issue #216) — l'alerte sonore de la page Alertes, écrite plus tôt, est réécrite après.
+        if (FirmwareInfo.isNewGenVsm() && elkMode != MG4Hardware.ElkMode.OFF && soundWarning != null) {
+            try { Thread.sleep(300) } catch (_: InterruptedException) {}
+            val swOk = MG4Hardware.setSoundWarning(soundWarning)
+            AppLogger.i(TAG, "  SoundWarning=$soundWarning (après le mode ELK) → $swOk")
         }
     }
 

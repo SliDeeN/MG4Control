@@ -24,6 +24,7 @@ import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.ProfileSections
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.ui.widget.setCategoryTabActive
 import com.mg4.control.util.FirmwareInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,13 +34,16 @@ import kotlinx.coroutines.withContext
 /**
  * Création / édition d'un profil, en plein écran (auparavant un AlertDialog trop à l'étroit).
  *
- * Les options sont réparties en trois catégories sélectionnées par le rail de gauche ; le nom du
+ * Les options sont réparties en trois catégories sélectionnées par les sous-onglets du haut ; le nom du
  * profil et le réglage « par défaut » restent visibles quelle que soit la catégorie, car ils
  * n'appartiennent à aucune d'elles.
  */
 class ProfileEditFragment : Fragment() {
 
     companion object {
+        /** Sous-onglet rouvert à la prochaine édition de profil, le temps de la session (2026-11-07). */
+        private var ongletRetenu = 0
+
         /** Bornes des curseurs de climatisation — les VRAIES limites sont lues sur le véhicule
          *  au moment d'appliquer, et la consigne y est clampée. Celles-ci ne servent qu'à la
          *  saisie, et doivent couvrir tous les firmwares (A9 accepte 17–33 °C et 1–11). */
@@ -771,7 +775,7 @@ class ProfileEditFragment : Fragment() {
         majRail()
 
         // ── Rail de catégories ───────────────────────────────────────────────
-        bindCategoryRail(view) { btn, on -> activateBtn(btn, on) }
+        bindCategoryRail(view)
 
         // ── Annuler ──────────────────────────────────────────────────────────
         view.findViewById<MaterialButton>(R.id.btn_dialog_cancel).setOnClickListener {
@@ -867,13 +871,13 @@ class ProfileEditFragment : Fragment() {
     }
 
     /**
-     * Rail de gauche : une catégorie visible à la fois.
+     * Sous-onglets en pastilles : une catégorie visible à la fois.
      *
      * Un onglet dont la page n'a plus aucune section visible sur ce firmware est masqué — mieux
      * vaut pas d'onglet qu'un onglet qui ouvre une page blanche. Appelé APRÈS les décisions de
      * visibilité, sinon le décompte serait faux.
      */
-    private fun bindCategoryRail(view: View, activate: (MaterialButton, Boolean) -> Unit) {
+    private fun bindCategoryRail(view: View) {
         val tabs = listOf(
             view.findViewById<MaterialButton>(R.id.btn_cat_drive)   to view.findViewById<ViewGroup>(R.id.page_cat_drive),
             view.findViewById<MaterialButton>(R.id.btn_cat_safety)  to view.findViewById<ViewGroup>(R.id.page_cat_safety),
@@ -906,14 +910,16 @@ class ProfileEditFragment : Fragment() {
         if (usable.isEmpty()) return
 
         fun select(target: ViewGroup) {
+            ongletRetenu = tabs.indexOfFirst { it.second === target }
             tabs.forEach { (btn, page) ->
                 val on = page === target
                 page.visibility = if (on) View.VISIBLE else View.GONE
-                activate(btn, on)
+                btn.setCategoryTabActive(on)
             }
             scroll?.scrollTo(0, 0)   // changer d'onglet en gardant le scroll précédent désoriente
         }
         usable.forEach { (btn, page) -> btn.setOnClickListener { select(page) } }
-        select(usable.first().second)
+        val retenu = tabs.getOrNull(ongletRetenu)?.takeIf { it in usable }
+        select((retenu ?: usable.first()).second)
     }
 }

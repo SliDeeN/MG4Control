@@ -94,6 +94,24 @@ enum class DistanceUnit(val key: String, val short: String, val factor: Float) {
     KM("km", "km", 1f),
     MILES("mi", "mi", 1.609344f);
 
+    /** Une distance en km, dans cette unité (2026-11-10, réglage général). */
+    fun fromKm(km: Float): Float = km / factor
+
+    /** Une valeur « par 100 km » (kWh, coût), par 100 de cette unité : 20 kWh/100 km = 32,2 kWh/100 mi. */
+    fun per100FromKm(perHundredKm: Float): Float = perHundredKm * factor
+
+    /** Une vitesse en km/h, dans cette unité. */
+    fun speedFromKmh(kmh: Float): Float = kmh / factor
+
+    /** « km/h » ou « mph ». */
+    val speedShort: String get() = if (this == MILES) "mph" else "km/h"
+
+    /** Une altitude en mètres, dans l'unité de hauteur qui va avec : pieds en miles (2026-11-16). */
+    fun altitudeFromM(m: Float): Float = if (this == MILES) m / 0.3048f else m
+
+    /** « m » ou « ft ». */
+    val altitudeShort: String get() = if (this == MILES) "ft" else "m"
+
     companion object {
         /** Choix « Auto » enregistré : comme la voiture. */
         const val AUTO = "auto"
@@ -267,6 +285,28 @@ object ClusterGauge {
     fun powerTicks(full: Float = POWER_FULL_KW): List<Float> =
         listOf(20f, 50f, 100f, 200f).filter { it < full && 1f - powerFraction(it, full) >= 0.1f } + full
 
+    /** Chevaux par kW, comme les blocs d'information (issue #229). */
+    private const val CH_PAR_KW = 1.36f
+
+    /**
+     * Graduations du côté puissance avec leur chiffre (2026-11-12) : en kW ([powerTicks]) ou en
+     * chevaux, des valeurs rondes en chevaux (25, 50, 100, 200, 300) placées à leur puissance en kW,
+     * même règle d'écart avec la fin, puis la fin de l'échelle en chevaux.
+     */
+    fun powerTickLabels(full: Float = POWER_FULL_KW, hp: Boolean = false): List<Pair<Float, Int>> =
+        if (!hp) powerTicks(full).map { it to Math.round(it) }
+        else listOf(25f, 50f, 100f, 200f, 300f).map { it / CH_PAR_KW }
+            .filter { it < full && 1f - powerFraction(it, full) >= 0.1f }
+            .map { it to Math.round(it * CH_PAR_KW) } + (full to Math.round(full * CH_PAR_KW))
+
+    /** Graduations de la récupération (kW positifs) avec leur chiffre, en kW ou en chevaux. */
+    fun regenTickLabels(hp: Boolean = false): List<Pair<Float, Int>> =
+        if (!hp) REGEN_TICKS_KW.map { it to Math.round(it) }
+        else listOf(15f, 40f, 80f).map { it / CH_PAR_KW to Math.round(it) }
+
+    /** Une puissance dans l'unité de la jauge. */
+    fun inPowerUnit(kw: Float, hp: Boolean): Float = if (hp) kw * CH_PAR_KW else kw
+
     /** Part du côté gauche pour [kw] récupérés (positifs), jusqu'à [REGEN_FULL_KW]. */
     fun regenFraction(kw: Float): Float =
         part((ln(1.0 + kw.coerceAtLeast(0f) / REGEN_CURVE_KW) / ln(1.0 + REGEN_FULL_KW / REGEN_CURVE_KW)).toFloat())
@@ -353,6 +393,28 @@ object ClusterGauge {
      */
     fun discreetPowerLabels(full: Float = POWER_FULL_KW): Set<Float> =
         (listOf(-60f, -20f, 0f) + powerTicks(full).filter { it == full || 1f - powerFraction(it, full) >= 0.2f }).toSet()
+
+    /**
+     * Crans de la barre de puissance avec leur chiffre (`null` = le trait seul), en kW ou en
+     * chevaux (2026-11-12) : mêmes règles que [discreetPowerTicks] et [discreetPowerLabels].
+     */
+    fun discreetPowerTickLabels(full: Float = POWER_FULL_KW, hp: Boolean = false): List<Pair<Float, Int?>> {
+        val recup = if (hp) listOf(-80f, -25f).map { it / CH_PAR_KW to Math.round(it) } else listOf(-60f to -60, -20f to -20)
+        val puissance = powerTickLabels(full, hp).map { (kw, ch) ->
+            kw to ch.takeIf { kw == full || 1f - powerFraction(kw, full) >= 0.2f }
+        }
+        // Deux chiffres trop proches sur la barre se chevauchent (25 et 50 ch) : le second garde son
+        // trait seul. En kW, les écarts dépassent tous ce seuil : rien ne change.
+        var dernier = Float.NEGATIVE_INFINITY
+        return (recup.map { (kw, ch) -> kw to (ch as Int?) } + (0f to 0) + puissance).map { (kw, ch) ->
+            val x = discreetPowerFraction(kw, full)
+            if (ch == null || (x - dernier < DISCREET_LABEL_GAP && kw != full)) kw to null
+            else { dernier = x; kw to ch }
+        }
+    }
+
+    /** Écart minimal entre deux chiffres de la barre de puissance, en part de la barre. */
+    private const val DISCREET_LABEL_GAP = 0.11f
 
     val DISCREET_POWER_TICKS: List<Float> get() = discreetPowerTicks()
     val DISCREET_POWER_LABELS: Set<Float> get() = discreetPowerLabels()
@@ -508,6 +570,9 @@ class ClusterTrip {
     }
 
     fun regenWh(): Float = energie.result().regenKwh * 1000f
+
+    /** Énergie sortie de la batterie depuis READY, récupération non déduite (issue #229). */
+    fun consumedKwh(): Float = energie.result().consumedKwh
 
     fun reset() {
         energie.reset()

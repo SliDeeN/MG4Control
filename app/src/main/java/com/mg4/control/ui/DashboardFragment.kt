@@ -28,6 +28,7 @@ import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.ui.widget.setCategoryTabActive
 import com.mg4.control.util.FirmwareInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,7 @@ class DashboardFragment : Fragment() {
     // ── ViewPager ────────────────────────────────────────────────────────────
     /** Onglet courant du rail : 0=Conduite, 1=Securite, 2=Confort, 3=Vitres. Remplace pager.currentItem. */
     private var currentTab = 0
+        set(v) { field = v; ongletRetenu = v }
 
     /** Onglet Vitres (V0 de test) : logique tactile et sondes dans sa propre classe. */
 
@@ -125,6 +127,32 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    /**
+     * Relecture périodique de l'ESC et de la somnolence, écran visible (2026-11-10) : changés depuis
+     * l'écran de la voiture, ils restaient affichés dans leur ancien état. Sautée pendant une
+     * écriture ([safetyWriteInFlight]) pour ne pas effacer la peinture du clic.
+     */
+    private val safetyPoll = object : Runnable {
+        override fun run() {
+            // Onglet Sécurité affiché et écran au premier plan seulement (2026-11-13) : sinon on
+            // s'arrête — un rappel tardif ne relance plus le sondage écran caché.
+            if (!isResumed || currentTab != TAB_SAFETY) return
+            if (!safetyWriteInFlight) refreshSafetyDmsEsc()
+            view?.postDelayed(this, SAFETY_POLL_MS)
+        }
+    }
+
+    /** Démarre ou arrête la relecture d'ESC et somnolence selon l'onglet et l'écran. */
+    private fun syncSafetyPoll() {
+        val v = view ?: return
+        v.removeCallbacks(safetyPoll)
+        if (!MG4Hardware.hasDrowsinessAndEsc() || !isResumed || currentTab != TAB_SAFETY) return
+        MG4Hardware.whenKatman4Ready {
+            if (isResumed && currentTab == TAB_SAFETY) view?.run { removeCallbacks(safetyPoll); postDelayed(safetyPoll, SAFETY_POLL_MS) }
+        }
+    }
+    @Volatile private var safetyWriteInFlight = false
+
     private var btnAebSenLow: Button? = null
     private var btnAebSenStandard: Button? = null
     private var btnAebSenHigh: Button? = null
@@ -170,7 +198,19 @@ class DashboardFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.fragment_dashboard, container, false)
 
+    /**
+     * Aucun interrupteur du tableau de bord ne garde son état dans la sauvegarde de la vue
+     * (2026-11-14) : en revenant sur l'écran, Android le remettait APRÈS la pose des écouteurs, qui
+     * écrivaient alors dans la voiture (TSR, AEB, ELK réécrits sans toucher à rien — et le TSR
+     * réécrit rallumait l'alerte de limitation). L'état vient toujours d'une lecture de la voiture.
+     */
+    private fun sansSauvegardeDesInterrupteurs(v: View) {
+        if (v is android.widget.CompoundButton) v.isSaveEnabled = false
+        if (v is ViewGroup) for (i in 0 until v.childCount) sansSauvegardeDesInterrupteurs(v.getChildAt(i))
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        sansSauvegardeDesInterrupteurs(view)
         super.onViewCreated(view, savedInstanceState)
         setupDashboard(view)
     }
@@ -189,6 +229,7 @@ class DashboardFragment : Fragment() {
         }
         refreshElk()  // SWI133 — sVsm133 indépendant de Katman4
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshSafetyDmsEsc() }
+        syncSafetyPoll()
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshHighBeam() }
         if (MG4Hardware.hasBatteryHeating()) {
             view?.removeCallbacks(batteryHeatPoll)
@@ -203,6 +244,7 @@ class DashboardFragment : Fragment() {
         super.onPause()
         stopClimatePolling()   // pas de sondage binder quand l'écran n'est plus visible
         view?.removeCallbacks(batteryHeatPoll)
+        view?.removeCallbacks(safetyPoll)
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -210,12 +252,16 @@ class DashboardFragment : Fragment() {
     // ═════════════════════════════════════════════════════════════════════════
 
     private companion object {
+        /** Sous-onglet rouvert en revenant sur le tableau de bord, le temps de la session (2026-11-07). */
+        var ongletRetenu = 0
         const val TAB_SAFETY = 1
         const val TAB_COMFORT = 2
         /** Tag des appuis « Sens de l'air » : le même que le filtre de la sonde MG4_AIR. */
         const val CLIM_UI_TAG = "MG4_AIR"
         /** Relecture du chauffage de la batterie et de son décompte, écran visible. */
         const val BATTERY_HEAT_POLL_MS = 15_000L
+        /** ESC et somnolence relus toutes les 2 s, onglet Sécurité affiché. */
+        const val SAFETY_POLL_MS = 2_000L
         /** Relectures (une par seconde) au plus après une consigne : au-delà de la fenêtre de 15 s. */
         const val BATTERY_HEAT_CONFIRM_TRIES = 16
     }
@@ -246,7 +292,7 @@ class DashboardFragment : Fragment() {
     }
 
     /**
-     * Rail de gauche — meme motif que les autres ecrans refondus. Un onglet dont la page n'a
+     * Sous-onglets en pastilles (refonte B) — meme motif que les autres ecrans. Un onglet dont la page n'a
      * plus aucune section visible sur ce firmware est masque.
      */
     private fun bindCategoryRail(root: View) {
@@ -256,11 +302,6 @@ class DashboardFragment : Fragment() {
             root.findViewById<MaterialButton>(R.id.btn_dash_cat_comfort) to root.findViewById<ViewGroup>(R.id.page_dash_comfort)
         )
         val scroll   = root.findViewById<ScrollView>(R.id.scroll_dashboard)
-        val dimColor = requireContext().getColor(R.color.dash_accent_dim)
-        val accent   = requireContext().getColor(R.color.dash_accent)
-        val offBg    = requireContext().getColor(R.color.dash_btn)
-        val border   = requireContext().getColor(R.color.dash_border)
-        val textOff  = requireContext().getColor(R.color.text_secondary)
 
         fun hasVisibleContent(page: ViewGroup): Boolean =
             (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
@@ -276,13 +317,17 @@ class DashboardFragment : Fragment() {
             tabs.forEachIndexed { i, (btn, page) ->
                 val on = i == index
                 page.visibility = if (on) View.VISIBLE else View.GONE
-                btn.backgroundTintList = ColorStateList.valueOf(if (on) dimColor else offBg)
-                btn.setTextColor(if (on) accent else textOff)
-                btn.strokeColor = ColorStateList.valueOf(if (on) accent else border)
+                btn.setCategoryTabActive(on)
             }
             scroll?.scrollTo(0, 0)
             // Rafraichissements qui etaient declenches par onPageSelected du pager.
-            if (index == TAB_SAFETY) refreshElk()
+            if (index == TAB_SAFETY) {
+                refreshElk()
+                // Arrivée sur l'onglet : une lecture tout de suite, puis toutes les 2 s (écran visible).
+                // Rappel tardif (service véhicule prêt après coup) : rien si on a quitté l'onglet entre-temps.
+                if (isResumed) MG4Hardware.whenKatman4Ready { if (isResumed && currentTab == TAB_SAFETY) refreshSafetyDmsEsc() }
+            }
+            syncSafetyPoll()
             if (index == TAB_COMFORT && MG4Hardware.hasClimateControl()) {
                 refreshClimatePage(force = true)
                 startClimatePolling()
@@ -292,7 +337,8 @@ class DashboardFragment : Fragment() {
         }
 
         tabs.forEachIndexed { i, (btn, _) -> btn.setOnClickListener { select(i) } }
-        select(tabs.indexOfFirst { it.second === usable.first().second })
+        val retenu = tabs.getOrNull(ongletRetenu)?.takeIf { t -> usable.any { it.second === t.second } }
+        select(tabs.indexOfFirst { it.second === (retenu ?: usable.first()).second })
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -1188,15 +1234,21 @@ class DashboardFragment : Fragment() {
      * que l'état obtenu ferait mentir l'écran.
      */
     private fun writeSafety(refresh: () -> Unit = { refreshSafetyDmsEsc() }, action: () -> Unit) {
+        // La relecture périodique attend la fin de l'écriture : elle effacerait la peinture du clic.
+        safetyWriteInFlight = true
         CoroutineScope(Dispatchers.IO).launch {
-            action()
-            // ⚠️ Relire IMMÉDIATEMENT après l'écriture rend l'ancienne valeur : le calculateur
-            // n'a pas encore appliqué la consigne. C'est ce qui faisait rester l'affichage sur
-            // OFF alors que le réglage venait bien de passer à ON. L'UI d'origine ne relit pas
-            // non plus — elle peint l'état demandé et attend le callback de changement.
-            // Ici : peinture optimiste au clic (déjà faite), puis relecture qui fait autorité.
-            delay(700)
-            withContext(Dispatchers.Main) { if (isAdded) refresh() }
+            try {
+                action()
+                // ⚠️ Relire IMMÉDIATEMENT après l'écriture rend l'ancienne valeur : le calculateur
+                // n'a pas encore appliqué la consigne. C'est ce qui faisait rester l'affichage sur
+                // OFF alors que le réglage venait bien de passer à ON. L'UI d'origine ne relit pas
+                // non plus — elle peint l'état demandé et attend le callback de changement.
+                // Ici : peinture optimiste au clic (déjà faite), puis relecture qui fait autorité.
+                delay(700)
+                withContext(Dispatchers.Main) { if (isAdded) refresh() }
+            } finally {
+                safetyWriteInFlight = false
+            }
         }
     }
 

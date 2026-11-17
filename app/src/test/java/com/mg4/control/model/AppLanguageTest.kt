@@ -10,6 +10,12 @@ class AppLanguageTest {
     @Test fun `une langue traduite de la voiture est reprise`() {
         assertEquals("de", AppLanguage.fromCar("de"))
         assertEquals("tr", AppLanguage.fromCar("TR"))
+        assertEquals("pl", AppLanguage.fromCar("pl"))
+        assertEquals("cs", AppLanguage.fromCar("cs"))
+        // Norvégien (issue #239) : bokmål, et les deux autres codes norvégiens.
+        assertEquals("nb", AppLanguage.fromCar("nb"))
+        assertEquals("nb", AppLanguage.fromCar("no"))
+        assertEquals("nb", AppLanguage.fromCar("nn"))
         assertEquals("it", AppLanguage.effective(null, "it"))
     }
 

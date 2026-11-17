@@ -171,6 +171,20 @@ object EnergyReader {
     /** Autonomie annoncée par la batterie, en km ; `null` hors de 1..1500. Une seule lecture. */
     fun rangeKm(): Int? = int(PROP_RANGE)?.takeIf { it in 1..1500 }
 
+    /** Prise branchée (charge finie ou non) ? `null` si aucun des deux signaux de prise ne se lit. */
+    fun plugged(): Boolean? {
+        val ac = int(PROP_PLUG_AC)
+        val dc = int(PROP_PLUG_DC)
+        if (ac == null && dc == null) return null
+        return ChargeDisplay.priseSignalee(ac, dc)
+    }
+
+    /** Type de prise branchée, `null` si aucune (ou illisible). */
+    fun plugType(): ChargeType? = chargeType()
+
+    /** Code de la limite de charge (voir `ChargeLimit.pct`), `null` si illisible. */
+    fun chargeLimitCode(): Int? = int(PROP_CHARGE_TARGET)
+
     /**
      * Limite de charge ([ChargeLimit], pop-up de charge, 2026-10-16). Voie d'origine sur SWI133
      * comme sur A9 : `CarBMSManager.setGlobalProperty(Integer, 0x2140f40c, code)` (service SAIC

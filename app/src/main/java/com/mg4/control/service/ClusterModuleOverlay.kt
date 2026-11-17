@@ -29,18 +29,17 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.hardware.ClusterReadySignal
 import com.mg4.control.hardware.ClusterTabReader
 import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.ChargeProbe
 import com.mg4.control.hardware.ReadyWatcher
-import com.mg4.control.hardware.VehicleDistanceUnit
 import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeEnCours
 import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterModule
-import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterTrip
 import com.mg4.control.model.DriveMode
@@ -52,6 +51,7 @@ import com.mg4.control.model.PreClimateTrend
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.ui.widget.ClusterBlocks
 import com.mg4.control.ui.widget.ClusterGaugeView
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.LocaleHelper
@@ -61,9 +61,9 @@ import kotlin.math.roundToInt
  * Module MG4Control sur le combiné (Réglages › Interface, 2026-10-14).
  *
  * Le combiné est un calculateur à part ; seule sa zone centrale vient de l'écran central, par un
- * écran Android à lui (le n° 1, 800 × 480 px), où SystemUI lance l'appli SAIC du combiné. Réservé à
- * SWI133, SWI68 et SWI165 ([ClusterModuleSettings.SUPPORTED]) : sur A9, le combiné ne montre pas
- * cet écran.
+ * écran Android à lui (le n° 1, 800 × 480 px), où l'appli SAIC du combiné dessine. Réservé à SWI133,
+ * SWI68, SWI165 et aux voitures qui ont cette appli ([ClusterModuleSettings.isSupported], issue #231 :
+ * `caripk` sur SWI173) ; sur les autres A9, le combiné ne montre pas cet écran.
  * Le module est une fenêtre de 260 × 260 px posée sur cet écran, à la place du carré de cette
  * appli. Il suit l'onglet choisi au volant : sur Navigation et Musique, le module réglé pour
  * l'onglet, ou rien — la fenêtre devient alors transparente et la page d'origine reparaît.
@@ -111,6 +111,10 @@ internal object ClusterModuleOverlay {
      * non en relevés manqués : à 0,1 s, trois relevés ne feraient que 0,3 s.
      */
     private const val MANQUE_TOLERE_MS = 3_000L
+    /** Signaux des cases d'information (issue #229) : relus toutes les 5 s, comme les bulles. */
+    private const val SIGNAUX_MS = 5_000L
+    /** Délai entre la pose de la fenêtre et le renvoi d'« image prête » (issue #245). */
+    private const val RELANCE_PRET_MS = 3_000L
 
     private val main = Handler(Looper.getMainLooper())
     private val lecteur: Handler by lazy { Handler(HandlerThread("mg4-cluster").also { it.start() }.looper) }
@@ -131,11 +135,22 @@ internal object ClusterModuleOverlay {
     private var dernierKwMs = 0L
     private var dernierLentMs = 0L
     private var dernierSocMs = 0L
+    /** Dernière lecture de la prise hors relevé lent (sortie de charge, « Charge terminée »). */
+    private var dernierePriseMs = 0L
     /** Dernier onglet et dernier module annoncés au journal : un mot par changement, pas par relevé. */
     private var dernierOnglet: Int? = -1
+    /** Dernier onglet RÉELLEMENT lu et son heure (issue #245) : repris quand une lecture échoue. */
+    private var ongletLu: Int? = null
+    private var ongletLuMs = 0L
+    private var lectureEchouee = false
     private var dernierModule: ClusterModule? = null
     private var dernierPreClim = false
     private var mode: DriveMode? = null
+    /** Cases d'information (issue #229) : signaux relus toutes les [SIGNAUX_MS], mots de la langue choisie. */
+    private val signaux = mutableMapOf<String, Any?>()
+    private var dernierSignauxMs = 0L
+    private var mots: com.mg4.control.ui.AndroidRuleWords? = null
+    private var motsLangue: String? = null
     /**
      * Profil de la pastille (issue #152) : relu quand le profil actif change, et avec les valeurs
      * lentes — un nom ou un mode modifié dans l'éditeur apparaît au plus dix secondes après.
@@ -176,10 +191,10 @@ internal object ClusterModuleOverlay {
      */
     private val ecouteurEcrans = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {
-            if (vue == null) afficher("écran $displayId ajouté", signalerAbsence = false)
+            if (vue == null) afficher("écran $displayId ajouté", signalerAbsence = false, reprise = repriseAutorisee)
         }
         override fun onDisplayRemoved(displayId: Int) {
-            if (displayId == ecranId) masquer("écran $displayId retiré")
+            if (displayId == ecranId) masquer("écran $displayId retiré", involontaire = true)
         }
         // Sortie de veille du combiné : la fenêtre a pu s'y détacher sans que l'écran ne soit retiré.
         override fun onDisplayChanged(displayId: Int) {
@@ -200,22 +215,40 @@ internal object ClusterModuleOverlay {
      * Fenêtre absente, détachée ou sur un autre écran : retirée puis reposée. Sans effet quand le
      * module n'a pas à être là (réglage coupé, firmware sans combiné).
      */
+    /**
+     * Le module a-t-il à être sur le combiné ? Firmware pris en charge, pas en mode Garage, et
+     * réglage activé ou pré-climatisation en cours. Une seule règle pour [refresh],
+     * [verifierEtRecoller] et [afficher] (issue #246, 2026-11-13 : au contact suivant, le recollage
+     * remettait la jauge en mode Garage). Partie sans Android.
+     */
+    fun doitEtreLa(supporte: Boolean, garage: Boolean, active: Boolean, preClim: Boolean): Boolean =
+        supporte && !garage && (active || preClim)
+
+    private fun doitEtreLa(app: Context): Boolean = doitEtreLa(ClusterModuleSettings.isSupported(),
+        com.mg4.control.util.GarageMode.isOn(app), ClusterModuleSettings.isEnabled(app), PreClimate.surLeCombine(app))
+
     fun verifierEtRecoller(origine: String) {
         val app = appContext ?: return
         main.post {
-            if (!ClusterModuleSettings.isSupported() ||
-                !(ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) return@post
+            if (!doitEtreLa(app)) return@post
             val ecran = ecranDuCombine(app)
             if (ecran == null) {
-                ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false) }, delai) }
+                ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false, reprise = repriseAutorisee) }, delai) }
                 return@post
             }
             val v = vue
             val detachee = v != null && !v.isAttachedToWindow && SystemClock.elapsedRealtime() - poseeMs > ATTACHE_DELAI_MS
             if (v == null || detachee || ecranId != ecran.displayId) {
                 AppLogger.i(TAG, "$origine : module ${if (v == null) "absent" else if (detachee) "détaché" else "sur un autre écran"} — recollé")
-                masquer(origine)
-                afficher(origine, signalerAbsence = false)
+                if (v == null) {
+                    // Pas de fenêtre à reposer (jamais posée, ou retirée exprès) : la raison du dernier
+                    // retrait décide, comme ailleurs — un module réactivé repart de zéro (2026-11-14).
+                    afficher(origine, signalerAbsence = false, reprise = repriseAutorisee)
+                } else {
+                    // Fenêtre détachée ou sur un autre écran : simple repose, les compteurs restent.
+                    masquer(origine, involontaire = true)
+                    afficher(origine, signalerAbsence = false, reprise = true)
+                }
             }
         }
     }
@@ -232,18 +265,25 @@ internal object ClusterModuleOverlay {
             // Hors des firmwares pris en charge, rien — même si le réglage a été activé pendant les
             // essais sur A9 : sans ça, une fenêtre invisible resterait posée sur l'écran du combiné.
             // Module désactivé : posé quand même le temps d'une pré-climatisation.
-            if (ClusterModuleSettings.isSupported() &&
-                (ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) {
+            // Mode Garage : rien sur le combiné, pré-climatisation comprise (signalé le 2026-11-03).
+            val garage = com.mg4.control.util.GarageMode.isOn(app)
+            if (doitEtreLa(app)) {
                 if (!abonne) {
                     abonne = true
                     ReadyWatcher.add(readyListener)
                     (app.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
                         ?.registerDisplayListener(ecouteurEcrans, main)
                 }
-                afficher(origine)
+                // Reprise seulement si la fenêtre était partie sans être voulue (écran disparu) : un
+                // module coupé puis réactivé, ou un premier affichage, repart de zéro.
+                afficher(origine, reprise = repriseAutorisee)
             } else {
                 desabonner()
-                masquer(if (origine == "réglage") "réglage désactivé" else "$origine, module désactivé")
+                masquer(when {
+                    garage -> "$origine, mode Garage"
+                    origine == "réglage" -> "réglage désactivé"
+                    else -> "$origine, module désactivé"
+                })
             }
         }
     }
@@ -298,9 +338,15 @@ internal object ClusterModuleOverlay {
      * Sans effet si le module est déjà là. [signalerAbsence] : faux pour les essais déclenchés par
      * l'arrivée d'un écran quelconque, qui ne sont pas tous celui du combiné.
      */
-    private fun afficher(origine: String, signalerAbsence: Boolean = true) {
+    private fun afficher(origine: String, signalerAbsence: Boolean = true, reprise: Boolean = false) {
         val ctx = appContext ?: return
         if (vue != null) return
+        // Dernier filet : un essai différé (+1 à +10 s) ou un autre appelant ne pose rien en mode
+        // Garage ni module coupé (issue #246).
+        if (!doitEtreLa(ctx)) {
+            AppLogger.i(TAG, "$origine : module non posé (${if (com.mg4.control.util.GarageMode.isOn(ctx)) "mode Garage" else "module désactivé"})")
+            return
+        }
         val ecran = ecranDuCombine(ctx)
         if (ecran == null) {
             if (signalerAbsence) AppLogger.w(TAG, "$origine : aucun écran de combiné parmi ceux d'Android — " +
@@ -333,15 +379,26 @@ internal object ClusterModuleOverlay {
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)?.key ?: "aucun"}, musique=" +
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)?.key ?: "aucun"}) sur l'écran " +
                 "${ecran.displayId} « ${ecran.name} » ${taille.x}×${taille.y} px — carré de ${place.side} px " +
-                "en (${place.x}, ${place.y})")
-            demarrerReleves()
+                "en (${place.x}, ${place.y}) — Android démarré depuis ${SystemClock.elapsedRealtime() / 1000} s")
+            demarrerReleves(reprise)
+            repriseAutorisee = false
+            lecteur.removeCallbacks(relancePret)
+            lecteur.postDelayed(relancePret, RELANCE_PRET_MS)
         } catch (e: Exception) {
             AppLogger.e(TAG, "$origine : affichage refusé sur l'écran ${ecran.displayId} — " +
                 "${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
-    private fun masquer(origine: String) {
+    /**
+     * Fenêtre retirée sans que personne l'ait voulu (écran disparu, fenêtre détachée) : la prochaine
+     * pose reprend les compteurs. Retirée exprès (module coupé, mode Garage, arrêt) : elle repart de
+     * zéro (2026-11-14). Fil principal.
+     */
+    private var repriseAutorisee = false
+
+    private fun masquer(origine: String, involontaire: Boolean = false) {
+        repriseAutorisee = involontaire
         arreterReleves()
         val v = vue ?: return
         runCatching { fenetres?.removeViewImmediate(v) }
@@ -354,20 +411,26 @@ internal object ClusterModuleOverlay {
 
     // ── Relevés (fil du lecteur) ─────────────────────────────────────────────
 
-    /** Le trajet repart de zéro à chaque affichage, et à chaque passage en READY ([readyListener]). */
-    private fun demarrerReleves() {
+    /**
+     * Le trajet repart de zéro à chaque affichage, et à chaque passage en READY ([readyListener]).
+     * [reprise] (2026-11-14) : fenêtre simplement reposée (combiné réveillé, écran revenu) — la
+     * moyenne, la récupération et la charge en cours sont gardées.
+     */
+    private fun demarrerReleves(reprise: Boolean = false) {
         lecteur.post {
             enMarche = true
-            trajet.reset()
+            if (!reprise) trajet.reset()
             kwLisse = null
             dernierKwMs = 0L
             dernierLentMs = 0L
             dernierOnglet = -1
             dernierModule = null
             dernierPreClim = false
-            session.terminer()
             chargeBrute = null
-            chargeFinie = false
+            if (!reprise) {
+                session.terminer()
+                chargeFinie = false
+            }
             lecteur.removeCallbacks(tic)
             lecteur.post(tic)
         }
@@ -376,8 +439,28 @@ internal object ClusterModuleOverlay {
     private fun arreterReleves() {
         lecteur.post {
             enMarche = false
+            lecteur.removeCallbacks(relancePret)
             lecteur.removeCallbacks(tic)
         }
+    }
+
+    /**
+     * Issue #245 (2026-11-14) : au démarrage, l'appli SAIC du combiné peut oublier de dire
+     * « image prête » (course avec sa liaison à la voiture, voir [ClusterReadySignal]) — le combiné
+     * garde alors sa page d'origine, et notre module reste caché jusqu'au premier changement
+     * d'onglet. Quelques secondes après chaque pose, sur Musique ou Navigation, on renvoie le
+     * signal que l'appli SAIC envoie elle-même à chaque changement d'onglet. Fil du lecteur.
+     */
+    private val relancePret = Runnable {
+        if (!enMarche) return@Runnable
+        val onglet = runCatching { ClusterTabReader.onglet() }.getOrNull()
+        if (onglet == null || ClusterReadySignal.signauxPour(onglet) == null) {
+            AppLogger.i(TAG, "image prête : rien à renvoyer (onglet ${onglet ?: "illisible"})")
+            return@Runnable
+        }
+        AppLogger.i(TAG, "image prête, avant renvoi (onglet $onglet) : ${ClusterReadySignal.releve()}")
+        ClusterReadySignal.envoyer(onglet, "image prête")
+        lecteur.postDelayed({ AppLogger.i(TAG, "image prête, 1 s après le renvoi : ${ClusterReadySignal.releve()}") }, 1_000L)
     }
 
     private val tic = object : Runnable {
@@ -423,8 +506,9 @@ internal object ClusterModuleOverlay {
                 dernierLentMs = 0L   // temps restant, cible et type tout de suite
                 AppLogger.i(TAG, "charge détectée : le module de charge remplace les jauges")
             }
-            val choixPastille = ClusterModuleSettings.pill(ctx)
-            val idActif = if (choixPastille == ClusterPill.PROFILE) ActiveProfile.id(ctx) else null
+            // Disposition (issue #229) : le profil n'est lu que si une case le montre.
+            val disposition = ClusterModuleSettings.layout(ctx)
+            val idActif = if (ClusterBlocks.usesProfile(disposition)) ActiveProfile.id(ctx) else null
             val lent = dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS
             if (idActif != profilId || (lent && idActif != null)) {
                 profilId = idActif
@@ -450,6 +534,14 @@ internal object ClusterModuleOverlay {
                 if (enCharge) {
                     chargeFinie = false
                 } else {
+                    // Sortie de charge (2026-11-14) : la prise relue tout de suite, pas au relevé lent
+                    // (10 s) — sinon un débranchement affichait « Charge terminée » jusqu'à lui.
+                    // Et tant que « Charge terminée » est affichée : la prise relue chaque seconde, pour que
+                    // le débranchement retire la fiche aussitôt (sans accélérer le relevé hors de ce cas).
+                    if (!chargeFinie || maintenant - dernierePriseMs >= BATTERIE_CHARGE_MS) {
+                        dernierePriseMs = maintenant
+                        runCatching { EnergyReader.chargeRaw() }.getOrNull()?.let { chargeBrute = it }
+                    }
                     val brut = chargeBrute
                     if (brut != null && ChargeDisplay.priseSignalee(brut.ac, brut.dc)) {
                         if (!chargeFinie) {
@@ -463,15 +555,34 @@ internal object ClusterModuleOverlay {
             }
             // Le module suit l'onglet choisi au volant. Les relevés, eux, continuent quel que
             // soit l'onglet : la moyenne du trajet ne doit pas avoir de trou.
-            val onglet = runCatching { ClusterTabReader.onglet() }.getOrNull()
+            val lu = runCatching { ClusterTabReader.onglet() }.getOrNull()
+            if (lu != null) { ongletLu = lu; ongletLuMs = maintenant }
+            // Lecture manquée : le dernier onglet lu plutôt que le module de la navigation partout (#245).
+            val onglet = ClusterModuleSettings.tabToFollow(lu, ongletLu, maintenant - ongletLuMs)
+            // Une ligne par série d'échecs, pour le diagnostic de l'issue #245.
+            if (lu == null && !lectureEchouee) {
+                lectureEchouee = true
+                AppLogger.w(TAG, "onglet illisible — " + (onglet?.let { "dernier lu ($it) gardé" } ?: "secours : module de la navigation"))
+            } else if (lu != null && lectureEchouee) {
+                lectureEchouee = false
+                AppLogger.i(TAG, "onglet relu : $lu")
+            }
             val navigation = ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)
             val musique = ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)
             val module = ClusterModuleSettings.moduleToShow(onglet, navigation, musique)
             if (onglet != dernierOnglet || module != dernierModule) {
-                AppLogger.i(TAG, "onglet ${onglet ?: "illisible"} (${ClusterTab.fromValue(onglet)?.name ?: "?"}) → " +
+                AppLogger.i(TAG, "onglet ${onglet ?: "illisible"} (${ClusterTab.fromValue(onglet)?.name ?: "?"})" +
+                    (if (lu == null && onglet != null) " [illisible, dernier lu gardé]" else "") + " → " +
                     (module?.let { "module ${it.key}" } ?: "aucun module, page d'origine"))
                 dernierOnglet = onglet
                 dernierModule = module
+                // Issue #245 : l'appli SAIC envoie « image prête » 500 ms après le changement.
+                if (ClusterReadySignal.signauxPour(onglet) != null) {
+                    AppLogger.i(TAG, "image prête au changement d'onglet : ${ClusterReadySignal.releve()}")
+                    lecteur.postDelayed({
+                        AppLogger.i(TAG, "image prête 1,5 s après le changement d'onglet : ${ClusterReadySignal.releve()}")
+                    }, 1_500L)
+                }
             }
             // Pré-climatisation : sa fiche sur les onglets qui portent l'image de l'écran central,
             // quel que soit le module réglé pour eux.
@@ -483,6 +594,7 @@ internal object ClusterModuleOverlay {
                 AppLogger.i(TAG, if (preClim != null) "pré-climatisation : sa fiche remplace le module"
                     else "pré-climatisation : la fiche se retire")
             }
+            val blocs = if (preClim == null && module != null) blocs(ctx, disposition, kmh, maintenant, lent) else emptyList()
             val contenu = if (preClim != null) ClusterGaugeView.Contenu(
                 // Ni jauge ni pastille tant que la fiche est là.
                 module = module ?: ClusterModule.CONSUMPTION, kw = null, kmh = null, pastille = null,
@@ -492,20 +604,20 @@ internal object ClusterModuleOverlay {
                     module = it,
                     kw = kwLisse,
                     kmh = kmh,
-                    pastille = ClusterGauge.pill(choixPastille, mode, profil?.name,
-                        // Couleur du mode du profil s'il règle la conduite, sinon celle de la voiture.
-                        profil?.takeIf { p -> p.appliesDrive }?.driveMode, langue(ctx)),
+                    // La pastille est une case comme les autres (issue #229).
+                    pastille = null,
                     moyenneWhKm = trajet.averageWhPerKm(),
                     recupWh = trajet.regenWh(),
                     unite = ClusterModuleSettings.consumptionUnit(ctx),
                     uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
-                    // Auto : l'unité de la voiture, relue au plus une fois par minute (binder, ce fil).
-                    distance = ClusterModuleSettings.distanceUnit(ctx,
-                        if (ClusterModuleSettings.distanceChoice(ctx) == null) VehicleDistanceUnit.actualiser() else null),
+                    // Réglage général ; Auto : l'unité de la voiture, relue au plus une fois par minute (binder, ce fil).
+                    distance = ClusterModuleSettings.distanceUnit(ctx),
                     style = style,
                     pleineEchelleKw = ClusterModuleSettings.fullScaleKw(ctx),
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,
+                    disposition = disposition,
+                    blocs = blocs,
                 )
             }
             main.post {
@@ -537,6 +649,48 @@ internal object ClusterModuleOverlay {
         ClusterModuleSettings.saveLearnedPower(ctx, apres, pointes)
         AppLogger.i(TAG, "fin du trajet : pointe ${pointe.toInt()} kW, plafond appris $avant → $apres kW " +
             "(pointes : ${pointes.joinToString { it.toInt().toString() }})")
+    }
+
+    /**
+     * Les cases d'information à cet instant (issue #229, fil du lecteur). Les signaux des
+     * automatisations se relisent toutes les [SIGNAUX_MS] (binder) ; le trajet, la puissance et la
+     * vitesse, à chaque relevé.
+     */
+    private fun blocs(ctx: Context, d: com.mg4.control.model.ClusterLayout, kmh: Float?, maintenant: Long, lent: Boolean):
+        List<ClusterGaugeView.Bloc?> {
+        val lus = ClusterBlocks.signauxLus(d)
+        if (lus.any { it.name !in signaux } || maintenant - dernierSignauxMs >= SIGNAUX_MS) {
+            dernierSignauxMs = maintenant
+            lus.forEach { s -> signaux[s.name] = com.mg4.control.automation.CustomRules.readSignal(ctx, s) }
+        }
+        val code = LocaleHelper.getLanguage(ctx)
+        val lieu = LocaleHelper.applyLocale(ctx)
+        // Les mots se refont avec les valeurs lentes : un profil renommé apparaît dans les dix secondes.
+        val m = mots?.takeIf { motsLangue == code && !lent } ?: com.mg4.control.ui.AndroidRuleWords(lieu).also {
+            mots = it
+            motsLangue = code
+        }
+        val lecture = ClusterBlocks.Lecture(
+            trajet = com.mg4.control.model.ClusterInfo.Trip(
+                averageWhPerKm = trajet.averageWhPerKm(),
+                distanceKm = trajet.distanceKm,
+                consumedKwh = trajet.consumedKwh(),
+                regenWh = trajet.regenWh(),
+                powerKw = kwLisse,
+            ),
+            vitesseKmh = kmh,
+            profilNom = profil?.name,
+            // Couleur du mode du profil s'il règle la conduite, sinon celle de la voiture.
+            profilMode = profil?.takeIf { p -> p.appliesDrive }?.driveMode,
+            mode = mode,
+            signaux = signaux.toMap(),
+        )
+        return runCatching {
+            ClusterBlocks.build(lieu, d, lecture, ClusterModuleSettings.distanceUnit(ctx), m, langue(ctx))
+        }.getOrElse { e ->
+            AppLogger.w(TAG, "cases d'information illisibles : ${e.message}")
+            emptyList()
+        }
     }
 
     /** Langue choisie dans l'application (comme la vue) : le nom du profil s'écrit en capitales dans celle-ci. */

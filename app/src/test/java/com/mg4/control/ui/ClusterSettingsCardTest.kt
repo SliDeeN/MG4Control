@@ -43,9 +43,8 @@ class ClusterSettingsCardTest {
         listOf(R.id.btn_cluster_nav_none, R.id.btn_cluster_nav_consumption, R.id.btn_cluster_nav_power,
             R.id.btn_cluster_media_none, R.id.btn_cluster_media_consumption, R.id.btn_cluster_media_power,
             R.id.btn_cluster_style_dynamic, R.id.btn_cluster_style_discreet,
-            R.id.btn_cluster_pill_mode, R.id.btn_cluster_pill_profile, R.id.btn_cluster_pill_none,
+            R.id.btn_cluster_layout,
             R.id.btn_cluster_unit_wh, R.id.btn_cluster_unit_kwh,
-            R.id.btn_cluster_avg_wh, R.id.btn_cluster_avg_kwh, R.id.btn_cluster_avg_km,
             R.id.btn_cluster_preview_nav, R.id.btn_cluster_preview_media,
         ).forEach { assertNotNull(v.findViewById<MaterialButton>(it)) }
         assertNotNull(v.findViewById<FrameLayout>(R.id.frame_cluster_preview))
@@ -71,5 +70,81 @@ class ClusterSettingsCardTest {
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals(View.VISIBLE, v.findViewById<View>(R.id.tv_cluster_preview_none).visibility)
         apercu.arreter()
+    }
+
+    @Test
+    fun `la personnalisation avancee s ouvre, se regle et rend ce qu on enregistre`() {
+        val activite = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        activite.setTheme(R.style.Theme_MG4Control)
+        var recu: com.mg4.control.model.ClusterLayout? = null
+        val editeur = ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, pill = "mode"), null,
+            "Profil", ClusterTab.NAVIGATION) { d, _ -> recu = d }
+        editeur.ouvrir()
+        shadowOf(Looper.getMainLooper()).idle()
+        val fenetre = org.robolectric.shadows.ShadowDialog.getLatestDialog()
+        val panneau = fenetre.findViewById<android.widget.LinearLayout>(R.id.panel_cluster_layout)
+        assertTrue(panneau.childCount > 5)
+        fenetre.findViewById<View>(R.id.btn_cluster_layout_reset).performClick()
+        fenetre.findViewById<View>(R.id.btn_cluster_layout_save).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        // La disposition d'avant : la pastille du mode en Info 1.
+        assertEquals(com.mg4.control.model.RuleSignal.DRIVE_MODE.name,
+            com.mg4.control.model.ClusterLayouts.slots(recu!!)[0]?.info)
+    }
+
+    @Test
+    fun `gauge options follow the gauge chosen for the preview`() {
+        val activite = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        activite.setTheme(R.style.Theme_MG4Control)
+        ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, navigation = "consumption"), null,
+            "Profil", ClusterTab.NAVIGATION) { _, _ -> }.ouvrir()
+        shadowOf(Looper.getMainLooper()).idle()
+        val fenetre = org.robolectric.shadows.ShadowDialog.getLatestDialog()
+        fun tous(v: View, out: MutableList<View> = mutableListOf()): List<View> {
+            out += v; if (v is android.view.ViewGroup) for (i in 0 until v.childCount) tous(v.getChildAt(i), out); return out
+        }
+        fun textes() = tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>().map { it.text.toString() }
+        val moyenne = activite.getString(R.string.cluster_layout_average_cursor)
+        val kwDessous = activite.getString(R.string.cluster_layout_consumption_kw)
+        val consoDessous = activite.getString(R.string.cluster_layout_power_consumption)
+        val unite = activite.getString(R.string.cluster_layout_power_unit)
+        // Consommation : ses options, pas celles de la puissance ; l'unité seulement avec les kW dessous.
+        assertTrue(moyenne in textes() && kwDessous in textes())
+        assertTrue(consoDessous !in textes() && unite !in textes())
+        tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<android.widget.Switch>()
+            .first { it.text.toString() == kwDessous }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(unite in textes())
+        tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>()
+            .first { it.text.toString() == activite.getString(R.string.settings_cluster_power) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(consoDessous in textes() && unite in textes())
+        assertTrue(moyenne !in textes() && kwDessous !in textes())
+    }
+
+    @Test
+    fun `the window reopens on the gauge chosen last time`() {
+        val activite = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        activite.setTheme(R.style.Theme_MG4Control)
+        fun tous(v: View, out: MutableList<View> = mutableListOf()): List<View> {
+            out += v; if (v is android.view.ViewGroup) for (i in 0 until v.childCount) tous(v.getChildAt(i), out); return out
+        }
+        val champ = ClusterGaugeView::class.java.getDeclaredField("contenu").also { it.isAccessible = true }
+        fun ouvrir(): android.app.Dialog {
+            ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, navigation = "consumption"), null,
+                "Profil", ClusterTab.NAVIGATION) { _, _ -> }.ouvrir()
+            shadowOf(Looper.getMainLooper()).idle()
+            return org.robolectric.shadows.ShadowDialog.getLatestDialog()
+        }
+        fun module(f: android.app.Dialog) = (champ.get(tous(f.findViewById(R.id.frame_cluster_layout_preview))
+            .first { it is ClusterGaugeView }) as ClusterGaugeView.Contenu?)?.module
+        val premiere = ouvrir()
+        assertEquals(com.mg4.control.model.ClusterModule.CONSUMPTION, module(premiere))
+        tous(premiere.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>()
+            .first { it.text.toString() == activite.getString(R.string.settings_cluster_power) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        premiere.dismiss()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(com.mg4.control.model.ClusterModule.POWER, module(ouvrir()))
     }
 }

@@ -6,6 +6,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Switch
@@ -15,6 +16,9 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.model.BubbleIcon
+import com.mg4.control.model.BubbleInfo
+import com.mg4.control.model.BubbleLook
 import com.mg4.control.model.ClusterConfigs
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.FloatingButton
@@ -22,6 +26,7 @@ import com.mg4.control.model.FloatingButtons
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.FloatingButtonsOverlay
+import com.mg4.control.service.OverlayKit
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.util.FloatingButtonSettings
@@ -45,7 +50,16 @@ class FloatingButtonsPage {
     private var fragment: Fragment? = null
     private lateinit var racine: View
     private lateinit var actions: List<Pair<String, ShortcutAction>>
+    private var choisirApp: ((String?, (String, String) -> Unit) -> Unit)? = null
     private var choisi: String? = null
+    /** Couleur de la bulle modifiée, dans son panneau (2026-11-04). */
+    private var couleurBulle: CouleurRangee? = null
+    /** Le panneau d'édition, déplacé dans la carte de la bulle modifiée (issue #213), et sa place d'origine. */
+    private var panneau: View? = null
+    private var panneauParent: ViewGroup? = null
+    private var panneauRang = 0
+    /** Lignes de la liste, par bulle : repeintes sur place pendant l'édition. */
+    private val lignes = HashMap<String, View>()
     private var majTitre = false
 
     /** Profil dont la page règle les bulles ; `null` sans aucun profil (bulles communes). */
@@ -63,19 +77,32 @@ class FloatingButtonsPage {
 
     private val rafraichir = Runnable { fragment?.context?.let { FloatingButtonsOverlay.refresh(it) } }
 
-    /** [actions] : celles des raccourcis du volant, sans celles qui demandent un réglage à part. */
-    fun bind(f: Fragment, view: View, actions: List<Pair<String, ShortcutAction>>) {
+    /**
+     * [actions] : celles des raccourcis du volant, sans celles qui demandent un réglage à part ;
+     * [choisirApp] : la grille des applis, pour « Lancer une application » (2026-11-17).
+     */
+    fun bind(f: Fragment, view: View, actions: List<Pair<String, ShortcutAction>>,
+             choisirApp: (deja: String?, surChoix: (paquet: String, nom: String) -> Unit) -> Unit) {
         fragment = f
         racine = view
         this.actions = actions
+        this.choisirApp = choisirApp
         val ctx = f.requireContext()
         // Page encore cachée : les bulles lues et écrites sont celles du profil à l'écran.
         profilRegle = FloatingProfiles.target(ctx)?.id
         relibeller(ctx)
+        panneau = view.findViewById<View>(R.id.floating_edit).also { p ->
+            panneauParent = p.parent as? ViewGroup
+            panneauRang = panneauParent?.indexOfChild(p) ?: 0
+        }
+        // « Fermer » et « Bouton n » : remplacés par la ligne de la bulle elle-même (issue #213).
+        view.findViewById<View>(R.id.btn_floating_close).visibility = View.GONE
+        view.findViewById<View>(R.id.floating_edit_heading).visibility = View.GONE
 
         view.findViewById<Switch>(R.id.switch_floating).apply {
             isChecked = FloatingButtonSettings.isEnabled(ctx)
             setOnCheckedChangeListener { _, on ->
+                peindreEtat(on)
                 if (majInterrupteur) return@setOnCheckedChangeListener
                 FloatingButtonSettings.setEnabled(ctx, on)
                 FloatingButtonsOverlay.refresh(ctx)
@@ -94,11 +121,23 @@ class FloatingButtonsPage {
             Toast.makeText(ctx, R.string.floating_reset_done, Toast.LENGTH_SHORT).show()
         }
         view.findViewById<MaterialButton>(R.id.btn_floating_add).setOnClickListener { ajouter() }
+        // Couleur générale des bulles (2026-11-04) : pastilles, personnalisée, code, par défaut.
+        CouleurRangee(ctx, view.findViewById(R.id.floating_color_row), defaut = { com.mg4.control.model.BubbleColors.DEFAULT }) { c ->
+            FloatingButtonSettings.setDefaultColor(ctx, c)
+            FloatingButtonsOverlay.refresh(ctx)
+            majLignes()
+        }.peindre(if (FloatingButtonSettings.defaultColor(ctx) == com.mg4.control.model.BubbleColors.DEFAULT) null
+            else FloatingButtonSettings.defaultColor(ctx))
+        couleurBulle = CouleurRangee(ctx, view.findViewById(R.id.floating_edit_color),
+            defaut = { FloatingButtonSettings.defaultColor(ctx) }) { c ->
+            bouton(choisi)?.let { modifier(it.copy(color = c), repeindreChamps = false) }
+        }
         view.findViewById<MaterialButton>(R.id.btn_floating_copy).setOnClickListener { ouvrirCopie() }
         view.findViewById<MaterialButton>(R.id.btn_floating_copy_cancel).setOnClickListener { fermerCopie() }
         view.findViewById<MaterialButton>(R.id.btn_floating_copy_go).setOnClickListener { copier() }
         brancherEdition()
         construirePuces()
+        peindreEtat(FloatingButtonSettings.isEnabled(ctx))
         peindreListe()
     }
 
@@ -125,7 +164,14 @@ class FloatingButtonsPage {
         val listeLue = FloatingButtonSettings.buttons(ctx)
         // Un raccourci perso garde son nom à lui (renommé depuis : le nouveau).
         val relibelles = listeLue.map { b ->
-            val nom = if (b.action == ShortcutAction.CUSTOM.name) CustomShortcutSettings.get(ctx, b.customId)?.name else libelle(b.action)
+            val nom = when (b.action) {
+                ShortcutAction.CUSTOM.name -> CustomShortcutSettings.get(ctx, b.customId)?.name
+                ShortcutAction.RUN_RULE.name -> RuleChooser.nom(ctx, b.customId)
+                ShortcutAction.OPEN_CUSTOM_APP.name -> b.customId?.let { pkg ->
+                    runCatching { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrNull()
+                }
+                else -> libelle(b.action)
+            }
             nom?.let { b.copy(actionLabel = it) } ?: b
         }
         if (relibelles != listeLue) {
@@ -174,9 +220,23 @@ class FloatingButtonsPage {
     /** L'interrupteur et la liste du profil réglé. */
     private fun peindreProfil(ctx: Context) {
         majInterrupteur = true
-        racine.findViewById<Switch>(R.id.switch_floating).isChecked = FloatingButtonSettings.isEnabled(ctx)
+        val on = FloatingButtonSettings.isEnabled(ctx)
+        racine.findViewById<Switch>(R.id.switch_floating).isChecked = on
         majInterrupteur = false
+        peindreEtat(on)
         peindreListe()
+    }
+
+    /**
+     * Titre et phrase de l'interrupteur (maquette C du 2026-11-03) : nommé avec le profil réglé
+     * — l'interrupteur est le sien —, et ce que fait l'état en cours.
+     */
+    private fun peindreEtat(on: Boolean) {
+        val ctx = fragment?.context ?: return
+        val profil = profils.firstOrNull { it.id == profilRegle }
+        racine.findViewById<TextView>(R.id.floating_switch_title).text =
+            profil?.let { ctx.getString(R.string.floating_switch_title_profile, it.name) } ?: ctx.getString(R.string.floating_switch_title)
+        racine.findViewById<TextView>(R.id.floating_switch_desc).setText(if (on) R.string.floating_state_on else R.string.floating_state_off)
     }
 
     // ── Copie vers d'autres profils ──────────────────────────────────────────
@@ -254,8 +314,13 @@ class FloatingButtonsPage {
             annuler = ctx.getString(android.R.string.cancel),
             choisi = actions.indexOfFirst { it.second.name == actuelle }) { rang ->
             val (nom, action) = actions[rang]
-            if (action == ShortcutAction.CUSTOM) {
+            if (action == ShortcutAction.OPEN_CUSTOM_APP) {
+                // L'appli lancée : son paquet est gardé comme l'id d'un raccourci perso, son nom sert de titre.
+                choisirApp?.invoke(dejaPerso) { paquet, nomAppli -> surChoix(action, nomAppli, paquet) }
+            } else if (action == ShortcutAction.CUSTOM) {
                 CustomShortcutDialog.choisir(ctx, dejaPerso) { c -> surChoix(action, c.name, c.id) }
+            } else if (action == ShortcutAction.RUN_RULE) {
+                RuleChooser.choisir(ctx, dejaPerso) { r -> surChoix(action, r.name, r.id) }
             } else {
                 surChoix(action, nom, null)
             }
@@ -276,29 +341,87 @@ class FloatingButtonsPage {
         racine.findViewById<View>(R.id.floating_empty).visibility = if (liste.isEmpty()) View.VISIBLE else View.GONE
         racine.findViewById<View>(R.id.btn_floating_add).visibility =
             if (liste.size >= FloatingButtons.MAX) View.GONE else View.VISIBLE
+        rangerPanneau()
+        lignes.clear()
         val gonfleur = LayoutInflater.from(ctx)
         liste.forEach { b ->
             val ligne = gonfleur.inflate(R.layout.item_floating_button, boite, false)
-            val nom = b.actionLabel.ifEmpty { ctx.getString(R.string.floating_unknown_action) }
-            // Aperçu réduit : la taille de la liste, la vraie bulle étant dans l'édition.
-            FloatingButtonsOverlay.peindre(ligne.findViewById(R.id.floating_row_chip),
-                b.copy(size = 0, textSp = 14), FloatingButtons.title(b, nom), deplacement = false)
-            ligne.findViewById<TextView>(R.id.floating_row_info).text = ctx.getString(R.string.floating_summary, nom,
-                if (FloatingButtons.inTopBar(b)) ctx.getString(R.string.floating_loc_bar) else nomTaille(b.size),
-                FloatingButtons.textFor(b))
-            ligne.findViewById<View>(R.id.btn_floating_row_edit).setOnClickListener {
-                choisi = b.id
-                ouvrirEdition()
+            lignes[b.id] = ligne
+            peindreLigne(ctx, ligne, b)
+            val ouverte = b.id == choisi
+            ligne.findViewById<MaterialButton>(R.id.btn_floating_row_edit).apply {
+                setText(if (ouverte) R.string.floating_close else R.string.floating_edit)
+                setOnClickListener { if (ouverte) fermerEdition() else { choisi = b.id; ouvrirEdition() } }
             }
-            ligne.findViewById<View>(R.id.btn_floating_row_delete).setOnClickListener {
-                FloatingButtonSettings.remove(ctx, b.id)
-                if (choisi == b.id) fermerEdition()
-                FloatingButtonsOverlay.refresh(ctx)
-                peindreListe()
+            ligne.findViewById<View>(R.id.btn_floating_row_delete).apply {
+                visibility = if (ouverte) View.GONE else View.VISIBLE
+                setOnClickListener {
+                    FloatingButtonSettings.remove(ctx, b.id)
+                    FloatingButtonsOverlay.refresh(ctx)
+                    peindreListe()
+                }
             }
-            if (b.id == choisi) ligne.background = ctx.getDrawable(R.drawable.bg_card_rounded)
-            boite.addView(ligne)
+            if (!ouverte) { boite.addView(ligne); return@forEach }
+            // Bulle modifiée (issue #213) : sa ligne et le panneau d'édition dans une même carte,
+            // à sa place dans la liste — et non plus tout en bas de la page.
+            val carte = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                val marge = OverlayKit.dp(ctx, 6f)
+                setPadding(marge, marge, marge, marge)
+                OverlayKit.fond(this, ctx.getColor(R.color.dash_accent_dim), ctx.getColor(R.color.dash_accent),
+                    OverlayKit.dp(ctx, 2f), OverlayKit.dp(ctx, 16f).toFloat())
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT).also { it.topMargin = OverlayKit.dp(ctx, 8f) }
+            }
+            (ligne.layoutParams as? ViewGroup.MarginLayoutParams)?.topMargin = 0
+            carte.addView(ligne)
+            panneau?.let { p ->
+                (p.parent as? ViewGroup)?.removeView(p)
+                carte.addView(p)
+                p.visibility = View.VISIBLE
+            }
+            boite.addView(carte)
         }
+    }
+
+    /** L'aperçu de la bulle et sa ligne : le résumé, ou « Modifier « titre » » pour la bulle ouverte. */
+    private fun peindreLigne(ctx: Context, ligne: View, b: FloatingButton) {
+        val info = BubbleInfo.isInfo(b)
+        val nom = b.actionLabel.ifEmpty { ctx.getString(R.string.floating_unknown_action) }
+        val titre = FloatingButtons.title(b, if (info) nomInfo(b.info) else nom)
+        val puce = b.copy(size = 0, textSp = 14)
+        FloatingButtonsOverlay.peindre(ligne.findViewById(R.id.floating_row_chip), puce,
+            if (info) FloatingButtonsOverlay.texteInfo(ctx, puce, BubbleInfo.UNKNOWN) else titre, deplacement = false)
+        // Bulle d'information : « Information · action (ou affichage seul) » à la place du nom de l'action ;
+        // bulle-icône : « Icône · action ».
+        val quoi = when {
+            info -> listOf(ctx.getString(R.string.floating_content_info) + " : " + nomInfo(b.info),
+                if (BubbleInfo.tapRuns(b)) nom else ctx.getString(R.string.floating_tap_none_short)).joinToString(" · ")
+            BubbleIcon.isIcon(b) -> ctx.getString(R.string.floating_content_icon) + " · " + nom
+            else -> nom
+        }
+        ligne.findViewById<TextView>(R.id.floating_row_info).text =
+            if (b.id == choisi) ctx.getString(R.string.floating_edit_heading_name, titre)
+            else ctx.getString(R.string.floating_summary, quoi,
+                if (FloatingButtons.inTopBar(b)) ctx.getString(R.string.floating_loc_bar) else nomTaille(b.size),
+                FloatingButtons.textFor(b)) + (resumeApparence(ctx, b)?.let { " · $it" } ?: "")
+    }
+
+    /** Pendant l'édition, les lignes sont repeintes sur place : reconstruire la liste ferait perdre la saisie. */
+    private fun majLignes() {
+        val ctx = fragment?.context ?: return
+        FloatingButtonSettings.buttons(ctx).forEach { b -> lignes[b.id]?.let { peindreLigne(ctx, it, b) } }
+    }
+
+    /** Le panneau d'édition retourne, caché, à sa place d'origine (hors de la liste). */
+    private fun rangerPanneau() {
+        val p = panneau ?: return
+        val origine = panneauParent ?: return
+        if (p.parent !== origine) {
+            (p.parent as? ViewGroup)?.removeView(p)
+            origine.addView(p, panneauRang.coerceAtMost(origine.childCount))
+        }
+        p.visibility = View.GONE
     }
 
     private fun nomTaille(size: Int): String {
@@ -322,7 +445,9 @@ class FloatingButtonsPage {
             override fun afterTextChanged(s: Editable?) {
                 if (majTitre) return
                 val b = bouton(choisi) ?: return
-                modifier(b.copy(customTitle = FloatingButtons.customTitleFor(s?.toString().orEmpty(), b.actionLabel)),
+                // Bulle d'information : le titre est le libellé, par défaut le nom de la valeur.
+                val base = if (BubbleInfo.isInfo(b)) nomInfo(b.info) else b.actionLabel
+                modifier(b.copy(customTitle = FloatingButtons.customTitleFor(s?.toString().orEmpty(), base)),
                     repeindreChamps = false)
             }
         })
@@ -379,6 +504,230 @@ class FloatingButtonsPage {
             fermerEdition()
             peindreListe()
         }
+        brancherApparence()
+        brancherInfo()
+    }
+
+    // ── Bulle d'information (issue #236, 2026-11-10) ───────────────────────────
+
+    /** Nom d'une information : « Heure », ou le nom de la valeur dans les automatisations. */
+    private fun nomInfo(cle: String?): String {
+        val ctx = fragment?.context ?: return cle.orEmpty()
+        return BubbleInfo.signal(cle)?.let { AndroidRuleWords(ctx).signal(it) } ?: ctx.getString(R.string.floating_info_time)
+    }
+
+    /** Ce que la voiture sait lire : mêmes filtres que la liste des valeurs des automatisations. */
+    private fun infoLisible(s: com.mg4.control.model.RuleSignal): Boolean = InfoIcons.readable(s)
+
+    private fun choisirInfo(b: FloatingButton) {
+        val ctx = fragment?.context ?: return
+        val cles = BubbleInfo.choices(::infoLisible)
+        AppDialog.choisir(ctx, titre = ctx.getString(R.string.floating_info_pick_title),
+            choix = cles.map { AppDialog.Choix(nomInfo(it)) }, annuler = ctx.getString(R.string.profile_cancel),
+            choisi = cles.indexOf(b.info)) { rang ->
+            bouton(choisi)?.let { modifier(it.copy(info = cles[rang], iconContent = null,
+                icon = it.icon?.takeIf { i -> BubbleIcon.isIcon(it).not() && BubbleIcon.symbolName(i) != null })) }
+        }
+    }
+
+    private fun brancherInfo() {
+        racine.findViewById<View>(R.id.btn_floating_content_title).setOnClickListener {
+            bouton(choisi)?.takeIf { BubbleIcon.content(it) != BubbleIcon.Content.TITLE }
+                ?.let { modifier(it.copy(info = null, infoStyle = null, iconContent = null, iconTitle = null, icon = null)) }
+        }
+        // « Icône » (2026-11-17) : l'icône par défaut tout de suite (l'appli lancée, sinon un symbole).
+        racine.findViewById<View>(R.id.btn_floating_content_icon).setOnClickListener {
+            bouton(choisi)?.takeIf { !BubbleIcon.isIcon(it) }
+                ?.let { modifier(it.copy(info = null, infoStyle = null, iconContent = true, icon = null)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_icon_only).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(iconTitle = null)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_icon_title).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(iconTitle = true)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_icon_choose).setOnClickListener { bouton(choisi)?.let { choisirIcone(it) } }
+        racine.findViewById<View>(R.id.btn_floating_icon_default).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(icon = null)) }
+        }
+        // « Information » : la valeur se choisit tout de suite ; sans choix, la bulle reste un titre.
+        racine.findViewById<View>(R.id.btn_floating_content_info).setOnClickListener {
+            bouton(choisi)?.takeIf { !BubbleInfo.isInfo(it) }?.let { choisirInfo(it) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_info).setOnClickListener { bouton(choisi)?.let { choisirInfo(it) } }
+        listOf(R.id.btn_floating_style_value to BubbleInfo.STYLE_VALUE, R.id.btn_floating_style_label to BubbleInfo.STYLE_LABEL,
+            R.id.btn_floating_style_icon to BubbleInfo.STYLE_ICON).forEach { (id, style) ->
+            racine.findViewById<View>(id).setOnClickListener {
+                bouton(choisi)?.let { modifier(it.copy(infoStyle = style.takeIf { s -> s != BubbleInfo.STYLE_LABEL })) }
+            }
+        }
+        racine.findViewById<View>(R.id.btn_floating_tap_action).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(tapAction = null)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_tap_none).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(tapAction = false)) }
+        }
+    }
+
+    /** Choisir l'icône : « Récentes » = les icônes choisies pour les autres bulles du profil. */
+    private fun choisirIcone(b: FloatingButton) {
+        val ctx = fragment?.context ?: return
+        val recentes = FloatingButtonSettings.buttons(ctx).filter { it.id != b.id }.mapNotNull { it.icon }
+        BubbleIcons.choisir(ctx, b, BubbleIcon.resolve(b, BubbleIcons.apps(ctx, b)), recentes) { ref ->
+            bouton(choisi)?.let { modifier(it.copy(icon = ref)) }
+        }
+    }
+
+    private fun peindreInfo(b: FloatingButton) {
+        val info = BubbleInfo.isInfo(b)
+        val icone = BubbleIcon.isIcon(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_content_title), !info && !icone)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_content_info), info)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_content_icon), icone)
+        racine.findViewById<View>(R.id.row_floating_icon_style).visibility = if (icone) View.VISIBLE else View.GONE
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_icon_only), !BubbleIcon.showsTitle(b))
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_icon_title), icone && BubbleIcon.showsTitle(b))
+        peindreIcone(b)
+        racine.findViewById<View>(R.id.row_floating_info).visibility = if (info) View.VISIBLE else View.GONE
+        racine.findViewById<View>(R.id.row_floating_info_style).visibility = if (info) View.VISIBLE else View.GONE
+        if (info) racine.findViewById<MaterialButton>(R.id.btn_floating_info).text = nomInfo(b.info)
+        val style = BubbleInfo.style(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_style_value), style == BubbleInfo.STYLE_VALUE)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_style_label), style == BubbleInfo.STYLE_LABEL)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_style_icon), style == BubbleInfo.STYLE_ICON)
+        val agit = BubbleInfo.tapRuns(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_tap_action), agit)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_tap_none), !agit)
+        // Au toucher « Rien » : l'action ne sert à rien, sa ligne disparaît (elle est gardée).
+        racine.findViewById<View>(R.id.row_floating_action).visibility = if (agit) View.VISIBLE else View.GONE
+    }
+
+    /** Ligne « Icône » : l'icône montrée, Choisir… et Par défaut (si une autre a été choisie). */
+    private fun peindreIcone(b: FloatingButton) {
+        val ctx = fragment?.context ?: return
+        val montre = BubbleIcon.showsIcon(b)
+        racine.findViewById<View>(R.id.row_floating_icon).visibility = if (montre) View.VISIBLE else View.GONE
+        if (!montre) return
+        OverlayKit.fond(racine.findViewById(R.id.floating_icon_tile), ctx.getColor(R.color.dash_btn),
+            ctx.getColor(R.color.dash_border), AppDialog.dp(ctx, 1f), rayon = AppDialog.dp(ctx, 14f).toFloat())
+        val icone = BubbleIcons.forBubble(ctx, b)
+        racine.findViewById<android.widget.ImageView>(R.id.floating_icon_preview).apply {
+            setImageDrawable(icone?.drawable)
+            imageTintList = if (icone?.tint == true) ColorStateList.valueOf(ctx.getColor(R.color.text_primary)) else null
+        }
+        racine.findViewById<View>(R.id.btn_floating_icon_default).visibility = if (b.icon != null) View.VISIBLE else View.INVISIBLE
+    }
+
+    // ── Apparence (issue #230, 2026-11-09) ──────────────────────────────────────
+
+    private fun brancherApparence() {
+        racine.findViewById<Slider>(R.id.slider_floating_opacity).addOnChangeListener { _, valeur, parUtilisateur ->
+            if (!parUtilisateur) return@addOnChangeListener
+            bouton(choisi)?.let { modifier(it.copy(opacity = valeur.toInt()), repeindreChamps = false) }
+        }
+        listOf(R.id.btn_floating_fill_dark to BubbleLook.FILL_DARK, R.id.btn_floating_fill_tint to BubbleLook.FILL_TINT,
+            R.id.btn_floating_fill_light to BubbleLook.FILL_LIGHT, R.id.btn_floating_fill_black to BubbleLook.FILL_BLACK).forEach { (id, fond) ->
+            racine.findViewById<View>(id).setOnClickListener {
+                bouton(choisi)?.let { modifier(it.copy(fill = fond.takeIf { f -> f != BubbleLook.FILL_DARK }), repeindreChamps = false) }
+            }
+        }
+        // Largeur (issue #222) : automatique, ou fixe au curseur.
+        racine.findViewById<View>(R.id.btn_floating_width_auto).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(widthDp = null)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_width_fixed).setOnClickListener {
+            bouton(choisi)?.let { if (it.widthDp == null) modifier(it.copy(widthDp = BubbleLook.WIDTH_DEFAULT)) }
+        }
+        racine.findViewById<Slider>(R.id.slider_floating_width).addOnChangeListener { _, valeur, parUtilisateur ->
+            if (!parUtilisateur) return@addOnChangeListener
+            bouton(choisi)?.let { modifier(it.copy(widthDp = valeur.toInt()), repeindreChamps = false) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_border_on).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(border = null), repeindreChamps = false) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_border_off).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(border = false), repeindreChamps = false) }
+        }
+        racine.findViewById<Switch>(R.id.switch_floating_dim).setOnCheckedChangeListener { _, on ->
+            if (majTitre) return@setOnCheckedChangeListener
+            bouton(choisi)?.let { modifier(it.copy(dimIdle = if (on) true else null), repeindreChamps = false) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_look_copy).setOnClickListener { copierApparence() }
+        racine.findViewById<View>(R.id.btn_floating_look_all).setOnClickListener { appliquerATous() }
+    }
+
+    /** Les autres bulles, de ce profil d'abord puis des autres (nommés) : leurs quatre réglages recopiés. */
+    private fun copierApparence() {
+        val ctx = fragment?.context ?: return
+        val b = bouton(choisi) ?: return
+        val inconnue = ctx.getString(R.string.floating_unknown_action)
+        fun nom(o: FloatingButton) = FloatingButtons.title(o, o.actionLabel.ifEmpty { inconnue })
+        val ici = FloatingButtonSettings.buttons(ctx).filter { it.id != b.id }.map { nom(it) to it }
+        val ailleurs = profils.filter { it.id != profilRegle }.flatMap { p ->
+            FloatingProfiles.buttonsOf(p).map { ctx.getString(R.string.floating_look_from_profile_fmt, nom(it), p.name) to it }
+        }
+        val choix = ici + ailleurs
+        if (choix.isEmpty()) {
+            Toast.makeText(ctx, R.string.floating_look_copy_none, Toast.LENGTH_SHORT).show()
+            return
+        }
+        AppDialog.choisir(ctx, titre = ctx.getString(R.string.floating_look_copy_title),
+            choix = choix.map { AppDialog.Choix(it.first) }, annuler = ctx.getString(R.string.profile_cancel)) { rang ->
+            val source = choix[rang].second
+            modifier(BubbleLook.copy(source, b))
+            Toast.makeText(ctx, ctx.getString(R.string.floating_look_copied, nom(source)), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** L'apparence de la bulle ouverte, donnée à toutes les bulles du profil réglé. */
+    private fun appliquerATous() {
+        val ctx = fragment?.context ?: return
+        val b = bouton(choisi) ?: return
+        val liste = FloatingButtonSettings.buttons(ctx)
+        FloatingButtonSettings.save(ctx, liste.map { if (it.id == b.id) it else BubbleLook.copy(b, it) })
+        majLignes()
+        racine.removeCallbacks(rafraichir)
+        racine.postDelayed(rafraichir, RAFRAICHIR_MS)
+        Toast.makeText(ctx, ctx.getString(R.string.floating_look_applied, liste.size), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun peindreApparence(ctx: Context, b: FloatingButton, repeindreChamps: Boolean) {
+        if (repeindreChamps) {
+            majTitre = true
+            racine.findViewById<Switch>(R.id.switch_floating_dim).isChecked = BubbleLook.dims(b)
+            majTitre = false
+            racine.findViewById<Slider>(R.id.slider_floating_opacity).value =
+                (BubbleLook.opacity(b) / BubbleLook.OPACITY_STEP * BubbleLook.OPACITY_STEP).toFloat()
+        }
+        racine.findViewById<TextView>(R.id.tv_floating_opacity).text = ctx.getString(R.string.floating_opacity_value, BubbleLook.opacity(b))
+        val fond = BubbleLook.fill(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_dark), fond == BubbleLook.FILL_DARK)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_tint), fond == BubbleLook.FILL_TINT)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_light), fond == BubbleLook.FILL_LIGHT)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_black), fond == BubbleLook.FILL_BLACK)
+        val largeur = BubbleLook.width(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_width_auto), largeur == null)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_width_fixed), largeur != null)
+        racine.findViewById<View>(R.id.row_floating_width_value).visibility = if (largeur != null) View.VISIBLE else View.GONE
+        if (largeur != null) {
+            if (repeindreChamps) racine.findViewById<Slider>(R.id.slider_floating_width).value = largeur.toFloat()
+            racine.findViewById<TextView>(R.id.tv_floating_width).text = ctx.getString(R.string.floating_width_value, largeur)
+        }
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_border_on), BubbleLook.border(b))
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_border_off), !BubbleLook.border(b))
+    }
+
+    /** « 35 % · teinté · sans bordure · atténuée », seulement si la bulle n'a plus l'allure d'avant. */
+    private fun resumeApparence(ctx: Context, b: FloatingButton): String? {
+        if (b.opacity == null && b.fill == null && b.border == null && b.dimIdle == null && b.widthDp == null) return null
+        return BubbleLook.summary(b, { f ->
+            ctx.getString(when (f) {
+                BubbleLook.FILL_TINT -> R.string.floating_fill_tint
+                BubbleLook.FILL_LIGHT -> R.string.floating_fill_light
+                BubbleLook.FILL_BLACK -> R.string.floating_fill_black
+                else -> R.string.floating_fill_dark
+            }).lowercase()
+        }, ctx.getString(R.string.floating_look_no_border), ctx.getString(R.string.floating_look_dimmed))
     }
 
     /** Enregistre [b], repeint l'édition (les champs, sauf pendant la frappe), puis les bulles. */
@@ -386,35 +735,38 @@ class FloatingButtonsPage {
         val ctx = fragment?.context ?: return
         FloatingButtonSettings.update(ctx, b)
         peindreEdition(b, repeindreChamps)
-        peindreListe()
+        majLignes()
         racine.removeCallbacks(rafraichir)
         racine.postDelayed(rafraichir, RAFRAICHIR_MS)
     }
 
     private fun ouvrirEdition() {
         val b = bouton(choisi) ?: return
-        racine.findViewById<View>(R.id.floating_edit).visibility = View.VISIBLE
-        peindreEdition(b, true)
         peindreListe()
+        peindreEdition(b, true)
+        // La carte ouverte peut sortir de l'écran (bas de la liste, bulle ajoutée) : on l'y amène.
+        val carte = panneau?.parent as? View ?: return
+        carte.post { carte.requestRectangleOnScreen(android.graphics.Rect(0, 0, carte.width, carte.height), false) }
     }
 
     private fun fermerEdition() {
         choisi = null
-        racine.findViewById<View>(R.id.floating_edit).visibility = View.GONE
+        rangerPanneau()
         racine.removeCallbacks(rafraichir)
         fragment?.context?.let { FloatingButtonsOverlay.refresh(it) }
+        peindreListe()
     }
 
     private fun peindreEdition(b: FloatingButton, repeindreChamps: Boolean) {
         val ctx = fragment?.context ?: return
         val nom = b.actionLabel.ifEmpty { ctx.getString(R.string.floating_unknown_action) }
-        val rang = FloatingButtonSettings.buttons(ctx).indexOfFirst { it.id == b.id }
-        racine.findViewById<TextView>(R.id.floating_edit_heading).text = ctx.getString(R.string.floating_edit_heading, rang + 1)
         racine.findViewById<MaterialButton>(R.id.btn_floating_action).text = nom
         if (repeindreChamps) {
             majTitre = true
-            racine.findViewById<EditText>(R.id.edit_floating_title).setText(FloatingButtons.title(b, nom))
+            racine.findViewById<EditText>(R.id.edit_floating_title).setText(
+                FloatingButtons.title(b, if (BubbleInfo.isInfo(b)) nomInfo(b.info) else nom))
             racine.findViewById<Switch>(R.id.switch_floating_bold).isChecked = b.bold == true
+            couleurBulle?.peindre(b.color)
             majTitre = false
             racine.findViewById<Slider>(R.id.slider_floating_size).value = b.size.toFloat()
             // Dans la barre, 14 sp au plus : la valeur d'abord ramenée sous la nouvelle borne, sinon
@@ -443,6 +795,8 @@ class FloatingButtonsPage {
         }
         racine.findViewById<MaterialButton>(R.id.btn_floating_action).strokeColor =
             ColorStateList.valueOf(ctx.getColor(R.color.dash_border))
+        peindreApparence(ctx, b, repeindreChamps)
+        peindreInfo(b)
     }
 
     private companion object {

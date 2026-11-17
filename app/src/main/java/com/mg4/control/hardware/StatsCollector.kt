@@ -55,6 +55,10 @@ object StatsCollector {
     private val worker = Handler(thread.looper)
 
     private var store: StatsStore? = null
+    /** Pour lire le profil actif à chaque relevé (trajets découpés par profil, 2026-11-05). */
+    @Volatile private var appContext: Context? = null
+    /** Nom du dernier profil lu : relu seulement quand le profil change. */
+    private var profilLu: Pair<String, String?>? = null
     private var tracker: StatsTracker? = null
 
     @Volatile
@@ -74,7 +78,8 @@ object StatsCollector {
                 worker.removeCallbacks(powerTick)
                 // Départ : on repart de zéro. Arrivée : un dernier point AVANT le relevé qui clôt
                 // le trajet, puisque c'est lui qui consigne la comparaison.
-                if (ready) integrator.reset() else integrer()
+                if (ready) { integrator.reset(); vitesses.reset() } else integrer()
+                suivreAltitude(ready)
                 sample()
                 if (ready) worker.post(powerTick)
                 // La cadence dépend du contact : on la réarme tout de suite au lieu d'attendre
@@ -103,11 +108,17 @@ object StatsCollector {
      */
     private val integrator = PowerIntegrator()
 
+    /** Distance du trajet, vitesse lue chaque seconde sur le même tic (2026-11-05). */
+    private val vitesses = com.mg4.control.model.SpeedIntegrator()
+
     /** Le relevé, complété de l'énergie intégrée depuis le début du trajet quand il y en a une. */
     private fun avecIntegration(s: EnergySnapshot): EnergySnapshot {
         val r = integrator.result()
-        if (r.samples == 0) return s
-        return s.copy(tripConsumedKwh = r.consumedKwh, tripRegenKwh = r.regenKwh)
+        val v = vitesses.result()
+        var res = s
+        if (r.samples > 0) res = res.copy(tripConsumedKwh = r.consumedKwh, tripRegenKwh = r.regenKwh)
+        if (v.samples > 0) res = res.copy(tripDistanceKm = v.km)
+        return res
     }
 
     /**
@@ -132,7 +143,10 @@ object StatsCollector {
 
     /** Temps monotone : l'horloge du boîtier peut sauter, voire se réveiller en 2019. */
     private fun integrer() {
-        runCatching { integrator.add(SystemClock.elapsedRealtime(), EnergyReader.dischargeKw()) }
+        val t = SystemClock.elapsedRealtime()
+        runCatching { integrator.add(t, EnergyReader.dischargeKw()) }
+        // Déjà en km/h chez SAIC : voir MG4Hardware.getVehicleSpeedKmh().
+        runCatching { vitesses.add(t, MG4Hardware.getVehicleSpeedKmh()?.takeIf { it in 0f..300f }) }
     }
 
     fun startIfEnabled(context: Context) {
@@ -157,6 +171,7 @@ object StatsCollector {
 
     private fun start(context: Context) {
         val app = context.applicationContext
+        appContext = app
         worker.post {
             if (running) return@post
             running = true
@@ -190,6 +205,8 @@ object StatsCollector {
             worker.removeCallbacks(tick)
             worker.removeCallbacks(powerTick)
             integrator.reset()
+            vitesses.reset()
+            suivreAltitude(false)
             ReadyWatcher.remove(readyListener)
             tracker = null
             store = null
@@ -197,12 +214,81 @@ object StatsCollector {
         }
     }
 
+    /** Le profil actif et son nom, ajoutés au relevé : le trajet se découpe par profil ([com.mg4.control.model.TripSegments]). */
+    private fun avecProfil(s: com.mg4.control.model.EnergySnapshot): com.mg4.control.model.EnergySnapshot {
+        val ctx = appContext ?: return s
+        val id = runCatching { com.mg4.control.profile.ActiveProfile.id(ctx) }.getOrNull() ?: return s
+        val nom = profilLu?.takeIf { it.first == id }?.second
+            ?: runCatching { com.mg4.control.profile.ProfileManager(ctx).getAll().firstOrNull { it.id == id }?.name }.getOrNull()
+                .also { profilLu = id to it }
+        return s.copy(profileId = id, profileName = nom)
+    }
+
+    // ── Altitude GPS, pour le dénivelé de la courbe du trajet (2026-11-05) ─────────────────
+
+    /** Dernière altitude reçue et son instant (`elapsedRealtime`). */
+    @Volatile private var altitude: Pair<Long, Float>? = null
+    private var altitudeSuivie = false
+    /** Relevés du trajet avec et sans altitude : journalisés à l'arrivée. */
+    private var altitudesVues = 0
+    private var altitudesTotal = 0
+
+    /** Une altitude plus vieille ne décrit plus l'endroit où roule la voiture. */
+    private const val ALTITUDE_MAX_AGE_MS = 25_000L
+
+    private val ecouteAltitude = object : android.location.LocationListener {
+        override fun onLocationChanged(l: android.location.Location) {
+            if (l.hasAltitude() && !(l.latitude == 0.0 && l.longitude == 0.0))
+                altitude = SystemClock.elapsedRealtime() to l.altitude.toFloat()
+        }
+        @Deprecated("API 28") override fun onStatusChanged(p: String?, s: Int, b: android.os.Bundle?) {}
+        override fun onProviderEnabled(p: String) {}
+        override fun onProviderDisabled(p: String) {}
+    }
+
+    /**
+     * Position suivie seulement sous contact, sur `fused` (le GPS de la T-Box, voir
+     * [com.mg4.control.automation.RuleServices]) et `gps`, toutes les 5 s : le relevé prend la plus
+     * récente. Une demande refusée est seulement journalisée — la courbe se passe alors d'altitude.
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun suivreAltitude(on: Boolean) {
+        if (on == altitudeSuivie) return
+        val ctx = appContext ?: return
+        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager ?: return
+        altitudeSuivie = on
+        if (on) {
+            altitude = null
+            altitudesVues = 0
+            altitudesTotal = 0
+            for (p in listOf("fused", android.location.LocationManager.GPS_PROVIDER)) {
+                runCatching { lm.requestLocationUpdates(p, 5_000L, 0f, ecouteAltitude, thread.looper) }
+                    .onFailure { AppLogger.w(TAG, "altitude : suivi $p refusé — ${it.message}") }
+            }
+        } else {
+            runCatching { lm.removeUpdates(ecouteAltitude) }
+            if (altitudesTotal > 0) AppLogger.i(TAG, "altitude GPS : $altitudesVues/$altitudesTotal relevés du trajet")
+            altitude = null
+        }
+    }
+
+    private fun avecAltitude(s: EnergySnapshot): EnergySnapshot {
+        if (!altitudeSuivie) return s
+        altitudesTotal++
+        val (ms, alt) = altitude ?: return s
+        if (SystemClock.elapsedRealtime() - ms > ALTITUDE_MAX_AGE_MS) return s
+        altitudesVues++
+        return s.copy(altitudeM = alt)
+    }
+
     /** Un relevé, sur le fil du collecteur. Toute erreur reste sans conséquence : on réessaie. */
     private fun sample() {
         val s = store ?: return
         val t = tracker ?: return
+        // Application lancée voiture déjà en READY : aucun changement ne déclencherait le suivi.
+        suivreAltitude(ReadyWatcher.ready == true)
         runCatching {
-            val snapshot = avecIntegration(EnergyReader.read())
+            val snapshot = avecAltitude(avecProfil(avecIntegration(EnergyReader.read())))
             // Horloge d'usine au réveil : on n'écrit rien, surtout pas le point de comparaison —
             // daté de 2018, il ferait d'une charge de nuit une session de sept ans.
             if (!StatsTracker.clockPlausible(snapshot.timestampMs)) {
@@ -285,6 +371,11 @@ object StatsCollector {
     private fun comparer(s: StatsStore, trip: Trip) {
         val ligne = EnergyCheck(trip, integrator.result(), s.settings().effectiveCapacityKwh).line()
         integrator.reset()
+        // Contrôle de la distance à la seconde (2026-11-05) : à côté de l'ancienne méthode et de l'odomètre.
+        val v = vitesses.result()
+        AppLogger.i(TAG, "distance · à la seconde ${trip.integratedKm ?: "?"} km (${v.samples} vitesses, ${v.gaps} trou(s)) · " +
+            "à 10 s ${trip.distanceCheckKm ?: "?"} km · odomètre ${trip.distanceKm} km")
+        vitesses.reset()
         s.addEnergyCheck(ligne)
         AppLogger.i(TAG, "énergie · $ligne")
     }

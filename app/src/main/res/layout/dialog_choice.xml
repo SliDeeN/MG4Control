@@ -79,16 +79,41 @@
 
     </ScrollView>
 
-    <TextView
-        android:id="@+id/choice_cancel"
+    <!-- Retour (2026-11-02) : seulement dans une fenêtre à étapes, à partir de la deuxième (Assistant). -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_marginTop="14dp"
-        android:background="@drawable/bg_dialog_tile"
-        android:gravity="center"
-        android:textColor="@color/text_primary"
-        android:textSize="17sp"
-        android:textStyle="bold"
-        android:maxLines="1" />
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <TextView
+            android:id="@+id/choice_back"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:text="@string/dialog_back"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/choice_cancel"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+    </LinearLayout>
 
 </LinearLayout>

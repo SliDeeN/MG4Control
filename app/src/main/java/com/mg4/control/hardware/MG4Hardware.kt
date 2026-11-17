@@ -152,9 +152,12 @@ object MG4Hardware {
     // Volume média — ancien SDK (SWI133/68/165) : SmartSoundManager.getVolume/setVolume/getMaxVolume(type).
     // Même SDK systemsettings/BaseManager que GeneralManager (singleton sInstance + init(Context, listener)).
     private const val SMART_SOUND_MANAGER_CLASS = "com.saicmotor.sdk.systemsettings.SmartSoundManager"
-    // Public : le raccourci « luminosité - » doit clamper sur CE plancher pour que son log dise
-    // la vérité. Le redéfinir de son côté le ferait diverger le jour où cette valeur change.
-    const val BRIGHTNESS_MIN_PERCENT = 5   // plancher de sécurité : ne jamais éteindre l'écran
+    // Plancher de luminosité. Ancien SDK (SWI133/68/165) : 0, comme le système d'origine —
+    // GeneralManager.decreaseBrightnessMin() écrit 0 et l'écran reste allumé ; avec 5 % (natif 12),
+    // un écran baissé à la main sous 12 ne pouvait plus être atteint (« luminosité − » sans effet,
+    // forum SWI68 du 2026-11-06). A9 : 5 %, comportement du bas de plage jamais vérifié.
+    private const val BRIGHTNESS_MIN_PERCENT_OLD_SDK = 0
+    private const val BRIGHTNESS_MIN_PERCENT_A9 = 5
 
     // SWI69/SWI131 : accès via CarAdapterClient → queryClient(0x8) → CarVehicleSettingClient
     // Architecture réelle : CarAdapterClient se connecte à com.saicmotor.caradapter.CarAdapterService,
@@ -301,13 +304,28 @@ object MG4Hardware {
     }
 
     /**
-     * Lit l'état d'allumage courant via CarPropertyManager.
-     * Retourne -1 si CPM non prêt, 0 si propriété non supportée.
+     * État d'allumage courant ([CarIgnitionItem]).
+     *
+     * ⚠️ D'abord Katman5 (VehicleConditionManager), puis CarPropertyManager. Sur SWI133, la
+     * propriété CPM 0x11400409 rend **0** (non supportée — indiscernable d'OFF) même voiture en
+     * route, alors que Katman5 signale bien IGNITION_RUN : journaux du 2026-11-08/09, « allumage=0 »
+     * en permanence. La garde d'allumage de [setEsc] refusait donc TOUTE commande ESC.
+     * Retourne -1 si rien n'est lisible.
      */
     fun getCurrentIgnitionState(): Int {
+        sVcm?.let { vcm ->
+            val direct = runCatching { vcm.javaClass.getMethod("getVehicleIgnition").invoke(vcm) as? Int }.getOrNull()
+            if (direct != null && direct >= 0) return direct
+        }
+        if (sLastVcmIgnitionState >= 0) return sLastVcmIgnitionState
         val v0 = getIntPropertyCPM(PROP_IGNITION_STATE, 0)
         if (v0 > 0) return v0
-        return getIntPropertyCPM(PROP_IGNITION_STATE, AREA_GLOBAL)
+        val v1 = getIntPropertyCPM(PROP_IGNITION_STATE, AREA_GLOBAL)
+        if (v1 > 0) return v1
+        // Sans Katman5 (A9) et avec une propriété CPM muette : une voiture CONNUE en READY est
+        // forcément contact mis — 0 serait alors « non supportée », pas « éteinte ».
+        if (ReadyWatcher.ready == true) return CarIgnitionItem.RUN
+        return v1
     }
 
     /**
@@ -336,6 +354,9 @@ object MG4Hardware {
 
     /** Objet `Car` lié, pour obtenir un gestionnaire SAIC par son nom ([EnergyProbe]). */
     internal fun car(): Any? = sCar
+
+    /** Propriété entière en zone globale par le CarPropertyManager, -1 si illisible (Mes automatisations). */
+    internal fun readIntGlobal(propId: Int): Int = getIntPropertyCPM(propId, AREA_GLOBAL)
 
     /** Lecture VPM brute (SWI133), -1 si indisponible — pour [LightProbe]. */
     internal fun vpmIntForProbe(propId: Int): Int = getIntPropertyVpm(propId)
@@ -1029,6 +1050,13 @@ object MG4Hardware {
     /** Luminosité écran disponible : ancien SDK (133/68/165) ou A9 (132/131/69). */
     fun hasBrightnessControl(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
 
+    /**
+     * Plancher de luminosité en % pour ce firmware. Public : raccourcis, curseurs et automatisme
+     * clampent sur CETTE valeur — la redéfinir ailleurs la ferait diverger.
+     */
+    fun brightnessMinPercent(): Int =
+        if (isA9Brightness()) BRIGHTNESS_MIN_PERCENT_A9 else BRIGHTNESS_MIN_PERCENT_OLD_SDK
+
     /** Lit la luminosité écran en % (0–100), ou -1 si indisponible. */
     /**
      * [journal] faux : sans ligne dans le journal. La luminosité automatique relit l'écran chaque
@@ -1039,11 +1067,10 @@ object MG4Hardware {
         if (isA9Brightness()) getBrightnessA9() else getBrightnessOldSdk(journal)
 
     /**
-     * Règle la luminosité écran en % (0–100). Plancher de sécurité à BRIGHTNESS_MIN_PERCENT
-     * pour ne jamais éteindre l'écran.
+     * Règle la luminosité écran en % (0–100), jamais sous [brightnessMinPercent].
      */
     fun setScreenBrightnessPercent(pct: Int, journal: Boolean = true): Boolean {
-        val clamped = pct.coerceIn(BRIGHTNESS_MIN_PERCENT, 100)
+        val clamped = pct.coerceIn(brightnessMinPercent(), 100)
         return if (isA9Brightness()) setBrightnessA9(clamped, journal) else setBrightnessOldSdk(clamped, journal)
     }
 
@@ -1362,7 +1389,8 @@ object MG4Hardware {
             val types = args.map { if (it is Int) Int::class.javaPrimitiveType!! else it!!.javaClass }.toTypedArray()
             vsm.javaClass.getMethod(methodName, *types).invoke(vsm, *args)
         } catch (e: Exception) {
-            AppLogger.w(TAG, "  SWI68: $methodName() exc: ${e.message}")
+            val cause = e.cause ?: e
+            AppLogger.w(TAG, "  SWI68: $methodName(${args.joinToString()}) exc: ${cause.javaClass.simpleName} ${cause.message}")
             null
         }
     }
@@ -1382,7 +1410,10 @@ object MG4Hardware {
             vsm.javaClass.getMethod(methodName, *types).invoke(vsm, *args)
             true   // méthode trouvée et appelée sans exception → succès
         } catch (e: Exception) {
-            AppLogger.w(TAG, "  VSM: $methodName() exc: ${e.message}")
+            // La vraie cause est sous l'InvocationTargetException, dont le message est null
+            // (« exc: null » relevé sur SWI173 pour setLasWarningSound, 2026-11-03).
+            val cause = e.cause ?: e
+            AppLogger.w(TAG, "  VSM: $methodName(${args.joinToString()}) exc: ${cause.javaClass.simpleName} ${cause.message}")
             false
         }
     }
@@ -1827,7 +1858,12 @@ object MG4Hardware {
             data.writeInt(value)
             data.writeFloatArray(FloatArray(0))
             data.writeByteArray(ByteArray(0))
-            binder.transact(txCode, data, reply, 0)
+            // Transaction refusée (code inconnu, processus mort…) : réponse vide, ce n'est PAS un
+            // statut 0 (2026-11-14 — le repli Binder compte désormais dans le journal des automatisations).
+            if (!binder.transact(txCode, data, reply, 0)) {
+                AppLogger.w(TAG, "  Binder TX=$txCode value=$value → transaction refusée")
+                return false
+            }
             val status = if (reply.dataAvail() > 0) reply.readInt() else 0
             if (logEnabled) AppLogger.i(TAG, "  Binder TX=$txCode value=$value → status=$status ${if (status == 0) "✓" else "✗ REJECTED"}")
             status == 0
@@ -1908,8 +1944,10 @@ object MG4Hardware {
 
     fun setDriveMode(mode: DriveMode): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setDriveMode → ${mode.label} (${mode.value})")
-        val ok = setIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL, mode.value)
-        if (!ok) binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_DRIVE_MODE, mode.value)
+        // Résultat de la voie de repli rendu aussi (2026-11-14) : réussie par le Binder, l'écriture
+        // comptait en échec dans le journal des automatisations.
+        val ok = setIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL, mode.value) ||
+            binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_DRIVE_MODE, mode.value)
         sAppContext?.getSharedPreferences(PREFS_NAME, 0)?.edit()
             ?.putInt(KEY_LAST_DRIVE_MODE, mode.value)?.apply()
         return ok
@@ -2139,18 +2177,32 @@ object MG4Hardware {
     fun setRegenLevel(level: RegenLevel): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setRegenLevel → ${level.label} (${level.value})")
         return if (level == RegenLevel.ONE_PEDAL) {
-            val ok = setOnePedal(true)
-            if (!ok) {
-                setIntPropertyCPM(PROP_REGEN_LEVEL, AREA_GLOBAL, level.value)
-                binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_REGEN_LEVEL, level.value)
-            }
-            ok
+            if (setOnePedal(true)) return true
+            // Repli : les deux voies, comme avant ; réussi si l'une a réussi (2026-11-14).
+            val cpm = setIntPropertyCPM(PROP_REGEN_LEVEL, AREA_GLOBAL, level.value)
+            val binder = binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_REGEN_LEVEL, level.value)
+            cpm || binder
         } else {
             setOnePedal(false)
-            val ok = setIntPropertyCPM(PROP_REGEN_LEVEL, AREA_GLOBAL, level.value)
-            if (!ok) binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_REGEN_LEVEL, level.value)
-            ok
+            setIntPropertyCPM(PROP_REGEN_LEVEL, AREA_GLOBAL, level.value) ||
+                binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_REGEN_LEVEL, level.value)
         }
+    }
+
+    /**
+     * One Pedal actif ? (issue #226, 2026-11-08) Deux voies : le niveau de régénération à 6 (ce que
+     * SWI133 rend) OU la propriété One Pedal elle-même à 1 — celle où l'on écrit pour l'activer —
+     * pour un firmware qui ne passerait pas le niveau à 6. `null` si aucune n'est lisible.
+     */
+    fun isOnePedalOn(): Boolean? {
+        val niveau = getRegenLevel()
+        val propre = runCatching {
+            val cpm = sCarPropertyManager ?: return@runCatching null
+            cpm.javaClass.getMethod("getIntProperty", Int::class.java, Int::class.java)
+                .invoke(cpm, PROP_ONE_PEDAL, AREA_GLOBAL) as? Int
+        }.getOrNull()
+        if (niveau == null && propre == null) return null
+        return niveau == RegenLevel.ONE_PEDAL || propre == 1
     }
 
     fun setOnePedal(enabled: Boolean): Boolean {
@@ -2387,22 +2439,25 @@ object MG4Hardware {
     }
 
     /**
-     * SWI68/SWI165 : getLaneKeepingWarningSound()
-     * SWI69/SWI131/SWI132 : getLasWarningSound()   (confirmé dans smali SWI132)
-     * Valeurs : 2=ON / 1=OFF
+     * SWI68/SWI165 : getLaneKeepingWarningSound() — 2=ON / 1=OFF.
+     * A9 (SWI69/SWI131/SWI132, SWI173) : getLasWarningSound() — **1=ON / 0=OFF**.
+     *
+     * Encodage A9 corrigé le 2026-11-05 (issue #216) : l'appli d'origine des quatre firmwares
+     * (`EhMgPilotFragment.onLasSoundChanged`) coche l'interrupteur quand la valeur vaut 1, et
+     * envoie la case telle quelle (1/0). Avec l'ancien 2/1, « coupé » écrivait 1 = ACTIVÉ, l'état
+     * se lisait toujours coupé, et « activé » (2) levait une exception (vu sur SWI173).
      */
-    fun isSoundWarningOn(): Boolean {
-        val method = if (FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132)
-            "getLasWarningSound" else "getLaneKeepingWarningSound"
-        return ((callVsm(method) as? Int) ?: 1) == 2
-    }
+    private fun lasA9() = FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
 
-    /** SWI68 : setLaneKeepingWarningSound(I)   SWI69/SWI131/SWI132 : setLasWarningSound(I) — void */
+    fun isSoundWarningOn(): Boolean =
+        if (lasA9()) (callVsm("getLasWarningSound") as? Int) == 1
+        else ((callVsm("getLaneKeepingWarningSound") as? Int) ?: 1) == 2
+
+    /** SWI68/165 : setLaneKeepingWarningSound(2/1)   A9 : setLasWarningSound(1/0) — void */
     fun setSoundWarning(on: Boolean): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setSoundWarning → $on")
-        val method = if (FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132)
-            "setLasWarningSound" else "setLaneKeepingWarningSound"
-        return callVsmVoid(method, if (on) 2 else 1)
+        return if (lasA9()) callVsmVoid("setLasWarningSound", if (on) 1 else 0)
+        else callVsmVoid("setLaneKeepingWarningSound", if (on) 2 else 1)
     }
 
     // ── AEB — Système anti-collision avant ──────────────────────────────────
@@ -3327,8 +3382,13 @@ object MG4Hardware {
                         ?.apply()
                     AppLogger.i(TAG, "  TSR OFF — sauvegarde overspeed=$overspeedOn speedTone=$speedToneOn")
                 }
+                // Déjà actif : le firmware ne remet rien à ON, il n'y a rien à restaurer (2026-11-14 —
+                // un TSR réécrit à ON alors qu'il l'était remettait l'ancienne valeur sauvegardée
+                // par-dessus celle du profil : alerte de limitation rallumée).
+                val dejaActif = enabled && isTsrOn()
                 val ok = setIntPropertyVpmRecovery(PROP_TSR_MODE, if (enabled) 1 else 0)
-                if (enabled && ok) {
+                if (enabled && ok && dejaActif) AppLogger.i(TAG, "  TSR déjà actif — alertes laissées telles quelles")
+                if (enabled && ok && !dejaActif) {
                     Thread.sleep(400)
                     val savedOverspeed = prefs?.getBoolean("tsr_saved_overspeed", true) ?: true
                     val savedSpeedTone = prefs?.getBoolean("tsr_saved_speed_tone", true) ?: true
@@ -3913,6 +3973,22 @@ object MG4Hardware {
             }
         }
 
+        // Alertes de vitesse SWI133 (2026-11-14) : l'appli Réglages d'origine écrit l'une OU l'autre
+        // paire selon 0x1010027 (0 → 0x503005b/5c, sinon 0x503004e/4f), avec setIntPropertyRecovery.
+        // MG4Control n'écrit que 4e/4f : ce relevé dit laquelle suit l'écran de la voiture.
+        if (gen == FirmwareInfo.Gen.SWI133) {
+            sb.appendLine("── SWI133 alertes de vitesse (VPM, lecture seule) ──")
+            listOf(
+                "config 0x1010027 (choisit la paire)" to 0x1010027,
+                "TSR 0x5030049" to PROP_TSR_MODE,
+                "survitesse 0x503004e" to PROP_OVERSPEED_ALARM,
+                "limite changée 0x503004f" to PROP_SPEED_LIMIT_TONE,
+                "survitesse (autre) 0x503005b" to 0x503005b,
+                "limite changée (autre) 0x503005c" to 0x503005c,
+            ).forEach { (nom, id) -> sb.appendLine("$nom = ${getIntPropertyVpm(id)}") }
+            sb.appendLine()
+        }
+
         // Sonde lumière/position : relevés des derniers READY et des ouvertures du Diagnostic.
         LightProbe.reports.forEach {
             sb.appendLine(it)
@@ -4090,11 +4166,8 @@ object MG4Hardware {
             sb.appendLine()
         }
 
-        sb.appendLine("── AppLogger (${AppLogger.entries.size} entrées) ──")
-        AppLogger.entries.forEach { e ->
-            sb.appendLine("[${e.time}] ${e.tag}: ${e.msg}")
-        }
-
+        // Le journal n'est plus recopié ici (2026-11-12) : le diagnostic l'ajoutait une seconde
+        // fois à la suite, et 2000 lignes dans la fenêtre ralentiraient son affichage.
         return sb.toString()
     }
 
@@ -4360,6 +4433,7 @@ object MG4Hardware {
     @Volatile private var sAnyFrontOpenPrev = false
     /** Front d'ouverture d'une porte avant, pour les sons d'automatisation (issue #161) : l'une ou l'autre. */
     private val sFrontDoorListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
+    private val sFrontDoorCloseListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
     @Volatile private var sFrontOpenForListeners = false
     @Volatile private var sVolumeBeforeDrop = -1     // volume mémorisé à l'ouverture (pour restauration)
 
@@ -4831,7 +4905,7 @@ object MG4Hardware {
             reply.readInt()                            // fréquence
             val type = reply.readInt()
             val etat = reply.readInt()
-            AppLogger.i(MEDIA_TAG, "radio : type=$type état=$etat (1 = en lecture)")
+            journalMedia("radio : type=$type état=$etat (1 = en lecture)")
             InfoRadio(type, etat == 1)
         } catch (e: Exception) {
             AppLogger.w(MEDIA_TAG, "état radio illisible : ${(e.cause ?: e).message}")
@@ -4850,7 +4924,7 @@ object MG4Hardware {
         val v = mediaLireInt(ACT_STATUS, DESC_STATUS, 0x9) ?: return -1   // getCurrentMediaSource
         if (v != sSourceCouranteLoguee) {
             sSourceCouranteLoguee = v
-            AppLogger.i(MEDIA_TAG, "source courante = $v (${nomSource(v)})")
+            journalMedia("source courante = $v (${nomSource(v)})")
         }
         return v
     }
@@ -4874,7 +4948,7 @@ object MG4Hardware {
             else -> null
         }
         if (reel != null) {
-            AppLogger.i(MEDIA_TAG, "état de lecture (source ${nomSource(source)}) = $reel")
+            journalMedia("état de lecture (source ${nomSource(source)}) = $reel")
             return reel
         }
         // Les sessions AVANT isMusicActive : elles disent un état réel, lui reste vrai
@@ -4883,16 +4957,43 @@ object MG4Hardware {
         // gardait le drapeau trompeur, et une pause suivie d une reprise renvoyait une pause.
         val parSession = sessionJoue()
         if (parSession != null) {
-            AppLogger.i(MEDIA_TAG, "état non exposé par ${nomSource(source)} — sessions = $parSession")
+            journalMedia("état non exposé par ${nomSource(source)} — sessions = $parSession")
             return parSession
         }
         val repli = musiqueEnCours()
-        AppLogger.i(MEDIA_TAG, "état non exposé par ${nomSource(source)} et sessions muettes — " +
+        journalMedia("état non exposé par ${nomSource(source)} et sessions muettes — " +
             "repli isMusicActive = $repli")
         return repli
     }
 
     /** Vrai si quelque chose joue — sert à choisir entre `play` et `pause`. */
+    /**
+     * Un média joue-t-il ? Pour la valeur « Média en cours » des automatisations, des bulles et de
+     * l'écran conducteur (2026-11-12) : `isMusicActive` restait faux avec le lecteur de la voiture,
+     * la valeur affichait toujours OFF. Même lecture que la pause en quittant (issue #235), sans
+     * journal — elle est relue toutes les 5 s. Sur le fil principal, la liaison au service média
+     * pourrait attendre : la dernière valeur lue, à défaut les sessions.
+     */
+    fun isMediaPlaying(): Boolean? {
+        if (Looper.myLooper() == Looper.getMainLooper()) return sDernierMediaJoue ?: sessionJoue() ?: musiqueEnCours()
+        sMediaSilencieux.set(true)
+        return try {
+            mediaJoue().also { sDernierMediaJoue = it }
+        } catch (e: Exception) {
+            null
+        } finally {
+            sMediaSilencieux.set(false)
+        }
+    }
+
+    @Volatile private var sDernierMediaJoue: Boolean? = null
+    /** Vrai pendant [isMediaPlaying] : l'état de lecture se relit sans remplir le journal. */
+    private val sMediaSilencieux = ThreadLocal<Boolean>()
+
+    private fun journalMedia(message: String) {
+        if (sMediaSilencieux.get() != true) AppLogger.i(MEDIA_TAG, message)
+    }
+
     private fun musiqueEnCours(): Boolean =
         (sAppContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.isMusicActive == true
 
@@ -5227,13 +5328,13 @@ object MG4Hardware {
                 // L'état n'est lu que si la commande en dépend : inutile d'imposer une lecture
                 // binder à « piste suivante », qui n'en a que faire.
                 val joue = cmd == CmdMedia.LECTURE_PAUSE && enLecture(cible)
-                // SWI133 par le SDK SAIC, tous les autres par le service allgo. Les deux voies
-                // sont exclusives selon le firmware : celle qui est absente échoue sans effet.
-                mediaTransact(ACT_CPAA, DESC_CPAA, when (cmd) {
-                    CmdMedia.SUIVANT -> 4
-                    CmdMedia.PRECEDENT -> 3
-                    CmdMedia.LECTURE_PAUSE -> if (joue) 2 else 1
-                }) || ruiMedia(cmd, joue)
+                // Lecture / pause : le service allgo D'ABORD (issue #235, 2026-11-09). Sur SWI133,
+                // la voie SAIC accepte la commande sans qu'Android Auto obéisse, alors qu'allgo
+                // — installé là aussi — agit tout de suite : la passer en premier supprime ~0,8 s
+                // d'attente vérifiée. Ailleurs (SWI68, 165, A9) allgo était déjà la seule voie.
+                // Pistes suivante / précédente : inchangées, la voie SAIC d'abord sur SWI133.
+                if (cmd == CmdMedia.LECTURE_PAUSE) ruiMedia(cmd, joue) || mediaTransact(ACT_CPAA, DESC_CPAA, if (joue) 2 else 1)
+                else mediaTransact(ACT_CPAA, DESC_CPAA, if (cmd == CmdMedia.SUIVANT) 4 else 3) || ruiMedia(cmd, joue)
             }
 
             else -> {
@@ -5255,7 +5356,11 @@ object MG4Hardware {
 
     fun mediaPrevious(): Boolean = commandeMedia(CmdMedia.PRECEDENT)
 
-    fun mediaPlayPause(): Boolean = commandeMedia(CmdMedia.LECTURE_PAUSE)
+    /** Bascule du raccourci : même vérification que la pause en quittant (issue #235). */
+    fun mediaPlayPause(): Boolean {
+        val joue = mediaJoue()
+        return verifierOuSecourir(pause = joue, commandeMedia(CmdMedia.LECTURE_PAUSE))
+    }
 
     /**
      * Un média joue-t-il ? Même lecture que la bascule Lecture/Pause : la source déclarée par le
@@ -5283,7 +5388,7 @@ object MG4Hardware {
             AppLogger.i(MEDIA_TAG, "pause demandée : rien ne joue — aucune action")
             return false
         }
-        return commandeMedia(CmdMedia.LECTURE_PAUSE)
+        return commandeMedia(CmdMedia.LECTURE_PAUSE).let { envoyee -> verifierOuSecourir(pause = true, envoyee) }
     }
 
     /**
@@ -5295,7 +5400,76 @@ object MG4Hardware {
             AppLogger.i(MEDIA_TAG, "reprise demandée : un média joue déjà — aucune action")
             return false
         }
-        return commandeMedia(CmdMedia.LECTURE_PAUSE)
+        return commandeMedia(CmdMedia.LECTURE_PAUSE).let { envoyee -> verifierOuSecourir(pause = false, envoyee) }
+    }
+
+    // ── Pause / reprise VÉRIFIÉES (issue #235, 2026-11-09) ───────────────────────
+    //
+    // Sur SWI133, Android Auto par `CPAA_PLAYER_ACTION` : la commande est ACCEPTÉE (tx 2 → true)
+    // mais rien ne s'arrête — l'état relu reste « en lecture » (journaux du 2026-11-09). Le code
+    // tenait l'envoi pour un succès et n'essayait rien d'autre. Désormais l'état est relu après
+    // chaque voie ; s'il n'a pas changé, on passe à la suivante. Toutes sont des commandes
+    // EXPLICITES (pause, lecture), jamais des bascules : une voie de trop ne peut rien inverser.
+
+    /** Le temps qu'une source suive avant qu'on relise son état. */
+    private const val VERIF_MEDIA_MS = 800L
+
+    /** Paquet de la dernière session mise en pause par [secoursMedia] : c'est elle qu'on relance. */
+    @Volatile private var sSessionEnPause: String? = null
+
+    /** La session de la projection qui, elle, n'honore rien (mesuré SWI132) : jamais utilisée. */
+    private const val SESSION_PROJECTION_MUETTE = "com.allgo.remoteui.mediabrowserservice"
+
+    private fun etatVoulu(pause: Boolean): Boolean {
+        Thread.sleep(VERIF_MEDIA_MS)
+        return mediaJoue() != pause
+    }
+
+    private fun verifierOuSecourir(pause: Boolean, envoyee: Boolean): Boolean {
+        if (envoyee && etatVoulu(pause)) return true
+        AppLogger.w(MEDIA_TAG, "${if (pause) "pause" else "reprise"} ${if (envoyee) "envoyée mais sans effet constaté" else "non envoyée"} " +
+            "— voies de secours")
+        return secoursMedia(pause)
+    }
+
+    /**
+     * Voies de secours, chacune vérifiée : (1) le service allgo de la projection, (2) la session
+     * média qui joue (pause) ou celle qu'on a mise en pause (reprise) — sauf la session muette de
+     * la projection —, (3) la touche média d'Android, qui atteint la session active (Android Auto,
+     * DiAuto…). Rend vrai dès que l'état voulu est constaté.
+     */
+    private fun secoursMedia(pause: Boolean): Boolean {
+        val src = mediaSourceCourante()
+        if (src == SRC_AA || src == SRC_CARPLAY) {
+            val ok = ruiEnvoyer(if (pause) RUI_PAUSE else RUI_PLAY)
+            AppLogger.i(MEDIA_TAG, "secours 1 : service allgo ${if (pause) "pause" else "lecture"} → $ok")
+            if (ok && etatVoulu(pause)) return true
+        }
+        val parSession = runCatching {
+            val msm = sAppContext?.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+            val sessions = msm?.getActiveSessions(null).orEmpty().filter { it.packageName != SESSION_PROJECTION_MUETTE }
+            val cible = if (pause) sessions.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+                else sessions.firstOrNull { it.packageName == sSessionEnPause }
+            if (cible == null) false else {
+                if (pause) { cible.transportControls.pause(); sSessionEnPause = cible.packageName }
+                else cible.transportControls.play()
+                AppLogger.i(MEDIA_TAG, "secours 2 : session ${cible.packageName} ${if (pause) "pause" else "lecture"}")
+                true
+            }
+        }.getOrDefault(false)
+        if (parSession && etatVoulu(pause)) return true
+        val audio = sAppContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val touche = if (pause) KeyEvent.KEYCODE_MEDIA_PAUSE else KeyEvent.KEYCODE_MEDIA_PLAY
+        val parTouche = runCatching {
+            audio?.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, touche))
+            audio?.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, touche))
+            audio != null
+        }.getOrDefault(false)
+        AppLogger.i(MEDIA_TAG, "secours 3 : touche média ${KeyEvent.keyCodeToString(touche)} → $parTouche")
+        if (parTouche && etatVoulu(pause)) return true
+        AppLogger.w(MEDIA_TAG, "${if (pause) "pause" else "reprise"} : aucune voie n'a pris effet " +
+            "(source ${nomSource(src)})")
+        return false
     }
 
     /**
@@ -6027,6 +6201,9 @@ object MG4Hardware {
     // ── Climatisation ─────────────────────────────────────────────────────────
     private const val CLIM_TAG = "MG4_CLIM"
 
+    /** Pause avant la relecture finale de l'A/C d'un profil ([applyProfileClimate]). */
+    private const val AC_RECHECK_MS = 800L
+
     // ── Voie A9 (SWI69/131/132) : carapi CarHvacClient via queryClient(0x7) ──────
     // Le SDK vehiclesettings est ABSENT sur A9 ; la clim passe par l'adaptateur carapi,
     // exactement comme le power-off (queryClient(0xf)) déjà en place.
@@ -6401,11 +6578,42 @@ object MG4Hardware {
             acCall(if (on) "openHvacPower" else "closeHvacPower").also { climLog("power=$on", it) }
 
     /** Consigne : Int sur old-SDK, **Float** sur A9 (setDriverTemperature(F)). */
-    fun setClimateTemp(celsius: Int): Boolean =
-        if (isClimateA9())
+    fun setClimateTemp(celsius: Int): Boolean {
+        // Issue #208 : la voiture rallume l'A/C quand la consigne change. Option active : l'état
+        // est lu AVANT l'écriture, pour savoir si l'A/C était coupé ([AcKeepOff]).
+        if (com.mg4.control.automation.AcKeepOff.isOn(sAppContext))
+            com.mg4.control.automation.AcKeepOff.avantConsigne(etatAc())
+        return if (isClimateA9())
             a9Set("setDriverTemperature", celsius.toFloat()).also { climLog("A9 temp=$celsius", it) }
         else
             acSet("setDrvTemp", celsius).also { climLog("temp=$celsius", it) }
+    }
+
+    /** Marche, A/C, AUTO et dégivrage avant, lus en quatre appels ([AcKeepOff]) ; null si la clim est injoignable. */
+    data class EtatAc(val power: Boolean?, val ac: Boolean?, val auto: Boolean?, val degivrage: Boolean?)
+
+    fun etatAc(): EtatAc? = try {
+        if (isClimateA9()) {
+            if (hvacA9() == null) null
+            else EtatAc(a9Get("getHvacPowerStatus") as? Boolean, a9Get("getACStatus") as? Boolean,
+                a9Get("getAutoStatus") as? Boolean, a9Get("getFrontDefrostStatus") as? Boolean)
+        } else {
+            if (sAirCondition == null) null
+            else EtatAc(acInt("getHvacPowerStatus")?.takeIf { it >= 0 }?.let { it == 1 },
+                acInt("getAcSwitch")?.takeIf { it >= 0 }?.let { it == 1 },
+                acInt("getAutoStatus")?.takeIf { it >= 0 }?.let { it == 1 },
+                acInt("getFrontWindowDefroster")?.takeIf { it >= 0 }?.let { it == 1 })
+        }
+    } catch (_: Exception) { null }
+
+    /** Consigne de température lue sur la voiture, en °C entiers ; null si illisible. */
+    fun consigneLue(): Int? = try {
+        if (isClimateA9()) (a9Get("getDriverTemperature") as? Float)?.takeIf { !it.isNaN() && it > 0f }?.let { Math.round(it) }
+        else acInt("getDrvTemp")?.takeIf { it > 0 }
+    } catch (_: Exception) { null }
+
+    /** Un seul appelant à la fois sur l'A/C : deux séries d'appuis entremêlées se fausseraient. */
+    private val sAcLock = Any()
 
     /**
      * Écrire un niveau fait aussi SORTIR du mode AUTO (voir [setClimateAuto]) : le sens de l'air et
@@ -6457,13 +6665,15 @@ object MG4Hardware {
      * sur véhicule ; envoyer `setAcStatus(0)` restait sans effet, ce qui trahit un argument
      * ignoré. On avance donc jusqu'à l'état voulu. Deux états ⇒ une bascule suffit.
      */
-    fun setClimateAc(on: Boolean): Boolean =
+    fun setClimateAc(on: Boolean): Boolean = synchronized(sAcLock) {
+        com.mg4.control.automation.AcKeepOff.noteEcriture()
         if (isClimateA9())
             a9CycleTo("ac", "getACStatus", if (on) 1 else 0, 2, "switchACStatus")
         else
             hvacCycleTo("ac", PROP_HVAC_AC_ON, if (on) 1 else 0, maxSteps = 2) {
                 acSet("setAcStatus", 1)
             }
+    }
 
     /**
      * Mode ECO de la clim (2026-10-23) : la clim limite sa puissance pour ménager la batterie.
@@ -6819,6 +7029,13 @@ object MG4Hardware {
         // lunette arrière non cochée = dégivrage arrière ÉTEINT.
         ok = airEtRecirculation(state, autoMode, airFlow, loopMode, "Profil") && ok
 
+        // A/C relu et remis EN DERNIER (testeur SWI173, 2026-11-03) : coupé et relu à 0 en début
+        // de bloc, il était revenu à ON au profil suivant — quitter AUTO par la ventilation, la
+        // recirculation ou ECO peut le rallumer. Une pause d'abord, le temps que la voiture ait
+        // fini de réagir aux réglages précédents ; s'il est déjà bon, aucun appui.
+        try { Thread.sleep(AC_RECHECK_MS) } catch (_: InterruptedException) {}
+        ok = setClimateAc(ac) && ok
+
         AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
             (if (autoMode) "ventilation=AUTO débit=${autoVolume?.let { AutoVolume.label(it) } ?: "inchangé"}"
              else "vent=$fanLevel") +
@@ -6998,6 +7215,8 @@ object MG4Hardware {
         // Sons d'automatisation : une porte avant vient de s'ouvrir, quelle que soit la baisse du volume.
         val ouverte = DOOR_FRONT_AREAS.any { sDoorReadLast[it] == 1 }
         if (ouverte && !sFrontOpenForListeners) sFrontDoorListeners.forEach { runCatching { it() } }
+        // Mes automatisations (2026-11-06) : les portes avant viennent toutes de se refermer.
+        if (!ouverte && sFrontOpenForListeners) sFrontDoorCloseListeners.forEach { runCatching { it() } }
         sFrontOpenForListeners = ouverte
         evaluateDoorTrigger()
     }
@@ -7014,6 +7233,28 @@ object MG4Hardware {
 
     fun removeFrontDoorOpenListener(listener: () -> Unit) {
         sFrontDoorListeners.remove(listener)
+    }
+
+    /**
+     * Une porte avant est-elle ouverte ? (Mes automatisations, 2026-11-06.) `null` là où la porte
+     * n'est pas lisible ou si aucune lecture ne répond. Ouvre la connexion à la voiture au besoin.
+     */
+    fun isFrontDoorOpen(): Boolean? {
+        if (!hasDoorDetection()) return null
+        connectCarProperty()   // idempotent
+        val lus = DOOR_FRONT_AREAS.toList().mapNotNull { readDoorOpen(it) }
+        return if (lus.isEmpty()) null else lus.any { it == 1 }
+    }
+
+    /** Prévient [listener] quand les portes avant sont toutes refermées (après une ouverture). */
+    fun addFrontDoorCloseListener(listener: () -> Unit) {
+        if (!hasDoorDetection()) return
+        sFrontDoorCloseListeners.addIfAbsent(listener)
+        connectCarProperty()   // idempotent
+    }
+
+    fun removeFrontDoorCloseListener(listener: () -> Unit) {
+        sFrontDoorCloseListeners.remove(listener)
     }
 
     /** Recalcule "au moins une porte choisie ouverte" à partir de l'état accumulé et applique

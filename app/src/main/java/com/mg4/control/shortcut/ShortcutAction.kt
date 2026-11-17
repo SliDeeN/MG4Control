@@ -102,7 +102,17 @@ enum class ShortcutAction(val id: Int) {
 
     // Paramètres Android (2026-10-31, repris du fork sensoyg) : ouvre l'écran des paramètres
     // d'Android, que le launcher SAIC ne propose pas. Voir AndroidSettings. N'écrit rien.
-    ANDROID_SETTINGS(50);
+    ANDROID_SETTINGS(50),
+
+    // Mes automatisations (étape 3, 2026-11-02) : lance l'automatisation choisie pour l'emplacement
+    // (`shortcut_<slot>_rule_id`, ou FloatingButton.customId) ; ses conditions s'appliquent.
+    RUN_RULE(51),
+    // Cycle des modes de conduite (issue #207) : seulement les modes choisis, dans l'ordre choisi
+    // (voir DriveModeCycle). Utilisable en roulant, comme le bouton de la voiture.
+    DRIVE_MODE_CYCLE(52),
+    // Pop-up Réglages rapides (issue #197) : les tuiles choisies dans Raccourcis › Réglages rapides
+    // (voir QuickSettingsOverlay). Un second appui le referme.
+    QUICK_SETTINGS(53);
 
     companion object {
         /**
