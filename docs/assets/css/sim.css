@@ -1609,3 +1609,15 @@
 .ri-txt b { display: block; font-weight: 500; }
 .ri-txt span { display: block; font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
 .ri-row .mw-b { flex: 0 0 auto; }
+
+/* Bulle-icône (2026-11-17) : aperçu dans l'éditeur et fenêtre de choix. */
+.fl-icoprev { flex: 0 0 56px; height: 56px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); display: flex; align-items: center; justify-content: center; color: var(--text-primary); font-size: 26px; }
+.a-fl .fl-sym { flex: none; }
+.mw-icwrap { display: flex; gap: 16px; margin-top: 14px; height: 400px; }
+.mw-iccats { flex: 0 0 260px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.mw-iccat { height: 52px; padding: 0 14px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-primary); font-size: calc(17px * var(--ts, 1)); text-align: left; }
+.mw-iccat small { color: var(--text-secondary); font-size: 14px; }
+.mw-iccat.on { background: var(--dash-accent-dim); color: var(--dash-accent); }
+.mw-icgrid { flex: 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-auto-rows: 64px; gap: 10px; align-content: start; overflow-y: auto; scrollbar-width: thin; }
+.mw-ic { border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
+.mw-ic.on { background: var(--dash-accent-dim); border: 2px solid var(--dash-accent); color: var(--dash-accent); }
