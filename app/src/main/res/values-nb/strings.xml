@@ -1201,6 +1201,13 @@
     <string name="floating_tap_action">Kjør handlingen</string>
     <string name="floating_tap_none">Ingenting</string>
     <string name="floating_tap_none_short">bare visning</string>
+    <string name="floating_content_icon">Ikon</string>
+    <string name="floating_field_icon">Ikon</string>
+    <string name="floating_icon_only">Bare ikon</string>
+    <string name="floating_icon_with_title">Ikon + tittel</string>
+    <string name="floating_icon_pick_title">Velg et ikon</string>
+    <string name="floating_icon_cat_app">App</string>
+    <string name="floating_icon_cat_misc">Diverse</string>
     <string name="color_default">Standard</string>
     <string name="color_custom">Egendefinert…</string>
     <string name="color_code">Kode</string>

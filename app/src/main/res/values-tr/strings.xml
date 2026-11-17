@@ -1200,6 +1200,13 @@
     <string name="floating_tap_action">Eylemi çalıştır</string>
     <string name="floating_tap_none">Hiçbir şey</string>
     <string name="floating_tap_none_short">yalnızca gösterim</string>
+    <string name="floating_content_icon">Simge</string>
+    <string name="floating_field_icon">Simge</string>
+    <string name="floating_icon_only">Yalnızca simge</string>
+    <string name="floating_icon_with_title">Simge + başlık</string>
+    <string name="floating_icon_pick_title">Bir simge seçin</string>
+    <string name="floating_icon_cat_app">Uygulama</string>
+    <string name="floating_icon_cat_misc">Diğer</string>
     <string name="color_default">Varsayılan</string>
     <string name="color_custom">Özel…</string>
     <string name="color_code">Kod</string>

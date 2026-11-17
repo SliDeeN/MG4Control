@@ -1200,6 +1200,13 @@
     <string name="floating_tap_action">Executar a ação</string>
     <string name="floating_tap_none">Nada</string>
     <string name="floating_tap_none_short">só apresentação</string>
+    <string name="floating_content_icon">Ícone</string>
+    <string name="floating_field_icon">Ícone</string>
+    <string name="floating_icon_only">Só ícone</string>
+    <string name="floating_icon_with_title">Ícone + título</string>
+    <string name="floating_icon_pick_title">Escolher um ícone</string>
+    <string name="floating_icon_cat_app">App</string>
+    <string name="floating_icon_cat_misc">Diversos</string>
     <string name="color_default">Predefinido</string>
     <string name="color_custom">Personalizada…</string>
     <string name="color_code">Código</string>

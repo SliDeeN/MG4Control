@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.model.BubbleIcon
 import com.mg4.control.model.BubbleInfo
 import com.mg4.control.model.BubbleLook
 import com.mg4.control.model.ClusterConfigs
@@ -379,9 +380,14 @@ class FloatingButtonsPage {
         val puce = b.copy(size = 0, textSp = 14)
         FloatingButtonsOverlay.peindre(ligne.findViewById(R.id.floating_row_chip), puce,
             if (info) FloatingButtonsOverlay.texteInfo(ctx, puce, BubbleInfo.UNKNOWN) else titre, deplacement = false)
-        // Bulle d'information : « Information · action (ou affichage seul) » à la place du nom de l'action.
-        val quoi = if (!info) nom else listOf(ctx.getString(R.string.floating_content_info) + " : " + nomInfo(b.info),
-            if (BubbleInfo.tapRuns(b)) nom else ctx.getString(R.string.floating_tap_none_short)).joinToString(" · ")
+        // Bulle d'information : « Information · action (ou affichage seul) » à la place du nom de l'action ;
+        // bulle-icône : « Icône · action ».
+        val quoi = when {
+            info -> listOf(ctx.getString(R.string.floating_content_info) + " : " + nomInfo(b.info),
+                if (BubbleInfo.tapRuns(b)) nom else ctx.getString(R.string.floating_tap_none_short)).joinToString(" · ")
+            BubbleIcon.isIcon(b) -> ctx.getString(R.string.floating_content_icon) + " · " + nom
+            else -> nom
+        }
         ligne.findViewById<TextView>(R.id.floating_row_info).text =
             if (b.id == choisi) ctx.getString(R.string.floating_edit_heading_name, titre)
             else ctx.getString(R.string.floating_summary, quoi,
@@ -507,13 +513,30 @@ class FloatingButtonsPage {
         AppDialog.choisir(ctx, titre = ctx.getString(R.string.floating_info_pick_title),
             choix = cles.map { AppDialog.Choix(nomInfo(it)) }, annuler = ctx.getString(R.string.profile_cancel),
             choisi = cles.indexOf(b.info)) { rang ->
-            bouton(choisi)?.let { modifier(it.copy(info = cles[rang])) }
+            bouton(choisi)?.let { modifier(it.copy(info = cles[rang], iconContent = null,
+                icon = it.icon?.takeIf { i -> BubbleIcon.isIcon(it).not() && BubbleIcon.symbolName(i) != null })) }
         }
     }
 
     private fun brancherInfo() {
         racine.findViewById<View>(R.id.btn_floating_content_title).setOnClickListener {
-            bouton(choisi)?.takeIf { BubbleInfo.isInfo(it) }?.let { modifier(it.copy(info = null, infoStyle = null)) }
+            bouton(choisi)?.takeIf { BubbleIcon.content(it) != BubbleIcon.Content.TITLE }
+                ?.let { modifier(it.copy(info = null, infoStyle = null, iconContent = null, iconTitle = null, icon = null)) }
+        }
+        // « Icône » (2026-11-17) : l'icône par défaut tout de suite (l'appli lancée, sinon un symbole).
+        racine.findViewById<View>(R.id.btn_floating_content_icon).setOnClickListener {
+            bouton(choisi)?.takeIf { !BubbleIcon.isIcon(it) }
+                ?.let { modifier(it.copy(info = null, infoStyle = null, iconContent = true, icon = null)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_icon_only).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(iconTitle = null)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_icon_title).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(iconTitle = true)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_icon_choose).setOnClickListener { bouton(choisi)?.let { choisirIcone(it) } }
+        racine.findViewById<View>(R.id.btn_floating_icon_default).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(icon = null)) }
         }
         // « Information » : la valeur se choisit tout de suite ; sans choix, la bulle reste un titre.
         racine.findViewById<View>(R.id.btn_floating_content_info).setOnClickListener {
@@ -534,10 +557,25 @@ class FloatingButtonsPage {
         }
     }
 
+    /** Choisir l'icône : « Récentes » = les icônes choisies pour les autres bulles du profil. */
+    private fun choisirIcone(b: FloatingButton) {
+        val ctx = fragment?.context ?: return
+        val recentes = FloatingButtonSettings.buttons(ctx).filter { it.id != b.id }.mapNotNull { it.icon }
+        BubbleIcons.choisir(ctx, b, BubbleIcon.resolve(b, BubbleIcons.apps(ctx, b)), recentes) { ref ->
+            bouton(choisi)?.let { modifier(it.copy(icon = ref)) }
+        }
+    }
+
     private fun peindreInfo(b: FloatingButton) {
         val info = BubbleInfo.isInfo(b)
-        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_content_title), !info)
+        val icone = BubbleIcon.isIcon(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_content_title), !info && !icone)
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_content_info), info)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_content_icon), icone)
+        racine.findViewById<View>(R.id.row_floating_icon_style).visibility = if (icone) View.VISIBLE else View.GONE
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_icon_only), !BubbleIcon.showsTitle(b))
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_icon_title), icone && BubbleIcon.showsTitle(b))
+        peindreIcone(b)
         racine.findViewById<View>(R.id.row_floating_info).visibility = if (info) View.VISIBLE else View.GONE
         racine.findViewById<View>(R.id.row_floating_info_style).visibility = if (info) View.VISIBLE else View.GONE
         if (info) racine.findViewById<MaterialButton>(R.id.btn_floating_info).text = nomInfo(b.info)
@@ -550,6 +588,22 @@ class FloatingButtonsPage {
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_tap_none), !agit)
         // Au toucher « Rien » : l'action ne sert à rien, sa ligne disparaît (elle est gardée).
         racine.findViewById<View>(R.id.row_floating_action).visibility = if (agit) View.VISIBLE else View.GONE
+    }
+
+    /** Ligne « Icône » : l'icône montrée, Choisir… et Par défaut (si une autre a été choisie). */
+    private fun peindreIcone(b: FloatingButton) {
+        val ctx = fragment?.context ?: return
+        val montre = BubbleIcon.showsIcon(b)
+        racine.findViewById<View>(R.id.row_floating_icon).visibility = if (montre) View.VISIBLE else View.GONE
+        if (!montre) return
+        OverlayKit.fond(racine.findViewById(R.id.floating_icon_tile), ctx.getColor(R.color.dash_btn),
+            ctx.getColor(R.color.dash_border), AppDialog.dp(ctx, 1f), rayon = AppDialog.dp(ctx, 14f).toFloat())
+        val icone = BubbleIcons.forBubble(ctx, b)
+        racine.findViewById<android.widget.ImageView>(R.id.floating_icon_preview).apply {
+            setImageDrawable(icone?.drawable)
+            imageTintList = if (icone?.tint == true) ColorStateList.valueOf(ctx.getColor(R.color.text_primary)) else null
+        }
+        racine.findViewById<View>(R.id.btn_floating_icon_default).visibility = if (b.icon != null) View.VISIBLE else View.INVISIBLE
     }
 
     // ── Apparence (issue #230, 2026-11-09) ──────────────────────────────────────

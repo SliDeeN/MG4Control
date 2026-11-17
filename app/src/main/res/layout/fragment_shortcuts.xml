@@ -1957,7 +1957,52 @@
                                     android:layout_width="0dp"
                                     android:layout_height="64dp"
                                     android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
                                     android:text="@string/floating_content_info"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                                <!-- Bulle-icône (2026-11-17, maquette validée le même jour). -->
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_content_icon"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_content_icon"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/row_floating_icon_style"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:visibility="gone">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_info_style"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="19sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_icon_only"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/floating_icon_only"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_icon_title"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_icon_with_title"
                                     android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
 
                             </LinearLayout>
@@ -2029,6 +2074,56 @@
                                     android:layout_height="64dp"
                                     android:layout_weight="1"
                                     android:text="@string/floating_info_style_icon"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/row_floating_icon"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:visibility="gone">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_icon"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="19sp" />
+
+                                <FrameLayout
+                                    android:id="@+id/floating_icon_tile"
+                                    android:layout_width="64dp"
+                                    android:layout_height="64dp"
+                                    android:layout_marginEnd="8dp">
+
+                                    <ImageView
+                                        android:id="@+id/floating_icon_preview"
+                                        android:layout_width="36dp"
+                                        android:layout_height="36dp"
+                                        android:layout_gravity="center"
+                                        android:importantForAccessibility="no" />
+
+                                </FrameLayout>
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_icon_choose"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/custom_choose"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_icon_default"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/color_default"
                                     android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
 
                             </LinearLayout>

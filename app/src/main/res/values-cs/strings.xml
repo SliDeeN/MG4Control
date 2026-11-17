@@ -1102,6 +1102,13 @@
     <string name="floating_tap_action">Spustit akci</string>
     <string name="floating_tap_none">Nic</string>
     <string name="floating_tap_none_short">jen zobrazení</string>
+    <string name="floating_content_icon">Ikona</string>
+    <string name="floating_field_icon">Ikona</string>
+    <string name="floating_icon_only">Jen ikona</string>
+    <string name="floating_icon_with_title">Ikona + název</string>
+    <string name="floating_icon_pick_title">Vyberte ikonu</string>
+    <string name="floating_icon_cat_app">Aplikace</string>
+    <string name="floating_icon_cat_misc">Ostatní</string>
     <string name="color_default">Výchozí</string>
     <string name="color_custom">Vlastní…</string>
     <string name="color_code">Kód</string>

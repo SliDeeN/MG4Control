@@ -65,6 +65,16 @@ data class FloatingButton(
     val infoStyle: String? = null,
     /** Au toucher : `false` = rien (affichage seul) ; `null` = l'action, comme avant. */
     val tapAction: Boolean? = null,
+    // Bulle-icône (2026-11-17) ; `null` partout = comme avant ([BubbleIcon]).
+    /** Contenu « Icône » : la bulle montre une icône à la place du titre ; `null` = non. */
+    val iconContent: Boolean? = null,
+    /** Bulle-icône : le titre en plus de l'icône ; `null` = l'icône seule. */
+    val iconTitle: Boolean? = null,
+    /**
+     * Icône choisie : [BubbleIcon.APP_PREFIX] + paquet (l'icône d'une appli) ou [BubbleIcon.SYM_PREFIX]
+     * + nom d'un symbole. `null` = celle par défaut (l'appli lancée, ou l'icône de l'information).
+     */
+    val icon: String? = null,
 )
 
 object FloatingButtons {

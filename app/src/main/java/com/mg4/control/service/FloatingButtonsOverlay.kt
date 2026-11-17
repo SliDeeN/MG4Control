@@ -22,6 +22,7 @@ import android.widget.TextView
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.R
+import com.mg4.control.model.BubbleIcon
 import com.mg4.control.model.BubbleInfo
 import com.mg4.control.model.BubbleLook
 import com.mg4.control.model.RuleSignal
@@ -625,24 +626,29 @@ object FloatingButtonsOverlay {
         val marge = if (enHaut) (10 * densite).roundToInt() else (hauteur * 0.35f).roundToInt()
         val vertical = if (enHaut) 0 else (6 * densite).roundToInt()
         vue.setPadding(marge, vertical, marge, vertical)
-        // Bulle d'information « icône + valeur » (issue #236) : l'icône à gauche, à la taille du texte.
-        val icone = if (BubbleInfo.isInfo(b) && BubbleInfo.style(b) == BubbleInfo.STYLE_ICON)
-            runCatching { vue.context.getDrawable(iconeInfo(b.info)) }.getOrNull()?.mutate() else null
+        // Icône (2026-11-17) : bulle-icône, ou information « icône + valeur » (issue #236). Une
+        // bulle-icône a une icône plus grande que le texte ; sans icône (appli disparue), son titre.
+        val trouvee = com.mg4.control.ui.BubbleIcons.forBubble(vue.context, b)
+        val icone = trouvee?.drawable
+        val bulleIcone = BubbleIcon.isIcon(b) && icone != null
         icone?.let { d ->
-            val cote = (FloatingButtons.textFor(b) * vue.resources.displayMetrics.scaledDensity * 1.15f).roundToInt()
+            val cote = if (bulleIcone) (hauteur * if (enHaut) 0.7f else 0.55f).roundToInt()
+                else (FloatingButtons.textFor(b) * vue.resources.displayMetrics.scaledDensity * 1.15f).roundToInt()
             d.setBounds(0, 0, cote, cote)
         }
+        if (bulleIcone && !BubbleIcon.showsTitle(b)) vue.text = ""
+        teinteIcone[vue] = trouvee?.tint ?: true
         vue.setCompoundDrawablesRelative(icone, null, null, null)
-        vue.compoundDrawablePadding = (6 * densite).roundToInt()
+        vue.compoundDrawablePadding = if (vue.text.isNullOrEmpty()) 0 else (6 * densite).roundToInt()
         habiller(vue, b, deplacement, etat)
         vue.scaleX = if (deplacement) 1.1f else 1f
         vue.scaleY = vue.scaleX
     }
 
-    // ── Bulles d'information (issue #236, 2026-11-10) ───────────────────────────
+    /** Icône d'appli posée sur une vue (pas de teinte) ; les vues disparues s'effacent seules. */
+    private val teinteIcone = java.util.WeakHashMap<TextView, Boolean>()
 
-    /** Icône de l'information (dessins des catégories de l'éditeur d'automatisations). */
-    private fun iconeInfo(cle: String?): Int = com.mg4.control.ui.InfoIcons.of(cle)
+    // ── Bulles d'information (issue #236, 2026-11-10) ───────────────────────────
 
     /** Mots des automatisations (noms des valeurs, unités, modes…), refaits à chaque pose. */
     @Volatile private var mots: com.mg4.control.ui.AndroidRuleWords? = null
@@ -722,7 +728,8 @@ object FloatingButtonsOverlay {
         val hauteur = (FloatingButtons.heightDp(b.size) * densite).roundToInt()
         val p = BubbleLook.paint(b, FloatingButtonSettings.colorOf(vue.context, b), etat, deplacement)
         vue.setTextColor(p.text)
-        vue.compoundDrawablesRelative[0]?.setTint(p.text)   // icône d'une bulle d'information
+        // Icône : un symbole prend la couleur du texte ; l'icône d'une appli garde ses couleurs.
+        if (teinteIcone[vue] != false) vue.compoundDrawablesRelative[0]?.setTint(p.text)
         if (p.halo) vue.setShadowLayer(3 * densite, 0f, 0f, CONTOUR_TEXTE) else vue.setShadowLayer(0f, 0f, 0f, 0)
         vue.background = GradientDrawable().apply {
             cornerRadius = hauteur / 2f
