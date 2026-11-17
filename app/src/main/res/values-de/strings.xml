@@ -566,7 +566,7 @@
     <string name="wheel_key_joy_left">Rechter Joystick ◀</string>
     <string name="wheel_key_joy_right">Rechter Joystick ▶</string>
     <string name="wheel_key_joy_center">Rechter Joystick · Druck</string>
-    <string name="wheel_status_on">Erweiterte Erfassung aktiv: Doppeldruck möglich, und eine belegte Taste führt ihre ursprüngliche Aktion nicht mehr aus.</string>
+    <string name="wheel_status_on">Erweiterte Erfassung aktiv: Doppeldruck möglich, und ein Druck mit Kurzbefehl ersetzt die ursprüngliche Aktion der Taste; die anderen Drücke behalten sie.</string>
     <string name="wheel_status_off">Erweiterte Erfassung aus: Nur kurzer und langer Druck der ★-Tasten funktionieren, und die Taste behält auch ihre ursprüngliche Aktion.</string>
     <string name="wheel_status_service_off">Erweiterte Erfassung: Der Bedienungshilfe-Dienst von MG4Control muss in den Android-Einstellungen aktiviert werden.</string>
     <string name="wheel_enable">Aktivieren</string>

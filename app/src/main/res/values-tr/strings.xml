@@ -566,7 +566,7 @@
     <string name="wheel_key_joy_left">Sağ joystick ◀</string>
     <string name="wheel_key_joy_right">Sağ joystick ▶</string>
     <string name="wheel_key_joy_center">Sağ joystick · basma</string>
-    <string name="wheel_status_on">Gelişmiş yakalama açık: çift basma kullanılabilir ve kısayol atanmış tuş artık özgün işlevini yapmaz.</string>
+    <string name="wheel_status_on">Gelişmiş yakalama açık: çift basma kullanılabilir ve kısayol atanmış bir basış tuşun özgün işlevinin yerini alır; diğer basışlar onu korur.</string>
     <string name="wheel_status_off">Gelişmiş yakalama kapalı: yalnızca ★ tuşlarının kısa ve uzun basması çalışır ve tuş özgün işlevini de korur.</string>
     <string name="wheel_status_service_off">Gelişmiş yakalama: MG4Control erişilebilirlik hizmeti Android ayarlarından açılmalıdır.</string>
     <string name="wheel_enable">Aç</string>

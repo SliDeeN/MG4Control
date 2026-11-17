@@ -566,7 +566,7 @@
     <string name="wheel_key_joy_left">Prawy joystick ◀</string>
     <string name="wheel_key_joy_right">Prawy joystick ▶</string>
     <string name="wheel_key_joy_center">Prawy joystick · naciśnięcie</string>
-    <string name="wheel_status_on">Przechwytywanie zaawansowane włączone: dostępne podwójne naciśnięcie, a przycisk z przypisanym skrótem nie wykonuje już swojej pierwotnej akcji.</string>
+    <string name="wheel_status_on">Przechwytywanie zaawansowane włączone: dostępne podwójne naciśnięcie, a naciśnięcie z przypisanym skrótem zastępuje pierwotną akcję przycisku; pozostałe naciśnięcia ją zachowują.</string>
     <string name="wheel_status_off">Przechwytywanie zaawansowane wyłączone: działają tylko krótkie i długie naciśnięcia przycisków ★, a przycisk zachowuje też swoją pierwotną akcję.</string>
     <string name="wheel_status_service_off">Przechwytywanie zaawansowane: usługę ułatwień dostępu MG4Control trzeba włączyć w ustawieniach Androida.</string>
     <string name="wheel_enable">Włącz</string>

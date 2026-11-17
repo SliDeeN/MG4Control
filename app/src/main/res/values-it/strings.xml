@@ -566,7 +566,7 @@
     <string name="wheel_key_joy_left">Joystick destro ◀</string>
     <string name="wheel_key_joy_right">Joystick destro ▶</string>
     <string name="wheel_key_joy_center">Joystick destro · pressione</string>
-    <string name="wheel_status_on">Cattura avanzata attiva: doppia pressione possibile, e un tasto con scorciatoia non esegue più l\'azione originale.</string>
+    <string name="wheel_status_on">Cattura avanzata attiva: doppia pressione possibile, e una pressione con scorciatoia sostituisce l\'azione originale del tasto; le altre pressioni la mantengono.</string>
     <string name="wheel_status_off">Cattura avanzata disattivata: funzionano solo la pressione breve e lunga dei tasti ★, e il tasto mantiene anche l\'azione originale.</string>
     <string name="wheel_status_service_off">Cattura avanzata: il servizio di accessibilità di MG4Control va attivato nelle impostazioni di Android.</string>
     <string name="wheel_enable">Attiva</string>

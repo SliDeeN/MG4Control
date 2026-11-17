@@ -566,7 +566,7 @@
     <string name="wheel_key_joy_left">Right joystick ◀</string>
     <string name="wheel_key_joy_right">Right joystick ▶</string>
     <string name="wheel_key_joy_center">Right joystick · press</string>
-    <string name="wheel_status_on">Advanced capture on: double press available, and a key that carries a shortcut no longer runs its original action.</string>
+    <string name="wheel_status_on">Advanced capture on: double press available, and a press that carries a shortcut replaces the key\'s original action; the other presses keep it.</string>
     <string name="wheel_status_off">Advanced capture off: only short and long presses of the ★ buttons work, and the key also keeps its original action.</string>
     <string name="wheel_status_service_off">Advanced capture: MG4Control\'s accessibility service must be turned on in Android settings.</string>
     <string name="wheel_enable">Turn on</string>

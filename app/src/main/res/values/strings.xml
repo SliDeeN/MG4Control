@@ -572,7 +572,7 @@
     <string name="wheel_key_joy_left">Joystick droit ◀</string>
     <string name="wheel_key_joy_right">Joystick droit ▶</string>
     <string name="wheel_key_joy_center">Joystick droit · clic</string>
-    <string name="wheel_status_on">Capture avancée active : double appui possible, et une touche qui porte un raccourci n\'exécute plus son action d\'origine.</string>
+    <string name="wheel_status_on">Capture avancée active : double appui possible, et un appui qui porte un raccourci remplace l\'action d\'origine de la touche ; les autres appuis la gardent.</string>
     <string name="wheel_status_off">Capture avancée inactive : seuls l\'appui simple et l\'appui long des boutons ★ fonctionnent, et la touche garde aussi son action d\'origine.</string>
     <string name="wheel_status_service_off">Capture avancée : le service d\'accessibilité de MG4Control est à activer dans les réglages Android.</string>
     <string name="wheel_enable">Activer</string>

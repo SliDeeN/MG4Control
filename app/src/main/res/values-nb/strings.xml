@@ -568,7 +568,7 @@
     <string name="wheel_key_joy_left">Høyre joystick ◀</string>
     <string name="wheel_key_joy_right">Høyre joystick ▶</string>
     <string name="wheel_key_joy_center">Høyre joystick · trykk</string>
-    <string name="wheel_status_on">Avansert fangst på: dobbelttrykk er tilgjengelig, og en knapp med snarvei utfører ikke lenger sin opprinnelige funksjon.</string>
+    <string name="wheel_status_on">Avansert fangst på: dobbelttrykk er tilgjengelig, og et trykk med snarvei erstatter knappens opprinnelige funksjon; de andre trykkene beholder den.</string>
     <string name="wheel_status_off">Avansert fangst av: bare korte og lange trykk på ★-knappene virker, og knappen beholder også sin opprinnelige funksjon.</string>
     <string name="wheel_status_service_off">Avansert fangst: tilgjengelighetstjenesten til MG4Control må slås på i Android-innstillingene.</string>
     <string name="wheel_enable">Slå på</string>
