@@ -165,12 +165,12 @@ class ShortcutsFragment : Fragment() {
         setupProfileCycle(view)
         setupSourceCycle(view)
         setupPreClimatePage(view)
-        // Boutons flottants : les actions du volant, sans celles qui demandent un réglage à part
-        // (profil ou appli à choisir) — la bulle n'a que son raccourci.
+        // Boutons flottants : les actions du volant, sans le profil à choisir ; l'appli de « Lancer
+        // une application » se choisit dans la même grille que pour le volant (2026-11-17).
         view.findViewById<android.widget.LinearLayout>(R.id.page_sc_quick)?.let { quickPage.bind(it) }
         floatingPage.bind(this, view, baseActionItems
-            .filter { it.action !in setOf(ShortcutAction.NONE, ShortcutAction.APPLY_PROFILE, ShortcutAction.OPEN_CUSTOM_APP) }
-            .map { it.label to it.action })
+            .filter { it.action !in setOf(ShortcutAction.NONE, ShortcutAction.APPLY_PROFILE) }
+            .map { it.label to it.action }) { deja, surChoix -> choisirUneApp(deja) { paquet, nom -> surChoix(paquet, nom) } }
         // Raccourcis perso : un changement repeint les emplacements qui en lancent un.
         customPage.bind(this, view) { wheelPage.refresh() }
         restoreState()

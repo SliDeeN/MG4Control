@@ -1123,7 +1123,8 @@ class MG4ControlService : Service() {
                     startActivity(intent)
                 }
                 ShortcutAction.OPEN_CUSTOM_APP -> {
-                    val pkg = prefs.getString("shortcut_${pressKey}_custom_app", null)
+                    // Bouton flottant : l'appli de la bulle (2026-11-17) ; sinon celle de l'emplacement.
+                    val pkg = customId ?: prefs.getString("shortcut_${pressKey}_custom_app", null)
                     if (pkg != null) {
                         val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
                         if (launchIntent != null) {

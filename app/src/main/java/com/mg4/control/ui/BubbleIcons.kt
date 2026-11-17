@@ -34,8 +34,8 @@ object BubbleIcons {
 
     /** Applis que lance [b] et qui sont installées (la première sert par défaut). */
     fun apps(ctx: Context, b: FloatingButton): List<String> {
-        val perso = CustomShortcutSettings.get(ctx, b.customId)
-            ?.takeIf { CustomShortcuts.kindOf(it) in APPLIS }?.packageName
+        val perso = if (b.action == com.mg4.control.shortcut.ShortcutAction.OPEN_CUSTOM_APP.name) b.customId
+            else CustomShortcutSettings.get(ctx, b.customId)?.takeIf { CustomShortcuts.kindOf(it) in APPLIS }?.packageName
         return BubbleIcon.apps(b.action, perso, ctx.packageName, ProjectionKind.entries.map { it.packageName })
             .filter { installe(ctx, it) }
     }

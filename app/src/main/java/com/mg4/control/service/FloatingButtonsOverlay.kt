@@ -638,8 +638,19 @@ object FloatingButtonsOverlay {
         }
         if (bulleIcone && !BubbleIcon.showsTitle(b)) vue.text = ""
         teinteIcone[vue] = trouvee?.tint ?: true
-        vue.setCompoundDrawablesRelative(icone, null, null, null)
+        // À gauche en absolu (2026-11-17) : une icône « relative » n'est résolue qu'une fois la vue
+        // posée, et la mesure faite avant (placement de la bulle) l'ignorait.
+        vue.setCompoundDrawables(icone, null, null, null)
         vue.compoundDrawablePadding = if (vue.text.isNullOrEmpty()) 0 else (6 * densite).roundToInt()
+        // Android colle une icône posée à gauche contre la marge, même quand le texte est centré :
+        // pour une bulle-icône, les marges sont calculées pour centrer l'ensemble icône + titre.
+        if (bulleIcone && icone != null) {
+            val texteL = if (vue.text.isNullOrEmpty()) 0 else vue.paint.measureText(vue.text.toString()).roundToInt()
+            val contenu = icone.bounds.width() + vue.compoundDrawablePadding + texteL
+            val largeur = maxOf(vue.minWidth, contenu + 2 * marge).coerceAtMost(maxOf(vue.maxWidth, contenu))
+            val cote = ((largeur - contenu) / 2).coerceAtLeast(0)
+            vue.setPadding(cote, vertical, cote, vertical)
+        }
         habiller(vue, b, deplacement, etat)
         vue.scaleX = if (deplacement) 1.1f else 1f
         vue.scaleY = vue.scaleX
@@ -729,7 +740,7 @@ object FloatingButtonsOverlay {
         val p = BubbleLook.paint(b, FloatingButtonSettings.colorOf(vue.context, b), etat, deplacement)
         vue.setTextColor(p.text)
         // Icône : un symbole prend la couleur du texte ; l'icône d'une appli garde ses couleurs.
-        if (teinteIcone[vue] != false) vue.compoundDrawablesRelative[0]?.setTint(p.text)
+        if (teinteIcone[vue] != false) vue.compoundDrawables[0]?.setTint(p.text)
         if (p.halo) vue.setShadowLayer(3 * densite, 0f, 0f, CONTOUR_TEXTE) else vue.setShadowLayer(0f, 0f, 0f, 0)
         vue.background = GradientDrawable().apply {
             cornerRadius = hauteur / 2f

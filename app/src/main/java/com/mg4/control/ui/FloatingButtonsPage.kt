@@ -50,6 +50,7 @@ class FloatingButtonsPage {
     private var fragment: Fragment? = null
     private lateinit var racine: View
     private lateinit var actions: List<Pair<String, ShortcutAction>>
+    private var choisirApp: ((String?, (String, String) -> Unit) -> Unit)? = null
     private var choisi: String? = null
     /** Couleur de la bulle modifiée, dans son panneau (2026-11-04). */
     private var couleurBulle: CouleurRangee? = null
@@ -76,11 +77,16 @@ class FloatingButtonsPage {
 
     private val rafraichir = Runnable { fragment?.context?.let { FloatingButtonsOverlay.refresh(it) } }
 
-    /** [actions] : celles des raccourcis du volant, sans celles qui demandent un réglage à part. */
-    fun bind(f: Fragment, view: View, actions: List<Pair<String, ShortcutAction>>) {
+    /**
+     * [actions] : celles des raccourcis du volant, sans celles qui demandent un réglage à part ;
+     * [choisirApp] : la grille des applis, pour « Lancer une application » (2026-11-17).
+     */
+    fun bind(f: Fragment, view: View, actions: List<Pair<String, ShortcutAction>>,
+             choisirApp: (deja: String?, surChoix: (paquet: String, nom: String) -> Unit) -> Unit) {
         fragment = f
         racine = view
         this.actions = actions
+        this.choisirApp = choisirApp
         val ctx = f.requireContext()
         // Page encore cachée : les bulles lues et écrites sont celles du profil à l'écran.
         profilRegle = FloatingProfiles.target(ctx)?.id
@@ -161,6 +167,9 @@ class FloatingButtonsPage {
             val nom = when (b.action) {
                 ShortcutAction.CUSTOM.name -> CustomShortcutSettings.get(ctx, b.customId)?.name
                 ShortcutAction.RUN_RULE.name -> RuleChooser.nom(ctx, b.customId)
+                ShortcutAction.OPEN_CUSTOM_APP.name -> b.customId?.let { pkg ->
+                    runCatching { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrNull()
+                }
                 else -> libelle(b.action)
             }
             nom?.let { b.copy(actionLabel = it) } ?: b
@@ -305,7 +314,10 @@ class FloatingButtonsPage {
             annuler = ctx.getString(android.R.string.cancel),
             choisi = actions.indexOfFirst { it.second.name == actuelle }) { rang ->
             val (nom, action) = actions[rang]
-            if (action == ShortcutAction.CUSTOM) {
+            if (action == ShortcutAction.OPEN_CUSTOM_APP) {
+                // L'appli lancée : son paquet est gardé comme l'id d'un raccourci perso, son nom sert de titre.
+                choisirApp?.invoke(dejaPerso) { paquet, nomAppli -> surChoix(action, nomAppli, paquet) }
+            } else if (action == ShortcutAction.CUSTOM) {
                 CustomShortcutDialog.choisir(ctx, dejaPerso) { c -> surChoix(action, c.name, c.id) }
             } else if (action == ShortcutAction.RUN_RULE) {
                 RuleChooser.choisir(ctx, dejaPerso) { r -> surChoix(action, r.name, r.id) }

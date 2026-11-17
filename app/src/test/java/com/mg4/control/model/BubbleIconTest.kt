@@ -46,6 +46,8 @@ class BubbleIconTest {
         assertEquals(emptyList<String>(), BubbleIcon.apps(ShortcutAction.CUSTOM.name, null, "me", proj))
         assertEquals(proj, BubbleIcon.apps(ShortcutAction.PROJECTION.name, null, "me", proj))
         assertEquals(listOf("me"), BubbleIcon.apps(ShortcutAction.OPEN_APP.name, null, "me", proj))
+        // « Lancer une application » sur une bulle (2026-11-17) : l'appli choisie.
+        assertEquals(listOf("yt"), BubbleIcon.apps(ShortcutAction.OPEN_CUSTOM_APP.name, "yt", "me", proj))
         assertEquals(emptyList<String>(), BubbleIcon.apps(ShortcutAction.ONE_PEDAL.name, null, "me", proj))
         assertEquals("pkg", BubbleIcon.appPackage("app:pkg"))
         assertNull(BubbleIcon.appPackage("sym:x"))

@@ -61,11 +61,11 @@ object BubbleIcon {
 
     /**
      * Applis que lance une bulle, pour son icône par défaut et la catégorie « Application » du
-     * choix : l'appli d'un raccourci perso ([customApp]), Android Auto et CarPlay pour la
+     * choix : l'appli d'un raccourci perso ou de « Lancer une application » ([customApp]), Android Auto et CarPlay pour la
      * projection, MG4Control pour « Ouvrir MG4Control ».
      */
     fun apps(action: String?, customApp: String?, selfPackage: String, projection: List<String>): List<String> = when (action) {
-        ShortcutAction.CUSTOM.name -> listOfNotNull(customApp)
+        ShortcutAction.CUSTOM.name, ShortcutAction.OPEN_CUSTOM_APP.name -> listOfNotNull(customApp)
         ShortcutAction.PROJECTION.name -> projection
         ShortcutAction.OPEN_APP.name -> listOf(selfPackage)
         else -> emptyList()
