@@ -719,11 +719,21 @@ class SettingsFragment : Fragment() {
             isChecked = com.mg4.control.automation.AcKeepOff.isOn(requireContext())
             setOnCheckedChangeListener { _, checked -> com.mg4.control.automation.AcKeepOff.setOn(requireContext(), checked) }
         }
-        view.findViewById<View>(R.id.row_replace_hvac_panel).visibility =
+        view.findViewById<View>(R.id.row_hide_hvac_startup).visibility =
             if (SaicHvacPanel.supported()) View.VISIBLE else View.GONE
-        view.findViewById<Switch>(R.id.switch_replace_hvac_panel).apply {
+        val remplacementHvac = view.findViewById<View>(R.id.row_replace_hvac_panel)
+        remplacementHvac.visibility =
+            if (SaicHvacPanel.supported() && SaicHvacPanel.isOn(requireContext())) View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_hide_hvac_startup).apply {
             isChecked = SaicHvacPanel.isOn(requireContext())
-            setOnCheckedChangeListener { _, checked -> SaicHvacPanel.setOn(requireContext(), checked) }
+            setOnCheckedChangeListener { _, checked ->
+                SaicHvacPanel.setOn(requireContext(), checked)
+                remplacementHvac.visibility = if (checked) View.VISIBLE else View.GONE
+            }
+        }
+        view.findViewById<Switch>(R.id.switch_replace_hvac_panel).apply {
+            isChecked = SaicHvacPanel.isPopupOn(requireContext())
+            setOnCheckedChangeListener { _, checked -> SaicHvacPanel.setPopupOn(requireContext(), checked) }
         }
 
         // ── Applis en plein écran (issue #248), désactivé par défaut ──

@@ -1,10 +1,17 @@
 package com.mg4.control.ui
 
+import android.content.Context
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Switch
+import androidx.test.core.app.ApplicationProvider
 import androidx.fragment.app.FragmentActivity
 import com.mg4.control.R
+import com.mg4.control.service.SaicHvacPanel
+import com.mg4.control.util.FirmwareInfo
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,6 +28,53 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "fr-w1920dp-h720dp-mdpi")
 class SettingsPagesLayoutTest {
+
+    @Test
+    fun `les options HVAC sont alignees et le remplacement depend du choix au demarrage`() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        for (gen in listOf(FirmwareInfo.Gen.SWI133, FirmwareInfo.Gen.SWI165, FirmwareInfo.Gen.SWI68, FirmwareInfo.Gen.SWI132)) {
+            ctx.getSharedPreferences("mg4_settings", Context.MODE_PRIVATE).edit().clear().commit()
+            FirmwareInfo.forceGeneration(ctx, gen)
+            val c = Robolectric.buildActivity(FragmentActivity::class.java)
+            c.get().setTheme(R.style.Theme_MG4Control)
+            c.setup()
+            val f = SettingsFragment()
+            c.get().supportFragmentManager.beginTransaction().add(android.R.id.content, f).commitNow()
+            val v = f.requireView()
+            v.findViewById<View>(R.id.btn_set_cat_advanced).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+            val row = v.findViewById<View>(R.id.row_hide_hvac_startup)
+            val child = v.findViewById<View>(R.id.row_replace_hvac_panel)
+            val startup = v.findViewById<Switch>(R.id.switch_hide_hvac_startup)
+            val popup = v.findViewById<Switch>(R.id.switch_replace_hvac_panel)
+            assertEquals(View.GONE, child.visibility)
+            assertFalse(startup.isChecked)
+            assertFalse(popup.isChecked)
+            if (gen == FirmwareInfo.Gen.SWI132) {
+                assertEquals(View.GONE, row.visibility)
+            } else {
+                assertEquals(View.VISIBLE, row.visibility)
+                startup.isChecked = true
+                assertEquals(View.VISIBLE, child.visibility)
+                shadowOf(Looper.getMainLooper()).idle()
+                assertEquals(row.parent, child.parent)
+                val a = IntArray(2)
+                val b = IntArray(2)
+                startup.getLocationInWindow(a)
+                popup.getLocationInWindow(b)
+                assertEquals(a[0], b[0])
+                popup.isChecked = true
+                assertTrue(SaicHvacPanel.isPopupOn(ctx))
+                startup.isChecked = false
+                assertEquals(View.GONE, child.visibility)
+                assertFalse(SaicHvacPanel.isOn(ctx))
+                startup.isChecked = true
+                assertEquals(View.VISIBLE, child.visibility)
+                assertTrue(popup.isChecked)
+            }
+            c.pause().stop().destroy()
+        }
+    }
 
     @Test
     fun `every visible settings row has a real height`() {

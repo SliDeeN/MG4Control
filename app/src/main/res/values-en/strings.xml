@@ -286,8 +286,10 @@
     <string name="settings_auto_scope_loop_kept">Yours is kept</string>
     <string name="settings_auto_scope_note">All ticked = the car’s behaviour. Unticked: MG4Control puts your setting back right after AUTO turns on (HVAC pop-up, Climate page, profiles and A/C automation).</string>
     <string name="settings_keep_ac_title">Climate · A/C</string>
-    <string name="settings_replace_hvac_panel">Replace the climate panel</string>
-    <string name="settings_replace_hvac_panel_desc">Replaces the stock climate panel when opened with the physical button or the shortcut in the top bar.</string>
+    <string name="settings_hide_hvac_startup">Hide the stock HVAC panel at startup</string>
+    <string name="settings_hide_hvac_startup_desc">Closes the stock panel the first time it appears after the car starts.</string>
+    <string name="settings_replace_hvac_panel">Open the MG4Control HVAC pop-up instead of the stock panel</string>
+    <string name="settings_replace_hvac_panel_desc">On subsequent openings, shows the MG4Control pop-up instead of the stock panel.</string>
     <string name="settings_keep_ac">Keep the A/C off when the temperature changes</string>
     <string name="settings_keep_ac_desc">The car turns the A/C back on whenever the setpoint changes. If it was off, MG4Control turns it off again: from MG4Control, and on trial from the car’s screen. Never in AUTO or with the front defrost on.</string>
     <string name="settings_projection_title">Android Auto · CarPlay</string>

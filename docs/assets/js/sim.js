@@ -168,7 +168,7 @@
         soc: 64, lights: false, batHeat: false, highBeam: true,
         // Portes verrouillées (Garde-voiture), unité de distance de la voiture, projection à l'écran.
         locked: false, distUnit: 'km', projection: null, rhd: false, mg4Dash: 'absent',
-        doors: { L: false, R: false },
+        doors: { L: false, R: false }, hvacStartupClosed: false,
         media: { playing: false, track: 3, source: 'RADIO' },
         // Recharge simulée (véhicule virtuel) et limite de charge réglée sur la voiture.
         charge: null, chargeLimit: 80
@@ -187,7 +187,7 @@
                   // Unité de distance générale et dernière jauge ouverte dans l'éditeur du combiné.
                   distUnit: 'auto', clLayMod: null,
                   // Côté du menu (NavSide) et « Garder l'A/C coupé » (#208, désactivé par défaut).
-                  navSide: 'auto', keepAcOff: false, replaceHvac: false,
+                  navSide: 'auto', keepAcOff: false, hideHvacStartup: false, replaceHvac: false,
                   // Relance de la détection du téléphone branché (#251) ; applications en plein écran (#248),
                   // une application → 'FULL' | 'STATUS' | 'NAVIGATION'. Tous deux désactivés par défaut.
                   projKick: false, immersive: false, immersiveApps: {} },
@@ -643,6 +643,7 @@
     // Branchée, la voiture n'est pas en READY : y revenir débranche, et le pop-up se ferme.
     if (c.charge) stopCharge();
     const wasReady = c.ready, wasOn = c.on;
+    if (!wasOn || wasReady) c.hvacStartupClosed = false;
     c.on = true; c.ready = true; c.maxSpeed = c.speed; c.readyAt = Date.now();
     c.esc = true; c.aebOn = true; // la voiture les rétablit à chaque démarrage
     // Un retour en READY après un arrêt en cours de trajet garde le profil choisi à la main ;
@@ -3139,7 +3140,8 @@
       // Garder l'A/C coupé (#208) : désactivé par défaut.
       if (k.clim) top += '<div class="a-sec" data-hl="s-keepac"><div class="a-h">' + esc(S('settings_keep_ac_title')) + '</div>' +
         row('s-keepac', S('settings_keep_ac'), S('settings_keep_ac_desc'), sw(s.keepAcOff, 'keepAc')) +
-        (k.replaceHvac ? row('s-replace-hvac', S('settings_replace_hvac_panel'), S('settings_replace_hvac_panel_desc'), sw(s.replaceHvac, 'replaceHvac')) : '') + '</div>';
+        (k.replaceHvac ? row('s-hide-hvac-startup', S('settings_hide_hvac_startup'), S('settings_hide_hvac_startup_desc'), sw(s.hideHvacStartup, 'hideHvacStartup')) +
+          (s.hideHvacStartup ? row('s-replace-hvac', S('settings_replace_hvac_panel'), S('settings_replace_hvac_panel_desc'), sw(s.replaceHvac, 'replaceHvac')) : '') : '') + '</div>';
       // Relancer la détection du téléphone branché (#251) : démarrage et réveil, désactivé par défaut.
       top += '<div class="a-sec" data-hl="s-projkick"><div class="a-h">' + esc(S('settings_projection_title')) + '</div>' + row('s-projkick', S('settings_projection_kick'), S('settings_projection_kick_desc'), sw(s.projKick, 'projKick')) + '</div>';
       // Applications en plein écran (#248) : juste sous la carte Android Auto · CarPlay.
@@ -6408,6 +6410,7 @@
           if (s.fullscreen) this.toast(L('Simulation : sur la voiture, la barre d\'état et la barre de navigation disparaissent.', 'Simulation: in the car, the status and navigation bars disappear.'), 3200);
           return;
         case 'hvacZone': s.hvacZone = !s.hvacZone; return r();
+        case 'hideHvacStartup': s.hideHvacStartup = !s.hideHvacStartup; return r();
         case 'replaceHvac': s.replaceHvac = !s.replaceHvac; return r();
         case 'projKick': s.projKick = !s.projKick; return r();
         // Applications en plein écran : avertissement à CHAQUE activation ; Annuler laisse l'option coupée.
@@ -7493,7 +7496,11 @@
       const sim = activeSim();
       if (!sim || !caps().replaceHvac) return;
       toggle(false);
-      if (state.settings.replaceHvac && !garage()) sim.openHvacPopup();
+      if (state.settings.hideHvacStartup && !garage() && !car().hvacStartupClosed) {
+        car().hvacStartupClosed = true;
+        sim.toast(L('Simulation · premier panneau HVAC fermé sans ouvrir de popup', 'Simulation · first HVAC panel closed without opening a pop-up'));
+        commit();
+      } else if (state.settings.hideHvacStartup && state.settings.replaceHvac && !garage()) sim.openHvacPopup();
       else sim.toast(L('Simulation · ouverture du panneau de climatisation d’origine', 'Simulation · opening the stock climate panel'));
     });
     q('[data-o=bt]').addEventListener('click', (e) => { const b = e.target.closest('[data-mac]'); if (b) toggleBt(b.getAttribute('data-mac')); });

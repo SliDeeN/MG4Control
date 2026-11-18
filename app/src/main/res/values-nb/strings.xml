@@ -288,8 +288,10 @@
     <string name="settings_auto_scope_loop_kept">Din blir beholdt</string>
     <string name="settings_auto_scope_note">Alle avkrysset = bilens oppførsel. Ikke merket av: MG4Control setter innstillingen tilbake rett etter at AUTO slås på (HVAC-pop-up, klimaside, profiler og A/C-automatisering).</string>
     <string name="settings_keep_ac_title">Klima · A/C</string>
-    <string name="settings_replace_hvac_panel">Erstatt klimapanelet</string>
-    <string name="settings_replace_hvac_panel_desc">Erstatter det originale klimapanelet når det åpnes med den fysiske knappen eller snarveien i den øverste linjen.</string>
+    <string name="settings_hide_hvac_startup">Skjul det originale HVAC-panelet ved oppstart</string>
+    <string name="settings_hide_hvac_startup_desc">Lukker originalpanelet første gang det vises etter at bilen starter.</string>
+    <string name="settings_replace_hvac_panel">Åpne HVAC-vinduet til MG4Control i stedet for originalpanelet</string>
+    <string name="settings_replace_hvac_panel_desc">Ved senere åpninger vises MG4Control-vinduet i stedet for originalpanelet.</string>
     <string name="settings_keep_ac">Hold A/C av når temperaturen endres</string>
     <string name="settings_keep_ac_desc">Bilen slår A/C på igjen hver gang innstilt temperatur endres. Hvis den var av, slår MG4Control den av igjen: fra MG4Control, og på prøve fra bilens skjerm. Aldri i AUTO eller med frontavdugging på.</string>
     <string name="settings_projection_title">Android Auto · CarPlay</string>

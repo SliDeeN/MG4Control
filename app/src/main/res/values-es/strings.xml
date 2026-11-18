@@ -286,8 +286,10 @@
     <string name="settings_auto_scope_loop_kept">Se mantiene la tuya</string>
     <string name="settings_auto_scope_note">Todo marcado = comportamiento del coche. Desmarcado: MG4Control vuelve a poner tu ajuste justo después de activar AUTO (ventana HVAC, página Clima, perfiles y automatización A/C).</string>
     <string name="settings_keep_ac_title">Climatización · A/C</string>
-    <string name="settings_replace_hvac_panel">Sustituir el panel de climatización</string>
-    <string name="settings_replace_hvac_panel_desc">Sustituye el panel de climatización original al abrirlo con el botón físico o el acceso directo de la barra superior.</string>
+    <string name="settings_hide_hvac_startup">Ocultar el panel HVAC original al arrancar</string>
+    <string name="settings_hide_hvac_startup_desc">Cierra el panel original la primera vez que aparece tras arrancar el coche.</string>
+    <string name="settings_replace_hvac_panel">Abrir el popup HVAC de MG4Control en lugar del panel original</string>
+    <string name="settings_replace_hvac_panel_desc">En las siguientes aperturas, muestra el popup de MG4Control en lugar del panel original.</string>
     <string name="settings_keep_ac">Mantener el A/C apagado al cambiar la temperatura</string>
     <string name="settings_keep_ac_desc">El coche vuelve a encender el A/C al cambiar la consigna. Si estaba apagado, MG4Control lo vuelve a apagar: desde MG4Control y, a prueba, desde la pantalla del coche. Nunca en AUTO ni con el desempañado delantero.</string>
     <string name="settings_projection_title">Android Auto · CarPlay</string>

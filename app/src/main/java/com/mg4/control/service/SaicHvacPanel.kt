@@ -10,6 +10,7 @@ import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Settings
 import android.system.Os
 import android.system.OsConstants
 import android.system.StructPollfd
@@ -31,12 +32,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Relais du panneau SAIC lorsqu'il apparaît. La commande de clim reste au véhicule. */
+/** Ferme le premier panneau SAIC du démarrage et peut relayer les suivants. */
 internal class SaicHvacPanel(context: Context) {
     companion object {
         private const val TAG = "MG4_HVAC_SAIC"
         private const val PREFS = "mg4_settings"
-        private const val KEY = "replace_saic_hvac_panel"
+        private const val KEY = "hide_saic_hvac_at_startup"
+        private const val KEY_POPUP = "replace_saic_hvac_panel"
+        private const val KEY_DEMARRAGE_FERME = "saic_hvac_closed_boot"
         const val KEYCODE = 0x120
         private const val TITRE = "hvac page"
         private const val DELAI_MAX_MS = 1_500L
@@ -60,11 +63,25 @@ internal class SaicHvacPanel(context: Context) {
             else -> false
         }
 
-        fun isOn(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
+        fun isOn(ctx: Context): Boolean {
+            val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            // Le remplacement déjà choisi avant la séparation des options reste actif.
+            return prefs.getBoolean(KEY, prefs.getBoolean(KEY_POPUP, false))
+        }
+
+        fun isPopupOn(ctx: Context): Boolean =
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_POPUP, false)
 
         fun setOn(ctx: Context, on: Boolean) {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
-            AppLogger.i(TAG, "Remplacement du panneau SAIC : ${if (on) "activé" else "désactivé"}")
+            AppLogger.i(TAG, "Fermeture du panneau SAIC au démarrage : ${if (on) "activée" else "désactivée"}")
+        }
+
+        fun setPopupOn(ctx: Context, on: Boolean) {
+            // Fige le choix principal hérité avant de modifier l'ancien réglage de remplacement.
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putBoolean(KEY, isOn(ctx)).putBoolean(KEY_POPUP, on).apply()
+            AppLogger.i(TAG, "Remplacement des panneaux SAIC suivants : ${if (on) "activé" else "désactivé"}")
         }
 
         /** SystemUI garde la vue attachée et la fait glisser au-dessus de l'écran pour la cacher. */
@@ -82,13 +99,14 @@ internal class SaicHvacPanel(context: Context) {
 
     private val app = context.applicationContext
     private val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val demarrage = Demarrage(prefs)
     private val ecran = app.getSystemService(PowerManager::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val appui = Channel<Unit>(Channel.CONFLATED)
     private var surveillance: Job? = null
     private var appuiLong = false
     private val changement = SharedPreferences.OnSharedPreferenceChangeListener { _, cle ->
-        if (cle == KEY) actualiser()
+        if (cle == KEY || cle == KEY_POPUP) actualiser()
     }
     @Volatile private var windowManager: IBinder? = null
 
@@ -143,11 +161,42 @@ internal class SaicHvacPanel(context: Context) {
         }
     }
 
+    internal enum class Action { AUCUNE, FERMER, REMPLACER }
+
+    /** Le compteur Android survit aux relances de MG4Control et ne change pas avec l'écran. */
+    internal class Demarrage(private val prefs: SharedPreferences) {
+        fun attendPremiereFermeture(compteur: Int): Boolean =
+            compteur >= 0 && prefs.getInt(KEY_DEMARRAGE_FERME, -1) != compteur
+
+        fun confirmerFermeture(compteur: Int) {
+            if (compteur >= 0) prefs.edit().putInt(KEY_DEMARRAGE_FERME, compteur).apply()
+        }
+
+        fun action(compteur: Int, popup: Boolean): Action = when {
+            attendPremiereFermeture(compteur) -> Action.FERMER
+            popup -> Action.REMPLACER
+            else -> Action.AUCUNE
+        }
+    }
+
+    private fun compteurDemarrage(): Int {
+        val compteur = runCatching { Settings.Global.getInt(app.contentResolver, Settings.Global.BOOT_COUNT, -1) }
+            .getOrDefault(-1)
+        if (compteur < 0) AppLogger.w(TAG, "Compteur de démarrage Android indisponible, fermeture au démarrage indisponible")
+        return compteur
+    }
+
     private suspend fun observer() {
         val ouvertures = Ouvertures()
+        val compteur = compteurDemarrage()
         var derniereErreur: String? = null
         var premiereLecture = true
         while (currentCoroutineContext().isActive && autorise()) {
+            // Fermeture seule déjà faite : plus de sondes jusqu'à un changement d'option.
+            if (demarrage.action(compteur, isPopupOn(app)) == Action.AUCUNE) {
+                AppLogger.i(TAG, "Aucune fermeture en attente, panneaux suivants conservés")
+                return
+            }
             if (ecran?.isInteractive != true) {
                 ouvertures.nouvelle(false)
                 appui.tryReceive()
@@ -164,11 +213,18 @@ internal class SaicHvacPanel(context: Context) {
             }
             derniereErreur = erreur
             if (ouvertures.nouvelle(visible) && autorise()) {
-                AppLogger.i(TAG, "Panneau SAIC visible, tentative de remplacement")
-                when (withTimeoutOrNull(DELAI_MAX_MS) { remplacer() }) {
+                val action = demarrage.action(compteur, isPopupOn(app))
+                if (action == Action.AUCUNE) return
+                val fermetureSeule = action == Action.FERMER
+                AppLogger.i(TAG, if (fermetureSeule)
+                    "Première ouverture du panneau SAIC au démarrage Android #$compteur, fermeture seule"
+                    else "Panneau SAIC visible, tentative de remplacement")
+                when (withTimeoutOrNull(DELAI_MAX_MS) { remplacer(compteur) }) {
                     null -> AppLogger.w(TAG, "Panneau SAIC : remplacement expiré")
                     false -> AppLogger.w(TAG, "Panneau SAIC conservé, remplacement indisponible")
-                    true -> AppLogger.i(TAG, "Panneau SAIC relayé par MG4Control")
+                    true -> AppLogger.i(TAG, if (fermetureSeule)
+                        "Premier panneau SAIC fermé sans ouvrir le pop-up MG4Control"
+                        else "Panneau SAIC relayé par MG4Control")
                 }
             }
             // La demande physique et la mise en page de SystemUI sont asynchrones.
@@ -177,7 +233,7 @@ internal class SaicHvacPanel(context: Context) {
         }
     }
 
-    private suspend fun remplacer(): Boolean {
+    private suspend fun remplacer(compteur: Int): Boolean {
         val connexion = CompletableDeferred<IBinder?>()
         val service = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, binder: IBinder) { connexion.complete(binder) }
@@ -198,9 +254,16 @@ internal class SaicHvacPanel(context: Context) {
                 AppLogger.w(TAG, "Interface de fermeture SAIC inconnue : $interfaceSaic")
                 return false
             }
-            return HvacPopupOverlay.remplacerPanneauSaic(app, ::autorise) {
+            if (demarrage.attendPremiereFermeture(compteur)) {
+                return withContext(Dispatchers.IO) {
+                    val ferme = autorise() && fermer(binder, interfaceSaic)
+                    if (ferme) demarrage.confirmerFermeture(compteur)
+                    ferme
+                }
+            }
+            return HvacPopupOverlay.remplacerPanneauSaic(app, { autorise() && isPopupOn(app) }) {
                 withContext(Dispatchers.IO) {
-                    autorise() && fermer(binder, interfaceSaic)
+                    autorise() && isPopupOn(app) && fermer(binder, interfaceSaic)
                 }
             }
         } finally {
