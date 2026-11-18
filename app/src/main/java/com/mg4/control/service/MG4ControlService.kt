@@ -217,6 +217,7 @@ class MG4ControlService : Service() {
         // parfaitement logique une fois vu d'ici. Le service, lui, démarre au boot.
         MG4Hardware.initAudio(applicationContext)
         registerHardkeyReceiver()
+        panneauClimSaic.demarrer()
         registerBtAclReceiver()        // [BT-PROFILES]
         registerSkinChangeReceiver()   // [THEME-AUTO]
         registerExternalApiReceiver()  // issue #79
@@ -369,6 +370,7 @@ class MG4ControlService : Service() {
             // conducteur partent (ou reviennent) tout de suite.
             FloatingButtonsOverlay.refresh(this)
             ProjectionHvacZone.refresh(this)
+            panneauClimSaic.actualiser()
             ClusterModuleOverlay.refresh(this, "mode Garage")
             return START_STICKY
         }

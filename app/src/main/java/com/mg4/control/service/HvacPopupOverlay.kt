@@ -217,7 +217,7 @@ object HvacPopupOverlay {
     }
 
     /**
-     * Relais de la touche d'origine : garde le panneau SAIC si on ne peut pas prendre la relève.
+     * Garde le panneau SAIC si on ne peut pas prendre la relève.
      * Si notre pop-up est déjà là, seul le panneau SAIC est refermé.
      */
     internal suspend fun remplacerPanneauSaic(
@@ -231,9 +231,9 @@ object HvacPopupOverlay {
         try {
             val (etatLu, chauds) = withContext(lectures) {
                 val lu = lireEtat()
-                lu to if (lu?.powerOn == true && dejaAffichee == null) lireChauffages() else null
+                lu to if (lu != null && dejaAffichee == null) lireChauffages() else null
             }
-            if (etatLu?.powerOn != true || !autorise()) return@withContext false
+            if (etatLu == null || !autorise()) return@withContext false
             if (dejaAffichee != null) return@withContext overlayView === dejaAffichee && fermerSaic()
             showOnMain(context, etatLu, chauds)
             val affichee = overlayView ?: return@withContext false

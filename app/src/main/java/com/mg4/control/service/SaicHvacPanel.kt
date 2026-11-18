@@ -4,9 +4,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.os.IBinder
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.os.SystemClock
 import android.system.Os
 import android.system.OsConstants
@@ -21,12 +23,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Relais du panneau SAIC après la touche HVAC. La commande de clim reste au véhicule. */
+/** Relais du panneau SAIC lorsqu'il apparaît. La commande de clim reste au véhicule. */
 internal class SaicHvacPanel(context: Context) {
     companion object {
         private const val TAG = "MG4_HVAC_SAIC"
@@ -35,7 +40,9 @@ internal class SaicHvacPanel(context: Context) {
         const val KEYCODE = 0x120
         private const val TITRE = "hvac page"
         private const val DELAI_MAX_MS = 1_500L
-        private const val LECTURE_MAX_MS = 200L
+        private const val LECTURE_MAX_MS = 400L
+        private const val SONDE_MS = 400L
+        private const val ATTENTE_MS = 1_000L
         private const val TX_FERMER = 2
         private const val SYSTEM_UI = "com.android.systemui"
         private val SERVICE by lazy { ComponentName(SYSTEM_UI, "$SYSTEM_UI.StartActivityService") }
@@ -44,7 +51,7 @@ internal class SaicHvacPanel(context: Context) {
             "com.saicmotor.sdk.external.IPageService", // SWI68 : closeHvac
         )
         private val ENTETE = Regex("""(?m)^\h*Window #\d+\h+""")
-        private val FENETRE = Regex("""Window\{\S+\s+u\d+ hvac page\}:""")
+        private val FENETRE = Regex("""Window\{\S+\s+u\d+ ${Regex.escape(TITRE)}\}:""")
         private val CADRE = Regex("""(?m)^\h*mFrame=\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]""")
         private val PAQUET = Regex("""\bpackage=com\.android\.systemui(?:\s|$)""")
 
@@ -57,6 +64,7 @@ internal class SaicHvacPanel(context: Context) {
 
         fun setOn(ctx: Context, on: Boolean) {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
+            AppLogger.i(TAG, "Remplacement du panneau SAIC : ${if (on) "activé" else "désactivé"}")
         }
 
         /** SystemUI garde la vue attachée et la fait glisser au-dessus de l'écran pour la cacher. */
@@ -73,13 +81,41 @@ internal class SaicHvacPanel(context: Context) {
     }
 
     private val app = context.applicationContext
+    private val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val ecran = app.getSystemService(PowerManager::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var remplacement: Job? = null
+    private val appui = Channel<Unit>(Channel.CONFLATED)
+    private var surveillance: Job? = null
     private var appuiLong = false
+    private val changement = SharedPreferences.OnSharedPreferenceChangeListener { _, cle ->
+        if (cle == KEY) actualiser()
+    }
+    @Volatile private var windowManager: IBinder? = null
 
-    fun stop() = scope.cancel()
+    fun demarrer() {
+        prefs.registerOnSharedPreferenceChangeListener(changement)
+        actualiser()
+    }
 
-    /** Reçoit uniquement la touche native, via le receiver protégé du service. Fil principal. */
+    fun stop() {
+        prefs.unregisterOnSharedPreferenceChangeListener(changement)
+        scope.cancel()
+    }
+
+    fun actualiser() {
+        if (!autorise()) {
+            surveillance?.cancel()
+            surveillance = null
+            appui.tryReceive()
+            appuiLong = false
+            return
+        }
+        if (surveillance?.isActive == true) return
+        AppLogger.i(TAG, "Surveillance du panneau SAIC active (${FirmwareInfo.getGeneration()})")
+        surveillance = scope.launch { observer() }
+    }
+
+    /** La touche accélère la prochaine lecture. Le bandeau et les firmwares sans signal passent par la sonde. */
     fun touche(down: Boolean, long: Boolean) {
         if (down) {
             appuiLong = long
@@ -87,24 +123,58 @@ internal class SaicHvacPanel(context: Context) {
         }
         val ignorer = appuiLong || long
         appuiLong = false
-        if (ignorer || remplacement?.isActive == true || !autorise()) return
-        remplacement = scope.launch {
-            val abouti = withTimeoutOrNull(DELAI_MAX_MS) { relayer() }
-            if (abouti == null) AppLogger.w(TAG, "Panneau SAIC : remplacement expiré")
+        if (!ignorer && surveillance?.isActive == true) {
+            AppLogger.i(TAG, "Touche clim relâchée")
+            appui.trySend(Unit)
         }
     }
 
     private fun autorise() = isOn(app) && !GarageMode.isOn(app) && supported()
 
-    private suspend fun relayer(): Boolean {
-        // Le receiver de SystemUI traite le même événement. On attend que sa vue apparaisse.
-        for (essai in 0 until 4) {
-            if (!autorise()) return false
-            delay(if (essai == 0) 65 else 95)
-            val visible = withContext(Dispatchers.IO) { panneauVisible() } ?: return false
-            if (visible) return remplacer()
+    /** Une tentative par ouverture confirmée, même si plusieurs sondes voient la même fenêtre. */
+    internal class Ouvertures {
+        private var visible = false
+
+        fun nouvelle(valeur: Boolean?): Boolean {
+            if (valeur == null) return false
+            val ouverture = valeur && !visible
+            visible = valeur
+            return ouverture
         }
-        return false
+    }
+
+    private suspend fun observer() {
+        val ouvertures = Ouvertures()
+        var derniereErreur: String? = null
+        var premiereLecture = true
+        while (currentCoroutineContext().isActive && autorise()) {
+            if (ecran?.isInteractive != true) {
+                ouvertures.nouvelle(false)
+                appui.tryReceive()
+                delay(ATTENTE_MS)
+                continue
+            }
+            val lecture = withContext(Dispatchers.IO) { runCatching { panneauVisible() } }
+            val erreur = lecture.exceptionOrNull()?.let { it.cause?.message ?: it.message ?: it.javaClass.simpleName }
+            if (erreur != null && erreur != derniereErreur) AppLogger.w(TAG, "Lecture du panneau SAIC : $erreur")
+            val visible = lecture.getOrNull()
+            if (visible != null && (premiereLecture || derniereErreur != null)) {
+                AppLogger.i(TAG, "Lecture du panneau SAIC disponible")
+                premiereLecture = false
+            }
+            derniereErreur = erreur
+            if (ouvertures.nouvelle(visible) && autorise()) {
+                AppLogger.i(TAG, "Panneau SAIC visible, tentative de remplacement")
+                when (withTimeoutOrNull(DELAI_MAX_MS) { remplacer() }) {
+                    null -> AppLogger.w(TAG, "Panneau SAIC : remplacement expiré")
+                    false -> AppLogger.w(TAG, "Panneau SAIC conservé, remplacement indisponible")
+                    true -> AppLogger.i(TAG, "Panneau SAIC relayé par MG4Control")
+                }
+            }
+            // La demande physique et la mise en page de SystemUI sont asynchrones.
+            val raccourci = withTimeoutOrNull(if (visible == null) ATTENTE_MS else SONDE_MS) { appui.receive() }
+            if (raccourci != null) delay(65L)
+        }
     }
 
     private suspend fun remplacer(): Boolean {
@@ -158,24 +228,21 @@ internal class SaicHvacPanel(context: Context) {
     }
 
     /** Diagnostic ciblé de WindowManager, borné et lu hors du fil principal. */
-    private fun panneauVisible(): Boolean? = try {
-        val wm = Class.forName("android.os.ServiceManager").getMethod("getService", String::class.java)
-            .invoke(null, "window") as? IBinder
-        if (wm == null) null else {
-            val (lecture, ecriture) = ParcelFileDescriptor.createPipe()
-            lecture.use { entree ->
-                ecriture.use { wm.dumpAsync(it.fileDescriptor, arrayOf("-a", TITRE)) }
-                lireDiagnostic(entree)?.let { dump ->
-                    if ("Permission Denial" in dump) {
-                        AppLogger.w(TAG, "Lecture des fenêtres de SystemUI refusée")
-                        null
-                    } else estVisible(dump)
-                }
-            }
+    private fun panneauVisible(): Boolean {
+        val wm = windowManager?.takeIf { it.isBinderAlive } ?: checkNotNull(
+            Class.forName("android.os.ServiceManager").getMethod("getService", String::class.java)
+                .invoke(null, "window") as? IBinder
+        ) { "WindowManager injoignable" }.also { windowManager = it }
+        val (lecture, ecriture) = ParcelFileDescriptor.createPipe()
+        val dump = lecture.use { entree ->
+            ecriture.use { wm.dumpAsync(it.fileDescriptor, arrayOf("-a", TITRE)) }
+            checkNotNull(lireDiagnostic(entree)) { "délai ou taille limite de la lecture WindowManager" }
         }
-    } catch (e: Exception) {
-        AppLogger.w(TAG, "Lecture du panneau SAIC impossible : ${e.javaClass.simpleName} ${e.message}")
-        null
+        check("Permission Denial" !in dump) { "lecture de WindowManager refusée" }
+        check("WINDOW MANAGER WINDOWS" in dump || "Bad window command, or no windows match: $TITRE" in dump) {
+            "format de diagnostic WindowManager inconnu"
+        }
+        return estVisible(dump)
     }
 
     private fun lireDiagnostic(entree: ParcelFileDescriptor): String? {

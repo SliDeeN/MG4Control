@@ -37,4 +37,14 @@ class SaicHvacPanelTest {
         assertFalse(SaicHvacPanel.estVisible("$sansSurface\n$autre"))
         assertFalse(SaicHvacPanel.estVisible("Permission Denial"))
     }
+
+    @Test fun `une tentative par ouverture meme si une lecture echoue`() {
+        val ouvertures = SaicHvacPanel.Ouvertures()
+        assertFalse(ouvertures.nouvelle(false))
+        assertTrue(ouvertures.nouvelle(true))
+        assertFalse(ouvertures.nouvelle(null))
+        assertFalse(ouvertures.nouvelle(true))
+        assertFalse(ouvertures.nouvelle(false))
+        assertTrue(ouvertures.nouvelle(true))
+    }
 }
