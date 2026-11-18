@@ -9,8 +9,9 @@ import com.mg4.control.util.FirmwareInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -35,7 +36,6 @@ object ProfileApplier {
     private val applyMutex = Mutex()
 
     /** Application en cours : annulée dès qu'une nouvelle est demandée. */
-    @Volatile
     private var currentApply: Job? = null
 
     /**
@@ -89,12 +89,22 @@ object ProfileApplier {
             AppLogger.i(TAG, "  Choix manuel mémorisé : ${profile.name} (id=${profile.id})")
         }
 
-        val previous = currentApply
+        scheduleApply(profile, autoStart, onComplete)
+    }
+
+    @Synchronized
+    private fun scheduleApply(profile: DrivingProfile, autoStart: Boolean, onComplete: ((Boolean) -> Unit)?) {
+        currentApply?.cancel()
         currentApply = applierScope.launch {
-            // Annule l'application précédente avant de prendre le verrou : la nouvelle
-            // demande fait autorité, on ne fait pas la queue derrière une séquence obsolète.
-            previous?.cancelAndJoin()
-            applyMutex.withLock { applyLocked(profile, autoStart, onComplete) }
+            val gen = FirmwareInfo.getGeneration()
+            applyMutex.withLock { applyLocked(profile, autoStart, gen, onComplete) }
+            if (gen == FirmwareInfo.Gen.SWI133 && profile.appliesSafety) {
+                profile.escEnabled?.let {
+                    // Après les autres réglages et hors du verrou des profils : une nouvelle
+                    // application peut continuer pendant la confirmation d'une bascule déjà partie.
+                    AppLogger.i(TAG, "  Esc=$it → ${MG4Hardware.setSwi133ProfileEsc(it)}")
+                }
+            }
         }
     }
 
@@ -102,7 +112,12 @@ object ProfileApplier {
      * Corps de l'application, exécuté sous [applyMutex] : une seule séquence d'écritures
      * véhicule à la fois.
      */
-    private fun applyLocked(profile: DrivingProfile, autoStart: Boolean, onComplete: ((Boolean) -> Unit)?) {
+    private suspend fun applyLocked(
+        profile: DrivingProfile,
+        autoStart: Boolean,
+        gen: FirmwareInfo.Gen,
+        onComplete: ((Boolean) -> Unit)?,
+    ) {
             var ok = true
 
             // Catégories coupées dans le profil (interrupteur général de l'éditeur) : rien n'en
@@ -204,9 +219,8 @@ object ProfileApplier {
             onComplete?.invoke(ok)
 
             // ADAS (Katman4) — appliqué dès que le service est prêt
-            MG4Hardware.whenKatman4Ready {
+            val applyAdas = {
                 AppLogger.i(TAG, "  Application ADAS pour profil '${profile.name}'")
-                val gen = FirmwareInfo.getGeneration()
 
                 // Aides à la conduite et alertes — page Sécurité.
                 if (securite) applyDrivingAids(profile)
@@ -234,11 +248,18 @@ object ProfileApplier {
                     verifyAdasWithRetry(profile)
                 }
             }
+            if (gen == FirmwareInfo.Gen.SWI133) {
+                MG4Hardware.awaitKatman4Ready()
+                currentCoroutineContext().ensureActive()
+                applyAdas()
+            } else {
+                MG4Hardware.whenKatman4Ready(applyAdas)
+            }
     }
 
     /**
      * Aides à la conduite et alertes de la page Sécurité, dans l'ordre que chaque firmware
-     * impose (TSR d'abord, puis les alertes qu'il réinitialise, puis ADAS, AEB, ESC/somnolence).
+     * impose (TSR d'abord, puis les alertes qu'il réinitialise, puis ADAS et AEB).
      * L'ELK, commun, est appliqué par l'appelant.
      */
     private fun applyDrivingAids(profile: DrivingProfile) {
@@ -336,7 +357,7 @@ object ProfileApplier {
             val adOk = MG4Hardware.setMixedIntelligentDrive(profile.adasMode)
             AppLogger.i(TAG, "  AdasMode=${profile.adasMode} → $adOk")
             applyAeb(profile.aebEnabled, profile.aebMode, profile.aebSensitivity)
-            applySafety(profile)
+            if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133) applyDrowsiness(profile)
         }
     }
 
@@ -425,57 +446,28 @@ object ProfileApplier {
             AppLogger.w(TAG, "  [VERIFY] $name ÉCHEC après 3 tentatives (lu=$finalVal, attendu=$desired)")
     }
 
-    /**
-     * Applique les réglages ELK (assistant de sortie de voie) du profil — tous firmwares.
-     * Si elkMode=0 (valeur par défaut — profil créé avant l'ajout de l'ELK),
-     * on ne touche pas aux réglages ELK pour éviter une modification involontaire.
-     */
-    /**
-     * ESC, avertissement de somnolence et sensibilité de son alerte.
-     *
-     * Les valeurs viennent des ACCESSEURS du profil, pas des champs bruts : un profil enregistré
-     * avant la fonctionnalité a ses trois champs à null et doit recevoir les défauts que la
-     * voiture rétablit d'elle-même au démarrage (ESC ON, somnolence ON, sensibilité Standard).
-     * Lire les champs directement appliquerait `false`, donc un ESC désactivé — l'inverse.
-     *
-     * La sensibilité est écrite avant le commutateur : sur un système éteint, régler la
-     * sensibilité d'abord évite une alerte au niveau précédent entre les deux appels.
-     */
+    /** ESC et somnolence sur les firmwares où la séquence ADAS peut arriver sur le fil UI. */
     private fun applySafety(profile: DrivingProfile) {
         if (!MG4Hardware.hasDrowsinessAndEsc()) return
-
-        // ⚠️ On lit les champs BRUTS (nullables), pas les accesseurs.
-        //
-        // Les accesseurs rendent « ON » pour un profil antérieur à la fonctionnalité, ce qui
-        // paraissait sûr — forcer un organe de sécurité à ON ne peut pas nuire. C'est faux ici :
-        // l'écriture ESC est une BASCULE pilotée par une relecture. Si la propriété rend une
-        // valeur fausse au démarrage (0 alors que l'ESC est en réalité actif), viser « ON »
-        // fait écrire 1, donc INVERSE l'état et désactive l'ESC.
-        //
-        // Un profil qui n'a jamais configuré ces réglages ne doit donc rien écrire du tout —
-        // même principe que le garde-fou de [applyAeb], qui existait déjà et que j'avais omis.
         if (profile.escEnabled == null &&
             profile.drowsinessEnabled == null &&
-            profile.drowsinessSensitivity == null) {
-            AppLogger.i(TAG, "  ESC/somnolence — non configurés dans ce profil, skip " +
-                "(évite toute écriture involontaire sur un organe de sécurité)")
-            return
-        }
+            profile.drowsinessSensitivity == null) return
 
-        // ⚠️ Hors thread principal OBLIGATOIREMENT : whenKatman4Ready republie ses écouteurs
-        // via Handler(Looper.getMainLooper()), donc ce code s'exécute sur le thread UI quand le
-        // service était déjà prêt — et setEsc attend ~1 s pour confirmer l'état. Sans ce
-        // basculement, l'écran gèlerait, et seulement dans certains cas de timing.
         applierScope.launch {
-            profile.drowsinessSensitivity?.let {
-                AppLogger.i(TAG, "  DrowsinessSensitivity=$it → ${MG4Hardware.setDrowsinessSensitivity(it)}")
-            }
-            profile.drowsinessEnabled?.let {
-                AppLogger.i(TAG, "  Drowsiness=$it → ${MG4Hardware.setDrowsiness(it)}")
-            }
+            applyDrowsiness(profile)
             profile.escEnabled?.let {
                 AppLogger.i(TAG, "  Esc=$it → ${MG4Hardware.setEsc(it)}")
             }
+        }
+    }
+
+    /** Écrit la sensibilité avant l'activation. Un champ null laisse le réglage du véhicule. */
+    private fun applyDrowsiness(profile: DrivingProfile) {
+        profile.drowsinessSensitivity?.let {
+            AppLogger.i(TAG, "  DrowsinessSensitivity=$it → ${MG4Hardware.setDrowsinessSensitivity(it)}")
+        }
+        profile.drowsinessEnabled?.let {
+            AppLogger.i(TAG, "  Drowsiness=$it → ${MG4Hardware.setDrowsiness(it)}")
         }
     }
 
@@ -494,6 +486,7 @@ object ProfileApplier {
         AppLogger.i(TAG, "  AutoHighBeam=$voulu → ${MG4Hardware.setAutoHighBeam(voulu)}")
     }
 
+    /** Applique l'aide au maintien dans la voie quand le profil la configure. */
     private fun applyElk(elkMode: Int, elkSensitivity: Int, lasAudibleWarning: Boolean = true, lasVibrationReminder: Boolean = true,
                          soundWarning: Boolean? = null) {
         if (elkMode == 0) {

@@ -32,9 +32,18 @@ import com.mg4.control.util.ClimateAutoScope
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
 import com.saicmotor.common.CommandParcelable
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -264,7 +273,8 @@ object MG4Hardware {
     @Volatile private var sVcm: Any? = null
     @Volatile private var sVcmListener: Any? = null
     @Volatile private var sVcmCallbackRegistered = false
-    @Volatile private var sLastVcmIgnitionState = -1   // filtre les faux RUN répétés
+    private data class IgnitionEvent(val state: Int, val elapsedMs: Long)
+    @Volatile private var lastVcmIgnition: IgnitionEvent? = null
     private val vehicleConditionCallbacks = java.util.concurrent.CopyOnWriteArrayList<(Int) -> Unit>()
 
     /** Listeners notifiés dès que Katman1 (CPM + HVAC) est opérationnel. */
@@ -294,6 +304,18 @@ object MG4Hardware {
         if (ready) action() else katman4ReadyListeners.add(action)
     }
 
+    internal suspend fun awaitKatman4Ready() {
+        val ready = CompletableDeferred<Unit>()
+        val notifyReady: () -> Unit = { ready.complete(Unit) }
+        katman4ReadyListeners.add(notifyReady)
+        try {
+            if (isKatman4Ready()) ready.complete(Unit)
+            ready.await()
+        } finally {
+            katman4ReadyListeners.remove(notifyReady)
+        }
+    }
+
     /** Enregistre un callback invoqué à chaque changement d'état d'allumage (CarIgnitionItem). */
     fun registerVehicleConditionListener(callback: (Int) -> Unit) {
         vehicleConditionCallbacks.add(callback)
@@ -317,7 +339,7 @@ object MG4Hardware {
             val direct = runCatching { vcm.javaClass.getMethod("getVehicleIgnition").invoke(vcm) as? Int }.getOrNull()
             if (direct != null && direct >= 0) return direct
         }
-        if (sLastVcmIgnitionState >= 0) return sLastVcmIgnitionState
+        lastVcmIgnition?.state?.takeIf { it >= 0 }?.let { return it }
         val v0 = getIntPropertyCPM(PROP_IGNITION_STATE, 0)
         if (v0 > 0) return v0
         val v1 = getIntPropertyCPM(PROP_IGNITION_STATE, AREA_GLOBAL)
@@ -2737,129 +2759,119 @@ object MG4Hardware {
         }
     }
 
-    /**
-     * Active/désactive l'ESC.
-     *
-     * ⚠️ L'écriture n'est PAS un « set » ordinaire : dans l'UI d'origine, l'interrupteur ET son
-     * dialogue de confirmation écrivent tous deux la valeur **1**. C'est la signature d'une
-     * bascule qui ignore son argument, comme les commandes clim SAIC (voir hvacCycleTo).
-     *
-     * On lit donc l'état courant et on n'écrit QUE s'il diffère de la cible. Le helper reste juste
-     * dans les deux hypothèses : si c'était en réalité un « set » où 1=ON, écrire 1 pour passer de
-     * OFF à ON donne le même résultat. [runSafetyDiag] tranche la question.
-     *
-     * Refuse plutôt que de deviner quand l'état courant est illisible : sur une bascule, partir
-     * d'un état supposé fait l'inverse de ce qui est demandé une fois sur deux.
-     */
-    /** Nombre de lectures concordantes exigées avant d'agir sur l'ESC. */
     private const val ESC_LECTURES = 3
-    /** Intervalle entre deux lectures, en ms. */
     private const val ESC_INTERVALLE_MS = 300L
-    /** Délai laissé au calculateur pour appliquer la bascule avant de constater l'effet. */
     private const val ESC_STABILISATION_MS = 600L
+    private const val ESC_SWI133_REVEIL_MS = 5_000L
+    private const val ESC_SWI133_INTERVALLE_MS = 500L
+    // Première relecture à 600 ms, puis sept autres jusqu'à 4,1 s.
+    private const val ESC_SWI133_RELECTURES = 8
+    private val escMutex = Mutex()
 
     /**
-     * État de l'ESC confirmé par [ESC_LECTURES] lectures concordantes, ou `null` si on ne peut
-     * pas conclure.
-     *
-     * Deux raisons de renoncer, et la seconde est la plus importante :
-     *  • une lecture illisible — on ne devine pas ;
-     *  • des lectures **divergentes**, qui signifient que la voiture est en train d'agir sur
-     *    l'ESC à cet instant précis. C'est exactement le moment où il ne faut surtout pas
-     *    écrire : l'écriture est une bascule, elle s'ajouterait à celle du véhicule et
-     *    produirait l'inverse du résultat voulu.
+     * Le profil SWI133 attend le cycle RUN courant. Un changement de contact invalide même une
+     * demande qui était déjà en attente quand le véhicule s'est réveillé de nouveau.
      */
-    private fun lireEscStable(): Boolean? {
+    internal suspend fun setSwi133ProfileEsc(on: Boolean): Boolean {
+        val reveil = lastVcmIgnition?.takeIf { it.state == CarIgnitionItem.RUN }
+        if (reveil == null) {
+            AppLogger.i(SAFE_TAG, "ESC profil : attente d'un passage en RUN, aucune bascule")
+            return false
+        }
+        val attente = ESC_SWI133_REVEIL_MS - (SystemClock.elapsedRealtime() - reveil.elapsedMs)
+        if (attente > 0) {
+            AppLogger.i(SAFE_TAG, "ESC profil : ${attente} ms restantes avant la première lecture")
+            delay(attente)
+        }
+        return setEscConfirmed(on, contexteValide = {
+            lastVcmIgnition === reveil && !GarageMode.isOn(appContext()) &&
+                getCurrentIgnitionState() == CarIgnitionItem.RUN
+        }, avantBascule = {
+            // Le conducteur peut déjà avoir quitté sa place de stationnement durant l'attente.
+            val vitesse = getVehicleSpeedKmh()
+            if (vitesse != 0f) AppLogger.w(SAFE_TAG, "ESC profil : arrêt non confirmé (vitesse=$vitesse)")
+            vitesse == 0f
+        })
+    }
+
+    /** Renvoie une valeur uniquement si chaque lecture concorde, y compris la dernière. */
+    internal fun escConfirme(lectures: List<Boolean?>): Boolean? {
+        val premier = lectures.firstOrNull() ?: return null
+        return premier.takeIf { lectures.all { lu -> lu == premier } }
+    }
+
+    /** Exige trois lectures concordantes pour décider si l'unique bascule est nécessaire. */
+    private suspend fun setEscConfirmed(
+        on: Boolean,
+        contexteValide: () -> Boolean,
+        avantBascule: () -> Boolean = { true },
+    ): Boolean = escMutex.withLock {
+        val swi133 = FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133
+        val intervalle = if (swi133) ESC_SWI133_INTERVALLE_MS else ESC_INTERVALLE_MS
         val lectures = ArrayList<Boolean?>(ESC_LECTURES)
         repeat(ESC_LECTURES) { i ->
-            if (i > 0) try { Thread.sleep(ESC_INTERVALLE_MS) } catch (_: InterruptedException) {}
+            if (i > 0) delay(intervalle)
+            if (!contexteValide()) {
+                AppLogger.w(SAFE_TAG, "ESC : contexte véhicule changé pendant les lectures")
+                return@withLock false
+            }
             lectures.add(isEscOn())
         }
-        if (lectures.any { it == null }) {
-            AppLogger.w(SAFE_TAG, "ESC : lecture illisible ($lectures) — aucune action")
-            return null
+        val stable = escConfirme(lectures)
+        if (stable == null) {
+            AppLogger.w(SAFE_TAG, "ESC : lectures illisibles ou divergentes ($lectures)")
+            return@withLock false
         }
-        val distinctes = lectures.distinct()
-        if (distinctes.size > 1) {
-            AppLogger.w(SAFE_TAG, "ESC : lectures DIVERGENTES ($lectures) — la voiture agit " +
-                "en ce moment, on renonce plutôt que de s'ajouter à sa bascule")
-            return null
+        if (stable == on) {
+            AppLogger.i(SAFE_TAG, "ESC déjà ${if (on) "ON" else "OFF"} (confirmé $ESC_LECTURES fois)")
+            return@withLock true
         }
-        return distinctes.first()
+        if (!avantBascule() || !contexteValide()) return@withLock false
+        currentCoroutineContext().ensureActive()
+        AppLogger.i(SAFE_TAG, "ESC → ${if (on) "ON" else "OFF"} : état confirmé=$stable, bascule demandée")
+        if (!writeEscRaw(1)) return@withLock false
+
+        // Une commande déjà envoyée continue côté voiture. Garder le verrou ESC jusqu'à la
+        // relecture évite qu'une nouvelle demande interprète son état transitoire.
+        withContext(NonCancellable) {
+            val confirmations = ArrayList<Boolean?>()
+            val nombre = if (swi133) ESC_SWI133_RELECTURES else 1
+            repeat(nombre) { i ->
+                delay(if (i == 0) ESC_STABILISATION_MS else intervalle)
+                if (!contexteValide()) {
+                    AppLogger.w(SAFE_TAG, "ESC : contexte véhicule changé avant la confirmation")
+                    return@withContext false
+                }
+                confirmations.add(isEscOn())
+            }
+            val obtenu = escConfirme(confirmations.takeLast(2))
+            if (obtenu != on) {
+                AppLogger.w(SAFE_TAG, "ESC : cible=$on, relectures=$confirmations — aucune nouvelle bascule")
+            } else {
+                AppLogger.i(SAFE_TAG, "ESC conforme après écriture : $on (relectures=$confirmations)")
+            }
+            obtenu == on
+        }
     }
 
     /**
-     * Active ou désactive l'ESC.
-     *
-     * ⚠️ L'écriture est un CYCLE, pas une consigne : vérifié sur cinq chemins de l'UI d'origine,
-     * deux firmwares et deux API différentes — la valeur écrite est **toujours 1**, pour allumer
-     * comme pour éteindre. Il n'existe aucune voie à valeur absolue. C'est donc la lecture
-     * préalable, et elle seule, qui détermine le sens de l'action.
-     *
-     * D'où le protocole : on n'agit QUE si [ESC_LECTURES] lectures concordantes diffèrent de la
-     * cible. Toute incertitude — lecture illisible ou instable — vaut abstention. Le véhicule
-     * remet l'ESC sur ON à chaque démarrage ; ne rien faire est donc toujours sans danger,
-     * contrairement à une écriture au mauvais moment.
-     *
-     * ⚠️ BLOQUE environ une seconde : à n'appeler QUE hors du thread principal.
+     * Commande ESC hors profil. La lecture et la confirmation bloquent le thread appelant.
+     * La valeur écrite est une bascule, identique pour les deux cibles.
      */
     fun setEsc(on: Boolean): Boolean {
         if (!hasDrowsinessAndEsc()) return false
-        // Garde explicite : whenKatman4Ready republie ses écouteurs sur le Looper principal,
-        // donc un appelant distrait arriverait ici sur le thread UI et gèlerait l'écran.
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            AppLogger.w(SAFE_TAG, "setEsc refusé — appelé sur le thread UI alors qu'il attend " +
-                "~1 s. L'appelant doit basculer sur un contexte IO.")
+            AppLogger.w(SAFE_TAG, "setEsc refusé sur le thread UI")
             return false
         }
 
-        // ⚠️ GARDE D'ALLUMAGE — cause d'un ESC désactivé au démarrage, reproduite le 2026-08-26.
-        //
-        // Scénario : on monte dans la voiture alors que l'infodivertissement tourne déjà mais que
-        // le tableau de bord est encore éteint. Le service démarre et applique le profil, donc
-        // AVANT que le véhicule ne soit réveillé. À cet instant la propriété ESC ne reflète pas
-        // l'état réel — et comme l'écriture est une BASCULE pilotée par cette lecture, viser
-        // « ON » à partir d'un « OFF » erroné INVERSE un ESC qui était actif. Il est alors
-        // réellement désactivé, en silence.
-        //
-        // Le second passage (IGNITION_RUN, puis passage en D) relisait correctement et le
-        // remettait sur ON : d'où l'impression d'un réglage qui « revient tout seul ».
-        //
-        // On refuse donc d'agir sur un état d'allumage CONNU comme non-RUN. Un état illisible
-        // n'est pas un refus : sur un firmware où la propriété ne répond pas, bloquer priverait
-        // l'utilisateur du réglage sans rien protéger.
-        //
-        // Aucune fonction perdue : le véhicule remet l'ESC sur ON à chaque démarrage, et le
-        // profil est ré-appliqué 500 ms après IGNITION_RUN — un profil qui veut l'ESC sur OFF
-        // sera donc bien honoré, simplement un peu plus tard.
-        val allumage = getCurrentIgnitionState()
-        if (allumage == CarIgnitionItem.OFF || allumage == CarIgnitionItem.ACCESSORY ||
-            allumage == CarIgnitionItem.CRANK) {
-            AppLogger.w(SAFE_TAG, "ESC : véhicule pas en RUN (allumage=$allumage) — aucune " +
-                "action. Basculer maintenant partirait d'une lecture non fiable.")
-            return false
+        return runBlocking {
+            setEscConfirmed(on, contexteValide = {
+                val allumage = getCurrentIgnitionState()
+                allumage != CarIgnitionItem.OFF && allumage != CarIgnitionItem.ACCESSORY &&
+                    allumage != CarIgnitionItem.CRANK
+            })
         }
-
-        val stable = lireEscStable() ?: return false
-        if (stable == on) {
-            AppLogger.i(SAFE_TAG, "ESC déjà ${if (on) "ON" else "OFF"} (confirmé " +
-                "$ESC_LECTURES fois) — aucune écriture")
-            return true
-        }
-
-        AppLogger.i(SAFE_TAG, "ESC → ${if (on) "ON" else "OFF"} : état confirmé=$stable, " +
-            "bascule via ${nEscSet()} (écriture de 1)")
-        val ok = writeEscRaw(1)
-
-        try { Thread.sleep(ESC_STABILISATION_MS) } catch (_: InterruptedException) {}
-        val obtenu = isEscOn()
-        if (obtenu != on) {
-            AppLogger.w(SAFE_TAG, "⚠️ ESC : cible=${if (on) "ON" else "OFF"} mais état relu=" +
-                "${obtenu ?: "illisible"} — AUCUNE réécriture (elle ferait osciller)")
-        } else {
-            AppLogger.i(SAFE_TAG, "ESC conforme après écriture : ${if (on) "ON" else "OFF"}")
-        }
-        return ok && obtenu == on
     }
 
     // ── Sonde somnolence / sensibilité / ESC (bouton Diagnostic) ──────────────
@@ -3906,8 +3918,8 @@ object MG4Hardware {
         // (changement de rapport D/N/R, etc.) alors que la voiture est déjà en RUN.
         // Au journal aussi, seulement au changement : en roulant, l'événement arrive toutes les
         // 100 ms (plus de 200 lignes identiques sur les 30 dernières secondes d'un trajet, SWI133).
-        if (state == sLastVcmIgnitionState) return
-        sLastVcmIgnitionState = state
+        if (state == lastVcmIgnition?.state) return
+        lastVcmIgnition = IgnitionEvent(state, SystemClock.elapsedRealtime())
         AppLogger.i(TAG, "  Katman5 event: ignition=$state (${carIgnitionName(state)})")
         val toNotify = vehicleConditionCallbacks.toList()
         if (toNotify.isEmpty()) return
@@ -3952,7 +3964,8 @@ object MG4Hardware {
         val katman5Path = if (FirmwareInfo.isNewGenVsm() || gen == FirmwareInfo.Gen.SWI132)
             "ICarGeneralService" else "VehicleConditionMgr"
         sb.appendLine("Katman5 prêt : ${if (sVcmCallbackRegistered) "✓ ($katman5Path)" else "✗ ($katman5Path)"}")
-        sb.appendLine("Katman5 ign  : ${carIgnitionName(sLastVcmIgnitionState)} ($sLastVcmIgnitionState)")
+        val ignition = lastVcmIgnition?.state ?: -1
+        sb.appendLine("Katman5 ign  : ${carIgnitionName(ignition)} ($ignition)")
         sb.appendLine()
 
         // Sonde énergie : TOUS les relevés gardés, pas seulement le dernier — c'est leur
