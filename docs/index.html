@@ -35,9 +35,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/site.css?v=cbeb2f14">
-  <link rel="stylesheet" href="assets/css/sim.css?v=22c2f559">
-  <link rel="stylesheet" href="assets/css/explorer.css?v=34b00b13">
+  <link rel="stylesheet" href="assets/css/site.css?v=6d7a1e7c">
+  <link rel="stylesheet" href="assets/css/sim.css?v=9bd7904d">
+  <link rel="stylesheet" href="assets/css/explorer.css?v=4173a27a">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
        langue a sa page, et seul un choix EXPLICITE y renvoie — ancien lien ?lang= (prioritaire,
@@ -388,7 +388,7 @@
         <p data-l="fr">Le réglage est relu sur la voiture. Il peut aussi faire partie d'un profil, où il ne s'applique que si vous l'avez coché, et se piloter d'un raccourci sur un bouton physique.</p>
       </details>
     </div>
-    <div class="pt" id="f-hvaceco" data-hl-key="climmodes hvac-eco" data-demo="hvacEco">
+    <div class="pt" id="f-hvaceco" data-hl-key="hvac-eco" data-demo="hvacEco">
       <h3><span data-l="fr">Mode ECO de la clim</span></h3>
       <p data-l="fr">Un bouton ECO rejoint A/C et AUTO : sur le tableau de bord, dans les profils et dans le pop-up HVAC.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
@@ -787,7 +787,7 @@
         <p data-l="fr">Tout bouton dont l'appui arrive à l'écran peut servir, sauf le joystick gauche, réservé à l'aide à la conduite. Sa carte montre son nom et son code (★ gauche 17, ★ droite 286, joystick 297 à 301…) ; le menu ⋮ le renomme, lui rend son nom d'origine ou retire la touche. Toucher de nouveau « Ajouter un bouton » annule ; l'attente expire seule au bout de 15 s.</p>
       </details>
     </div>
-    <div class="pt" id="f-scope" data-hl-key="adv-scope" data-go="shortcuts:classic">
+    <div class="pt" id="f-scope" data-hl-key="adv-scope" data-demo="wheelScopes">
       <h3><span data-l="fr">Raccourcis par profil</span></h3>
       <p data-l="fr">Un même bouton fait une chose différente selon le profil en cours.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
@@ -796,7 +796,7 @@
         <p data-l="fr">À l'appui, le raccourci de ce profil passe en premier, sinon celui de « Tous les profils ». Une touche n'est interceptée que si elle porte une action pour ce profil.</p>
       </details>
     </div>
-    <div class="pt" id="f-unassigned" data-hl-key="adv-list" data-go="shortcuts:classic">
+    <div class="pt" id="f-unassigned" data-hl-key="sc-btn2" data-go="shortcuts:classic">
       <h3><span data-l="fr">Appuis sans raccourci conservés</span></h3>
       <p data-l="fr">Un appui sans raccourci garde la fonction d'origine du bouton.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
@@ -884,7 +884,7 @@
         <p data-l="fr">Seuil de 0 à 60 °C, borne incluse. Un bandeau en bas de l'écran pose la question pendant le délai réglé (10 s par défaut), sans masquer la navigation : il rappelle la mesure, le seuil et le profil, et se répond au doigt ou au joystick droit du volant. NON ou délai écoulé, on retombe sur le profil Bluetooth ou par défaut. Température illisible ou profil supprimé : l'automatisation est ignorée.</p>
       </details>
     </div>
-    <div class="pt" id="f-acauto" data-hl-key="auto-clim" data-go="automation">
+    <div class="pt" id="f-acauto" data-hl-key="auto-clim" data-demo="acOnce">
       <h3><span data-l="fr">Climatisation selon la température</span></h3>
       <p data-l="fr">Deux règles côte à côte, chaud et froid, se règlent au curseur et allument la clim avec vos réglages.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
@@ -1389,7 +1389,7 @@
         <p data-l="fr">Android Auto et CarPlay occupent tout l'écran : la zone clim du haut ouvre alors le pop-up HVAC à la place du panneau d'origine. Interrupteur dans Réglages › Interface, désactivé par défaut, suspendu en Mode Garage.</p>
       </details>
     </div>
-    <div class="pt is-new" id="f-autolang" data-hl-key="s-lang" data-demo="lang">
+    <div class="pt is-new" id="f-autolang" data-hl-key="language-dialog" data-demo="lang">
       <h3><span data-l="fr">Langue de la voiture</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Au premier lancement, MG4Control prend la langue de la voiture si elle est traduite ; sinon il vous la demande.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
@@ -1511,21 +1511,21 @@
         <p data-l="fr"><b>Installer la MAJ</b> ouvre le dialogue habituel, <b>Ignorer cette version</b> ne la propose plus, <b>Ne plus me prévenir</b> coupe l'alerte, <b>Plus tard</b> referme le bandeau — comme l'absence de réponse à la fin du délai des pop-ups. Le reste de l'écran reste utilisable. Vérification 20 s après le contact, 6 h minimum entre deux requêtes, une seule fois par session.</p>
       </details>
     </div>
-    <div class="pt is-new" id="f-silentupd" data-hl-key="s-checkupd" data-demo="update">
+    <div class="pt is-new" id="f-silentupd" data-hl-key="update-dialog" data-go="settings:3" data-demo="update">
       <h3><span data-l="fr">Installation sans détour</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Plus de dossier Téléchargements ni d'installeur Android : la mise à jour s'installe seule et MG4Control se relance.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">Une fois l'APK téléchargé et sa signature vérifiée, MG4Control l'installe par une session PackageInstaller avec le drapeau interne INSTALL_INTERNAL, comme DiAuto-MG4, puis se rouvre s'il était à l'écran. Une version plus ancienne est refusée ; en cas d'échec, un message le dit et l'installation manuelle reste possible.</p>
       </details>
     </div>
-    <div class="pt" data-hl-key="s-checkupd" data-go="settings:3">
+    <div class="pt" data-hl-key="s-beta" data-go="settings:2">
       <h3><span data-l="fr">Stable ou bêta</span></h3>
       <p data-l="fr">Canal stable par défaut, canal bêta pour les pré-versions.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">La version stable remplace ensuite la dernière bêta du même numéro, jamais l'inverse. « Ne plus me rappeler » ignore une version donnée.</p>
       </details>
     </div>
-    <div class="pt" data-hl-key="s-checkupd" data-go="settings:3" data-demo="update">
+    <div class="pt" data-hl-key="update-dialog" data-go="settings:3" data-demo="update">
       <h3><span data-l="fr">Téléchargement sûr</span></h3>
       <p data-l="fr">L'APK doit venir de GitHub ou GitLab et porter la même signature, sinon il est supprimé.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
@@ -1607,7 +1607,7 @@
   <div class="wrap">
     <div class="sec-head">
       <h2><span data-l="fr">Compatibilité par firmware</span></h2>
-      <p data-l="fr">MG4 Electric (SAIC), écran MT2712, Android Automotive 9+, 1280 × 480. La colonne surlignée suit le firmware choisi pour la maquette.</p>
+      <p data-l="fr">MG4 Electric (SAIC), écran MT2712, Android Automotive 9+, 1920 × 720. La colonne surlignée suit le firmware choisi pour la maquette.</p>
     </div>
     <div class="table-wrap">
       <table class="matrix">
@@ -1718,9 +1718,9 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=016b7da4"></script>
-<script src="assets/js/sim.js?v=8a2b5fe3"></script>
-<script src="assets/js/site.js?v=5b3c68e9"></script>
-<script src="assets/js/explorer.js?v=72fb983a"></script>
+<script src="assets/js/strings.js?v=33b7e8f6"></script>
+<script src="assets/js/sim.js?v=e654f804"></script>
+<script src="assets/js/site.js?v=a3c1886a"></script>
+<script src="assets/js/explorer.js?v=16d44a4f"></script>
 </body>
 </html>

@@ -419,7 +419,7 @@
         <p data-l="en">The setting is re-read from the car. It can also be part of a profile, where it only applies if you ticked it, and be driven by a shortcut on a physical button.</p>
       </details>
     </div>
-    <div class="pt" id="f-hvaceco" data-hl-key="climmodes hvac-eco" data-demo="hvacEco">
+    <div class="pt" id="f-hvaceco" data-hl-key="hvac-eco" data-demo="hvacEco">
       <h3><span data-l="fr">Mode ECO de la clim</span><span data-l="en">Climate ECO mode</span></h3>
       <p data-l="fr">Un bouton ECO rejoint A/C et AUTO : sur le tableau de bord, dans les profils et dans le pop-up HVAC.</p>
       <p data-l="en">An ECO button joins A/C and AUTO: on the dashboard, in profiles and in the HVAC pop-up.</p>
@@ -910,7 +910,7 @@
         <p data-l="en">Any button whose press reaches the screen can be used, except the left joystick, reserved for driver assistance. Its card shows its name and code (left ★ 17, right ★ 286, joystick 297 to 301…); the ⋮ menu renames it, restores its original name or removes the key. Tapping “Add a button” again cancels; the wait times out on its own after 15 s.</p>
       </details>
     </div>
-    <div class="pt" id="f-scope" data-hl-key="adv-scope" data-go="shortcuts:classic">
+    <div class="pt" id="f-scope" data-hl-key="adv-scope" data-demo="wheelScopes">
       <h3><span data-l="fr">Raccourcis par profil</span><span data-l="en">Profile-scoped shortcuts</span></h3>
       <p data-l="fr">Un même bouton fait une chose différente selon le profil en cours.</p>
       <p data-l="en">One button does a different thing depending on the current profile.</p>
@@ -923,7 +923,7 @@
         <p data-l="en">On press, that profile's shortcut comes first, otherwise the “All profiles” one. A key is only intercepted if it carries an action for that profile.</p>
       </details>
     </div>
-    <div class="pt" id="f-unassigned" data-hl-key="adv-list" data-go="shortcuts:classic">
+    <div class="pt" id="f-unassigned" data-hl-key="sc-btn2" data-go="shortcuts:classic">
       <h3><span data-l="fr">Appuis sans raccourci conservés</span><span data-l="en">Presses without a shortcut kept</span></h3>
       <p data-l="fr">Un appui sans raccourci garde la fonction d'origine du bouton.</p>
       <p data-l="en">A press without a shortcut keeps the button's original function.</p>
@@ -1030,7 +1030,7 @@
         <p data-l="en">Threshold from 0 to 60 °C, inclusive. A banner at the bottom of the screen asks the question for the set delay (10 s by default), without hiding navigation: it shows the reading, the threshold and the profile, and is answered by touch or with the steering wheel's right joystick. NO or timeout falls back to the Bluetooth or default profile. Unreadable temperature or deleted profile: the automation is skipped.</p>
       </details>
     </div>
-    <div class="pt" id="f-acauto" data-hl-key="auto-clim" data-go="automation">
+    <div class="pt" id="f-acauto" data-hl-key="auto-clim" data-demo="acOnce">
       <h3><span data-l="fr">Climatisation selon la température</span><span data-l="en">Climate by temperature</span></h3>
       <p data-l="fr">Deux règles côte à côte, chaud et froid, se règlent au curseur et allument la clim avec vos réglages.</p>
       <p data-l="en">Two rules side by side, hot and cold, are set with sliders and switch the climate on with your settings.</p>
@@ -1661,7 +1661,7 @@
         <p data-l="en">Android Auto and CarPlay fill the screen: the climate area at the top then opens the HVAC pop-up instead of the stock panel. Switch in Settings › Interface, off by default, suspended in Garage mode.</p>
       </details>
     </div>
-    <div class="pt is-new" id="f-autolang" data-hl-key="s-lang" data-demo="lang">
+    <div class="pt is-new" id="f-autolang" data-hl-key="language-dialog" data-demo="lang">
       <h3><span data-l="fr">Langue de la voiture</span><span data-l="en">Car language</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="fr">Au premier lancement, MG4Control prend la langue de la voiture si elle est traduite ; sinon il vous la demande.</p>
       <p data-l="en">On first launch, MG4Control takes the car's language if it is translated; otherwise it asks you.</p>
@@ -1812,7 +1812,7 @@
         <p data-l="en"><b>Install update</b> opens the usual dialog, <b>Skip this version</b> stops offering it, <b>Stop telling me</b> turns the alert off, <b>Later</b> closes the banner, as does no answer when the pop-up delay runs out. The rest of the screen stays usable. Check 20 s after ignition, 6 h minimum between requests, only once per session.</p>
       </details>
     </div>
-    <div class="pt is-new" id="f-silentupd" data-hl-key="s-checkupd" data-demo="update">
+    <div class="pt is-new" id="f-silentupd" data-hl-key="update-dialog" data-go="settings:3" data-demo="update">
       <h3><span data-l="fr">Installation sans détour</span><span data-l="en">Direct install</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="fr">Plus de dossier Téléchargements ni d'installeur Android : la mise à jour s'installe seule et MG4Control se relance.</p>
       <p data-l="en">No more Downloads folder or Android installer: the update installs itself and MG4Control restarts.</p>
@@ -1821,7 +1821,7 @@
         <p data-l="en">Once the APK is downloaded and its signature checked, MG4Control installs it through a PackageInstaller session with the internal INSTALL_INTERNAL flag, as DiAuto-MG4 does, then reopens if it was on screen. An older version is refused; if it fails, a message says so and manual installation is still possible.</p>
       </details>
     </div>
-    <div class="pt" data-hl-key="s-checkupd" data-go="settings:3">
+    <div class="pt" data-hl-key="s-beta" data-go="settings:2">
       <h3><span data-l="fr">Stable ou bêta</span><span data-l="en">Stable or beta</span></h3>
       <p data-l="fr">Canal stable par défaut, canal bêta pour les pré-versions.</p>
       <p data-l="en">Stable channel by default, beta channel for pre-releases.</p>
@@ -1830,7 +1830,7 @@
         <p data-l="en">The stable release then replaces the latest beta of the same number, never the other way round. “Don't remind me” skips a given version.</p>
       </details>
     </div>
-    <div class="pt" data-hl-key="s-checkupd" data-go="settings:3" data-demo="update">
+    <div class="pt" data-hl-key="update-dialog" data-go="settings:3" data-demo="update">
       <h3><span data-l="fr">Téléchargement sûr</span><span data-l="en">Safe download</span></h3>
       <p data-l="fr">L'APK doit venir de GitHub ou GitLab et porter la même signature, sinon il est supprimé.</p>
       <p data-l="en">The APK must come from GitHub or GitLab and carry the same signature, otherwise it's deleted.</p>
@@ -1921,8 +1921,8 @@
   <div class="wrap">
     <div class="sec-head">
       <h2><span data-l="fr">Compatibilité par firmware</span><span data-l="en">Compatibility by firmware</span></h2>
-      <p data-l="fr">MG4 Electric (SAIC), écran MT2712, Android Automotive 9+, 1280 × 480. La colonne surlignée suit le firmware choisi pour la maquette.</p>
-      <p data-l="en">MG4 Electric (SAIC), MT2712 head unit, Android Automotive 9+, 1280 × 480. The highlighted column follows the firmware picked for the mockup.</p>
+      <p data-l="fr">MG4 Electric (SAIC), écran MT2712, Android Automotive 9+, 1920 × 720. La colonne surlignée suit le firmware choisi pour la maquette.</p>
+      <p data-l="en">MG4 Electric (SAIC), MT2712 head unit, Android Automotive 9+, 1920 × 720. The highlighted column follows the firmware picked for the mockup.</p>
     </div>
     <div class="table-wrap">
       <table class="matrix">

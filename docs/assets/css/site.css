@@ -453,6 +453,7 @@ pre.code {
 .dock-x { border: 0; background: var(--bg-alt); color: var(--ink-2); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
 .dock-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
 .dock-f { display: grid; gap: 4px; font-size: 0.7812rem; color: var(--ink-3); font-weight: 600; min-width: 0; }
+.dock-f[hidden] { display: none; }
 .dock-f b { color: var(--ink); font-family: var(--mono); font-weight: 600; }
 .dock-f select { height: 34px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); font: 500 0.8125rem var(--font); padding: 0 6px; min-width: 0; }
 .dock-f input[type=range] { width: 100%; accent-color: var(--accent); }

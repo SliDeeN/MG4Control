@@ -74,7 +74,7 @@
         if (req && !fsEl()) {
           try {
             const p = req.call(root);
-            // Sur Android, le plein écran autorise à forcer le paysage (ratio 1280 × 480).
+            // Sur Android, le plein écran autorise à forcer le paysage (ratio 8:3).
             const lock = () => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* non géré */ } };
             if (p && p.then) p.then(lock).catch(() => {}); else lock();
           } catch (e) { /* refusé : la couche fixe suffit */ }
@@ -147,11 +147,7 @@
 
     // ── Barre de thèmes : défilement de la liste + écran de la maquette ────
     function showGroup(g) {
-      const go = g.getAttribute('data-go'), demo = g.getAttribute('data-demo');
-      sim.ui.dialog = null;
-      if (sim.ui.overlay) sim.closeOverlay();
-      if (go) { const [scr, tab] = go.split(':'); sim.go(scr, tab); }
-      if (demo) sim.demo(demo);
+      sim.openFeature(g.getAttribute('data-go'), g.getAttribute('data-demo'));
     }
     chips.forEach((c) => c.addEventListener('click', (e) => {
       e.preventDefault();

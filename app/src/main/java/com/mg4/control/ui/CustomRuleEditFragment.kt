@@ -823,7 +823,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     }
 
     private fun catSignal(sig: RuleSignal): Cat = when (sig) {
-        RuleSignal.LOCKED, RuleSignal.FRONT_DOOR -> Cat.CAR
+        // « Nuit (feux auto) » (2026-11-18) : rangée avec la voiture, introuvable sous « Écran et son ».
+        RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.NIGHT -> Cat.CAR
         RuleSignal.BT_DEVICE, RuleSignal.ALTITUDE -> Cat.PLACES
         RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
         RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES, RuleSignal.PROFILE -> Cat.DRIVING
@@ -833,7 +834,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> Cat.CLIMATE
         RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT, RuleSignal.KEY_AWAY -> Cat.COMFORT
         RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM -> Cat.ADAS
-        RuleSignal.BRIGHTNESS, RuleSignal.VOLUME, RuleSignal.MEDIA_PLAYING, RuleSignal.NIGHT, RuleSignal.SUN_UP -> Cat.SCREEN_SOUND
+        RuleSignal.BRIGHTNESS, RuleSignal.VOLUME, RuleSignal.MEDIA_PLAYING, RuleSignal.SUN_UP -> Cat.SCREEN_SOUND
         RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON, RuleSignal.PROJECTION,
         RuleSignal.IN_CALL, RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> Cat.CONNECTIONS
         else -> Cat.SYSTEM

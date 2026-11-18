@@ -228,9 +228,7 @@
       const off = () => { const s = simFor(pt); if (s && !pt.classList.contains('active')) s.highlight(null); };
       const go = () => {
         const s = simFor(pt); if (!s) return;
-        const target = pt.getAttribute('data-go');
-        if (target) { const [scr, tab] = target.split(':'); s.go(scr, tab); }
-        const demo = pt.getAttribute('data-demo'); if (demo) s.demo(demo);
+        s.openFeature(pt.getAttribute('data-go'), pt.getAttribute('data-demo'));
         document.querySelectorAll('.pt.active').forEach((p) => p.classList.remove('active'));
         pt.classList.add('active');
         reveal(s, pt.getAttribute('data-hl-key'));

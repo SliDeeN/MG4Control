@@ -69,7 +69,7 @@ html[data-unpinned] .x-stage { position: static; }
 .x-pin[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent); }
 @media (max-width: 699px) { .x-fw { display: none; } }
 
-/* La maquette ne dépasse pas ~35 % de la hauteur de l'écran (ratio 1280 × 480). */
+/* La maquette ne dépasse pas ~35 % de la hauteur de l'écran (ratio 8:3). */
 #sim { max-width: min(100%, 92vh); margin: 0 auto; }
 html[data-unpinned] #sim { max-width: 100%; }
 
@@ -104,7 +104,7 @@ html[data-sim-full] .x-fulltitle { display: block; flex: 1; min-width: 0; font-w
 html[data-sim-full] .x-fulltitle .four { color: #2563EB; }
 html[data-sim-full] .x-fw { display: flex; }
 html[data-sim-full] .x-fullhint { display: inline; }
-/* Ratio 1280 × 480 : la largeur est bornée par la hauteur disponible (barre + marges retirées). */
+/* Ratio 8:3 : la largeur est bornée par la hauteur disponible (barre + marges retirées). */
 html[data-sim-full] #sim { max-width: min(100%, calc((100vh - 120px) * 2.62)); max-width: min(100%, calc((100dvh - 120px) * 2.62)); }
 @media (max-width: 699px) and (orientation: portrait) {
   html[data-sim-full] .x-rotate { display: inline; }

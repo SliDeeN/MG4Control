@@ -1,7 +1,7 @@
 /* ==========================================================================
    MG4Control : simulateur interactif
    ---------------------------------------------------------------------------
-   Reproduit l'interface de l'application (écran 1280 × 480) et son
+   Reproduit l'interface de l'application (écran 1920 × 720) et son
    comportement, d'après le code source (app/src/main/java/com/mg4/control).
    Toutes les maquettes de la page partagent UN véhicule virtuel : ce que vous
    réglez dans l'une se retrouve dans les autres.
@@ -64,6 +64,9 @@
     'Google Maps': 'com.google.android.apps.maps', Spotify: 'com.spotify.music', Waze: 'com.waze',
     YouTube: 'com.google.android.youtube', 'YouTube Music': 'com.google.android.apps.youtube.music'
   };
+
+  const SCREEN_WIDTH = 1920;
+  const SCREEN_HEIGHT = 720;
 
   /** Plafond de ProfileManager.MAX_PROFILES : dix depuis la 2.6.9. */
   const MAX_PROFILES = 10;
@@ -184,7 +187,7 @@
                   // Unité de distance générale et dernière jauge ouverte dans l'éditeur du combiné.
                   distUnit: 'auto', clLayMod: null,
                   // Côté du menu (NavSide) et « Garder l'A/C coupé » (#208, désactivé par défaut).
-                  navSide: 'auto', keepAcOff: false,
+                  navSide: 'auto', keepAcOff: false, replaceHvac: false,
                   // Relance de la détection du téléphone branché (#251) ; applications en plein écran (#248),
                   // une application → 'FULL' | 'STATUS' | 'NAVIGATION'. Tous deux désactivés par défaut.
                   projKick: false, immersive: false, immersiveApps: {} },
@@ -240,8 +243,8 @@
       bt: { devices: [{ mac: 'A4:C1:38:5E:22:10', name: 'Pixel 8' }, { mac: '5C:F9:38:07:AB:41', name: 'iPhone 15' }], connected: [] },
       diagUnlocked: false,
       // 2.7.0 : réglages rapides (null = tuiles par défaut), Mes automatisations.
-      quick: { tiles: null },
-      rules: { engine: true, hist: [], list: [
+      quick: { tiles: null, values: {} },
+      rules: { engine: true, hist: [], variables: {}, places: [], sounds: [], accounts: [], android: { wifi: true, ssid: 'MG4 Wi-Fi', bluetooth: true, hotspot: false }, list: [
         { id: 'r1', name: L('Message au démarrage', 'Startup message'), on: true, trg: [{ k: 'app_start' }], cond: [], act: [{ k: 'notify', msg: L('MG4Control est prêt', 'MG4Control is ready') }], opt: { ready: false, restart: false }, last: null },
         { id: 'r2', name: L('Volant chauffant : arrêt après 15 min', 'Heated steering wheel: off after 15 min'), on: false, trg: [{ k: 'steering_on', for: 900 }], cond: [],
           act: [{ k: 'set', key: 'steering', v: false }, { k: 'notify', msg: L('Volant chauffant coupé après 15 min', 'Heated steering wheel switched off after 15 min') }], opt: { ready: false, restart: false }, last: null },
@@ -288,6 +291,7 @@
       twoAlerts: !vsm || s132,                         // survitesse + changement de limite
       heat: ['SWI133', 'SWI68', 'SWI165'].includes(g), // sièges + volant chauffants
       clim: known, esc: known, bri: known, power: known,
+      replaceHvac: ['SWI133', 'SWI165', 'SWI68'].includes(g),
       door: known,                                     // carte « Baisse du volume » : partout où le volume est pilotable
       beam: known, batHeat: known,                     // feux de route automatiques, chauffage de la batterie
       counters: g === 'SWI132' || g === 'SWI133',      // compteurs d'énergie du véhicule ; sinon l'énergie est calculée
@@ -575,8 +579,10 @@
       ch.pts.push({ t: ch.simMs, kw, soc: ch.soc });
       c.soc = Math.floor(ch.soc);
     }
-    // Le pop-up suit chaque relevé ; le reste de la page, toutes les deux secondes.
-    instances.forEach((i) => { const o = i.ui.overlay; if (o && o.type === 'charge') i.render(); });
+    // Les fenêtres de charge suivent chaque relevé ; le reste, toutes les deux secondes.
+    instances.forEach((i) => {
+      if (i.ui.overlay?.type === 'charge' || i.ui.dialog?.type === 'chargeState') i.render();
+    });
     if (++chargeTickN % 4 === 0 || ch.done) listeners.forEach((f) => f());
   }
   /** Limite relevée au-dessus du niveau : une charge finie reprend. */
@@ -1510,7 +1516,20 @@
     STEERING_HEAT: { key: 'quick_tile_steering', ok: (k) => k.heat, opts: ynOpts, get: () => car().steering, set: (v) => { car().steering = v; return true; } },
     BRIGHTNESS: { key: 'quick_tile_brightness', ok: (k) => k.bri, opts: () => [20, 40, 60, 80, 100].map((n) => [n, n + ' %']), get: () => car().brightness, set: (v) => { car().brightness = v; return true; } }
   };
+  const QT_GROUPS = [
+    ['rule_cat_adas', 'shield', ['ELK_MODE', 'ELK_SENSITIVITY', 'CRUISE', 'AEB', 'TSR', 'OVERSPEED_ALARM', 'AUTO_HIGH_BEAM']],
+    ['rule_cat_driving', 'steering', ['REGEN', 'DRIVE_MODE', 'ENERGY_SAVING']],
+    ['rule_cat_battery', 'battery', ['BATTERY_HEAT']],
+    ['rule_cat_climate', 'temperature', ['AC', 'RECIRC', 'DEFROST_FRONT', 'DEFROST_REAR']],
+    ['rule_cat_comfort', 'armchair', ['SEAT_LEFT', 'SEAT_RIGHT', 'STEERING_HEAT']],
+    ['rule_cat_screen_sound', 'sun', ['BRIGHTNESS']]
+  ];
   const qtTiles = () => (state.quick.tiles || QT_DEFAULT).filter((t) => QT[t] && QT[t].ok(caps()));
+  const qtOptions = (t) => {
+    const all = QT[t].opts();
+    const kept = all.filter(([v]) => state.quick.values[t]?.includes(v));
+    return kept.length >= 2 ? kept : all;
+  };
   const qtValue = (t) => { const d = QT[t], v = d.get(), o = d.opts().find(([x]) => x === v); return o ? o[1] : String(v); };
 
   // ── Mes automatisations (CustomRules) : version de démonstration du moteur ─────
@@ -1529,24 +1548,145 @@
     return [noon - len / 2, noon + len / 2];
   }
   const sunUp = () => { const n = new Date(), h = n.getHours() + n.getMinutes() / 60, [a, b] = sunTimes(n); return h >= a && h < b; };
-  const valTxt = (key, v) => (typeof v === 'boolean' ? S(v ? 'rule_on' : 'rule_off') : key === 'hvac_temp' ? v + ' °C'
-    : key === 'recirc' ? S(['rule_recirc_inner', 'rule_recirc_outside', 'rule_recirc_auto'][v]) : /^seat/.test(key) ? (v ? S('climate_level_' + v) : S('rule_seat_off')) : String(v));
-  const SET_KEYS = {
-    seat_left: { k: 'seatL', opts: [0, 1, 2, 3], ok: (k) => k.heat }, seat_right: { k: 'seatR', opts: [0, 1, 2, 3], ok: (k) => k.heat },
-    steering: { k: 'steering', bool: true, ok: (k) => k.heat }, hvac: { k: 'clim.power', bool: true, ok: (k) => k.clim },
-    ac: { k: 'clim.ac', bool: true, ok: (k) => k.clim }, hvac_auto: { k: 'clim.auto', bool: true, ok: (k) => k.clim },
-    hvac_temp: { k: 'clim.temp', min: 16, max: 32, ok: (k) => k.clim }, recirc: { k: 'clim.loop', opts: [0, 1, 2], ok: (k) => k.clim },
-    defrost_front: { k: 'clim.defF', bool: true, ok: (k) => k.clim }, defrost_rear: { k: 'clim.defR', bool: true, ok: (k) => k.clim },
-    battery_heat: { k: 'batHeat', bool: true, ok: (k) => k.batHeat }, auto_high_beam: { k: 'highBeam', bool: true, ok: (k) => k.beam }
+  const valTxt = (key, v) => {
+    if (typeof v === 'boolean') return S(v ? 'rule_on' : 'rule_off');
+    if (key === 'recirc') return S(['rule_recirc_inner', 'rule_recirc_outside', 'rule_recirc_auto'][v]);
+    if (key === 'auto_volume') return S(['rule_level_high', 'rule_level_medium', 'rule_level_low'][v]);
+    if (key === 'drive_mode') return driveName(v);
+    if (key === 'regen') return regenName(v);
+    if (key.startsWith('seat') && !v) return S('rule_seat_off');
+    if (key === 'volume_step' && v > 0) return '+' + v;
+    return String(v) + (SET_KEYS[key]?.unit || '');
   };
+  const anyFirmware = () => true;
+  const SET_KEYS = {
+    drive_mode: { opts: DRIVE, label: 'rule_sig_drive_mode', ok: anyFirmware, run: W.drive },
+    regen: { opts: ['OFF', ...REGEN_SELECTABLE], ok: anyFirmware, run: W.regen },
+    one_pedal: { bool: true, label: 'rule_sig_one_pedal', ok: anyFirmware, run: (v) => W.regen(v ? 'ONE_PEDAL' : car().regen === 'ONE_PEDAL' ? car().regenPrev || 'MEDIUM' : car().regen) },
+    energy_saving: { bool: true, label: 'rule_sig_energy_saving', ok: anyFirmware, run: W.energy },
+    seat_left: { k: 'seatL', opts: [0, 1, 2, 3], ok: anyFirmware }, seat_right: { k: 'seatR', opts: [0, 1, 2, 3], ok: anyFirmware },
+    steering: { k: 'steering', bool: true, ok: anyFirmware }, hvac: { k: 'clim.power', bool: true, ok: (k) => k.clim },
+    ac: { k: 'clim.ac', bool: true, ok: (k) => k.clim }, hvac_auto: { k: 'clim.auto', bool: true, ok: (k) => k.clim },
+    hvac_eco: { k: 'clim.eco', bool: true, label: 'rule_sig_hvac_eco', ok: (k) => k.clim },
+    hvac_temp: { k: 'clim.temp', min: 16, max: 30, value: 21, unit: ' °C', ok: (k) => k.clim },
+    hvac_fan: { min: 1, max: 7, value: 3, ok: (k) => k.clim, run: (v) => { car().clim.auto = false; car().clim.fan = v; return true; } },
+    air_flow: { min: 0, max: 6, value: 1, ok: (k) => k.clim, run: (v) => {
+      const mask = [AIR.FACE, AIR.FACE | AIR.FEET, AIR.FEET, AIR.FEET | AIR.WS, AIR.WS, AIR.FACE | AIR.FEET | AIR.WS, AIR.FACE | AIR.WS][v];
+      car().clim.air = { face: !!(mask & AIR.FACE), feet: !!(mask & AIR.FEET), ws: !!(mask & AIR.WS) }; return true;
+    } },
+    auto_volume: { k: 'clim.autoVol', opts: [0, 1, 2], value: 1, ok: (k) => k.clim },
+    recirc: { k: 'clim.loop', opts: [0, 1, 2], value: 2, ok: (k) => k.clim },
+    defrost_front: { k: 'clim.defF', bool: true, ok: (k) => k.clim }, defrost_rear: { k: 'clim.defR', bool: true, ok: (k) => k.clim },
+    battery_heat: { k: 'batHeat', bool: true, ok: (k) => k.batHeat }, auto_high_beam: { k: 'highBeam', bool: true, ok: (k) => k.beam },
+    charge_limit: { min: 40, max: 100, value: 80, step: 10, unit: ' %', label: 'rule_sig_charge_limit', ok: anyFirmware, run: (v) => { car().chargeLimit = v; resumeCharge(); return true; } },
+    brightness: { k: 'brightness', min: 0, max: 100, value: 50, step: 5, unit: ' %', label: 'rule_sig_brightness', ok: (k) => k.bri },
+    volume: { k: 'volume', min: 0, max: () => car().volMax, value: 10, label: 'rule_sig_volume', ok: anyFirmware },
+    volume_step: { min: -10, max: 10, value: 2, ok: anyFirmware, run: (v) => { car().volume = clamp(car().volume + v, 0, car().volMax); return true; } },
+    aeb: { bool: true, label: 'rule_sig_aeb', ok: anyFirmware, run: (v) => W.bool('aebOn', v) },
+    tsr: { bool: true, label: 'rule_sig_tsr', ok: anyFirmware, run: W.tsr },
+    esc: { bool: true, label: 'rule_sig_esc', ok: (k) => k.esc, run: W.esc },
+    drowsiness: { bool: true, label: 'rule_sig_drowsiness', ok: (k) => k.esc, run: (v) => W.bool('dms', v) },
+    overspeed_alarm: { bool: true, label: 'rule_sig_overspeed', ok: anyFirmware, run: (v) => W.bool('overspeed', v) },
+    speed_limit_tone: { bool: true, ok: anyFirmware, run: (v) => W.bool('speedTone', v) },
+    wifi: { bool: true, label: 'rule_sig_wifi_on', ok: anyFirmware, run: (v) => { state.rules.android.wifi = v; return true; } },
+    bluetooth: { bool: true, label: 'rule_sig_bt_on', ok: anyFirmware, run: (v) => { state.rules.android.bluetooth = v; if (!v) state.bt.connected = []; return true; } },
+    hotspot: { bool: true, label: 'rule_sig_hotspot', ok: anyFirmware, run: (v) => { state.rules.android.hotspot = v; return true; } }
+  };
+  const rSetName = (key) => S(SET_KEYS[key]?.label || 'rule_key_' + key);
+  const rSetDefault = (key) => { const s = SET_KEYS[key]; return s.value ?? (s.bool ? true : s.opts?.[0]); };
   const carGet = (path) => path.split('.').reduce((o, p) => o[p], car());
   const carPut = (path, v) => { const ps = path.split('.'), last = ps.pop(); ps.reduce((o, p) => o[p], car())[last] = v; };
+
+  // Parité avec CustomRuleEditFragment.signaux(), borne() et choixTexte().
+  const ruleRegen = () => ['OFF', ...REGEN_SELECTABLE].map((v) => [v, regenName(v)]);
+  const ruleDrive = () => DRIVE.map((v) => [v, driveName(v)]);
+  const ruleRecirc = () => ['INNER', 'OUTSIDE', 'AUTO'].map((v, i) => [v, valTxt('recirc', i)]);
+  const ruleBool = (label, cat, read, cap) => ({ label, cat, read, cap, type: 'bool' });
+  const ruleNum = (label, cat, read, number, cap, changes = false) => ({ label, cat, read, cap, type: 'number', number, changes });
+  const ruleText = (label, cat, read, choices, cap) => ({ label, cat, read, choices, cap, type: 'text' });
+  const R_SIGNALS = {
+    READY: ruleBool('rule_sig_ready', 'driving', () => car().ready),
+    GEAR: ruleText('rule_sig_gear', 'driving', () => car().inPark ? 'P' : 'D', () => [['P', 'P'], ['D', 'D'], ['OTHER', S('rule_gear_other')]]),
+    SPEED: ruleNum('rule_sig_speed', 'driving', () => car().speed, [0, 200, 50, 5, ' km/h']),
+    DRIVE_MODE: ruleText('rule_sig_drive_mode', 'driving', () => car().driveMode, ruleDrive),
+    REGEN: ruleText('rule_key_regen', 'driving', () => car().regen, ruleRegen),
+    ONE_PEDAL: ruleBool('rule_sig_one_pedal', 'driving', () => car().regen === 'ONE_PEDAL'),
+    ENERGY_SAVING: ruleBool('rule_sig_energy_saving', 'driving', () => car().energy),
+    DRIVE_MINUTES: ruleNum('rule_sig_drive_minutes', 'driving', () => car().ready ? Math.floor((Date.now() - (car().ruleReadyAt || Date.now())) / 60000) : 0, [0, 600, 30, 5]),
+    SOC: ruleNum('rule_sig_soc', 'battery', () => car().soc, [0, 100, 50, 1, ' %']),
+    RANGE: ruleNum('rule_sig_range', 'battery', () => rangeKm(car().soc), [0, 700, 100, 5, ' km']),
+    CHARGING: ruleBool('rule_sig_charging', 'battery', () => !!car().charge && !car().charge.done),
+    PLUGGED: ruleBool('rule_sig_plugged', 'battery', () => !!car().charge),
+    CHARGE_DC: ruleBool('rule_sig_charge_dc', 'battery', () => car().charge?.type === 'DC'),
+    CHARGE_LIMIT: ruleNum('rule_sig_charge_limit', 'battery', () => car().chargeLimit, [40, 100, 80, 10], null, true),
+    BATTERY_HEAT: ruleBool('rule_key_battery_heat', 'battery', () => car().batHeat, 'batHeat'),
+    OUTSIDE_TEMP: ruleNum('rule_sig_outside_temp', 'climate', () => car().outside, [-30, 50, 20, 1, ' °C']),
+    NIGHT: ruleBool('rule_sig_night', 'car', () => car().lights),
+    SUN_UP: ruleBool('rule_sig_sun_up', 'screen_sound', sunUp),
+    ALTITUDE: ruleNum('rule_sig_altitude', 'places', altM, [0, 4000, 500, 50, ' m']),
+    HVAC_ON: ruleBool('rule_sig_hvac', 'climate', () => car().clim.power, 'clim'),
+    AC_ON: ruleBool('rule_key_ac', 'climate', () => car().clim.ac, 'clim'),
+    HVAC_AUTO: ruleBool('rule_key_hvac_auto', 'climate', () => car().clim.auto, 'clim'),
+    HVAC_ECO: ruleBool('rule_sig_hvac_eco', 'climate', () => car().clim.eco, 'clim'),
+    HVAC_TEMP: ruleNum('rule_key_hvac_temp', 'climate', () => car().clim.temp, [16, 30, 21, 1], 'clim', true),
+    FAN: ruleNum('rule_key_hvac_fan', 'climate', () => car().clim.fan, [0, 7, 3, 1], 'clim', true),
+    RECIRC: ruleText('rule_key_recirc', 'climate', () => ['INNER', 'OUTSIDE', 'AUTO'][car().clim.loop], ruleRecirc, 'clim'),
+    DEFROST_FRONT: ruleBool('rule_key_defrost_front', 'climate', () => car().clim.defF, 'clim'),
+    DEFROST_REAR: ruleBool('rule_key_defrost_rear', 'climate', () => car().clim.defR, 'clim'),
+    SEAT_HEAT_LEFT: ruleNum('rule_key_seat_left', 'comfort', () => caps().heat ? car().seatL : null, [0, 3, 0, 1], null, true),
+    SEAT_HEAT_RIGHT: ruleNum('rule_key_seat_right', 'comfort', () => caps().heat ? car().seatR : null, [0, 3, 0, 1], null, true),
+    STEERING_HEAT: ruleBool('rule_key_steering', 'comfort', () => caps().heat ? car().steering : null),
+    AEB: ruleBool('rule_sig_aeb', 'adas', () => car().aebOn),
+    TSR: ruleBool('rule_sig_tsr', 'adas', () => car().tsr),
+    ESC: ruleBool('rule_sig_esc', 'adas', () => car().esc, 'esc'),
+    DROWSINESS: ruleBool('rule_sig_drowsiness', 'adas', () => car().dms, 'esc'),
+    OVERSPEED_ALARM: ruleBool('rule_sig_overspeed', 'adas', () => car().overspeed),
+    LOCKED: ruleBool('rule_sig_locked', 'car', () => car().locked),
+    FRONT_DOOR: ruleBool('rule_sig_front_door', 'car', () => car().doors.L || car().doors.R, 'doorSensor'),
+    PROFILE: ruleText('rule_sig_profile', 'driving', () => state.activeProfileId, () => state.profiles.map((p) => [p.id, p.name])),
+    BT_DEVICE: ruleText('rule_sig_bt', 'places', () => state.bt.connected.slice().sort(), () => state.bt.devices.map((d) => [d.mac, d.name])),
+    BT_ON: ruleBool('rule_sig_bt_on', 'connections', () => state.rules.android.bluetooth),
+    WIFI_ON: ruleBool('rule_sig_wifi_on', 'connections', () => state.rules.android.wifi),
+    WIFI_SSID: ruleText('rule_sig_wifi_ssid', 'connections', () => state.rules.android.wifi ? state.rules.android.ssid : null),
+    HOTSPOT_ON: ruleBool('rule_sig_hotspot', 'connections', () => state.rules.android.hotspot),
+    PROJECTION: ruleBool('rule_sig_projection', 'connections', () => !!car().projection),
+    MEDIA_PLAYING: ruleBool('rule_sig_media_playing', 'screen_sound', () => car().media.playing),
+    IN_CALL: ruleBool('rule_sig_in_call', 'connections', () => state.rules.android.call ?? false),
+    BRIGHTNESS: ruleNum('rule_sig_brightness', 'screen_sound', () => car().brightness, [0, 100, 50, 5], 'bri', true),
+    VOLUME: ruleNum('rule_sig_volume', 'screen_sound', () => car().volume, [0, 40, 10, 1], null, true),
+    DATA_TODAY_MB: ruleNum('rule_sig_data_today', 'connections', () => 38, [0, 50000, 500, 50]),
+    DATA_MONTH_MB: ruleNum('rule_sig_data_month', 'connections', () => 900, [0, 50000, 500, 50]),
+    FIRMWARE: ruleText('rule_sig_firmware', 'system', gen, () => FIRMWARES.filter((f) => f !== 'SWI173').map((f) => [f, f]))
+  };
+  const rSignals = () => Object.entries(R_SIGNALS).filter(([, s]) => !s.cap || caps()[s.cap]);
+  const rSignalName = (id) => S(R_SIGNALS[id]?.label || 'rule_unknown');
+  const rRead = (id) => { const s = R_SIGNALS[id]; return s && (!s.cap || caps()[s.cap]) ? s.read() : null; };
+  const rOps = { yes: 'segment_yes', no: 'segment_no', above: 'rule_op_above', below: 'rule_op_below', is: 'rule_op_is', not: 'rule_op_is_not' };
+  function rCompare(op, value, expected) {
+    if (value == null || (typeof value === 'number' && !Number.isFinite(value))) return null;
+    if (op === 'yes' || op === 'no') return value === (op === 'yes');
+    if (op === 'above') return value > expected;
+    if (op === 'below') return value < expected;
+    const equal = Array.isArray(value) ? value.includes(expected) : value === expected;
+    return op === 'not' ? !equal : equal;
+  }
+  const rSignalTxt = (c) => {
+    const s = R_SIGNALS[c.sig], label = rSignalName(c.sig);
+    if (c.op === 'yes' || c.op === 'no') return S(c.op === 'yes' ? 'rule_yes_fmt' : 'rule_no_fmt', label);
+    const value = s?.choices?.().find(([v]) => v === c.v)?.[1] ?? c.v;
+    return label + ' ' + lc(S(rOps[c.op])) + ' ' + value + (s?.number?.[4] || '');
+  };
 
   /**
    * Catalogue : catégorie (comme la grande fenêtre de l'éditeur), texte d'une ligne, valeurs par
    * défaut et, pour un déclencheur à valeur, l'état vrai/faux relevé à chaque seconde.
    */
   const R_TRG = {
+    compare: { name: () => S('rule_choose_signal'), txt: rSignalTxt, val: (t) => rCompare(t.op, rRead(t.sig), t.v) },
+    changed: { name: () => S('rule_choose_signal'), txt: (t) => S('rule_changes_fmt', rSignalName(t.sig)), chg: (t) => {
+      const value = rRead(t.sig); return Array.isArray(value) ? JSON.stringify(value) : value;
+    } },
+    place: { def: { id: '', op: 'yes' }, name: () => S('rule_trg_place'), txt: (t) => R_COND.place.txt(t), val: (t) => R_COND.place.ok(t) },
     ready: { cat: 'car', name: () => S('rule_yes_fmt', S('rule_sig_ready')), txt: () => S('rule_yes_fmt', S('rule_sig_ready')) },
     app_start: { cat: 'car', name: () => S('rule_event_app_start'), txt: () => S('rule_event_app_start') },
     door: { cat: 'car', ok: (k) => k.doorSensor, name: () => S('rule_event_door'), txt: () => S('rule_event_door'), st: () => !!(car().doors.L || car().doors.R) },
@@ -1563,8 +1703,8 @@
       txt: (t) => S('rule_key_seat_left') + ' > ' + S('rule_seat_off').toLowerCase() + ' · ' + S('rule_minutes_fmt', t.min), val: () => car().seatL > 0, hold: (t) => t.min * 60 },
     time: { cat: 'time', def: { h: 7, m: 30 }, name: () => S('rule_trg_time'), txt: (t) => S('rule_at_fmt', hm(t.h, t.m)) },
     every: { cat: 'time', def: { min: 15 }, name: () => S('rule_trg_every'), txt: (t) => S('rule_every_fmt', t.min) },
-    sunrise: { cat: 'time', name: () => S('rule_sunrise'), txt: () => S('rule_sunrise') },
-    sunset: { cat: 'time', name: () => S('rule_sunset'), txt: () => S('rule_sunset') },
+    sunrise: { cat: 'time', def: { offset: 0 }, name: () => S('rule_sunrise'), txt: (t) => rSunLabel('rule_sunrise', t.offset) },
+    sunset: { cat: 'time', def: { offset: 0 }, name: () => S('rule_sunset'), txt: (t) => rSunLabel('rule_sunset', t.offset) },
     manual: { cat: 'time', name: () => S('rule_trg_manual'), txt: () => S('rule_trg_manual') },
     ready_on: { cat: 'car', name: () => S('rule_trg_ready_on'), txt: () => S('rule_trg_ready_on'), st: () => !!car().ready },
     ready_off: { cat: 'car', name: () => S('rule_trg_ready_off'), txt: () => S('rule_trg_ready_off'), st: () => !car().ready },
@@ -1581,9 +1721,45 @@
     seat_above: { ok: (k) => k.heat, def: { v: 0 }, name: () => S('rule_key_seat_left'), txt: (t) => S('rule_key_seat_left') + ' ' + lc(S('rule_op_above')) + ' ' + t.v, val: (t) => car().seatL > t.v },
     seat_below: { ok: (k) => k.heat, def: { v: 1 }, name: () => S('rule_key_seat_left'), txt: (t) => S('rule_key_seat_left') + ' ' + lc(S('rule_op_below')) + ' ' + t.v, val: (t) => car().seatL < t.v }
   };
+  const rSunLabel = (key, offset) => S(key) + (offset ? ' ' + (offset > 0 ? '+' : '−') + S('rule_minutes_fmt', Math.abs(offset)) : '');
+  const rGroups = { all: 'rule_cond_group_all', any: 'rule_cond_group_any', not: 'rule_cond_group_not' };
+  const rPlaceName = (id) => state.rules.places.find((p) => p.id === id)?.name || S('rule_unknown');
+  const rMonthDay = (month, day) => new Intl.DateTimeFormat(appLang(), { month: 'short', day: 'numeric' }).format(new Date(2024, month - 1, day));
+  const rCondValue = (c) => R_COND[c.k]?.ok(c) ?? null;
+  function rGroupValue(op, values) {
+    if (!values.length) return true;
+    if (op === 'all') return values.includes(false) ? false : values.includes(null) ? null : true;
+    if (values.includes(true)) return op === 'any';
+    return values.includes(null) ? null : op === 'not';
+  }
+  const rEvalGroup = (conditions, op = 'all') => rGroupValue(op, conditions.map(rCondValue));
   const R_COND = {
+    compare: { name: () => S('rule_choose_signal'), txt: rSignalTxt, ok: (c) => rCompare(c.op, rRead(c.sig), c.v) },
+    group: { def: { op: 'all', children: [] }, name: () => S('rule_cond_group_all'),
+      txt: (c) => S(rGroups[c.op]) + (c.children.length ? ' · ' + c.children.map((v) => rTxt('cond', v)).join(c.op === 'all' ? S('rule_and') : S('rule_or')) : ''),
+      ok: (c) => rEvalGroup(c.children, c.op) },
+    season: { def: { m0: 12, d0: 1, m1: 2, d1: 28 }, name: () => S('rule_cond_season'),
+      txt: (c) => S('rule_season_fmt', rMonthDay(c.m0, c.d0), rMonthDay(c.m1, c.d1)),
+      ok: (c) => {
+        const n = new Date(), day = (n.getMonth() + 1) * 100 + n.getDate(), start = c.m0 * 100 + c.d0, end = c.m1 * 100 + c.d1;
+        return start <= end ? day >= start && day <= end : day >= start || day <= end;
+      } },
+    variable: { def: { name: '', op: 'yes', v: 0 }, name: () => S('rule_cond_variable'),
+      txt: (c) => (c.name || S('rule_cond_variable')) + ' · ' + S(rOps[c.op]) + (['yes', 'no'].includes(c.op) ? '' : ' ' + c.v),
+      ok: (c) => {
+        const value = Object.hasOwn(state.rules.variables, c.name) ? state.rules.variables[c.name] : null;
+        if (value == null) return null;
+        if (c.op === 'yes' || c.op === 'no') {
+          const bool = [true, 1, '1', 'true'].includes(value) ? true : [false, 0, '0', 'false'].includes(value) ? false : null;
+          return rCompare(c.op, bool);
+        }
+        return rCompare(c.op, +value, c.v);
+      } },
+    place: { def: { id: '', op: 'yes' }, name: () => S('rule_cond_place'),
+      txt: (c) => S(c.op === 'yes' ? 'rule_in_place_fmt' : 'rule_out_place_fmt', rPlaceName(c.id)),
+      ok: (c) => rCompare(c.op, state.rules.places.find((p) => p.id === c.id)?.inside) },
     time_range: { cat: 'time', def: { a: [22, 0], b: [6, 0] }, name: () => S('rule_cond_time'), txt: (c) => S('rule_range_fmt', hm(c.a[0], c.a[1]), hm(c.b[0], c.b[1])),
-      ok: (c) => { const n = new Date(), x = n.getHours() * 60 + n.getMinutes(), a = c.a[0] * 60 + c.a[1], b = c.b[0] * 60 + c.b[1]; return a <= b ? x >= a && x < b : x >= a || x < b; } },
+      ok: (c) => { const n = new Date(), x = n.getHours() * 60 + n.getMinutes(), a = c.a[0] * 60 + c.a[1], b = c.b[0] * 60 + c.b[1]; return a === b || (a < b ? x >= a && x < b : x >= a || x < b); } },
     days: { cat: 'time', def: { d: [1, 2, 3, 4, 5] }, name: () => S('rule_cond_days'), txt: (c) => (c.d.length === 7 ? S('rule_every_day') : c.d.map(dayName).join(', ')), ok: (c) => c.d.includes(new Date().getDay() || 7) },
     sun_up: { cat: 'time', def: { is: true }, name: () => S('rule_sig_sun_up'), txt: (c) => S(c.is ? 'rule_yes_fmt' : 'rule_no_fmt', S('rule_sig_sun_up')), ok: (c) => sunUp() === c.is },
     random: { cat: 'time', def: { p: 50 }, name: () => S('rule_cond_random'), txt: (c) => S('rule_random_fmt', c.p), ok: (c) => Math.random() * 100 < c.p },
@@ -1597,7 +1773,8 @@
     drive_mode: { cat: 'car', def: { m: 'ECO' }, name: () => S('rule_sig_drive_mode'), txt: (c) => S('rule_set_fmt', S('rule_sig_drive_mode'), driveName(c.m)), ok: (c) => car().driveMode === c.m }
   };
   const R_ACT = {
-    set: { cat: 'climate', def: { key: 'hvac', v: true }, name: () => S('rule_choose_setting'), txt: (a) => S('rule_set_fmt', S('rule_key_' + a.key), valTxt(a.key, a.v)) },
+    set: { cat: 'climate', def: { key: 'hvac', v: true }, name: () => S('rule_choose_setting'),
+      txt: (a) => a.variable ? S('rule_set_from_var_fmt', rSetName(a.key), a.variable) : S('rule_set_fmt', rSetName(a.key), valTxt(a.key, a.v)) },
     profile: { cat: 'driving', name: () => S('rule_subject_profile'), txt: (a) => S('rule_act_profile_fmt', profName(a.id)) },
     brightness: { cat: 'screen', ok: (k) => k.bri, def: { v: 60 }, name: () => S('rule_sig_brightness'), txt: (a) => S('rule_set_fmt', S('rule_sig_brightness'), a.v + ' %') },
     volume: { cat: 'screen', def: { v: 10 }, name: () => S('rule_sig_volume'), txt: (a) => S('rule_set_fmt', S('rule_sig_volume'), a.v) },
@@ -1606,19 +1783,54 @@
     run_rule: { cat: 'shortcuts', name: () => S('rule_act_rule'), txt: (a) => S('rule_run_fmt', ruleName(a.id)) },
     notify: { cat: 'screen', def: { msg: '' }, name: () => S('rule_act_notify'), txt: (a) => S('rule_act_notify_fmt', a.msg) },
     speak: { cat: 'screen', def: { msg: '' }, name: () => S('rule_act_speak'), txt: (a) => S('rule_speak_fmt', a.msg) },
-    confirm: { cat: 'flow', def: { msg: '' }, name: () => S('rule_act_confirm'), txt: (a) => S('rule_confirm_fmt', a.msg) },
+    confirm: { cat: 'flow', def: { msg: '', s: 15, timeoutAnswer: false }, name: () => S('rule_act_confirm'), txt: (a) => S('rule_confirm_fmt', a.msg) },
     wait: { cat: 'flow', def: { s: 10 }, name: () => S('rule_act_wait'), txt: (a) => S('rule_act_wait_fmt', a.s) },
-    if: { cat: 'flow', name: () => S('rule_act_if'), txt: (a) => S('rule_act_if_fmt', R_COND[a.c.k].txt(a.c)) },
+    wait_until: { cat: 'flow', def: { s: 60, until: [] }, name: () => S('rule_act_wait_until'), txt: (a) => S('rule_wait_until_fmt', rConditionSummary(a), a.s) },
+    if: { cat: 'flow', name: () => S('rule_act_if'), txt: (a) => S('rule_act_if_fmt', rConditionSummary(a)) },
+    repeat: { cat: 'flow', def: { count: 2, then: [] }, name: () => S('rule_act_repeat'), txt: (a) => S('rule_repeat_fmt', a.count) },
     stop: { cat: 'flow', name: () => S('rule_act_stop'), txt: () => S('rule_act_stop') },
     media: { cat: 'screen', def: { play: false }, name: () => S('rule_subject_playback'), txt: (a) => S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause') },
-    android: { def: { w: 'home' }, name: () => S('rule_act_android'), txt: (a) => S(R_ANDROID[a.w] || 'rule_unknown') },
-    sound: { cat: 'screen', name: () => S('rule_act_sound'), txt: () => S('rule_set_fmt', S('rule_act_sound'), S('rule_sound_beep')) },
+    android: { def: { w: 'home' }, name: () => S('rule_act_android'), txt: (a) => {
+      if (a.w === 'close' && a.target) return S('rule_close_app_fmt', a.target);
+      if (a.w === 'settings' && a.target) return S('rule_open_settings_fmt', S('rule_settings_page_' + a.target));
+      return S(R_ANDROID[a.w] || 'rule_unknown');
+    } },
+    sound: { cat: 'media', def: { sound: 'beep', volume: 70 }, name: () => S('rule_act_sound'),
+      txt: (a) => S('rule_play_sound_fmt', rSoundChoices().find(([id]) => id === (a.sound || 'beep'))?.[1] || S('rule_unknown')) },
+    open_app: { def: { target: '' }, name: () => S('rule_act_app'), txt: (a) => S('rule_open_app_fmt', a.target) },
+    custom: { def: { id: '' }, name: () => S('rule_act_custom'), txt: (a) => S('rule_custom_shortcut_fmt', customName(a.id)) },
+    navigate: { def: { id: '' }, name: () => S('rule_act_navigate'), txt: (a) => S('rule_navigate_fmt', rPlaceName(a.id)) },
+    variable: { def: { name: '', op: 'true', v: 0 }, name: () => S('rule_act_variable'),
+      txt: (a) => a.op === 'add' ? S('rule_var_add_fmt', a.name, (a.v >= 0 ? '+' : '') + a.v) :
+        a.name + ' = ' + (a.op === 'number' ? a.v : S('rule_var_' + a.op)) },
+    save_value: { def: { sig: 'SOC', name: '' }, name: () => S('rule_act_save_value'), txt: (a) => S('rule_save_value_fmt', rSignalName(a.sig), a.name) },
     stop_rule: { cat: 'shortcuts', name: () => S('rule_rule_stop'), txt: (a) => S('rule_stop_rule_fmt', ruleName(a.id)) },
-    abrp: { cat: 'driving', def: { on: true }, name: () => S('abrp_rule_action'), txt: (a) => (a.on ? S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4')) : S('abrp_rule_stop')) }
+    rule_enable: { def: { on: true, id: '' }, name: () => S('rule_act_rule'), txt: (a) => S(a.on ? 'rule_enable_fmt' : 'rule_disable_fmt', ruleName(a.id)) },
+    abrp: { def: { on: true, id: '' }, name: () => S('abrp_rule_action'), txt: (a) => a.on ?
+      S('abrp_rule_start_fmt', state.rules.accounts.find((r) => r.id === a.id)?.name || S('abrp_account_missing')) : S('abrp_rule_stop') }
   };
   const R_ANDROID = { home: 'rule_android_home', back: 'rule_android_back', close: 'rule_android_close_app', settings: 'rule_android_settings' };
+  const R_ANDROID_PAGES = ['wifi', 'bluetooth', 'hotspot', 'sound', 'display', 'apps', 'accessibility', 'date', 'language', 'storage'];
+  const rClosableApps = () => APPS.filter((p) => !['MG Launcher', 'Bluetooth', 'Radio', 'Settings', 'Files'].includes(p));
+  const rVariableName = (name) => (name || '').trim().toUpperCase().slice(0, 32);
+  const rSoundChoices = () => [['beep', S('rule_sound_beep')], ...state.rules.sounds.map((s) => [s.id, s.name]),
+    ...state.sound.slots.flatMap((s, i) => s.file ? [['page:' + i, S('rule_sound_page_fmt', s.file)]] : [])];
+  const rConditions = (a) => a.conditions || a.until || (a.c ? [a.c] : []);
+  const rConditionText = (list, op = 'all') => {
+    if (!list.length) return S('rule_always');
+    const text = list.map((c) => rTxt('cond', c)).join(S(op === 'all' ? 'rule_and' : 'rule_or'));
+    return op === 'not' ? S('rule_none_fmt', text) : text;
+  };
+  const rConditionSummary = (a) => rConditionText(rConditions(a), a.conditionOp);
   /** Les moments : un déclencheur qui n'est pas un état n'a pas de « Pendant ». */
   const R_MOMENTS = ['app_start', 'time', 'every', 'sunrise', 'sunset', 'manual'];
+  const R_TRIGGER_LABELS = {
+    READY: { yes: 'rule_trg_ready_on', no: 'rule_trg_ready_off' },
+    CHARGING: { yes: 'rule_trg_charge_start', no: 'rule_trg_charge_end' },
+    PLUGGED: { yes: 'rule_trg_plugged', no: 'rule_trg_unplugged' },
+    LOCKED: { yes: 'rule_trg_locked', no: 'rule_trg_unlocked' },
+    BT_DEVICE: { is: 'rule_trg_phone', not: 'rule_trg_phone_off' }
+  };
   /** Ordre des catégories de la grande fenêtre (Cat de l'éditeur). */
   const R_CATS = ['car', 'time', 'places', 'driving', 'battery', 'climate', 'comfort', 'adas', 'media', 'screen_sound', 'screen_apps', 'connections', 'shortcuts', 'flow', 'system', 'advanced'];
   /**
@@ -1626,72 +1838,91 @@
    * avec ses modes — un mode s'applique au toucher, plusieurs se choisissent ensuite. Pour les
    * actions, un réglage et les raccourcis qui agissent sur la même chose ne font qu'une tuile.
    */
-  function rSubjects(kind) {
+  function rSubjects(kind, path = kind) {
     const k = caps(), out = [];
     const subj = (id, cat, name, modes) => { const m = modes.filter(Boolean); if (m.length) out.push({ id, cat, name, modes: m }); };
     const md = (label, key, pre) => ({ label, k: key, pre: pre || {} });
+    const depth = (path.match(kind === 'cond' ? /\.children/g : /\.(then|else)/g) || []).length;
+    if (kind !== 'act') {
+      const trigger = kind === 'trg';
+      for (const [id, sig] of rSignals()) {
+        const label = rSignalName(id);
+        const pre = sig.type === 'number' ? { v: sig.number[2] } : { v: sig.choices?.()[0]?.[0] ?? '' };
+        const ops = sig.type === 'bool' ? ['yes', 'no'] : sig.type === 'number' ? ['above', 'below'] : ['is', 'not'];
+        const trgLabels = { yes: 'rule_mode_to_true', no: 'rule_mode_to_false', above: 'rule_mode_above', below: 'rule_mode_below', is: 'rule_mode_becomes', not: 'rule_mode_stops' };
+        let modes = ops.map((op) => md(S(trigger ? R_TRIGGER_LABELS[id]?.[op] || trgLabels[op] : rOps[op]), 'compare', { sig: id, op, ...pre }));
+        if (trigger && id === 'GEAR') modes.unshift(md(S('rule_trg_gear_p'), 'compare', { sig: id, op: 'is', v: 'P' }),
+          md(S('rule_trg_gear_d'), 'compare', { sig: id, op: 'is', v: 'D' }));
+        if (trigger && id === 'FRONT_DOOR') modes = [md(S('rule_event_door'), 'door'), md(S('rule_event_door_close'), 'door_close')];
+        if (trigger && (sig.type !== 'number' || sig.changes)) modes.push(md(S(id === 'PROFILE' ? 'rule_trg_profile_changes' :
+          sig.type === 'bool' ? 'rule_mode_both' : 'rule_mode_change'), 'changed', { sig: id }));
+        subj('sig:' + id, sig.cat, label, modes);
+      }
+    }
     if (kind === 'trg') {
       subj('app_start', 'car', S('rule_event_app_start'), [md(S('rule_event_app_start'), 'app_start')]);
-      if (k.doorSensor) subj('door', 'car', S('rule_sig_front_door'), [md(S('rule_event_door'), 'door'), md(S('rule_event_door_close'), 'door_close'), md(S('rule_mode_both'), 'door_change')]);
       subj('time', 'time', S('rule_trg_time'), [md(S('rule_trg_time'), 'time')]);
       subj('every', 'time', S('rule_trg_every'), [md(S('rule_trg_every'), 'every')]);
       subj('sun', 'time', S('rule_trg_sun'), [md(S('rule_sunrise'), 'sunrise'), md(S('rule_sunset'), 'sunset')]);
-      subj('ready', 'driving', S('rule_sig_ready'), [md(S('rule_trg_ready_on'), 'ready_on'), md(S('rule_trg_ready_off'), 'ready_off'), md(S('rule_mode_both'), 'ready_change')]);
-      subj('profile', 'driving', S('rule_sig_profile'), [md(S('rule_trg_profile_changes'), 'profile_change')]);
-      subj('soc', 'battery', S('rule_sig_soc'), [md(S('rule_mode_above'), 'soc_above'), md(S('rule_mode_below'), 'soc_below')]);
-      subj('charging', 'battery', S('rule_sig_charging'), [md(S('rule_trg_charge_start'), 'charge_start'), md(S('rule_trg_charge_end'), 'charge_end'), md(S('rule_mode_both'), 'charging_change')]);
-      subj('outside', 'climate', S('rule_sig_outside_temp'), [md(S('rule_mode_above'), 'temp_above'), md(S('rule_mode_below'), 'temp_below')]);
-      subj('altitude', 'places', S('rule_sig_altitude'), [md(S('rule_mode_above'), 'alt_above'), md(S('rule_mode_below'), 'alt_below')]);
-      if (k.heat) {
-        subj('steering', 'comfort', S('rule_key_steering'), [md(S('rule_mode_to_true'), 'steering_on'), md(S('rule_mode_to_false'), 'steering_off'), md(S('rule_mode_both'), 'steering_change')]);
-        subj('seat', 'comfort', S('rule_key_seat_left'), [md(S('rule_mode_above'), 'seat_above'), md(S('rule_mode_below'), 'seat_below')]);
-      }
+      subj('place', 'places', S('rule_trg_place'), [md(S('rule_place_inside'), 'place', { op: 'yes' }), md(S('rule_place_outside'), 'place', { op: 'no' })]);
       subj('manual', 'advanced', S('rule_trg_manual'), [md(S('rule_trg_manual'), 'manual')]);
     } else if (kind === 'cond') {
       subj('time_range', 'time', S('rule_cond_time'), [md(S('rule_cond_time'), 'time_range')]);
       subj('days', 'time', S('rule_cond_days'), [md(S('rule_cond_days'), 'days')]);
-      subj('ready', 'driving', S('rule_sig_ready'), [md(S('segment_yes'), 'ready', { is: true }), md(S('segment_no'), 'ready', { is: false })]);
-      subj('drive_mode', 'driving', S('rule_sig_drive_mode'), [md(S('rule_op_is'), 'drive_mode')]);
-      subj('soc', 'battery', S('rule_sig_soc'), [md(S('rule_op_above'), 'soc_above'), md(S('rule_op_below'), 'soc_below')]);
-      subj('outside', 'climate', S('rule_sig_outside_temp'), [md(S('rule_op_above'), 'temp_above'), md(S('rule_op_below'), 'temp_below')]);
-      subj('altitude', 'places', S('rule_sig_altitude'), [md(S('rule_op_above'), 'alt_above'), md(S('rule_op_below'), 'alt_below')]);
-      subj('sun_up', 'screen_sound', S('rule_sig_sun_up'), [md(S('segment_yes'), 'sun_up', { is: true }), md(S('segment_no'), 'sun_up', { is: false })]);
+      subj('season', 'time', S('rule_cond_season'), [md(S('rule_cond_season'), 'season')]);
+      subj('place', 'places', S('rule_cond_place'), [md(S('rule_place_inside'), 'place', { op: 'yes' }), md(S('rule_place_outside'), 'place', { op: 'no' })]);
+      subj('variable', 'flow', S('rule_cond_variable'), [md(S('rule_cond_variable'), 'variable')]);
       subj('random', 'flow', S('rule_cond_random'), [md(S('rule_cond_random'), 'random')]);
+      if (depth < 2 && !/\.until$/.test(path)) Object.entries(rGroups).forEach(([op, key]) => subj('group:' + op, 'flow', S(key), [md(S(key), 'group', { op })]));
     } else {
       const av = availableActions(), used = new Set(['NONE', 'APPLY_PROFILE', 'OPEN_APP', 'OPEN_CUSTOM_APP', 'CUSTOM', 'RUN_RULE', 'ANDROID_SETTINGS']);
       const sc = (a, label) => { if (!av.includes(a)) return null; used.add(a); return Object.assign(md(label || S(ACTION_KEY[a]), 'shortcut', { a }), { w: S(ACTION_KEY[a]) }); };
       const one = (a, cat) => { const m = sc(a); if (m) subj('sc:' + a, cat, m.label, [m]); };
       const tog = S('rule_act_mode_toggle'), cyc = S('rule_act_mode_cycle'), up = S('rule_act_mode_up'), dn = S('rule_act_mode_down'), setL = S('rule_act_mode_set');
-      const SET_CAT = { seat_left: 'comfort', seat_right: 'comfort', steering: 'comfort', battery_heat: 'battery', auto_high_beam: 'adas' };
-      const reg = (key, ...more) => subj('set:' + key, SET_CAT[key] || 'climate', S('rule_key_' + key), [SET_KEYS[key].ok(k) ? md(setL, 'set', { key }) : null].concat(more));
+      const reg = (key, cat, ...more) => subj('set:' + key, cat, rSetName(key), [SET_KEYS[key].ok(k) ? md(setL, 'set', { key }) : null, ...more]);
+      const tile = (key, cat) => subj(key, cat, R_ACT[key].name(), [md(R_ACT[key].name(), key)]);
       used.add('WINDOWS_OPEN_ALL'); used.add('WINDOWS_CLOSE_ALL');
       subj('windows', 'car', S('rule_act_windows'), [md(S('shortcuts_action_windows_open'), 'windows', { close: false }), md(S('shortcuts_action_windows_close'), 'windows', { close: true })]);
       subj('profile', 'car', S('rule_subject_profile'), state.profiles.map((p) => md(S('rule_act_profile_fmt', p.name), 'profile', { id: p.id })).concat([sc('PROFILE_CYCLE'), sc('PROFILE_PICKER')]));
       one('VEHICLE_POWER_OFF', 'car');
-      ['DRIVE_MODE_CYCLE', 'REGEN_CYCLE', 'ONE_PEDAL', 'ENERGY_SAVING_TOGGLE'].forEach((a) => one(a, 'driving'));
-      reg('battery_heat', sc('BATTERY_HEAT_TOGGLE', tog));
+      reg('drive_mode', 'driving', sc('DRIVE_MODE_CYCLE', cyc));
+      reg('regen', 'driving', sc('REGEN_CYCLE', cyc));
+      reg('one_pedal', 'driving', sc('ONE_PEDAL', tog));
+      reg('energy_saving', 'driving', sc('ENERGY_SAVING_TOGGLE', tog));
+      reg('battery_heat', 'battery', sc('BATTERY_HEAT_TOGGLE', tog));
+      reg('charge_limit', 'battery');
       one('CHARGE_POPUP', 'battery');
-      reg('hvac', sc('HVAC_TOGGLE', tog)); reg('ac', sc('HVAC_AC_TOGGLE', tog)); reg('hvac_auto');
-      reg('hvac_temp', sc('HVAC_TEMP_UP', up), sc('HVAC_TEMP_DOWN', dn));
-      subj('fan', 'climate', S('rule_key_hvac_fan'), [sc('HVAC_FAN_UP', up), sc('HVAC_FAN_DOWN', dn)]);
-      reg('recirc', sc('HVAC_RECIRC_CYCLE', cyc)); reg('defrost_front', sc('DEFROST_FRONT_TOGGLE', tog)); reg('defrost_rear', sc('DEFROST_REAR_TOGGLE', tog));
-      ['HVAC_AUTO_VOLUME_CYCLE', 'HVAC_POPUP', 'PRE_CLIMATE'].forEach((a) => one(a, 'climate'));
-      reg('seat_left', sc('SEAT_HEAT_LEFT_CYCLE', cyc)); reg('seat_right', sc('SEAT_HEAT_RIGHT_CYCLE', cyc)); reg('steering', sc('STEERING_HEAT_TOGGLE', tog));
-      reg('auto_high_beam', sc('AUTO_HIGH_BEAM_TOGGLE', tog));
-      ['AEB_CYCLE', 'TSR_TOGGLE', 'ESC_TOGGLE', 'DROWSINESS_TOGGLE', 'DROWSINESS_SEN_CYCLE', 'OVERSPEED_ALARM', 'SPEED_LIMIT_TONE', 'SOUND_WARNING', 'ADAS_CYCLE'].forEach((a) => one(a, 'adas'));
+      reg('hvac', 'climate', sc('HVAC_TOGGLE', tog)); reg('ac', 'climate', sc('HVAC_AC_TOGGLE', tog));
+      reg('hvac_auto', 'climate'); reg('hvac_eco', 'climate');
+      reg('hvac_temp', 'climate', sc('HVAC_TEMP_UP', up), sc('HVAC_TEMP_DOWN', dn));
+      reg('hvac_fan', 'climate', sc('HVAC_FAN_UP', up), sc('HVAC_FAN_DOWN', dn));
+      reg('air_flow', 'climate'); reg('auto_volume', 'climate', sc('HVAC_AUTO_VOLUME_CYCLE', cyc));
+      reg('recirc', 'climate', sc('HVAC_RECIRC_CYCLE', cyc));
+      reg('defrost_front', 'climate', sc('DEFROST_FRONT_TOGGLE', tog)); reg('defrost_rear', 'climate', sc('DEFROST_REAR_TOGGLE', tog));
+      ['HVAC_POPUP', 'PRE_CLIMATE'].forEach((a) => one(a, 'climate'));
+      reg('seat_left', 'comfort', sc('SEAT_HEAT_LEFT_CYCLE', cyc)); reg('seat_right', 'comfort', sc('SEAT_HEAT_RIGHT_CYCLE', cyc));
+      reg('steering', 'comfort', sc('STEERING_HEAT_TOGGLE', tog));
+      reg('auto_high_beam', 'adas', sc('AUTO_HIGH_BEAM_TOGGLE', tog));
+      reg('aeb', 'adas', sc('AEB_CYCLE', cyc)); reg('tsr', 'adas', sc('TSR_TOGGLE', tog));
+      reg('esc', 'adas', sc('ESC_TOGGLE', tog)); reg('drowsiness', 'adas', sc('DROWSINESS_TOGGLE', tog));
+      reg('overspeed_alarm', 'adas', sc('OVERSPEED_ALARM', tog)); reg('speed_limit_tone', 'adas', sc('SPEED_LIMIT_TONE', tog));
+      ['DROWSINESS_SEN_CYCLE', 'SOUND_WARNING', 'ADAS_CYCLE'].forEach((a) => one(a, 'adas'));
       subj('playback', 'media', S('rule_subject_playback'), [md(S('rule_act_media_play'), 'media', { play: true }), md(S('rule_act_media_pause'), 'media', { play: false }), sc('MEDIA_PLAY_PAUSE', tog)]);
       ['MEDIA_NEXT', 'MEDIA_PREVIOUS', 'AUDIO_SOURCE_CYCLE'].forEach((a) => one(a, 'media'));
-      subj('sound', 'media', S('rule_act_sound'), [md(S('rule_act_sound'), 'sound')]);
-      if (k.bri) subj('brightness', 'screen_sound', S('rule_sig_brightness'), [md(setL, 'brightness'), sc('BRIGHTNESS_UP', up), sc('BRIGHTNESS_DOWN', dn)]);
-      subj('volume', 'screen_sound', S('rule_sig_volume'), [md(setL, 'volume'), sc('VOLUME_UP', up), sc('VOLUME_DOWN', dn)]);
+      tile('sound', 'media');
+      reg('brightness', 'screen_sound', sc('BRIGHTNESS_UP', up), sc('BRIGHTNESS_DOWN', dn));
+      reg('volume', 'screen_sound', md(rSetName('volume_step'), 'set', { key: 'volume_step' }), sc('VOLUME_UP', up), sc('VOLUME_DOWN', dn));
       one('QUICK_SETTINGS', 'screen_apps');
-      subj('notify', 'screen_apps', S('rule_act_notify'), [md(S('rule_act_notify'), 'notify')]);
+      ['notify', 'open_app'].forEach((key) => tile(key, 'screen_apps'));
       Object.keys(R_ANDROID).forEach((w) => subj('android:' + w, 'screen_apps', S(R_ANDROID[w]), [md(S(R_ANDROID[w]), 'android', { w })]));
+      ['wifi', 'bluetooth', 'hotspot'].forEach((key) => reg(key, 'connections'));
       one('PROJECTION', 'connections');
-      subj('abrp', 'connections', S('abrp_rule_action'), [md(S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4')), 'abrp', { on: true }), md(S('abrp_rule_stop'), 'abrp', { on: false })]);
-      subj('rule', 'shortcuts', S('rule_act_rule'), [md(S('rule_rule_run'), 'run_rule'), md(S('rule_rule_stop'), 'stop_rule')]);
+      tile('abrp', 'connections'); tile('navigate', 'screen_apps'); tile('custom', 'shortcuts');
+      subj('rule', 'shortcuts', S('rule_act_rule'), [md(S('rule_rule_run'), 'run_rule'), md(S('rule_rule_stop'), 'stop_rule'),
+        md(S('rule_rule_enable'), 'rule_enable', { on: true }), md(S('rule_rule_disable'), 'rule_enable', { on: false })]);
       av.filter((a) => !used.has(a)).forEach((a) => one(a, 'shortcuts'));
-      ['confirm', 'wait', 'if', 'stop'].forEach((x) => subj(x, 'flow', R_ACT[x].name(), [md(R_ACT[x].name(), x)]));
+      ['variable', 'save_value', 'confirm', 'wait', 'wait_until', 'stop'].forEach((key) => tile(key, 'flow'));
+      if (depth < 2) ['if', 'repeat'].forEach((key) => tile(key, 'flow'));
     }
     return out;
   }
@@ -1705,23 +1936,46 @@
     return kind === 'trg' && it.for > 0 ? S('rule_for_fmt', t, it.for) : t;
   };
   const rClone = (o) => JSON.parse(JSON.stringify(o));
-  /** Liste d'un chemin « trg », « cond », « act » ou « act.2.then » / « act.2.else » (blocs Si / Sinon). */
+  /** Liste de la section, d'une branche d'action ou d'un groupe de conditions. */
   function rList(rule, path) {
     const ps = path.split('.');
     let l = rule[ps[0]];
     for (let i = 1; i < ps.length; i += 2) l = l[+ps[i]][ps[i + 1]];
     return l;
   }
+  function rFits(kind, item, path, ruleId) {
+    const depth = (path.match(kind === 'cond' ? /\.children/g : /\.(then|else)/g) || []).length;
+    if (kind === 'cond' && /\.until$/.test(path) && item.k === 'group') return false;
+    if (kind === 'cond') {
+      const fits = (c, at) => c.k !== 'group' || (at < 2 && c.children.every((child) => fits(child, at + 1)));
+      return fits(item, depth);
+    }
+    if (kind !== 'act') return true;
+    const fits = (a, at) => {
+      if (['run_rule', 'stop_rule'].includes(a.k) && a.id === ruleId) return false;
+      if (a.k !== 'if' && a.k !== 'repeat') return true;
+      return at < 2 && [...a.then, ...(a.else || [])].every((child) => fits(child, at + 1));
+    };
+    return fits(item, depth);
+  }
   /** Texte de résumé d'une action : un bloc Si / Sinon dit ce qu'il fait (« si X → A ; sinon → B »). */
   const unq = (t) => t.replace(/^"|"$/g, '');
   function rSumAct(a) {
-    if (a.k !== 'if') return rTxt('act', a);
+    if (a.k !== 'if' && a.k !== 'repeat') return rTxt('act', a);
     const l = (x) => (x.length ? x.map(rSumAct).join(' · ') : '—');
-    return S('rule_sum_if_fmt', R_COND[a.c.k].txt(a.c), l(a.then)) + (a.else.length ? unq(S('rule_sum_else_fmt', l(a.else))) : '');
+    if (a.k === 'repeat') return rTxt('act', a) + ' · ' + l(a.then);
+    return S('rule_sum_if_fmt', rConditionSummary(a), l(a.then)) + (a.else.length ? unq(S('rule_sum_else_fmt', l(a.else))) : '');
+  }
+  function rNormalizeActions(list) {
+    for (const a of list) {
+      if (a.k === 'if' && !a.conditions) { a.conditions = a.c ? [a.c] : []; delete a.c; }
+      if (a.then) rNormalizeActions(a.then);
+      if (a.else) rNormalizeActions(a.else);
+    }
   }
   function rSummary(r) {
     const join = (l, kind, sep) => (l.length ? l.map((x) => (kind === 'act' ? rSumAct(x) : rTxt(kind, x))).join(sep) : null);
-    return S('rule_summary_fmt', join(r.trg, 'trg', S('rule_or')) || '—', join(r.cond, 'cond', S('rule_and')) || S('rule_always'), join(r.act, 'act', ' · ') || '—');
+    return S('rule_summary_fmt', join(r.trg, 'trg', S('rule_or')) || '—', rConditionText(r.cond, r.conditionOp), join(r.act, 'act', ' · ') || '—');
   }
   /** Modèles (CustomRuleTemplates) : de quoi démarrer, à adapter dans l'éditeur. */
   function rTemplates() {
@@ -1748,6 +2002,8 @@
   // chaque seconde (« devient vrai » exige d'avoir vu faux), heures à la minute près.
   const rSeen = {};
   let rMinute = null;
+  const rActive = new Map();
+  const rLastRun = new Map();
   function rulesOn() { return state.rules.engine && !garage(); }
   function ruleEvent(ev) {
     if (!rulesOn()) return;
@@ -1755,6 +2011,8 @@
     state.rules.list.forEach((r) => { if (r.on && r.trg.some((t) => t.k === ev && !(t.for > 0))) runRule(r, R_TRG[ev].txt({})); });
   }
   function ruleTick() {
+    const c = car();
+    c.ruleReadyAt = c.ready ? c.ruleReadyAt || Date.now() : null;
     if (!rulesOn()) return;
     const n = new Date(), mk = n.getHours() * 60 + n.getMinutes(), newMin = mk !== rMinute;
     const [rise, set] = sunTimes(n);
@@ -1766,13 +2024,16 @@
         if (d.chg) {
           // « Change » : la nouvelle valeur doit tenir la durée ; revenir avant l'annule.
           const v = d.chg(t), s = rSeen[key];
+          if (v == null) { delete rSeen[key]; return; }
           if (!s) { rSeen[key] = { v, pend: undefined, since: 0 }; return; }
           if (v === s.v) { s.pend = undefined; return; }
           if (s.pend !== v) { s.pend = v; s.since = Date.now(); }
           if (Date.now() - s.since >= (t.for || 0) * 1000) { s.v = v; s.pend = undefined; runRule(r, rTxt('trg', t)); }
         } else if (d.val || (t.for > 0 && d.st)) {
           // « Devient vrai » : il faut avoir vu faux, puis vrai pendant la durée choisie.
-          const v = !!(d.val ? d.val(t) : d.st(t)), s = rSeen[key] || (rSeen[key] = { v: null, since: 0, fired: false, armed: !!d.hold });
+          const reading = d.val ? d.val(t) : d.st(t);
+          if (reading == null) { delete rSeen[key]; return; }
+          const v = Boolean(reading), s = rSeen[key] || (rSeen[key] = { v: null, since: 0, fired: false, armed: !!d.hold });
           if (v !== s.v) { s.since = Date.now(); s.fired = false; }
           s.v = v;
           if (!v) { s.armed = true; return; }
@@ -1782,33 +2043,85 @@
         } else if (newMin && rMinute !== null) {
           if (t.k === 'time' && mk === t.h * 60 + t.m) runRule(r, d.txt(t));
           if (t.k === 'every' && mk % t.min === 0) runRule(r, d.txt(t));
-          if ((t.k === 'sunrise' && mk === Math.round(rise * 60)) || (t.k === 'sunset' && mk === Math.round(set * 60))) runRule(r, d.txt(t));
+          if (t.k === 'sunrise' || t.k === 'sunset') {
+            const minute = Math.round((t.k === 'sunrise' ? rise : set) * 60) + (t.offset || 0);
+            if (mk === (minute + 1440) % 1440) runRule(r, d.txt(t));
+          }
         }
       });
     });
     rMinute = mk;
   }
   setInterval(ruleTick, 1000);
-  const rWait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  function rPause(job, ms) {
+    return new Promise((ok) => {
+      const id = setTimeout(ok, ms);
+      job.wake = () => { clearTimeout(id); ok(); };
+    });
+  }
+  function rStop(id) {
+    const job = rActive.get(id);
+    if (!job) return;
+    job.stopped = true;
+    job.wake?.();
+  }
   /** Une exécution : conditions (sauf Tester), puis les actions de haut en bas, dans le journal. */
   async function runRule(r, why, test) {
     const j = [], t0 = Date.now();
-    let ok = 0, ko = 0, sent = 0;
+    let ok = 0, ko = 0, sent = 0, count = 0;
     j.push('▶ ' + (why || S('rule_test')));
     if (!test) {
       if (r.opt && r.opt.ready && !car().ready) { j.push('■ ' + S('rule_opt_ready')); return rDone(r, j, 0, 0, { short: S('rule_skip_short_not_ready'), long: S('rule_skip_not_ready'), by: why }); }
-      for (const c of r.cond) {
-        const d = R_COND[c.k]; const v = d && d.ok(c); j.push((v ? '✓ ' : '✗ ') + rTxt('cond', c));
-        if (!v) return rDone(r, j, 0, 0, { short: S('rule_skip_short_conditions'), long: S('rule_skip_conditions_fmt', rTxt('cond', c)), by: why });
+      const values = r.cond.map(rCondValue);
+      r.cond.forEach((c, i) => j.push((values[i] === true ? '✓ ' : values[i] === false ? '✗ ' : '? ') + rTxt('cond', c)));
+      if (rGroupValue(r.conditionOp || 'all', values) !== true) {
+        return rDone(r, j, 0, 0, { short: S('rule_skip_short_conditions'), long: S('rule_skip_conditions_fmt', rConditionText(r.cond, r.conditionOp)), by: why });
+      }
+      const cooldown = (r.opt?.cooldown || 0) * 60000;
+      if (cooldown && t0 - (rLastRun.get(r.id) || 0) < cooldown) {
+        return rDone(r, j, 0, 0, { short: S('rule_skip_short_cooldown'), long: S('rule_skip_cooldown_fmt', r.opt.cooldown), by: why });
       }
     }
+    if (rActive.has(r.id)) {
+      if (!r.opt?.restart) return rDone(r, j, 0, 0, { short: S('rule_skip_short_busy'), long: S('rule_skip_busy'), by: why });
+      rStop(r.id);
+    }
+    const job = { stopped: false, wake: null };
+    rActive.set(r.id, job);
+    if (!test) rLastRun.set(r.id, t0);
     const steps = async (list) => {
       for (const a of list) {
+        job.wake = null;
+        if (job.stopped || ++count > 200) return false;
         if (a.k === 'stop') { j.push('■ ' + S('rule_act_stop')); return false; }
-        if (a.k === 'if') { const v = R_COND[a.c.k].ok(a.c); j.push('? ' + rTxt('act', a) + ' → ' + S(v ? 'rule_on' : 'rule_off')); if (await steps(v ? a.then : a.else) === false) return false; continue; }
-        if (a.k === 'wait') { j.push('… ' + rTxt('act', a)); await rWait(Math.min(a.s, 30) * 1000); continue; }
+        if (a.k === 'if') {
+          const v = rEvalGroup(rConditions(a), a.conditionOp);
+          j.push('? ' + rTxt('act', a) + ' → ' + (v == null ? '?' : S(v ? 'rule_on' : 'rule_off')));
+          if (v != null && await steps(v ? a.then : a.else) === false) return false;
+          continue;
+        }
+        if (a.k === 'repeat') {
+          j.push('↻ ' + rTxt('act', a));
+          for (let i = 0; i < a.count; i++) if (await steps(a.then) === false) return false;
+          continue;
+        }
+        if (a.k === 'wait') { j.push('… ' + rTxt('act', a)); await rPause(job, a.s * 1000); continue; }
+        if (a.k === 'wait_until') {
+          const limit = Date.now() + a.s * 1000;
+          let ready = rEvalGroup(rConditions(a));
+          while (!job.stopped && ready !== true && Date.now() < limit) {
+            await rPause(job, 1000);
+            ready = rEvalGroup(rConditions(a));
+          }
+          j.push((ready === true ? '✓ ' : '… ') + rTxt('act', a)); continue;
+        }
         if (a.k === 'confirm') {
-          const s = activeSim(); const yes = s ? await s.ruleAsk(a.msg) : false;
+          const s = activeSim();
+          const yes = s ? await new Promise((done) => {
+            const result = s.ruleAsk(a.msg, a.s ?? 15, a.timeoutAnswer ?? false);
+            job.wake = () => { if (s.ui.dialog?.type === 'rAsk') s.act('rAskNo'); done(false); };
+            result.then(done);
+          }) : false;
           j.push((yes ? '✓ ' : '■ ') + rTxt('act', a)); if (!yes) return false; continue;
         }
         // Fait (✓), seulement envoyé (↗) ou refusé (✗), avec la raison (2026-11-14).
@@ -1818,8 +2131,12 @@
       }
       return true;
     };
-    await steps(r.act);
-    return rDone(r, j, ok, ko, false, t0, test, sent);
+    try {
+      await steps(r.act);
+      if (!job.stopped) return rDone(r, j, ok, ko, false, t0, test, sent);
+    } finally {
+      if (rActive.get(r.id) === job) rActive.delete(r.id);
+    }
   }
   function rDone(r, j, ok, ko, skipped, t0, test, sent) {
     // Un refus reste sur la carte jusqu'à la prochaine exécution (RuleHistory.skipIsNewer).
@@ -1833,6 +2150,7 @@
   /** Résultat d'une action : relais = envoyé, « Lancer » = démarrée ou refusée et pourquoi. */
   function rResult(a) {
     if (a.k === 'shortcut') { runAction(a.a); return { o: 'sent', why: S('rule_res_sent') }; }
+    if (a.k === 'custom') return rExec(a) ? { o: 'sent', why: S('rule_res_sent') } : { o: 'ko' };
     if (a.k === 'run_rule') {
       const r = state.rules.list.find((x) => x.id === a.id);
       if (!r || !r.on || !state.rules.engine) return { o: 'ko', why: S('rule_res_rule_off') };
@@ -1846,8 +2164,21 @@
     switch (a.k) {
       case 'set': {
         const d = SET_KEYS[a.key]; if (!d || !d.ok(caps())) return false;
-        if (a.key === 'hvac_auto') { setClimAuto(a.v); return true; }
-        carPut(d.k, a.v); return true;
+        if (['seat_left', 'seat_right', 'steering'].includes(a.key) && !caps().heat) return false;
+        const value = a.variable ? (Object.hasOwn(state.rules.variables, a.variable) ? state.rules.variables[a.variable] : null) : a.v;
+        if (value == null) return false;
+        let v = value;
+        if (d.bool && [0, 1, '0', '1'].includes(v)) v = Boolean(+v);
+        if (d.min != null || typeof d.opts?.[0] === 'number') {
+          v = a.key === 'recirc' && typeof v === 'string' && ['INNER', 'OUTSIDE', 'AUTO'].includes(v) ?
+            ['INNER', 'OUTSIDE', 'AUTO'].indexOf(v) : +v;
+        }
+        if (d.bool && typeof v !== 'boolean') return false;
+        if (d.opts && !d.opts.includes(v)) return false;
+        if (d.min != null && (!Number.isFinite(v) || v < d.min || v > (typeof d.max === 'function' ? d.max() : d.max))) return false;
+        if (a.key === 'hvac_auto') { setClimAuto(v); return true; }
+        if (d.run) return d.run(v);
+        carPut(d.k, v); return true;
       }
       case 'profile': { const p = state.profiles.find((x) => x.id === a.id); if (!p) return false; applyProfile(p, { manual: true }); return true; }
       case 'brightness': c.brightness = clamp(a.v, briMin(), 100); return true;
@@ -1857,10 +2188,39 @@
       case 'run_rule': { const r = state.rules.list.find((x) => x.id === a.id); if (!r) return false; runRule(r, S('rule_trg_manual')); return true; }
       case 'notify': toastActive(a.msg || '…', 3000); return true;
       case 'media': c.media.playing = !!a.play; hud((a.play ? '▶ ' : '⏸ ') + S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause')); return true;
-      case 'android': hud(rTxt('act', a)); return true;
-      case 'sound': hud('🔔 ' + S('rule_sound_beep')); return true;
-      case 'stop_rule': return !!state.rules.list.find((x) => x.id === a.id);
-      case 'abrp': hud(a.on ? S('abrp_running_fmt', L('Ma MG4', 'My MG4')) : S('abrp_rule_stop')); return true;
+      case 'android': case 'open_app': hud(rTxt('act', a)); return true;
+      case 'custom': return !!runAction('CUSTOM', { customId: a.id });
+      case 'navigate':
+        if (!state.rules.places.some((p) => p.id === a.id)) return false;
+        hud(rTxt('act', a)); return true;
+      case 'variable': {
+        const vars = state.rules.variables;
+        const prev = Object.hasOwn(vars, a.name) ? vars[a.name] : undefined;
+        vars[a.name] = a.op === 'number' ? a.v : a.op === 'add' ? (Number(prev) || 0) + a.v : a.op === 'true';
+        return true;
+      }
+      case 'save_value': {
+        const v = rRead(a.sig);
+        if (v == null) return false;
+        state.rules.variables[a.name] = Array.isArray(v) ? v.join(',') : v; return true;
+      }
+      case 'sound':
+        if (!rSoundChoices().some(([id]) => id === (a.sound || 'beep'))) return false;
+        hud('🔔 ' + rTxt('act', a)); return true;
+      case 'stop_rule':
+        if (!state.rules.list.some((x) => x.id === a.id)) return false;
+        rStop(a.id); return true;
+      case 'rule_enable': {
+        const rule = state.rules.list.find((r) => r.id === a.id);
+        if (!rule) return false;
+        rule.on = a.on; return true;
+      }
+      case 'abrp': {
+        const account = state.rules.accounts.find((r) => r.id === a.id);
+        if (a.on && !account) return false;
+        state.rules.abrp = a.on ? a.id : null;
+        hud(a.on ? S('abrp_running_fmt', account.name) : S('abrp_rule_stop')); return true;
+      }
       case 'speak': hud('🗣 « ' + (a.msg || '…') + ' »'); return true;
       default: return false;
     }
@@ -1888,6 +2248,8 @@
       this.bezel = el.querySelector('.sim-bezel');
       this.stage = el.querySelector('.sim-stage');
       this.screenEl = el.querySelector('.sim-screen');
+      this.screenEl.style.setProperty('--screen-width', SCREEN_WIDTH + 'px');
+      this.screenEl.style.setProperty('--screen-height', SCREEN_HEIGHT + 'px');
       this.app = el.querySelector('.app');
       this.app.setAttribute('aria-label', L('Maquette interactive de MG4Control', 'Interactive MG4Control mockup'));
       this.bind();
@@ -1906,12 +2268,14 @@
       // une barre de défilement pour un dépassement de moins d'un pixel.
       const avail = Math.floor(this.viewport.getBoundingClientRect().width) - 20;
       if (avail <= 0) return;
-      const k = Math.max(avail / 1280, window.innerWidth < 700 ? 0.5 : 0.3);
-      this.stage.style.width = Math.floor(1280 * k) + 'px';
-      this.stage.style.height = Math.floor(480 * k) + 'px';
-      this.bezel.style.width = Math.floor(1280 * k) + 20 + 'px';
+      const minWidth = window.innerWidth < 700 ? 640 : 384;
+      const width = Math.max(avail, minWidth);
+      const k = width / SCREEN_WIDTH;
+      this.stage.style.width = width + 'px';
+      this.stage.style.height = Math.floor(SCREEN_HEIGHT * k) + 'px';
+      this.bezel.style.width = width + 20 + 'px';
       this.screenEl.style.setProperty('--k', k);
-      this.el.classList.toggle('sim-scrolls', 1280 * k > avail + 1);
+      this.el.classList.toggle('sim-scrolls', width > avail + 1);
     }
 
     // ── Navigation ─────────────────────────────────────────────────────────
@@ -1925,6 +2289,19 @@
       }
       if (screen === 'profileEdit' && !this.ui.edit) this.startEdit(state.profiles[0]);
       this.render();
+    }
+    openFeature(target, demo) {
+      if (!target && !demo) return;
+      clearTimeout(this._quickDemoT);
+      if (this.ui.dialog?.type === 'rAsk') this.act('rAskNo');
+      else this.ui.dialog = null;
+      if (this.ui.overlay?.type === 'confirm') this.act('cfNo');
+      else if (this.ui.overlay) this.closeOverlay();
+      if (target) {
+        const [screen, tab] = target.split(':');
+        this.go(screen, tab);
+      }
+      if (demo) this.demo(demo);
     }
     resetShortcutDraft(tab) {
       const key = { regen: 'regenDraft', drivemode: 'driveDraft', profiles: 'profileDraft', sources: 'audioDraft' }[tab];
@@ -1966,7 +2343,10 @@
       const sc = this.app.querySelector('.a-scroll');
       const st = sc ? sc.scrollTop : 0;
       const key = this.viewKey();
-      const focused = document.activeElement && this.app.contains(document.activeElement) ? document.activeElement.getAttribute('data-fid') : null;
+      const activeInput = document.activeElement;
+      const focused = activeInput && this.app.contains(activeInput) ? activeInput.getAttribute('data-fid') : null;
+      const selection = focused && typeof activeInput.selectionStart === 'number' ?
+        [activeInput.selectionStart, activeInput.selectionEnd, activeInput.selectionDirection] : null;
       this.app.setAttribute('data-app-theme', appTheme());
       this.app.setAttribute('lang', appLang());
       this.app.setAttribute('data-ts', state.settings.textSize);
@@ -2013,7 +2393,13 @@
       const sc2 = this.app.querySelector('.a-scroll');
       if (sc2 && key === this._lastKey) sc2.scrollTop = st;
       this._lastKey = key;
-      if (focused) { const f = this.app.querySelector('[data-fid="' + focused + '"]'); if (f) { f.focus(); if (f.setSelectionRange && f.type === 'text') { const n = f.value.length; f.setSelectionRange(n, n); } } }
+      if (focused) {
+        const input = this.app.querySelector('[data-fid="' + focused + '"]');
+        if (input) {
+          input.focus({ preventScroll: true });
+          if (selection) input.setSelectionRange(...selection);
+        }
+      }
       this.app.querySelectorAll('input[type=range]').forEach(paintRange);
       this.app.querySelectorAll('svg[data-clprev]').forEach(clPreviewSvg);
       if (this.hl) this.applyHl();
@@ -2025,7 +2411,9 @@
         return '<div class="a-closed"><div>' + esc(L('MG4Control a été fermée.', 'MG4Control was closed.')) + '</div><button class="b" data-a="reopen">' + esc(L('Relancer l\'application', 'Relaunch the app')) + '</button></div>';
       }
       // Côté du menu (NavSide) : Auto suit le volant de la voiture simulée, Gauche / Droite le forcent.
-      let out = '<div class="a-frame' + (navRight() ? ' right' : '') + '">' + this.topbar() + '<div class="a-main">' + this.screenHtml() + '</div></div>';
+      const nativeLayout = ['dashboard', 'profiles', 'profileEdit', 'shortcuts', 'automation', 'ruleEdit', 'stats', 'settings', 'audio'].includes(u.screen);
+      let out = '<div class="a-frame' + (nativeLayout ? ' a-frame-native' : '') + (navRight() ? ' right' : '') +
+        '">' + this.topbar() + '<div class="a-main">' + this.screenHtml() + '</div></div>';
       if (!state.car.on) out += '<div class="a-off-badge">' + esc(L('Véhicule hors tension, écran actif', 'Vehicle powered off, screen on')) + '</div>';
       // Notification persistante du service en Mode Garage
       if (garage()) out += '<div class="a-garage-badge" data-hl="garage-notif">🔧 ' + esc(S('notif_garage_mode')) + '</div>';
@@ -2208,13 +2596,13 @@
         if (!t.page || (t.hidden && i !== cur)) return '';
         return '<button class="a-tab' + (t.off ? ' off' : '') + (i === cur ? ' on' : '') + '" data-a="tab" data-v="' + tabKey + ':' + id(t, i) + '" data-hl="rail' + (t.hl ? ' ' + t.hl : '') + '">' + (t.icon ? ico(t.icon) : '') + '<span>' + esc(t.label) + '</span>' + (t.off ? '<small>' + esc(S('climate_off')) + '</small>' : '') + '</button>';
       }).join('');
-      return '<div class="a-body ' + (extraCls || '') + '"><div class="a-pillrow"><div class="a-rail" data-hl="rail" data-sk="rail-' + tabKey + '">' + rail + '</div>' + (after || '') + '</div><div class="a-scroll"><div class="a-stack">' + (tabs[cur] ? tabs[cur].page : '') + '</div></div></div>';
+      const page = tabs[cur]?.page;
+      return '<div class="a-body ' + (extraCls || '') + '"><div class="a-pillrow"><div class="a-rail" data-hl="rail" data-sk="rail-' + tabKey + '">' + rail + '</div>' + (after || '') + '</div><div class="a-scroll"><div class="a-stack">' + (typeof page === 'function' ? page() : page || '') + '</div></div></div>';
     }
 
     // ── Dashboard ──────────────────────────────────────────────────────────
     dashHtml() {
-      // Même cadre que les autres écrans : marges et espace sous les pastilles.
-      return '<div class="a-page">' + this.railLayout('dash', [
+      return '<div class="a-page dash-page">' + this.railLayout('dash', [
         { label: S('profile_cat_drive'), icon: 'steering', page: this.dashDrive() },
         { label: S('profile_cat_safety'), icon: 'shield', page: this.dashSafety() },
         { label: S('profile_cat_comfort'), icon: 'armchair', page: this.dashComfort() }
@@ -2233,12 +2621,12 @@
         const en = regenOk || (l === 'ONE_PEDAL' && !snow);
         return '<button class="b' + (c.regen === l ? ' on' : '') + (en ? '' : ' dis') + '" data-a="regen" data-v="' + l + '"' + (en ? '' : ' disabled') + '>' + esc(S(key)) + '</button>';
       };
-      const energy = k.known ? '<button class="b full' + (c.energy ? ' on' : '') + (snow ? ' dis' : '') + '" data-a="energy" data-hl="energy"' + (snow ? ' disabled' : '') + ' style="margin-top:5px">' + esc(S('drive_energy_saving')) + '</button>' : '';
+      const energy = k.known ? '<button class="b full dash-energy' + (c.energy ? ' on' : '') + (snow ? ' dis' : '') + '" data-a="energy" data-hl="energy"' + (snow ? ' disabled' : '') + '>' + esc(S('drive_energy_saving')) + '</button>' : '';
       const custom = c.driveMode === 'CUSTOM' ? this.customCard(c.custom, 'custom', 'custom') : '';
       return '<div class="a-sec" data-hl="drive"><div class="a-h">' + esc(S('drive_section_mode')) + '</div>' +
         // 2.7.0 : les cinq modes en tuiles à pictogramme (ic_mode_*), sur une rangée.
-        '<div class="a-grid g5">' + DRIVE.map(dm).join('') + '</div>' + energy + '</div>' + custom +
-        '<div class="a-sec" data-hl="regen"><div class="a-h">' + esc(S('drive_section_regen')) + '</div><div class="a-grid g2">' +
+        '<div class="a-grid g5 dash-modes">' + DRIVE.map(dm).join('') + '</div>' + energy + '</div>' + custom +
+        '<div class="a-sec" data-hl="regen"><div class="a-h">' + esc(S('drive_section_regen')) + '</div><div class="a-grid g2 dash-stacked">' +
         rg('OFF', 'regen_off') + rg('LOW', 'regen_low') + rg('MEDIUM', 'regen_medium') + rg('HIGH', 'regen_high') + rg('ADAPTIVE', 'regen_adaptive_short') + rg('ONE_PEDAL', 'regen_one_pedal_short') +
         '</div></div>' + this.batHeatSection();
     }
@@ -2249,7 +2637,7 @@
       const b = (on, key) => '<button class="b' + (c.batHeat === on ? ' on' : '') + '" data-a="batHeat" data-v="' + (on ? 1 : 0) + '">' + esc(S(key)) + '</button>';
       const status = !c.batHeat ? S('batheat_status_off') : bh.on ? S('batheat_status_countdown', bh.minutes) : S('batheat_status_stays_on');
       return '<div class="a-sec" data-hl="batheat"><div class="a-h">' + esc(S('batheat_section')) + '</div><div class="a-grid g2">' + b(true, 'common_on') + b(false, 'common_off') + '</div>' +
-        '<div class="a-desc" style="margin-top:6px">' + esc(status) + '</div><div class="a-desc">' + esc(S('batheat_hint')) + '</div></div>';
+        '<div class="a-desc dash-batheat-status">' + esc(status) + '</div><div class="a-desc">' + esc(S('batheat_hint')) + '</div></div>';
     }
     /** Carte « Mode personnalisé » : puissance, direction, pédale (index 0/1/2). */
     customCard(vals, act, hl) {
@@ -2266,6 +2654,15 @@
       return '<div class="a-grid g3">' + b(0, 'adas_off') + b(1, 'adas_limiteur_short') + b(2, 'adas_auto') + '</div>' +
         '<div class="a-grid g3" style="margin-top:5px">' + b(3, 'adas_acc') + b(4, k.fifth) + '<span></span></div>';
     }
+    /** Tableau de bord Android : grand titre, puis sous-cartes avec leurs propres contours. */
+    dashCard(key, title, body, layout = '') {
+      return '<div class="a-card dash-card" data-hl="' + key + '"><div class="a-h">' + esc(S(title)) +
+        '</div><div class="dash-card-body' + (layout ? ' ' + layout : '') + '">' + body + '</div></div>';
+    }
+    dashPanel(title, body, hl = '') {
+      return '<div class="dash-panel"' + (hl ? ' data-hl="' + hl + '"' : '') + '><div class="a-h">' +
+        esc(S(title)) + '</div>' + body + '</div>';
+    }
     dashSafety() {
       const c = car(), k = caps();
       let h = '<div class="a-sec" data-hl="adas"><div class="a-h">ADAS</div>' + this.adasButtons(c.adas, 'adas') + '</div>';
@@ -2280,16 +2677,17 @@
       } else {
         alerts = '<div class="a-row"><span class="lbl">' + esc(S('adas_sound_warning')) + '</span>' + sw(c.sound, 'sound') + '</div>';
       }
-      h += '<div class="a-card" data-hl="alerts"><div class="a-h">' + esc(S('card_alerts')) + '</div><div class="a-sub">' + esc(S('adas_section_sounds')) + '</div>' +
-        '<div class="a-cols sep">' + (tsr ? '<div>' + tsr + '</div>' : '') + '<div data-hl="alerts-sound">' + alerts + '</div></div></div>';
+      h += this.dashCard('alerts', 'card_alerts',
+        this.dashPanel('adas_section_sounds', '<div class="dash-alerts' + (tsr ? ' has-tsr' : '') + '">' +
+          tsr + '<div data-hl="alerts-sound">' + alerts + '</div></div>'), 'dash-alert-card');
       if (k.known) {
         const md = (m, key) => '<button class="b' + (c.aebMode === m ? ' on' : '') + (c.aebOn ? '' : ' dis') + '" data-a="aebMode" data-v="' + m + '"' + (c.aebOn ? '' : ' disabled') + '>' + esc(S(key)) + '</button>';
         const sn = (s, key) => '<button class="b' + (c.aebSen === s ? ' on' : '') + '" data-a="aebSen" data-v="' + s + '">' + esc(S(key)) + '</button>';
-        h += '<div class="a-card" data-hl="aeb"><div class="a-h">' + esc(S('aeb_card_title')) + '</div><div class="a-cols sep">' +
-          '<div><div class="a-sub">' + esc(S('elk_section_toggle')) + '</div><div class="a-row" style="justify-content:center">' + sw(c.aebOn, 'aebOn') + '</div></div>' +
-          '<div><div class="a-sub">' + esc(S('elk_section_mode')) + '</div><div class="a-grid">' + md(1, 'adas_aeb_alarm') + md(2, 'adas_aeb_alarm_brake') + '</div></div>' +
-          '<div><div class="a-sub">' + esc(S('aeb_section_sensitivity')) + '</div><div class="a-grid">' + sn(1, 'aeb_sensitivity_low') + sn(2, 'aeb_sensitivity_standard') + sn(3, 'aeb_sensitivity_high') + '</div></div>' +
-          '</div></div>';
+        h += this.dashCard('aeb', 'aeb_card_title',
+          this.dashPanel('elk_section_toggle', '<div class="dash-centered">' + sw(c.aebOn, 'aebOn') + '</div>') +
+          this.dashPanel('elk_section_mode', '<div class="a-grid dash-stacked">' + md(1, 'adas_aeb_alarm') + md(2, 'adas_aeb_alarm_brake') + '</div>') +
+          this.dashPanel('aeb_section_sensitivity', '<div class="a-grid dash-stacked">' + sn(1, 'aeb_sensitivity_low') + sn(2, 'aeb_sensitivity_standard') + sn(3, 'aeb_sensitivity_high') + '</div>'),
+          'dash-aeb');
       }
       // ELK
       const elkOn = c.elkMode !== ELK.OFF;
@@ -2299,20 +2697,21 @@
         ? '<div class="a-row"><span class="lbl">' + esc(S('elk_label_enable')) + '</span>' + sw(elkOn, 'elkOn') + '</div>' +
           '<div class="a-row"><span class="lbl">' + esc(S('elk_sound_warning')) + '</span>' + sw(c.elkSound, 'elkSound', !elkOn) + '</div>' +
           '<div class="a-row"><span class="lbl">' + esc(S('elk_vibration_reminder')) + '</span>' + sw(c.elkVib, 'elkVib', !elkOn) + '</div>'
-        : '<div class="a-row" style="justify-content:center">' + sw(elkOn, 'elkOn') + '</div>';
-      h += '<div class="a-card" data-hl="elk"><div class="a-h">' + esc(S('elk_card_title')) + '</div><div class="a-cols sep">' +
-        '<div><div class="a-sub">' + esc(S('elk_section_toggle')) + '</div>' + act + '</div>' +
-        '<div><div class="a-sub">' + esc(S('elk_section_mode')) + '</div><div class="a-grid">' + em(ELK.ALERT, 'elk_mode_alert') + em(ELK.ASSIST, 'elk_mode_assist') + (k.s132 ? '' : em(ELK.EMERGENCY, 'elk_mode_emergency')) + '</div></div>' +
-        '<div><div class="a-sub">' + esc(S('elk_section_sensitivity')) + '</div><div class="a-grid">' + es(1, 'elk_sensitivity_low') + es(2, 'elk_sensitivity_standard') + es(3, 'elk_sensitivity_high') + '</div></div>' +
-        '</div></div>';
+        : '<div class="dash-centered">' + sw(elkOn, 'elkOn') + '</div>';
+      h += this.dashCard('elk', 'elk_card_title',
+        this.dashPanel('elk_section_toggle', act) +
+        this.dashPanel('elk_section_mode', '<div class="a-grid dash-stacked">' + em(ELK.ALERT, 'elk_mode_alert') + em(ELK.ASSIST, 'elk_mode_assist') + (k.s132 ? '' : em(ELK.EMERGENCY, 'elk_mode_emergency')) + '</div>') +
+        this.dashPanel('elk_section_sensitivity', '<div class="a-grid dash-stacked">' + es(1, 'elk_sensitivity_low') + es(2, 'elk_sensitivity_standard') + es(3, 'elk_sensitivity_high') + '</div>'),
+        'dash-elk');
       // ESC + somnolence
       if (k.esc) {
         const pair = (act2, val) => '<div class="a-grid g2"><button class="b' + (val ? ' on' : '') + '" data-a="' + act2 + '" data-v="1">' + esc(S('common_on')) + '</button><button class="b' + (!val ? ' on' : '') + '" data-a="' + act2 + '" data-v="0">' + esc(S('common_off')) + '</button></div>';
         const sn = (s, key) => '<button class="b' + (c.dmsSen === s ? ' on' : '') + '" data-a="dmsSen" data-v="' + s + '">' + esc(S(key)) + '</button>';
-        h += '<div class="a-card" data-hl="esc"><div class="a-cols">' +
-          '<div data-hl="esc-esc"><div class="a-sub">' + esc(S('safety_esc')) + '</div>' + pair('esc', c.esc) + '</div>' +
-          '<div data-hl="esc-dms"><div class="a-sub">' + esc(S('safety_drowsiness')) + '</div>' + pair('dms', c.dms) + '</div>' +
-          '</div><div class="a-sub" style="margin-top:10px">' + esc(S('safety_drowsiness_sensitivity')) + '</div><div class="a-grid g3" data-hl="esc-dms">' + sn(1, 'sens_low') + sn(2, 'sens_medium') + sn(3, 'sens_high') + '</div></div>';
+        h += '<div class="a-sec dash-esc" data-hl="esc">' +
+          '<div data-hl="esc-esc"><div class="a-h">' + esc(S('safety_esc')) + '</div>' + pair('esc', c.esc) + '</div>' +
+          '<div data-hl="esc-dms"><div class="a-h">' + esc(S('safety_drowsiness')) + '</div>' + pair('dms', c.dms) + '</div>' +
+          '<div data-hl="esc-dms"><div class="a-h">' + esc(S('safety_drowsiness_sensitivity')) + '</div><div class="a-grid g3">' +
+          sn(1, 'sens_low') + sn(2, 'sens_medium') + sn(3, 'sens_high') + '</div></div></div>';
       }
       return h;
     }
@@ -2322,40 +2721,45 @@
       if (k.heat) {
         const seat = (side, lvl) => {
           const b = (n, key) => '<button class="b' + (lvl === n ? ' on' : '') + '" data-a="seat' + side + '" data-v="' + n + '">' + esc(S(key)) + '</button>';
-          return '<div class="a-grid g2">' + b(0, 'climate_off') + b(1, 'climate_level_1') + b(2, 'climate_level_2') + b(3, 'climate_level_3') + '</div>';
+          return '<div class="a-grid g2 dash-stacked">' + b(0, 'climate_off') + b(2, 'climate_level_2') + b(1, 'climate_level_1') + b(3, 'climate_level_3') + '</div>';
         };
-        h += '<div class="a-card" data-hl="heat"><div class="a-h">' + esc(S('card_climate')) + '</div><div class="a-cols sep">' +
-          '<div data-hl="heat-steer"><div class="a-sub">' + esc(S('climate_steering_heat')) + '</div><div class="a-row" style="justify-content:center;min-height:100px">' + sw(c.steering, 'steer') + '</div></div>' +
-          '<div data-hl="heat-seats"><div class="a-sub">' + esc(S('climate_seat_left')) + '</div>' + seat('L', c.seatL) + '</div>' +
-          '<div data-hl="heat-seats"><div class="a-sub">' + esc(S('climate_seat_right')) + '</div>' + seat('R', c.seatR) + '</div>' +
-          '</div></div>';
+        h += this.dashCard('heat', 'card_climate',
+          this.dashPanel('climate_steering_heat', '<div class="dash-centered">' + sw(c.steering, 'steer') + '</div>', 'heat-steer') +
+          this.dashPanel('climate_seat_left', seat('L', c.seatL), 'heat-seats') +
+          this.dashPanel('climate_seat_right', seat('R', c.seatR), 'heat-seats'),
+          'dash-heating');
       }
       if (k.beam) {
         const hb = (on, key) => '<button class="b' + (c.highBeam === on ? ' on' : '') + '" data-a="highBeam" data-v="' + (on ? 1 : 0) + '">' + esc(S(key)) + '</button>';
-        h += '<div class="a-card" data-hl="highbeam"><div class="a-h">' + esc(S('card_lighting')) + '</div><div class="a-sub">' + esc(S('lighting_auto_high_beam')) + '</div>' +
-          '<div class="a-grid g2">' + hb(true, 'common_on') + hb(false, 'common_off') + '</div></div>';
+        h += this.dashCard('highbeam', 'card_lighting',
+          this.dashPanel('lighting_auto_high_beam', '<div class="a-grid g2">' + hb(true, 'common_on') + hb(false, 'common_off') + '</div>'));
       }
       if (k.clim) {
         const cl = c.clim;
-        h += '<div class="a-card" data-hl="clim"><div class="a-h">' + esc(S('clim_card_title')) + '</div>' +
-          '<div class="a-cols sep"><div><div class="a-row"><span class="lbl">' + esc(S('clim_temperature')) + '</span><span class="a-val" data-out="climTemp">' + cl.temp + '°</span></div>' +
+        h += this.dashCard('clim', 'clim_card_title',
+          '<div class="dash-panel"><div class="a-row"><span class="lbl">' + esc(S('clim_temperature')) + '</span><span class="a-val" data-out="climTemp">' + cl.temp + '°</span></div>' +
           range('climTemp', cl.tMin, cl.tMax, cl.temp) + '</div>' +
-          '<div><div class="a-row"><span class="lbl">' + esc(S('clim_fan')) + '</span><span class="a-val" data-out="climFan">' + (cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</span></div>' +
-          range('climFan', cl.fMin, cl.fMax, cl.fan) + '</div></div></div>';
-        const tg = (a, on, key) => '<button class="b' + (on ? ' on' : '') + '" data-a="' + a + '">' + esc(S(key)) + '</button>';
+          '<div class="dash-panel"><div class="a-row"><span class="lbl">' + esc(S('clim_fan')) + '</span><span class="a-val" data-out="climFan">' + (cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</span></div>' +
+          range('climFan', cl.fMin, cl.fMax, cl.fan) + '</div>', 'dash-climate');
+        const tg = (a, on, key) => {
+          const eco = a === 'climEco';
+          return '<button class="b' + (on ? ' on' : '') + (eco ? ' dash-climate-eco eco' : '') +
+            '" data-a="' + a + '"' + (eco ? ' data-hl="hvac-eco"' : '') + '>' +
+            (eco ? ico('mode_eco') : '') + esc(S(key)) + '</button>';
+        };
         const lp = (n, key) => '<button class="b' + (cl.loop === n ? ' on' : '') + '" data-a="climLoop" data-v="' + n + '">' + esc(S(key)) + '</button>';
         const av = (n) => '<button class="b' + (cl.autoVol === n ? ' on' : '') + '" data-a="climAutoVol" data-v="' + n + '">' + esc(S(AUTOVOL_KEY[n])) + '</button>';
-        h += '<div class="a-card" data-hl="climmodes"><div class="a-h">' + esc(S('clim_modes_title')) + '</div><div class="a-cols sep">' +
-          '<div><div class="a-sub">' + esc(S('clim_section_switches')) + '</div><div class="a-grid g1">' + tg('climPower', cl.power, 'clim_power') + tg('climAc', cl.ac, 'clim_ac') + tg('climAuto', cl.auto, 'clim_auto') + tg('climEco', cl.eco, 'clim_eco') + '</div></div>' +
-          '<div><div class="a-sub">' + esc(S('clim_section_loop')) + '</div><div class="a-grid g1">' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
+        h += this.dashCard('climmodes', 'clim_modes_title',
+          this.dashPanel('clim_section_switches', '<div class="a-grid g1 dash-stacked">' + tg('climPower', cl.power, 'clim_power') + tg('climAc', cl.ac, 'clim_ac') + tg('climAuto', cl.auto, 'clim_auto') + tg('climEco', cl.eco, 'clim_eco') + '</div>') +
+          this.dashPanel('clim_section_loop', '<div class="a-grid g1 dash-stacked">' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div>') +
           // Débit d'air en mode AUTO (issue #178) : réglage de la voiture, 0 = fort, 1 = moyen, 2 = faible.
-          '<div data-hl="autovol"><div class="a-sub">' + esc(S('clim_section_autovol')) + '</div><div class="a-grid g1">' + av(0) + av(1) + av(2) + '</div></div>' +
-          '</div></div>';
+          this.dashPanel('clim_section_autovol', '<div class="a-grid g1 dash-stacked">' + av(0) + av(1) + av(2) + '</div>', 'autovol'),
+          'dash-climate-modes');
         // Sens de l'air : boutons cumulables ; la lunette arrière est le dégivrage arrière.
         const ab = (a, on, key, icon) => '<button class="b air' + (on ? ' on' : '') + '" data-a="' + a + '">' + AIR_ICON[icon] + '<span>' + esc(S(key)) + '</span></button>';
-        h += '<div class="a-card" data-hl="airflow"><div class="a-h">' + esc(S('clim_section_airflow')) + '</div><div class="a-grid g4">' +
+        h += this.dashCard('airflow', 'clim_section_airflow', '<div class="a-grid g4">' +
           ab('airFace', cl.air.face, 'clim_air_face', 'face') + ab('airFeet', cl.air.feet, 'clim_air_feet', 'feet') +
-          ab('airWs', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('climDefR', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div></div>';
+          ab('airWs', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('climDefR', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div>', 'dash-air');
       }
       return h;
     }
@@ -2388,7 +2792,7 @@
           '<button class="b" data-a="pDefault" data-v="' + p.id + '">' + esc(S('profile_set_default')) + '</button></div></div></div>';
       }).join('');
       const empty = '<div class="a-desc" style="text-align:center;padding:40px 0">' + esc(L('Aucun profil. Créez-en un avec « Nouveau profil ».', 'No profile yet. Create one with “New profile”.')) + '</div>';
-      return '<div class="a-page"><div class="a-scroll">' + (items ? '<div class="p-grid">' + items + '</div>' : empty) + '</div>' +
+      return '<div class="a-page p-page"><div class="a-scroll">' + (items ? '<div class="p-grid">' + items + '</div>' : empty) + '</div>' +
         '<button class="b primary full up p-new" data-a="pNew" data-hl="pnew">' + esc(S('profile_add')) + '</button></div>';
     }
 
@@ -2438,8 +2842,10 @@
     }
     editHtml() {
       const e = this.ui.edit; if (!e) return '';
-      const head = '<div class="pe-head"><span class="a-title" style="flex:0 0 auto">' + esc(e._new ? S('profile_add') : S('profile_edit')) + '</span>' +
-        '<input class="a-input pe-name" data-c="eName" data-fid="eName" maxlength="30" placeholder="' + esc(S('profile_name_hint')) + '" value="' + esc(e.name) + '" data-hl="ename">' +
+      const name = esc(S('profile_name_hint'));
+      const head = '<div class="pe-head"><span class="a-title">' + esc(e._new ? S('profile_add') : S('profile_edit')) + '</span>' +
+        '<label class="pe-name" data-hl="ename"><input class="a-input" data-c="eName" data-fid="eName" maxlength="30" placeholder=" " value="' + esc(e.name) + '">' +
+        '<span>' + name + '</span></label>' +
         '<div class="pe-def"><span class="lbl">' + esc(S('profile_set_as_default')) + '</span>' + sw(e._default, 'eDefault') + '</div></div>';
       // Une page sans aucun réglage sur ce firmware reste absente du rail, comme avant.
       const cat = (key, content, tail) => ({
@@ -2460,7 +2866,7 @@
      */
     catPage(e, key, content, tail) {
       const on = catOn(e, key);
-      return '<div class="a-sec" data-hl="p-cat"><div class="a-row"><span class="lbl"><b>' + esc(S('profile_cat_apply_' + key)) + '</b></span>' + sw(on, 'eCat', false, key) + '</div></div>' +
+      return '<div class="a-sec pe-category" data-hl="p-cat"><div class="a-row"><span class="lbl">' + esc(S('profile_cat_apply_' + key)) + '</span>' + sw(on, 'eCat', false, key) + '</div></div>' +
         (on ? content : '<div class="a-desc a-cat-off">' + esc(S('profile_cat_off_' + key)) + '</div>') + (tail || '');
     }
     editDrive(e) {
@@ -2471,11 +2877,12 @@
       const rg = (l, key) => { const en = regenOn && (ok || (l === 'ONE_PEDAL' && !snow)); return '<button class="b' + (e.regen === l ? ' on' : '') + (en ? '' : ' dis') + '" data-a="eRegen" data-v="' + l + '"' + (en ? '' : ' disabled') + '>' + esc(S(key)) + '</button>'; };
       const custom = e.driveMode === 'CUSTOM'
         ? this.customCard({ power: e.customPower, steer: e.customSteer, pedal: e.customPedal }, 'eCustom', 'p-custom') : '';
-      return '<div class="a-sec"><div class="a-h">' + esc(S('drive_section_mode')) + '</div><div class="a-grid g3">' + dm('ECO') + dm('NORMAL') + dm('SPORT') + '</div><div class="a-grid g2" style="margin-top:8px">' + dm('SNOW') + dm('CUSTOM') + '</div>' +
-        (k.known ? '<button class="b full' + (e.energy ? ' on' : '') + (snow ? ' dis' : '') + '" style="margin-top:5px" data-a="eEnergy"' + (snow ? ' disabled' : '') + '>' + esc(S('drive_energy_saving')) + '</button>' : '') + '</div>' + custom +
-        '<div class="a-sec" data-hl="p-regen"><div class="a-row"><span class="lbl"><b>' + esc(S('drive_section_regen')) + '</b></span>' + sw(regenOn, 'eRegenOn') + '</div><div class="a-grid g3">' +
-        rg('OFF', 'regen_off') + rg('LOW', 'regen_low') + rg('MEDIUM', 'regen_medium') + rg('HIGH', 'regen_high') + rg('ADAPTIVE', 'regen_adaptive_short') + rg('ONE_PEDAL', 'regen_one_pedal_short') + '</div>' +
-        (regenOn ? '' : '<div class="a-desc" style="margin-top:6px">' + esc(S('regen_unchanged_note')) + '</div>') + '</div>';
+      return '<div class="a-sec pe-drive"><div class="a-h">' + esc(S('drive_section_mode')) + '</div><div class="a-grid g3">' + dm('ECO') + dm('NORMAL') + dm('SPORT') + '</div><div class="a-grid g2">' + dm('SNOW') + dm('CUSTOM') + '</div>' +
+        (k.known ? '<button class="b full' + (e.energy ? ' on' : '') + (snow ? ' dis' : '') + '" data-a="eEnergy"' + (snow ? ' disabled' : '') + '>' + esc(S('drive_energy_saving')) + '</button>' : '') + '</div>' + custom +
+        '<div class="a-sec pe-regen" data-hl="p-regen"><div class="a-row pe-section-title"><span class="lbl">' + esc(S('drive_section_regen')) + '</span>' + sw(regenOn, 'eRegenOn') + '</div><div class="a-grid g3">' +
+        rg('OFF', 'regen_off') + rg('LOW', 'regen_low') + rg('MEDIUM', 'regen_medium') + '</div><div class="a-grid g3">' +
+        rg('HIGH', 'regen_high') + rg('ADAPTIVE', 'regen_adaptive_short') + rg('ONE_PEDAL', 'regen_one_pedal_short') + '</div>' +
+        (regenOn ? '' : '<div class="a-desc">' + esc(S('regen_unchanged_note')) + '</div>') + '</div>';
     }
     editSafety(e) {
       const k = caps();
@@ -2509,17 +2916,20 @@
       let h = '';
       if (k.heat) {
         const b = (a, v, cur, key, dis) => '<button class="b' + (cur === v ? ' on' : '') + (dis ? ' dis' : '') + '" data-a="' + a + '" data-v="' + v + '"' + (dis ? ' disabled' : '') + '>' + esc(S(key)) + '</button>';
-        h += '<div class="a-sec" data-hl="p-heat"><div class="a-row"><span class="lbl"><b>' + esc(S('climate_steering_heat')) + '</b></span>' + sw(e.steeringApply, 'eSteerApply') + '</div>' +
+        h += '<div class="a-sec" data-hl="p-heat"><div class="a-row pe-section-title"><span class="lbl">' + esc(S('climate_steering_heat')) + '</span>' + sw(e.steeringApply, 'eSteerApply') + '</div>' +
           '<div class="a-grid g2">' + b('eSteer', 0, e.steeringOn ? 1 : 0, 'climate_off', !e.steeringApply) + b('eSteer', 1, e.steeringOn ? 1 : 0, 'climate_on', !e.steeringApply) + '</div></div>';
-        const lv = (a, cur) => b(a, 0, cur, 'climate_off', !e.seatApply) + b(a, 1, cur, 'climate_level_1', !e.seatApply) + b(a, 2, cur, 'climate_level_2', !e.seatApply) + b(a, 3, cur, 'climate_level_3', !e.seatApply);
-        h += '<div class="a-sec" data-hl="p-heat"><div class="a-row"><span class="lbl"><b>' + esc(S('climate_seat_heat')) + '</b></span>' + sw(e.seatApply, 'eSeatApply') + '</div>' +
-          '<div class="a-sub">' + esc(S('climate_seat_left')) + '</div><div class="a-grid g4">' + lv('eSeatL', e.seatL) + '</div>' +
-          '<div class="a-sub" style="margin-top:8px">' + esc(S('climate_seat_right')) + '</div><div class="a-grid g4">' + lv('eSeatR', e.seatR) + '</div></div>';
+        const seat = (label, action, cur) => {
+          const lv = (v, key) => b(action, v, cur, key, !e.seatApply);
+          return '<div><div class="a-h">' + esc(S(label)) + '</div><div class="a-grid g2">' +
+            lv(0, 'climate_off') + lv(1, 'climate_level_1') + lv(2, 'climate_level_2') + lv(3, 'climate_level_3') + '</div></div>';
+        };
+        h += '<div class="a-sec" data-hl="p-heat"><div class="a-row pe-section-title"><span class="lbl">' + esc(S('climate_seat_heat')) + '</span>' + sw(e.seatApply, 'eSeatApply') + '</div>' +
+          '<div class="pe-seats">' + seat('climate_seat_left', 'eSeatL', e.seatL) + seat('climate_seat_right', 'eSeatR', e.seatR) + '</div></div>';
       }
       if (k.beam) {
         const on = e.beam != null, cur = e.beam !== false;
         const hb = (v, key) => '<button class="b' + (cur === v ? ' on' : '') + (on ? '' : ' dis') + '" data-a="eBeam" data-v="' + (v ? 1 : 0) + '"' + (on ? '' : ' disabled') + '>' + esc(S(key)) + '</button>';
-        h += '<div class="a-sec" data-hl="p-beam"><div class="a-row"><span class="lbl"><b>' + esc(S('lighting_auto_high_beam')) + '</b></span>' + sw(on, 'eBeamOn') + '</div>' +
+        h += '<div class="a-sec" data-hl="p-beam"><div class="a-row pe-section-title"><span class="lbl">' + esc(S('lighting_auto_high_beam')) + '</span>' + sw(on, 'eBeamOn') + '</div>' +
           '<div class="a-grid g2">' + hb(false, 'climate_off') + hb(true, 'climate_on') + '</div></div>';
       }
       if (k.clim) h += this.editHvac(e.hvac);
@@ -2528,14 +2938,15 @@
     /** Association Bluetooth : hors de la zone repliable, elle déclenche le profil sans être un réglage de confort. */
     editBt(e) {
       const opts = '<option value="">' + esc(S('profile_bt_none')) + '</option>' + state.bt.devices.map((d) => '<option value="' + esc(d.mac) + '"' + (e.bt === d.mac ? ' selected' : '') + '>' + esc(d.name) + ' (' + esc(d.mac) + ')</option>').join('');
-      return '<div class="a-sec" data-hl="p-bt"><div class="a-row"><span class="lbl">' + esc(S('profile_bt_device_label')) + '</span><select class="a-select" data-c="eBt">' + opts + '</select></div></div>';
+      return '<label class="a-sec pe-bt" data-hl="p-bt"><span class="a-h">' + esc(S('profile_bt_device_label')) +
+        '</span><select class="a-select" data-c="eBt">' + opts + '</select></label>';
     }
 
     /** Bloc climatisation du profil, décoché par défaut. */
     editHvac(hv) {
       const on = hv.enabled, dimOff = on && hv.power ? '' : ' dim';
       const b = (a, active, label, v, dis) => '<button class="b sm' + (active ? ' on' : '') + (dis ? ' dis' : '') + '" data-a="' + a + '"' + (v != null ? ' data-v="' + v + '"' : '') + (dis ? ' disabled' : '') + '>' + label + '</button>';
-      let h = '<div class="a-sec" data-hl="p-hvac"><div class="a-row"><span class="lbl"><b>' + esc(S('profile_hvac_title')) + '</b></span>' + sw(on, 'hvOn') + '</div>';
+      let h = '<div class="a-sec" data-hl="p-hvac"><div class="a-row pe-section-title"><span class="lbl">' + esc(S('profile_hvac_title')) + '</span>' + sw(on, 'hvOn') + '</div>';
       {
         const off = !on || !hv.power;
         const air = hv.air;
@@ -2565,23 +2976,25 @@
     settingsHtml() {
       // 2.7.0 : plus de titre « Réglages » ni de bouton Fermer (le logo ramène au tableau de bord).
       const body = this.railLayout('set', [
-        { label: S('settings_cat_lang'), icon: 'language', page: this.setLang() },
-        { label: S('settings_cat_ui'), icon: 'palette', page: this.setUi() },
-        { label: S('settings_cat_advanced'), icon: 'adjustments', page: this.setAdv() },
-        { label: S('settings_cat_info'), icon: 'info', page: this.setInfo() }
+        { label: S('settings_cat_lang'), icon: 'language', page: () => this.setLang() },
+        { label: S('settings_cat_ui'), icon: 'palette', page: () => this.setUi() },
+        { label: S('settings_cat_advanced'), icon: 'adjustments', page: () => this.setAdv() },
+        { label: S('settings_cat_info'), icon: 'info', page: () => this.setInfo() }
       ], 'set-pages');
-      return '<div class="a-page">' + body + '</div>';
+      return '<div class="a-page set-page">' + body + '</div>';
     }
     setLang() {
       const cur = appLang();
       const b = (code) => '<button class="b nc' + (cur === code ? ' on' : '') + '" data-a="lang" data-v="' + code + '">' + esc(S('settings_language_' + code)) + '</button>';
-      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g5">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + b('pl') + b('nb') + b('cs') + '</div></div>';
+      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g5">' +
+        ['fr', 'en', 'de', 'es', 'pt', 'it', 'tr', 'pl', 'nb', 'cs'].map(b).join('') + '</div></div>';
     }
     setUi() {
       const s = state.settings, k = caps();
       const ds = (v, key) => '<button class="b' + (s.defaultScreen === v ? ' on' : '') + '" data-a="defScreen" data-v="' + v + '">' + esc(S(key)) + '</button>';
       const th = (v, key) => '<button class="b' + (s.theme === v ? ' on' : '') + '" data-a="theme" data-v="' + v + '">' + esc(S(key)) + '</button>';
       const desc = (key) => '<div class="a-desc">' + esc(S(key)) + '</div>';
+      const cl = k.cluster ? this.setCluster() : '';
       return '<div class="set-2col">' +
         '<div class="a-sec" data-hl="s-default"><div class="a-h">' + esc(S('settings_default_screen')) + '</div><div class="a-grid g3">' + ds('dashboard', 'settings_default_screen_dashboard') + ds('profiles', 'nav_profiles') + ds('shortcuts', 'nav_shortcuts') + '</div></div>' +
         '<div class="a-sec" data-hl="s-theme"><div class="a-h">' + esc(S('settings_theme')) + '</div><div class="a-grid g3">' + th('auto', 'settings_theme_auto') + th('dark', 'settings_theme_dark') + th('light', 'settings_theme_light') + '</div></div>' +
@@ -2592,8 +3005,8 @@
         '<div class="a-sec" data-hl="s-hvaczone"><div class="a-h">' + esc(S('floating_hvac_zone')) + '</div>' +
           '<div class="a-row"><span class="lbl">' + esc(S('floating_hvac_zone_desc')) + '</span>' + sw(s.hvacZone, 'hvacZone') + '</div></div>' +
         '<div class="a-sec" data-hl="s-popupdelay"><div class="a-h">' + esc(S('settings_popup_delay')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('popupDelay', 1, 60, popupDelay()) + '</div><span class="a-val" data-out="popupDelay">' + popupDelay() + ' s</span></div>' + desc('settings_popup_delay_desc') + '</div>' +
-        // Pop-up de charge (ChargePopupSettings) : tous les firmwares, activé par défaut.
+          '<div class="a-row set-level">' + range('popupDelay', 1, 60, popupDelay()) + '<span class="a-val" data-out="popupDelay">' + popupDelay() + ' s</span></div>' + desc('settings_popup_delay_desc') + '</div>' +
+        // Pop-up de charge (ChargePopupSettings) : tous les firmwares.
         '<div class="a-sec" data-hl="s-chargepopup"><div class="a-h">' + esc(S('settings_charge_popup')) + '</div>' +
           '<div class="a-row"><span class="lbl">' + esc(S('settings_charge_popup_switch')) + '</span>' + sw(s.chargePopup, 'chargePopup') + '</div>' + desc('settings_charge_popup_desc') + '</div>' +
         // Côté du menu (NavSide) : Auto suit le volant lu sur la voiture.
@@ -2604,7 +3017,7 @@
         '<div class="a-sec" data-hl="s-distance"><div class="a-h">' + esc(S('settings_distance_unit')) + '</div><div class="a-grid g3">' +
           [['auto', S('cluster_distance_auto_value', S(car().distUnit === 'mi' ? 'cluster_distance_miles' : 'cluster_distance_km'))], ['km', S('cluster_distance_km')], ['mi', S('cluster_distance_miles')]]
             .map(([v, lab]) => '<button class="b' + ((s.distUnit || 'auto') === v ? ' on' : '') + '" data-a="distUnit" data-v="' + v + '">' + esc(lab) + '</button>').join('') + '</div>' + desc('settings_distance_unit_desc') + '</div>' +
-        '</div>' + (k.cluster ? this.setCluster() : '');
+        '</div>' + cl;
     }
     /**
      * Carte « Écran conducteur » : disponible sur les firmwares équipés.
@@ -2635,15 +3048,21 @@
       const common = (key, value = cfg[key]) => mixed(key) ? undefined : value;
       const timing = (key) => mixed(key) ? S('settings_cluster_mixed_short') : fmtS(cfg[key]) + ' s';
       const mods = [['none', 'settings_cluster_none'], ['consumption', 'settings_cluster_consumption'], ['power', 'settings_cluster_power']];
-      const chips = ps.length ? '<div class="cls-profs" data-hl="s-cluster-profiles"><span class="cls-lbl">' + esc(S('settings_cluster_profiles_title')) + '</span><div class="cl-chips">' +
-        ps.map((p) => '<button class="cl-chip' + (u.clSel.includes(p.id) ? ' on' : '') + '" data-a="clSel" data-v="' + p.id + '">' + esc(p.name) + (p.id === followed ? ' <small>●</small>' : '') + '</button>').join('') +
-        (ps.length > 1 ? '<button class="cl-chip all" data-a="clSelAll">' + esc(S('settings_cluster_profiles_all')) + '</button><button class="cl-chip all" data-a="clSelCurrent">' +
-          esc(S('settings_cluster_profiles_current_only')) + '</button>' : '') + '</div></div>' +
-        '<div class="a-desc">' + esc(u.clSel.length > 1 ? S('settings_cluster_profiles_many', u.clSel.length) : S('settings_cluster_profiles_one', (ps.find((p) => p.id === u.clSel[0]) || {}).name || '')) + '</div>' : '';
+      const selection = u.clSel.length > 1 ? S('settings_cluster_profiles_many', u.clSel.length) :
+        S('settings_cluster_profiles_one', profName(u.clSel[0]));
+      const chips = ps.length ? '<div class="cls-profs" data-hl="s-cluster-profiles"><div class="cls-profs-head"><span>' +
+        esc(S('settings_cluster_profiles_title')) + '</span><span class="a-desc">' + esc(selection) + '</span>' +
+        '<button class="cls-select" data-a="clSelAll">' + esc(S('settings_cluster_profiles_all')) + '</button><button class="cls-select" data-a="clSelCurrent">' +
+        esc(S('settings_cluster_profiles_current_only')) + '</button></div><div class="a-grid g5">' +
+        ps.map((p) => {
+          const chosen = u.clSel.includes(p.id);
+          return '<button class="cl-chip' + (chosen ? ' on' : '') + '" data-a="clSel" data-v="' + p.id + '" aria-pressed="' + chosen + '">' +
+            '<b>' + esc(p.name) + '</b>' + (p.id === followed ? '<small>' + esc(S('settings_cluster_profile_current')) + '</small>' : '') + '</button>';
+        }).join('') + '</div></div>' : '';
       const h = '<div class="a-sec" data-hl="s-cluster"><div class="a-h">' + esc(S('settings_cluster')) + '</div>' + chips +
-        '<div class="a-row"><span class="lbl">' + esc(S('settings_cluster_module')) + '<small>' + esc(S('settings_cluster_module_desc')) + '</small>' +
-        (mixed('cluster') ? '<small class="cls-mixed">' + esc(S('settings_cluster_mixed')) + '</small>' : '') +
-        '</span>' + sw(selected.every((c) => c.cluster), 'cluster') + '</div>';
+        '<div class="a-row"><span class="lbl">' + esc(S('settings_cluster_module')) + '</span>' + sw(selected.every((c) => c.cluster), 'cluster') + '</div>' +
+        '<div class="a-desc">' + esc(S('settings_cluster_module_desc')) + '</div>' +
+        (mixed('cluster') ? '<div class="a-desc cls-mixed">' + esc(S('settings_cluster_mixed')) + '</div>' : '');
       // Activer déplie : l'aperçu et les réglages.
       if (!active) return h + '</div>';
       const tab = u.clPrevTab || 'nav', m = tab === 'media' ? cfg.clusterMedia : cfg.clusterNav;
@@ -2667,13 +3086,14 @@
         '<div class="a-sub">' + esc(S('settings_cluster_sec_units')) + '</div>' +
         // Unité de la jauge ; la moyenne a la sienne dans sa case (personnalisation avancée).
         line(S('settings_cluster_row_gauge'), seg('clusterUnit', common('clusterUnit'), [['wh', null, mi ? 'Wh/mi' : S('cluster_unit_wh_km')], ['kwh', null, mi ? 'kWh/100 mi' : S('cluster_unit_kwh_100km')]]), 's-cluster-unit', 'clusterUnit') +
-        '<button class="cls-adv" data-a="clAdv" data-hl="s-cluster-refresh"><span>' + esc(S('settings_cluster_advanced', timing('clusterRefresh'), timing('clusterAnim'))) + '</span><i>' + (u.clAdv ? '▴' : '▾') + '</i></button>' +
+        '<button class="cls-adv" data-a="clAdv" data-hl="s-cluster-refresh" aria-expanded="' + !!u.clAdv + '"><span>' +
+        esc(S('settings_cluster_advanced', timing('clusterRefresh'), timing('clusterAnim'))) + '</span><i aria-hidden="true">' + (u.clAdv ? '▴' : '▾') + '</i></button>' +
         (u.clAdv ? '<div class="cls-advbox">' +
           '<div class="a-sub">' + esc(S('settings_cluster_refresh')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('clusterRefresh', 1, 10, ref) + '</div><span class="a-val" data-out="clusterRefresh">' + esc(timing('clusterRefresh')) + '</span></div>' +
+          '<div class="a-row set-level">' + range('clusterRefresh', 1, 10, ref) + '<span class="a-val" data-out="clusterRefresh">' + esc(timing('clusterRefresh')) + '</span></div>' +
           '<div class="a-desc">' + esc(S('settings_cluster_refresh_desc')) + '</div>' +
-          '<div class="a-sub" style="margin-top:8px">' + esc(S('settings_cluster_animation')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('clusterAnim', 2, 20, anim) + '</div><span class="a-val" data-out="clusterAnim">' + esc(timing('clusterAnim')) + '</span></div>' +
+          '<div class="a-sub">' + esc(S('settings_cluster_animation')) + '</div>' +
+          '<div class="a-row set-level">' + range('clusterAnim', 2, 20, anim) + '<span class="a-val" data-out="clusterAnim">' + esc(timing('clusterAnim')) + '</span></div>' +
           '<div class="a-desc">' + esc(S('settings_cluster_animation_desc')) + '</div></div>' : '') +
         '</div>';
       return h + '<div class="cls-wrap">' + prev + set + '</div></div>';
@@ -2690,28 +3110,36 @@
     }
     setAdv() {
       const s = state.settings, k = caps();
-      const row = (hl, label, desc, swHtml) => '<div class="a-row" data-hl="' + hl + '" style="padding:6px 0;border-bottom:1px solid var(--dash-border)"><span class="lbl">' + esc(label) + (desc ? '<small>' + esc(desc) + '</small>' : '') + '</span>' + swHtml + '</div>';
-      let h = '<div class="a-sec"><div class="a-h">' + esc(S('settings_auto_apply')) + '</div>' +
-        row('s-garage s-autoapply', S('settings_garage_mode'), S('settings_garage_mode_desc'), sw(s.garage, 'garage')) +
-        row('s-rescue s-garage', S('settings_rescue_shortcut'), S('settings_rescue_shortcut_desc'), sw(s.rescue, 'rescue')) +
-        row('s-readydefault', S('settings_ready_default'), S('settings_ready_default_desc'), sw(s.readyDefault, 'readyDefault')) +
-        row('s-api', S('settings_external_api'), S('settings_external_api_warn'), sw(s.api, 'api')) +
+      const row = (hl, label, desc, control, fullDesc = false) =>
+        '<div class="set-row" data-hl="' + hl + '"><div class="a-row"><span class="lbl">' + esc(label) +
+        (desc && !fullDesc ? '<small>' + esc(desc) + '</small>' : '') + '</span>' + control + '</div>' +
+        (desc && fullDesc ? '<div class="a-desc">' + esc(desc) + '</div>' : '') + '</div>';
+      let h = '<div class="a-sec set-advanced"><div class="a-h">' + esc(S('settings_auto_apply')) + '</div>' +
+        row('s-garage s-autoapply', S('settings_garage_mode'), S('settings_garage_mode_desc'), sw(s.garage, 'garage'), true) +
+        row('s-rescue s-garage', S('settings_rescue_shortcut'), S('settings_rescue_shortcut_desc'), sw(s.rescue, 'rescue'), true) +
+        row('s-readydefault', S('settings_ready_default'), S('settings_ready_default_desc'), sw(s.readyDefault, 'readyDefault'), true) +
+        row('s-api', S('settings_external_api'), S('settings_external_api_warn'), sw(s.api, 'api'), true) +
         row('s-update', S('settings_auto_update_desc'), '', sw(s.autoUpdate, 'autoUpdate')) +
-        row('s-updoverlay', S('settings_update_overlay'), S('settings_update_overlay_desc'), sw(s.updOverlay && s.autoUpdate, 'updOverlay', !s.autoUpdate)) +
-        row('s-beta', S('settings_beta_channel'), S('settings_beta_channel_desc'), sw(s.beta, 'beta'));
-      if (k.power) h += '<div class="a-row" data-hl="s-power" style="padding:6px 0;border-bottom:1px solid var(--dash-border)"><span class="lbl">' + esc(S('settings_vehicle_power_desc')) + '</span><button class="b primary up" style="flex:0 0 auto;padding:0 18px" data-a="powerOff">' + esc(S('settings_vehicle_power_btn')) + '</button></div>';
-      h += '<div data-hl="s-gate">' + row('s-gate', S('settings_speed_gate_desc'), '', sw(s.gate, 'gate')) +
-        '<div class="a-row"><span class="lbl' + (s.gate ? '' : ' dim') + '">' + esc(S('settings_speed_gate_max_label')) + '</span><input class="a-input num" type="number" min="0" max="250" data-c="gateMax" data-fid="gateMax" value="' + s.gateMax + '"' + (s.gate ? '' : ' disabled') + ' placeholder="' + esc(S('settings_speed_gate_max_hint')) + '"></div></div></div>';
+        row('s-updoverlay', S('settings_update_overlay'), S('settings_update_overlay_desc'), sw(s.updOverlay && s.autoUpdate, 'updOverlay', !s.autoUpdate), true) +
+        row('s-beta', S('settings_beta_channel'), S('settings_beta_channel_desc'), sw(s.beta, 'beta'), true);
+      if (k.power) h += row('s-power', S('settings_vehicle_power_desc'), '',
+        '<button class="b primary up" data-a="powerOff">' + esc(S('settings_vehicle_power_btn')) + '</button>');
+      h += row('s-gate', S('settings_speed_gate_desc'), '', sw(s.gate, 'gate')) +
+        '<label class="a-row set-speed"><span class="lbl' + (s.gate ? '' : ' dim') + '">' + esc(S('settings_speed_gate_max_label')) +
+        '</span><input class="a-input num" type="number" min="0" max="250" data-c="gateMax" data-fid="gateMax" value="' + s.gateMax + '"' +
+        (s.gate ? '' : ' disabled') + ' placeholder="' + esc(S('settings_speed_gate_max_hint')) + '"></label></div>';
       let top = '';
       // Ce que règle AUTO (issue #160) : sens de l'air et recirculation au choix (la ventilation, toujours : ligne retirée le 2026-11-14).
       if (k.clim) {
         top += '<div class="a-sec" data-hl="s-autoscope"><div class="a-h">' + esc(S('settings_auto_scope_title')) + '</div><div class="a-desc">' + esc(S('settings_auto_scope_desc')) + '</div>' +
           row('s-autoscope', S('settings_auto_scope_air'), S(s.scopeAir ? 'settings_auto_scope_air_car' : 'settings_auto_scope_air_kept'), sw(s.scopeAir, 'scopeAir')) +
           row('s-autoscope', S('settings_auto_scope_loop'), S(s.scopeLoop ? 'settings_auto_scope_loop_car' : 'settings_auto_scope_loop_kept'), sw(s.scopeLoop, 'scopeLoop')) +
-          '<div class="a-desc" style="margin-top:6px">' + esc(S('settings_auto_scope_note')) + '</div></div>';
+          '<div class="a-desc">' + esc(S('settings_auto_scope_note')) + '</div></div>';
       }
       // Garder l'A/C coupé (#208) : désactivé par défaut.
-      if (k.clim) top += '<div class="a-sec" data-hl="s-keepac"><div class="a-h">' + esc(S('settings_keep_ac_title')) + '</div>' + row('s-keepac', S('settings_keep_ac'), S('settings_keep_ac_desc'), sw(s.keepAcOff, 'keepAc')) + '</div>';
+      if (k.clim) top += '<div class="a-sec" data-hl="s-keepac"><div class="a-h">' + esc(S('settings_keep_ac_title')) + '</div>' +
+        row('s-keepac', S('settings_keep_ac'), S('settings_keep_ac_desc'), sw(s.keepAcOff, 'keepAc')) +
+        (k.replaceHvac ? row('s-replace-hvac', S('settings_replace_hvac_panel'), S('settings_replace_hvac_panel_desc'), sw(s.replaceHvac, 'replaceHvac')) : '') + '</div>';
       // Relancer la détection du téléphone branché (#251) : démarrage et réveil, désactivé par défaut.
       top += '<div class="a-sec" data-hl="s-projkick"><div class="a-h">' + esc(S('settings_projection_title')) + '</div>' + row('s-projkick', S('settings_projection_kick'), S('settings_projection_kick_desc'), sw(s.projKick, 'projKick')) + '</div>';
       // Applications en plein écran (#248) : juste sous la carte Android Auto · CarPlay.
@@ -2730,10 +3158,10 @@
         (s.immersive ? '<div class="a-desc">' + esc(S(car().rhd ? 'immersive_reminder_right' : 'immersive_reminder_left')) + '</div>' : '') +
         (car().mg4Dash === 'outdated' ? '<div class="a-desc a-imm-warning">' + esc(S('immersive_mg4dash_outdated')) + '</div>' : '') +
         '<div class="a-row a-imm-selection"><span class="lbl">' + esc(S('immersive_apps')) + '<small>' + esc(noms) + '</small></span>' +
-        '<button class="b" style="flex:0 0 auto;padding:0 18px" data-a="immChoose">' + esc(S('immersive_choose', Object.keys(apps).length)) + '</button></div></div>';
+        '<button class="b" data-a="immChoose">' + esc(S('immersive_choose', Object.keys(apps).length)) + '</button></div></div>';
     }
     setInfo() {
-      const k = caps(), u = this.ui;
+      const u = this.ui;
       const upd = u.updFb === 'ok' ? '<button class="b green" data-a="checkUpd">' + esc(S('update_up_to_date')) + '</button>' : '<button class="b" data-a="checkUpd" data-hl="s-checkupd">' + esc(S('btn_check_update')) + '</button>';
       const apk = u.apkFb ? '<button class="b green" data-a="cleanApk">' + esc(u.apkFb) + '</button>' : '<button class="b" data-a="cleanApk">' + esc(S('btn_clean_apk')) + '</button>';
       const unknownMode = state.fw === 'UNKNOWN';
@@ -2741,13 +3169,14 @@
         '<button class="fw-chip' + ((state.forced || state.fw) === g ? ' on' : '') + (unknownMode ? ' tap' : '') + '" ' + (unknownMode ? 'data-a="force" data-v="' + g + '"' : 'tabindex="-1"') + '>' + g + '</button>').join('');
       const du = [['data_usage_today', '38 Mo'], ['data_usage_week', '212 Mo'], ['data_usage_month', '0,9 Go'], ['data_usage_30d', '1,2 Go']]
         .map(([key, v]) => '<div class="du-row"><span>' + esc(S(key)) + '</span><b>' + (appLang() === 'fr' ? v : v.replace(',', '.').replace('Mo', 'MB').replace('Go', 'GB')) + '</b></div>').join('');
-      return '<div class="a-sec" data-hl="s-maint"><div class="a-h">' + esc(S('settings_maintenance')) + '</div><div class="a-grid g2 up2">' + upd + apk + '</div>' +
-        '<button class="b full up" style="margin-top:8px" data-a="about" data-hl="s-about">' + esc(S('btn_infos')) + '</button>' +
-        '<button class="b full up" style="margin-top:8px" data-a="androidSet" data-hl="s-androidset">' + esc(S('btn_android_settings')) + '</button>' +
-        (state.diagUnlocked ? '<button class="b full warn on" style="margin-top:5px" data-a="diag" data-hl="s-diag">' + esc(S('btn_diagnostic')) + '</button>' : '') +
+      return '<div class="a-sec set-info" data-hl="s-maint"><div class="a-h">' + esc(S('settings_maintenance')) + '</div><div class="a-grid g2 up2">' + upd + apk + '</div>' +
+        '<button class="b full up" data-a="about" data-hl="s-about">' + esc(S('btn_infos')) + '</button>' +
+        '<button class="b full up" data-a="androidSet" data-hl="s-androidset">' + esc(S('btn_android_settings')) + '</button>' +
+        (state.diagUnlocked ? '<button class="b full up" data-a="chargeState" data-hl="s-charge-state">' + esc(S('btn_charge_state')) + '</button>' +
+          '<button class="b full warn on" data-a="diag" data-hl="s-diag">' + esc(S('btn_diagnostic')) + '</button>' : '') +
         '<div class="fw-box" data-hl="s-fw"><span>' + esc(S('settings_firmware_version')) + '</span><div class="fw-chips">' + chips + '</div></div>' +
-        (unknownMode ? '<div class="a-desc" style="margin-top:6px">' + esc(L('Firmware non reconnu : touchez une pastille pour forcer un mode de compatibilité.', 'Unrecognised firmware: tap a chip to force a compatibility mode.')) + '</div>' : '') + '</div>' +
-        '<div class="a-sec" data-hl="s-data"><div class="a-h">' + esc(S('data_usage_title')) + '</div><div class="du">' + du + '</div></div>';
+        (unknownMode ? '<div class="a-desc">' + esc(L('Firmware non reconnu : touchez une pastille pour forcer un mode de compatibilité.', 'Unrecognised firmware: tap a chip to force a compatibility mode.')) + '</div>' : '') + '</div>' +
+        '<div class="a-sec set-data" data-hl="s-data"><div class="a-h">' + esc(S('data_usage_title')) + '</div><div class="du">' + du + '</div></div>';
     }
 
     // ── Raccourcis ─────────────────────────────────────────────────────────
@@ -2773,15 +3202,28 @@
       const f = (l, key) => '<button class="b' + (cur === l ? ' on' : '') + '" data-a="scFallback" data-v="' + l + '">' + esc(S(key)) + '</button>';
       const desc = cur === 'PREV' ? S('shortcuts_onepedal_desc_prev') : S('shortcuts_onepedal_desc_fixed', regenName(cur));
       return '<div class="a-sec" data-hl="sc-onepedal"><div class="a-h">' + esc(S('shortcuts_cfg_one_pedal')) + '</div>' +
-        '<div class="a-grid" style="grid-template-columns:1.8fr 1fr 1fr 1fr 1fr">' + f('PREV', 'shortcuts_onepedal_prev') + f('LOW', 'regen_low') + f('MEDIUM', 'regen_medium') + f('HIGH', 'regen_high') + f('ADAPTIVE', 'regen_adaptive') + '</div>' +
-        '<div class="a-desc" style="margin-top:8px">' + esc(desc) + '</div></div>';
+        '<div class="a-grid sc-cycle-options sc-onepedal-options">' + f('PREV', 'shortcuts_onepedal_prev') + f('LOW', 'regen_low') + f('MEDIUM', 'regen_medium') + f('HIGH', 'regen_high') + f('ADAPTIVE', 'regen_adaptive') + '</div>' +
+        '<div class="a-desc sc-cycle-desc">' + esc(desc) + '</div></div>';
     }
     scAdasCfg() {
       const sc = state.sc;
       const m = (act, cur) => [0, 1, 2, 3, 4].map((i) => '<button class="b sm' + (cur === i ? ' on' : '') + '" data-a="' + act + '" data-v="' + i + '">' + esc(adasLabel(i)) + '</button>').join('');
       return '<div class="a-sec" data-hl="sc-adas"><div class="a-h">' + esc(S('shortcuts_cfg_adas')) + '</div>' +
-        '<div class="a-row"><span class="a-sub" style="min-width:70px;margin:0">' + esc(S('shortcuts_cfg_mode1')) + '</span><div class="a-grid g5" style="flex:1">' + m('scAdasA', sc.adasA) + '</div></div>' +
-        '<div class="a-row"><span class="a-sub" style="min-width:70px;margin:0">' + esc(S('shortcuts_cfg_mode2')) + '</span><div class="a-grid g5" style="flex:1">' + m('scAdasB', sc.adasB) + '</div></div></div>';
+        '<div class="a-row sc-adas-row"><span class="a-sub">' + esc(S('shortcuts_cfg_mode1')) + '</span><div class="a-grid g5">' + m('scAdasA', sc.adasA) + '</div></div>' +
+        '<div class="a-row sc-adas-row"><span class="a-sub">' + esc(S('shortcuts_cfg_mode2')) + '</span><div class="a-grid g5">' + m('scAdasB', sc.adasB) + '</div></div></div>';
+    }
+    scCycleFooter(labels, minKey, clear, save) {
+      const ok = labels.length >= 2;
+      return '<div class="sc-cycle-summary' + (ok ? '' : ' warn') + '">' +
+        esc(ok ? S('shortcuts_cfg_regen_summary', labels.join(' → ')) : S(minKey)) + '</div>' +
+        '<div class="a-grid g2 sc-cycle-footer"><button class="b" data-a="' + clear + '">' + esc(S('shortcuts_cfg_regen_clear')) +
+        '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="' + save + '"' + (ok ? '' : ' disabled') + '>' +
+        esc(S('shortcuts_cfg_regen_save')) + '</button></div>';
+    }
+    scCycleOption(action, value, label, index) {
+      return '<button class="b sc-order-option' + (index >= 0 ? ' on' : '') +
+        '" data-a="' + action + '" data-v="' + esc(value) + '" aria-pressed="' + (index >= 0) + '">' +
+        '<span>' + esc(label) + '</span><span>' + (index >= 0 ? index + 1 : '&nbsp;') + '</span></button>';
     }
     /** Cycle de régénération : l'ordre des appuis est l'ordre du cycle, rien n'est gardé avant « Sauvegarder ». */
     scRegen() {
@@ -2789,14 +3231,11 @@
       if (!u.regenDraft) u.regenDraft = regenOrder().slice();
       const d = u.regenDraft;
       const keys = { LOW: 'regen_low', MEDIUM: 'regen_medium', HIGH: 'regen_high', ADAPTIVE: 'regen_adaptive_short', ONE_PEDAL: 'regen_one_pedal_short' };
-      const btn = (l) => { const i = d.indexOf(l); return '<button class="b' + (i >= 0 ? ' on' : '') + '" data-a="rcToggle" data-v="' + l + '">' + (i >= 0 ? '<span class="rc-n">' + (i + 1) + '</span>' : '') + esc(S(keys[l])) + '</button>'; };
-      const ok = d.length >= 2;
+      const btn = (l) => this.scCycleOption('rcToggle', l, S(keys[l]), d.indexOf(l));
       return '<div class="a-sec" data-hl="sc-regen"><div class="a-h">' + esc(S('shortcuts_cfg_regen_cycle')) + '</div>' +
         '<div class="a-desc">' + esc(S('shortcuts_cfg_regen_hint')) + '</div>' +
-        '<div class="a-grid g5" style="margin-top:8px">' + REGEN_SELECTABLE.map(btn).join('') + '</div>' +
-        '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map((l) => S(keys[l])).join(' → '))) :
-        '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_regen_min')) + '</span>') + '</span></div>' +
-        '<div class="a-grid g2"><button class="b" data-a="rcClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="rcSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
+        '<div class="a-grid g5 sc-cycle-options">' + REGEN_SELECTABLE.map(btn).join('') + '</div>' +
+        this.scCycleFooter(d.map((l) => S(keys[l])), 'shortcuts_cfg_regen_min', 'rcClear', 'rcSave') + '</div>';
     }
     /** Cycle de profils : même écran que le cycle de régénération, avec les profils pour boutons. */
     scProfiles() {
@@ -2807,15 +3246,13 @@
       const name = (id) => (ps.find((p) => p.id === id) || {}).name || '?';
       // Nom raccourci sur le bouton (ProfileCycle.label) ; le résumé garde les noms entiers.
       const short = (n) => (n.length > 16 ? n.slice(0, 15).trimEnd() + '…' : n);
-      const btn = (p) => { const i = d.indexOf(p.id); return '<button class="b' + (i >= 0 ? ' on' : '') + '" data-a="pcToggle" data-v="' + esc(p.id) + '">' + (i >= 0 ? '<span class="rc-n">' + (i + 1) + '</span>' : '') + esc(short(p.name)) + '</button>'; };
-      const ok = d.length >= 2;
+      const btn = (p) => this.scCycleOption('pcToggle', p.id, short(p.name), d.indexOf(p.id));
       const head = '<div class="a-h">' + esc(S('shortcuts_action_profile_cycle')) + '</div><div class="a-desc">' + esc(S('shortcuts_cfg_profile_hint')) + '</div>';
-      if (!ps.length) return '<div class="a-sec" data-hl="sc-profiles">' + head + '<div class="a-row"><span class="lbl">' + esc(S('shortcuts_no_profiles')) + '</span></div></div>';
+      if (!ps.length) return '<div class="a-sec" data-hl="sc-profiles">' + head + '<div class="sc-cycle-summary">' + esc(S('shortcuts_no_profiles')) + '</div></div>';
+      const row = (items) => '<div class="sc-cycle-options sc-profile-row">' + items.map(btn).join('') + '</div>';
       return '<div class="a-sec" data-hl="sc-profiles">' + head +
-        '<div class="a-grid g5" style="margin-top:8px">' + ps.map(btn).join('') + '</div>' +
-        '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map(name).join(' → '))) :
-        '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_profile_min')) + '</span>') + '</span></div>' +
-        '<div class="a-grid g2"><button class="b" data-a="pcClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="pcSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
+        row(ps.slice(0, 5)) + (ps.length > 5 ? row(ps.slice(5)) : '') +
+        this.scCycleFooter(d.map(name), 'shortcuts_cfg_profile_min', 'pcClear', 'pcSave') + '</div>';
     }
     /** Cycle de sources : tuiles (pictogramme, nom, rang en pastille) — maquette B de l'app. */
     scSources() {
@@ -2824,13 +3261,10 @@
       const d = u.audioDraft = u.audioDraft.filter((x) => offered.includes(x));
       const tile = (x) => { const i = d.indexOf(x); return '<button class="b src' + (i >= 0 ? ' on' : '') + '" data-a="acToggle" data-v="' + x + '">' +
         (i >= 0 ? '<span class="src-n">' + (i + 1) + '</span>' : '') + SRC_ICON[x] + '<span>' + esc(S(AUDIO_LABEL[x])) + '</span></button>'; };
-      const ok = d.length >= 2;
       return '<div class="a-sec" data-hl="sc-sources"><div class="a-h">' + esc(S('shortcuts_action_audio_cycle')) + '</div>' +
         '<div class="a-desc">' + esc(S('shortcuts_cfg_audio_hint')) + '</div>' +
-        '<div class="a-grid g' + offered.length + '" style="margin-top:8px">' + offered.map(tile).join('') + '</div>' +
-        '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map((x) => S(AUDIO_LABEL[x])).join(' → '))) :
-        '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_audio_min')) + '</span>') + '</span></div>' +
-        '<div class="a-grid g2"><button class="b" data-a="acClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="acSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
+        '<div class="a-grid g' + offered.length + ' sc-cycle-options">' + offered.map(tile).join('') + '</div>' +
+        this.scCycleFooter(d.map((x) => S(AUDIO_LABEL[x])), 'shortcuts_cfg_audio_min', 'acClear', 'acSave') + '</div>';
     }
     /** Page « Garde-voiture » : apparaît quand l'action est attribuée (PreClimateSettings). */
     scPreclim() {
@@ -2841,7 +3275,7 @@
       const scr = (v, key) => '<button class="b' + (p.screen === v ? ' on' : '') + '" data-a="pcScreenMode" data-v="' + v + '">' + esc(S(key)) + '</button>';
       return '<div class="a-sec" data-hl="sc-preclim"><div class="a-h">' + esc(S('shortcuts_cat_preclim')) + '</div><div class="a-desc">' + esc(S('preclim_cfg_hint')) + '</div>' +
         sl('pcLock', S('preclim_cfg_lock'), 10, 60, p.lock, 5) + sl('pcSoc', S('preclim_cfg_soc'), 10, 40, p.soc, 5) +
-        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3" style="flex:0 0 470px">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3 sc-screen-modes">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
         // La surveillance suit-elle ce réglage ? Non par défaut : l'écran rouge reste allumé (2026-11-13).
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_surv_screen')) + '<small>' + esc(S('preclim_cfg_surv_screen_desc')) + '</small></span>' + sw(p.survScreen, 'pcSurvScreen') + '</div>' +
         (k.cluster ? '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_cluster')) + '<small>' + esc(S('preclim_cfg_cluster_desc')) + '</small></span>' + sw(p.cluster, 'pcCluster') + '</div>' : '') +
@@ -2882,17 +3316,20 @@
         '<div class="fl-for"><span class="lbl">' + esc(S('floating_profiles_title')) + '</span><span class="a-desc">' + esc(S('floating_profiles_info')) + '</span></div>' + chips +
         '<div class="a-row fl-switch"><span class="lbl"><b>' + esc(prof ? S('floating_switch_title_profile', prof.name) : S('floating_switch_title')) + '</b><small>' + esc(S(set.on ? 'floating_state_on' : 'floating_state_off')) + '</small></span>' + sw(set.on, 'flOn') + '</div>';
       const sizeName = (b) => (b.size === 0 ? S('floating_size_small') : b.size === 50 ? S('floating_size_medium') : b.size === 100 ? S('floating_size_large') : S('floating_size_value', b.size));
-      h += '<div data-hl="fl-list">' + (set.list.length ? set.list.map((b) => '<div class="fl-row"><span class="fl-dot' + (b.bold ? ' bold' : '') + '">' + esc(flTitle(b)) + '</span>' +
+      h += '<div data-hl="fl-list">' + (set.list.length ? set.list.map((b, i) => {
+        const open = u.flEditing === b.id;
+        return '<div class="fl-item' + (open ? ' editing' : '') + '"><div class="fl-row"><span class="fl-dot' + (b.bold ? ' bold' : '') + '">' + esc(flTitle(b)) + '</span>' +
           '<span class="lbl">' + esc(flTitle(b)) + '<small>' + esc(b.bar ? S('floating_loc_bar') + ' · ' + this.actionLabel(b.action, b) : S('floating_summary', this.actionLabel(b.action, b), sizeName(b), b.text)) + '</small></span>' +
-          '<button class="b sm' + (u.flEditing === b.id ? ' on' : '') + '" data-a="flEditB" data-v="' + b.id + '">' + esc(S('floating_edit')) + '</button><button class="b sm danger" data-a="flDel" data-v="' + b.id + '">' + esc(S('floating_delete')) + '</button></div>' +
-          (u.flEditing === b.id ? this.flEditor(b, set.list.indexOf(b)) : '')).join('')
+          '<button class="b sm' + (open ? ' on' : '') + '" data-a="flEditB" data-v="' + b.id + '">' + esc(S(open ? 'floating_close' : 'floating_edit')) + '</button>' +
+          (open ? '</div>' + this.flEditor(b, i) : '<button class="b sm danger" data-a="flDel" data-v="' + b.id + '">' + esc(S('floating_delete')) + '</button></div>') + '</div>';
+      }).join('')
         : '<div class="a-desc" style="padding:10px 0 4px">' + esc(S('floating_empty')) + '</div>') + '</div>' +
         '<div class="a-grid g2" style="margin-top:8px"><button class="b' + (set.list.length >= 6 ? ' dis' : '') + '" data-a="flAdd"' + (set.list.length >= 6 ? ' disabled' : '') + '>' + esc(set.list.length >= 6 ? S('floating_full') : S('floating_add')) + '</button>' +
         '<button class="b" data-a="flCopy" data-hl="fl-copy">' + esc(S('floating_copy')) + '</button></div>';
       // Copie vers d'autres profils : leurs bulles sont remplacées.
       const others = ps.filter((p) => p.id !== pid);
       if (others.length) {
-        h += '<div>' +
+        h += '<div class="fl-copy-panel">' +
           (u.flCopy ? '<div class="a-desc" style="margin-top:8px">' + esc(S('floating_copy_info', prof ? prof.name : '')) + '</div><div class="cl-chips">' +
             others.map((p) => '<button class="cl-chip' + (u.flCopy.includes(p.id) ? ' on' : '') + '" data-a="flCopyTo" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>' +
             '<div class="a-row"><span class="lbl" style="color:var(--text-secondary)">' + esc(S('floating_copy_note')) + '</span><button class="b sm primary" style="padding:0 16px" data-a="flCopyGo">' + esc(S('floating_copy_go')) + '</button></div>' : '') + '</div>';
@@ -2934,18 +3371,18 @@
         row('floating_field_opacity', '<div style="flex:1">' + range('flOpacity', 0, 100, b.opacity == null ? 72 : b.opacity) + '</div><span class="a-val" data-out="flOpacity">' + esc(S('floating_opacity_value', b.opacity == null ? 72 : b.opacity)) + '</span>') +
         row('floating_field_fill', seg('flFill', b.fill || 'dark', [['dark', 'floating_fill_dark'], ['tint', 'floating_fill_tint'], ['light', 'floating_fill_light'], ['black', 'floating_fill_black']])) +
         row('floating_field_width', seg('flWidth', b.width ? 'fixed' : 'auto', [['auto', 'floating_width_auto'], ['fixed', 'floating_width_fixed']])) +
-        (b.width ? '<div class="a-row" style="margin-left:168px"><div style="flex:1">' + range('flWidthV', 60, 240, b.width, false, '', 10) + '</div><span class="a-val" data-out="flWidthV">' + esc(S('floating_width_value', b.width)) + '</span></div>' : '') +
+        (b.width ? '<div class="a-row fl-indent"><div style="flex:1">' + range('flWidthV', 60, 240, b.width, false, '', 10) + '</div><span class="a-val" data-out="flWidthV">' + esc(S('floating_width_value', b.width)) + '</span></div>' : '') +
         row('floating_field_border', seg('flBorder', b.noBorder ? 'none' : 'color', [['color', 'floating_border_color'], ['none', 'floating_border_none']])) +
         '<div class="a-row"><span class="lbl">' + esc(S('floating_field_dim')) + '<small>' + esc(S('floating_dim_hint')) + '</small></span>' + sw(!!b.dim, 'flDim') + '</div>';
-      return '<div class="fl-edit" data-hl="fl-edit"><div class="a-sub" style="margin:0 0 6px">' + esc(S('floating_edit_heading_name', flTitle(b))) + '</div>' + content +
+      return '<div class="fl-edit" data-hl="fl-edit"><div class="a-title">' + esc(S('floating_edit_heading_name', flTitle(b))) + '</div>' +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_title')) + '</span><input class="a-input" style="flex:1" type="text" maxlength="24" data-c="flTitle" data-fid="flTitle" value="' + esc(flTitle(b)) + '">' +
-          '<button class="b sm" style="padding:0 14px" data-a="flTitleReset" title="' + esc(S('floating_title_reset')) + '">↺</button></div>' +
+          '<button class="b sm fl-title-reset" data-a="flTitleReset" title="' + esc(S('floating_title_reset')) + '">↺</button></div>' + content +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_action')) + '</span><select class="a-select" style="flex:1" data-c="flAction">' +
           acts.map((a) => opt(a, S(ACTION_KEY[a]))).join('') + state.sc.custom.map((cs) => opt('CUSTOM:' + cs.id, S('shortcuts_custom_prefix') + ' ' + cs.name)).join('') + '</select></div>' +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_location')) + '</span><div class="a-grid g2" style="flex:1">' + loc(false, 'floating_loc_screen') + loc(true, 'floating_loc_bar') + '</div></div>' +
         (b.bar ? '<div class="a-desc">' + esc(S('floating_size_bar')) + '</div>'
           : '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_size')) + '</span><div style="flex:1">' + range('flSize', 0, 100, b.size) + '</div><span class="a-val" data-out="flSize">' + esc(S('floating_size_value', b.size)) + '</span></div>' +
-            '<div class="a-grid g3" style="margin-left:168px">' + tick(0, 'floating_size_small') + tick(50, 'floating_size_medium') + tick(100, 'floating_size_large') + '</div>') +
+            '<div class="a-grid g3 fl-indent fl-size-ticks">' + tick(0, 'floating_size_small') + tick(50, 'floating_size_medium') + tick(100, 'floating_size_large') + '</div>') +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_text')) + '</span><div style="flex:1">' + range('flText', 10, tmax, Math.min(b.text, tmax)) + '</div><span class="a-val" data-out="flText">' + esc(S('floating_text_value', Math.min(b.text, tmax))) + '</span></div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('floating_field_bold')) + '</span>' + sw(b.bold, 'flBold') + '</div>' + look +
         '<button class="b full" data-a="flEditB" data-v="' + b.id + '">' + esc(S('floating_close')) + '</button></div>';
@@ -2954,7 +3391,8 @@
     scCustom() {
       const list = state.sc.custom;
       return '<div class="a-sec" data-hl="sc-custom"><div class="a-h">' + esc(S('shortcuts_cat_custom')) + '</div><div class="a-desc">' + esc(S('custom_page_desc')) + '</div>' +
-        (list.length ? list.map((cs) => '<div class="fl-row"><span class="lbl">' + esc(cs.name) + '<small>' + esc(S(CS_KIND_KEY[cs.kind]) + ' · ' + (cs.kind === 'WEBHOOK' ? 'https://…' : customTarget(cs))) + '</small></span>' +
+        (list.length ? list.map((cs) => '<div class="fl-row"><span class="sc-custom-kind">' + esc(S(CS_KIND_KEY[cs.kind])) + '</span><span class="lbl">' +
+            esc(cs.name) + '<small>' + esc(cs.kind === 'WEBHOOK' ? 'https://…' : customTarget(cs)) + '</small></span>' +
             '<button class="b sm" data-a="csTest" data-v="' + cs.id + '">' + esc(S('custom_test')) + '</button><button class="b sm" data-a="csEdit" data-v="' + cs.id + '">' + esc(S('floating_edit')) + '</button>' +
             '<button class="b sm danger" data-a="csDel" data-v="' + cs.id + '">' + esc(S('custom_delete')) + '</button></div>').join('')
           : '<div class="a-desc" style="padding:14px 0;text-align:center">' + esc(S('custom_page_empty')) + '</div>') +
@@ -3019,42 +3457,54 @@
     }
 
     // ── Automatisation ─────────────────────────────────────────────────────
+    automationHead(title, open, action) {
+      return '<button type="button" class="fold-head auto-fold" data-a="' + action + '" aria-expanded="' + open +
+        '"><span class="a-title">' + esc(S(title)) + '</span><span class="chev' + (open ? ' open' : '') +
+        '" aria-hidden="true">' + ICON_CHEV + '</span></button>';
+    }
     automationHtml() {
       const a = state.auto, k = caps();
       // Patron commun : titre + chevron, puis description et interrupteur toujours visibles ;
       // les réglages n'apparaissent que carte dépliée (activer déplie, couper replie).
       const card = (hl, titleKey, desc, on, swAct, open, foldAct, body) =>
-        '<div class="a-card" data-hl="' + hl + '"><div class="fold-head" data-a="' + foldAct + '"><span class="a-title">' + esc(S(titleKey)) + '</span><span class="chev' + (open ? ' open' : '') + '">' + ICON_CHEV + '</span></div>' +
-        '<div class="a-row" style="margin-top:6px"><span class="lbl">' + desc + '</span>' + sw(on, swAct) + '</div>' + (open ? body : '') + '</div>';
+        '<div class="a-card auto-card" data-hl="' + hl + '">' + this.automationHead(titleKey, open, foldAct) +
+        '<div class="a-row"><span class="lbl">' + desc + '</span>' + sw(on, swAct) + '</div>' +
+        (open ? '<div class="auto-config">' + body + '</div>' : '') + '</div>';
       const profSel = (cur, dataC) => '<select class="a-select" style="width:100%" data-c="' + dataC + '"><option value="">' + esc(S('automation_no_profile')) + '</option>' +
         state.profiles.map((p) => '<option value="' + p.id + '"' + (cur === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select>';
       const check = (dataC, on, label, attrs) => '<label class="a-check"><input type="checkbox" data-c="' + dataC + '"' + (on ? ' checked' : '') + (attrs || '') + '> ' + label + '</label>';
       const note = (key) => '<div class="a-desc" style="margin-top:8px">ℹ ' + esc(S(key)) + '</div>';
-      const slider = (id, label, min, max, val, out, step) => '<div class="a-row"><span class="lbl" style="flex:0 0 250px">' + esc(label) + '</span><div style="flex:1">' + range(id, min, max, val, false, '', step) + '</div><span class="a-val" data-out="' + id + '">' + esc(out) + '</span></div>';
+      const slider = (id, label, min, max, val, out, step) => '<div class="auto-level"><div class="a-row"><span class="lbl">' +
+        esc(label) + '</span><span class="a-val" data-out="' + id + '">' + esc(out) + '</span></div>' +
+        range(id, min, max, val, false, '', step) + '</div>';
       const plain = (s) => String(s).replace(/<[^>]+>/g, '');
 
       // 1. Profil selon la température
       const dir = (v, key) => '<button class="b' + (a.p.dir === v ? ' on' : '') + '" data-a="autoDir" data-v="' + v + '">' + esc(S(key)) + '</button>';
-      const body1 = '<div class="a-sub" style="margin-top:6px">' + esc(S('automation_direction_label')) + '</div><div class="a-grid g2">' + dir('BELOW', 'automation_dir_below') + dir('ABOVE', 'automation_dir_above') + '</div>' +
-        '<div class="fields"><div class="field"><label>' + esc(S('automation_threshold_label')) + '</label><input class="a-input" type="number" min="0" max="60" data-c="autoThr" data-fid="autoThr" value="' + a.p.thr + '" placeholder="' + esc(S('automation_threshold_hint')) + '"></div>' +
-        '<div class="field" style="grid-column:span 2"><label>' + esc(S('automation_profile_label')) + '</label>' + profSel(a.p.profileId, 'autoProfile') + '</div></div>' +
+      const profileField = (profileId, change) => '<label class="auto-profile-select"><span>' + esc(S('automation_profile_label')) +
+        '</span>' + profSel(profileId, change) + '</label>';
+      const body1 = '<div class="a-sub">' + esc(S('automation_direction_label')) + '</div><div class="a-grid g2">' + dir('BELOW', 'automation_dir_below') + dir('ABOVE', 'automation_dir_above') + '</div>' +
+        '<label class="a-row auto-threshold"><span class="lbl">' + esc(S('automation_threshold_label')) +
+        '</span><input class="a-input" type="number" min="0" max="60" data-c="autoThr" data-fid="autoThr" value="' + a.p.thr +
+        '" placeholder="' + esc(S('automation_threshold_hint')) + '"></label>' + profileField(a.p.profileId, 'autoProfile') +
         '<div class="a-row">' + check('autoExec', a.p.autoExec, esc(S('automation_auto_execute'))) + '</div>';
       const card1 = card('auto-profile', 'automation_profile_title', esc(S('automation_desc')), a.p.on, 'autoP', a.p.open, 'foldP', body1);
 
       // 2. Profil selon la batterie
       const body2 = slider('batThr', S('battery_auto_threshold_label'), 5, 60, a.b.thr, a.b.thr + ' %') +
-        '<div class="fields"><div class="field" style="grid-column:span 3"><label>' + esc(S('automation_profile_label')) + '</label>' + profSel(a.b.profileId, 'batProfile') + '</div></div>' +
+        profileField(a.b.profileId, 'batProfile') +
         '<div class="a-row">' + check('batExec', a.b.autoExec, esc(S('automation_auto_execute'))) + '</div>' + note('battery_auto_note');
       const card2 = card('auto-battery', 'battery_auto_title', esc(S('battery_auto_desc')), a.b.on, 'autoB', a.b.open, 'foldB', body2);
 
       // 3. Luminosité automatique (au moins une source : la dernière cochée est verrouillée)
       const b = a.bri;
-      const body3 = '<div class="a-sub" style="margin-top:8px">' + esc(plain(S('autobri_sources'))) + '</div>' +
+      const body3 = '<div class="a-sec auto-bri-sources"><div class="a-sub">' + esc(plain(S('autobri_sources'))) + '</div>' +
         '<div class="a-row">' + check('briLights', b.lights, esc(S('autobri_lights')), b.lights && !b.forecast ? ' disabled' : '') + '</div>' +
         '<div class="a-row">' + check('briForecast', b.forecast, esc(S('autobri_forecast')) + ' <small>' + esc(S('autobri_forecast_warning')) + '</small>', b.forecast && !b.lights ? ' disabled' : '') + '</div>' +
-        '<div class="a-row">' + check('briFollow', b.follow, esc(S('autobri_follow'))) + '</div>' +
+        '<div class="a-row">' + check('briFollow', b.follow, esc(S('autobri_follow'))) + '</div></div><div class="a-sec auto-bri-levels">' +
         slider('briDay', S('autobri_level_lights_off'), briMin(), 100, b.day, b.day + ' %', 5) + slider('briNight', S('autobri_level_lights_on'), briMin(), 100, b.night, b.night + ' %', 5) +
-        '<div class="a-row"><span class="lbl" style="color:var(--text-secondary)">' + esc(b.last || S('autobri_status_none')) + '</span><button class="b sm" style="padding:0 16px" data-a="briTest">' + esc(S('autobri_test')) + '</button></div>';
+        '</div><button class="b full auto-test" data-a="briTest">' + esc(S('autobri_test')) + '</button>' +
+        '<div class="a-desc">' + esc(b.last || S('autobri_status_none')) + '</div>';
       const card3 = k.bri ? card('auto-bri', 'autobri_title', esc(S('autobri_desc')), b.on, 'autoBri', b.open, 'foldBri', body3) : '';
 
       // 4. Coupure du chauffage de la batterie
@@ -3071,7 +3521,7 @@
           '<input type="range" class="a-slider" min="' + min + '" max="' + max + '" step="1" value="' + v + '" data-c="' + c + sfx + '" style="--p:' + (max > min ? ((v - min) / (max - min)) * 100 : 0) + '%"' + (dis ? ' disabled' : '') + '>' +
           '<span class="a-val" data-out="' + c + sfx + '">' + esc(dis ? S('clim_auto') : outText(c + sfx, v)) + '</span></div>';
         const bt = (label, act, v, on) => '<button class="b sm' + (on ? ' on' : '') + '" data-a="' + act + '" data-v="' + id + ':' + v + '">' + esc(label) + '</button>';
-        const rb = (label, btns) => '<div class="rr top"><span class="rl">' + esc(label) + '</span><div class="rg">' + btns + '</div></div>';
+        const rb = (label, btns, cls = '') => '<div class="rr top ' + cls + '"><span class="rl">' + esc(label) + '</span><div class="rg">' + btns + '</div></div>';
         const rc = r.recircForce ? r.recirc : -1;   // -1 = « Inchangé » : la recirculation n'est pas pilotée
         return '<div class="rule" data-hl="rule-' + id + '"><div class="rule-h ' + id + '"><span style="flex:1">' + esc(S(titleKey)) + '</span>' + sw(r.on, 'ruleOn', false, id) + '</div>' +
           (r.on
@@ -3081,7 +3531,7 @@
               rs(S('ac_auto_fan_level'), 'rtFan', climB.fMin, climB.fMax, clamp(r.fan, climB.fMin, climB.fMax), r.auto) +
               // Ligne Air (issue #177) : boutons cumulables ; « Inchangé » = la règle n'y touche pas.
               rb(S('profile_hvac_row_air'), bt(S('profile_hvac_unchanged'), 'ruleAir', 'none', r.air == null) +
-                AIR_ROW.map(([bit, key]) => bt(S(key), 'ruleAir', bit, r.air != null && (r.air & bit) !== 0)).join('')) +
+                AIR_ROW.map(([bit, key]) => bt(S(key), 'ruleAir', bit, r.air != null && (r.air & bit) !== 0)).join(''), 'auto-air') +
               '<div class="a-desc" style="margin:0 0 6px">' + esc(r.air != null ? S('ac_auto_air_hint', AIR_ROW.filter(([bit]) => r.air & bit).map(([, key]) => S(key)).join(' + ')) : S('ac_auto_air_unchanged_hint')) + '</div>' +
               rb(S('clim_section_loop'), bt(S('profile_hvac_unchanged'), 'ruleRecirc', -1, rc === -1) + bt(S('recirc_inner'), 'ruleRecirc', 0, rc === 0) +
                 bt(S('recirc_outside'), 'ruleRecirc', 1, rc === 1) + bt(S('recirc_auto'), 'ruleRecirc', 2, rc === 2))
@@ -3098,7 +3548,7 @@
       // 6. Sons (issue #161) : là où le volume de la voiture se pilote.
       const sd = state.sound;
       const card6 = k.door ? card('auto-sound', 'sound_title', esc(S('sound_desc')), sd.on, 'sndOn', sd.open, 'foldSnd', this.soundBody()) : '';
-      return '<div class="a-page">' + this.automationTabs({ p1: card1, p2: card2, c3: card3, c4: card4, c5: card5, c6: card6 }) + '</div>';
+      return '<div class="a-page auto-page">' + this.automationTabs({ p1: card1, p2: card2, c3: card3, c4: card4, c5: card5, c6: card6 }) + '</div>';
     }
 
     /** Carte « Sons » : un son par emplacement, ses moments, son volume ; au plus un son par moment. */
@@ -3136,8 +3586,8 @@
      */
     windowsCard() {
       const u = this.ui, a = state.winAuto;
-      let h = '<div class="a-card" data-hl="windows"><div class="fold-head" data-a="foldW"><span class="a-title">' + esc(S('win_automation_title')) + '</span><span class="chev' + (u.winOpen ? ' open' : '') + '">' + ICON_CHEV + '</span></div>' +
-        '<div class="a-row" style="margin-top:6px" data-hl="win-auto"><span class="lbl">' + esc(S('win_auto_label')) + '</span>' + sw(a.on, 'winAutoOn') + '</div>';
+      let h = '<div class="a-card auto-card" data-hl="windows">' + this.automationHead('win_automation_title', u.winOpen, 'foldW') +
+        '<div class="a-row" data-hl="win-auto"><span class="lbl">' + esc(S('win_auto_label')) + '</span>' + sw(a.on, 'winAutoOn') + '</div>';
       if (!u.winOpen) return h + '</div>';
       h += '<div class="a-desc">' + esc(S('win_auto_desc')) + '</div><div class="a-desc" style="color:var(--dash-danger)">⚠ ' + esc(S('win_auto_warning')) + '</div>';
       if (a.on) {
@@ -3176,8 +3626,8 @@
       const ready = !k.doorSensor, pause = d.mode === 'pause';
       const desc = pause ? (ready ? 'door_media_pause_desc_ready' : 'door_media_pause_desc') : (ready ? 'door_volume_desc_ready' : 'door_volume_desc');
       const restore = pause ? (ready ? 'door_media_resume_ready_title' : 'door_media_resume_title') : (ready ? 'door_volume_restore_ready_title' : 'door_volume_restore_title');
-      let h = '<div class="a-card" data-hl="door"><div class="fold-head" data-a="foldD"><span class="a-title">' + esc(S('door_volume_title')) + '</span><span class="chev' + (d.open ? ' open' : '') + '">' + ICON_CHEV + '</span></div>' +
-        '<div class="a-row" style="margin-top:6px"><span class="lbl">' + esc(S(desc)) + '</span>' + sw(d.on, 'doorOn') + '</div>';
+      let h = '<div class="a-card auto-card" data-hl="door">' + this.automationHead('door_volume_title', d.open, 'foldD') +
+        '<div class="a-row"><span class="lbl">' + esc(S(desc)) + '</span>' + sw(d.on, 'doorOn') + '</div>';
       if (!d.open) return h + '</div>';
       const md = (v, key) => '<button class="b' + (d.mode === v ? ' on' : '') + (dis ? ' dis' : '') + '" data-a="doorMode" data-v="' + v + '"' + (dis ? ' disabled' : '') + '>' + esc(S(key)) + '</button>';
       h += '<div class="' + (dis ? 'dim' : '') + '"><div class="a-grid g2" data-hl="door-mode" style="margin:4px 0 6px">' + md('volume', 'door_media_mode_volume') + md('pause', 'door_media_mode_pause') + '</div>' +
@@ -3193,11 +3643,11 @@
     // ── Statistiques ───────────────────────────────────────────────
     statsHtml() {
       const body = this.railLayout('st', [
-        { label: S('stats_cat_general'), icon: 'chart', page: this.statsGeneral() },
-        { label: S('stats_cat_trips'), icon: 'route', page: this.statsTrips() },
-        { label: S('stats_cat_charges'), icon: 'bolt', page: this.statsCharges() }
-      ]);
-      return '<div class="a-page">' + body + '</div>';
+        { label: S('stats_cat_general'), icon: 'chart', page: () => this.statsGeneral() },
+        { label: S('stats_cat_trips'), icon: 'route', page: () => this.statsTrips() },
+        { label: S('stats_cat_charges'), icon: 'bolt', page: () => this.statsCharges() }
+      ], 'st-pages');
+      return '<div class="a-page st-page">' + body + '</div>';
     }
     statsSummary() {
       const st = state.stats;
@@ -3236,8 +3686,8 @@
     statsPager(kind, shown, total) {
       if (shown >= total) return '';
       return '<div class="a-row st-pager"><span class="lbl">' + esc(S('stats_shown_' + kind, shown, total)) + '</span>' +
-        '<button class="b sm" data-a="stMore" data-v="' + kind + '">' + esc(S('stats_show_more_fmt', Math.min(ST_PAGE_SIZE, total - shown))) + '</button>' +
-        '<button class="b sm" data-a="stAll" data-v="' + kind + '">' + esc(S('stats_show_all')) + '</button></div>';
+        '<button class="st-chip" data-a="stMore" data-v="' + kind + '">' + esc(S('stats_show_more_fmt', Math.min(ST_PAGE_SIZE, total - shown))) + '</button>' +
+        '<button class="st-chip" data-a="stAll" data-v="' + kind + '">' + esc(S('stats_show_all')) + '</button></div>';
     }
     money(v) { return v == null ? '—' : this.num(v, 2) + ' ' + state.stats.currency; }
     tiles(list) {
@@ -3250,11 +3700,11 @@
     }
     statsGeneral() {
       const st = state.stats, s = this.statsSummary();
-      let h = '<div class="a-sec" data-hl="st-enable"><div class="a-row"><span class="lbl"><b>' + esc(S('stats_enable_label')) + '</b><small>' + esc(S('stats_enable_desc')) + '</small></span>' + sw(st.enabled, 'stEnable') + '</div>' +
+      let h = '<div class="a-card" data-hl="st-enable"><div class="a-row"><span class="lbl"><span class="st-title">' + esc(S('stats_enable_label')) + '</span><small>' + esc(S('stats_enable_desc')) + '</small></span>' + sw(st.enabled, 'stEnable') + '</div>' +
         (st.enabled ? '' : '<div class="a-desc">' + esc(S('stats_disabled_note')) + '</div>') + '</div>';
       if (!st.enabled) return h;
       const kwh = (v) => this.num(v, 1) + ' kWh';
-      h += '<div class="a-sec" data-hl="st-summary"><div class="a-h">' + esc(S('stats_summary_title')) + '</div>' + this.periodRow() + this.tiles([
+      h += '<div class="a-card" data-hl="st-summary"><div class="st-title">' + esc(S('stats_summary_title')) + '</div>' + this.periodRow() + this.tiles([
         [S('stats_tile_distance'), this.statsDistance(s.km)],
         [S('stats_tile_consumption'), s.cons != null ? this.statsConsumption(s.cons) : '—'],
         [S('stats_tile_speed'), s.speed != null ? this.statsSpeed(s.speed) : '—'],
@@ -3262,31 +3712,35 @@
         [S('stats_tile_cost'), this.money(s.driving)], [S('stats_tile_cost_per100', this.statsUnit()), this.money(s.per100 == null ? null : this.statsPerDistance(s.per100))]
       ]) + '</div>';
       // Batterie : menu des trois MG4. En changer recalcule les recharges enregistrées.
-      h += '<div class="a-sec" data-hl="st-battery"><div class="a-h">' + esc(S('stats_battery_title')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_battery_label')) + '</span>' +
-        '<select class="a-select" style="width:340px" data-c="stBattery">' + Object.keys(BATTERIES).map((n) =>
-          '<option value="' + n + '"' + (+n === st.battery ? ' selected' : '') + '>' + esc(S('stats_battery_option', +n, this.num(BATTERIES[n], 1), +n === 51 ? 'LFP' : 'NMC')) + '</option>').join('') + '</select></div>' +
+      h += '<div class="a-card" data-hl="st-battery"><div class="st-title">' + esc(S('stats_battery_title')) + '</div><label class="a-row"><span class="lbl">' + esc(S('stats_battery_label')) + '</span>' +
+        '<select class="a-select" data-c="stBattery">' + Object.keys(BATTERIES).map((n) =>
+          '<option value="' + n + '"' + (+n === st.battery ? ' selected' : '') + '>' + esc(S('stats_battery_option', +n, this.num(BATTERIES[n], 1), +n === 51 ? 'LFP' : 'NMC')) + '</option>').join('') + '</select></label>' +
         // État de santé : − et + par 0,5 %, maintenus pour aller vite (StatsFragment.bindStateOfHealth).
         '<div class="a-row" data-hl="st-soh"><span class="lbl">' + esc(S('stats_soh_label')) + '</span>' +
           '<button class="mw-step" data-a="stSoh" data-v="-1" data-rep aria-label="' + esc(S('stats_soh_less')) + '">' + MW.minus + '</button>' +
           '<b class="st-soh">' + esc(S('stats_soh_value', this.num(st.soh, 1))) + '</b>' +
           '<button class="mw-step" data-a="stSoh" data-v="1" data-rep aria-label="' + esc(S('stats_soh_more')) + '">' + MW.plus + '</button></div>' +
         '<div class="a-desc st-soh-eff">' + esc(S('stats_soh_effective', this.num(capacityKwh(st.battery, st.soh), 1), this.num(BATTERIES[st.battery], 1), this.num(st.soh, 1))) + '</div>' +
-        '<div class="a-desc" style="margin-top:6px">' + esc(S('stats_battery_note')) + '</div></div>';
-      const field = (label, id, v, type) => '<div class="a-row"><span class="lbl">' + esc(label) + '</span><input class="a-input num" style="width:120px" ' + (type === 'text' ? 'type="text" maxlength="3"' : 'type="number" step="0.001" min="0"') + ' data-c="' + id + '" data-fid="' + id + '" value="' + esc(v) + '"></div>';
-      h += '<div class="a-sec" data-hl="st-price"><div class="a-h">' + esc(S('stats_price_title')) + '</div>' +
-        field(S('stats_currency'), 'stCurrency', st.currency, 'text') + field(S('stats_price_ac'), 'stPriceAc', st.priceAc) + field(S('stats_price_dc'), 'stPriceDc', st.priceDc) +
+        '<div class="a-desc">' + esc(S('stats_battery_note')) + '</div></div>';
+      const field = (label, id, value, attrs, disabled = false) =>
+        '<label class="a-row st-field' + (disabled ? ' dim' : '') + '"><span class="lbl">' + esc(label) + '</span><input class="a-input num" ' +
+        attrs + ' data-c="' + id + '" data-fid="' + id + '" value="' + esc(value) + '"' + (disabled ? ' disabled' : '') + '></label>';
+      const priceAttrs = 'type="number" step="0.001" min="0"';
+      h += '<div class="a-card" data-hl="st-price"><div class="st-title">' + esc(S('stats_price_title')) + '</div>' +
+        field(S('stats_currency'), 'stCurrency', st.currency, 'type="text" maxlength="3"') +
+        field(S('stats_price_ac'), 'stPriceAc', st.priceAc, priceAttrs) + field(S('stats_price_dc'), 'stPriceDc', st.priceDc, priceAttrs) +
         '<div class="a-desc">' + esc(S('stats_price_note')) + '</div></div>';
       // Petits trajets : la distance minimale est grisée tant que le filtre est coupé.
-      h += '<div class="a-sec" data-hl="st-skip"><div class="a-h">' + esc(S('stats_cat_trips')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_skip_short_label')) + '</span>' + sw(st.skipShort, 'stSkipShort') + '</div>' +
-        '<div class="a-row' + (st.skipShort ? '' : ' dim') + '"><span class="lbl">' + esc(S('stats_min_trip_label', this.statsUnit())) + '</span><input class="a-input num" style="width:120px" type="number" step="0.1" data-c="stMinTrip" data-fid="stMinTrip" value="' + +(st.minTrip / (clMiles() ? MI_KM : 1)).toFixed(2) + '"' + (st.skipShort ? '' : ' disabled') + '></div>' +
+      h += '<div class="a-card" data-hl="st-skip"><div class="st-title">' + esc(S('stats_cat_trips')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_skip_short_label')) + '</span>' + sw(st.skipShort, 'stSkipShort') + '</div>' +
+        field(S('stats_min_trip_label', this.statsUnit()), 'stMinTrip', +(st.minTrip / (clMiles() ? MI_KM : 1)).toFixed(2), 'type="number" step="0.1"', !st.skipShort) +
         '<div class="a-desc">' + esc(S('stats_skip_short_note')) + '</div></div>';
       const ret = [[30, 'stats_retention_30d'], [90, 'stats_retention_3m'], [182, 'stats_retention_6m'], [365, 'stats_retention_1y']];
-      h += '<div class="a-sec" data-hl="st-retention"><div class="a-h">' + esc(S('stats_retention_title')) + '</div><div class="a-grid g4">' +
-        ret.map(([d, k]) => '<button class="b sm' + (st.retention === d ? ' on' : '') + '" data-a="stRetention" data-v="' + d + '">' + esc(S(k)) + '</button>').join('') + '</div>' +
-        '<div class="a-desc" style="margin-top:6px">' + esc(S('stats_retention_note')) + '</div>' +
+      h += '<div class="a-card" data-hl="st-retention"><div class="st-title">' + esc(S('stats_retention_title')) + '</div><div class="st-chips">' +
+        ret.map(([d, k]) => '<button class="st-chip' + (st.retention === d ? ' on' : '') + '" data-a="stRetention" data-v="' + d + '">' + esc(S(k)) + '</button>').join('') + '</div>' +
+        '<div class="a-desc">' + esc(S('stats_retention_note')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('stats_history_size', st.trips.length, st.charges.length, Math.max(1, Math.round((st.trips.length * 380 + st.charges.length * 300) / 1024)))) + '</span>' +
-        '<button class="b sm primary" style="padding:0 16px" data-a="stExport" data-hl="st-export">' + esc(S('stats_export')) + '</button>' +
-        '<button class="b danger sm" style="padding:0 16px" data-a="stClear">' + esc(S('stats_clear')) + '</button></div></div>';
+        '<button class="b primary" data-a="stExport" data-hl="st-export">' + esc(S('stats_export')) + '</button>' +
+        '<button class="b danger" data-a="stClear">' + esc(S('stats_clear')) + '</button></div></div>';
       return h;
     }
     dateLine(a, b) {
@@ -3297,6 +3751,28 @@
     }
     // Comme StatsFragment.duration() : minutes tronquées, « 6 h 40 » dès une heure, sinon « 36 min ».
     dur(ms) { const m = Math.floor(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0') : m + ' min'; }
+    statsRow(kind, index, open, date, meta, value, secondary, badge = '') {
+      const id = kind[0] + index;
+      return '<button type="button" class="st-row" data-a="stOpen" data-v="' + id + '" data-fid="st-' + id +
+        '" data-hl="st-' + kind + '-row" aria-expanded="' + open + '"><span class="st-l"><span class="st-date">' +
+        '<span>' + esc(date) + '</span>' + badge + '</span><small>' + esc(meta) + '</small></span>' +
+        '<span class="st-r"><b>' + esc(value) + '</b><small>' + esc(secondary) + '</small></span></button>';
+    }
+    statsSplit(t, color) {
+      const profiles = new Map();
+      const segment = (g) => {
+        profiles.set(g.pid, (profiles.get(g.pid) || 0) + g.km);
+        return '<span style="flex:' + g.km + ';background:' + color(g.pid) + '"></span>';
+      };
+      const bar = t.segs.map(segment).join('');
+      const rows = Array.from(profiles, ([id, km]) =>
+        '<div class="st-splitrow"><span class="st-dot" style="--pc:' + color(id) + '"></span><span>' + esc(profName(id)) +
+        '</span><b>' + esc(this.statsDistance(km)) + '</b></div>').join('');
+      const order = t.segs.map((g) => profName(g.pid) + ' ' + this.statsDistance(g.km)).join(' → ');
+      return '<div class="st-split" data-hl="st-split"><div>' + esc(S('stats_split_title')) + '</div>' +
+        '<div class="st-track" aria-hidden="true">' + bar + '</div>' + rows +
+        '<div class="st-split-order">' + esc(S('stats_split_order', order)) + '</div></div>';
+    }
     /**
      * Trajets 2.7.0 : rangée « Profil » (#206, la part de chaque trajet), pastille du profil ou
      * « Mixte », répartition et graphique de consommation dans le détail déplié.
@@ -3310,13 +3786,13 @@
       const color = (id) => { const i = state.profiles.findIndex((p) => p.id === id); return ['#A6C8FF', '#7FD4A8', '#F7C873', '#E9A0D8', '#9FD6E8', '#F29E8E'][i % 6] || '#A6C8FF'; };
       const seen = new Set(); s.trips.forEach((t) => (t.segs || []).forEach((g) => { if (g.pid) seen.add(g.pid); }));
       const used = state.profiles.filter((p) => seen.has(p.id));
-      const chips = used.length ? '<div class="st-chips st-prof" data-hl="st-profile"><span class="st-cap">' + esc(S('stats_filter_profile')) + '</span>' +
+      const chips = used.length ? '<div class="st-chips st-prof" data-sk="st-profile" data-hl="st-profile"><span class="st-cap">' + esc(S('stats_filter_profile')) + '</span>' +
         [{ id: '', name: S('stats_filter_all') }].concat(used).map((p) => '<button class="st-chip' + ((pid || '') === p.id ? ' on' : '') + '" data-a="stProf" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>' : '';
-      let h = '<div class="a-sec" data-hl="st-trips"><div class="st-title">' + esc(S('stats_cat_trips')) + '</div>' + this.periodRow() + chips + this.tiles([
+      let h = '<div class="a-card" data-hl="st-trips"><div class="st-title">' + esc(S('stats_cat_trips')) + '</div>' + this.periodRow() + chips + this.tiles([
         [S('stats_tile_trips'), String(list.length)], [S('stats_tile_distance'), this.statsDistance(km)],
         [S('stats_tile_longest'), this.statsDistance(list.reduce((a, x) => Math.max(a, x.km), 0))], [S('stats_tile_cost'), this.money(s.driving * km / kmAll)]
-      ]) + '</div>';
-      if (!list.length) return h + '<div class="a-sec st-empty">' + esc(S('stats_no_trip')) + '</div>';
+      ]) + '</div><div class="a-card st-list">';
+      if (!list.length) return h + '<div class="st-empty">' + esc(S('stats_no_trip')) + '</div></div>';
       const shown = u.stTripsShown ?? ST_PAGE_SIZE;
       list.slice(0, shown).forEach(({ t, i, km: kp }) => {
         const cons = this.statsConsumption(t.kwh / t.km * 100, t.short);
@@ -3325,8 +3801,8 @@
         const pill = ids.length > 1 ? '<span class="st-pill mixed">' + esc(S('stats_trip_mixed')) + '</span>'
           : ids.length ? '<span class="st-pill" style="--pc:' + color(ids[0]) + '">' + esc(profName(ids[0])) + '</span>' : '';
         const dist = pid && kp < t.km ? S('stats_portion', this.statsDistance(kp), this.statsDistance(t.km)) : this.statsDistance(t.km);
-        h += '<div class="st-row" data-a="stOpen" data-v="t' + i + '" data-hl="st-trip-row"><div><b>' + esc(this.dateLine(t.start, t.end)) + ' ' + pill + '</b><small>' + esc(this.dur(t.end - t.start) + ' · ' + dist) + '</small></div>' +
-          '<div class="st-r"><b>' + esc(cons) + '</b><small>' + esc(this.statsSpeed(t.speed) + ' · ' + this.num(t.kwh, 1) + ' kWh') + '</small></div></div>';
+        h += this.statsRow('trip', i, open, this.dateLine(t.start, t.end), this.dur(t.end - t.start) + ' · ' + dist,
+          cons, this.statsSpeed(t.speed) + ' · ' + this.num(t.kwh, 1) + ' kWh', pill);
         if (open) {
           // Sans compteurs d'énergie (hors SWI132/133), l'énergie est calculée d'après la tension et
           // le courant de la batterie, et la répartition vient du compteur d'origine, au kWh entier.
@@ -3335,16 +3811,16 @@
           const energy = caps().counters
             ? [[S('stats_detail_motor'), this.num(t.motor, 1) + ' kWh'], [S('stats_detail_climate'), this.num(t.climate, 1) + ' kWh'], [S('stats_detail_accessories'), this.num(t.acc, 1) + ' kWh']]
             : [[S('stats_detail_origin'), S('stats_detail_origin_integrated')], [S('stats_detail_motor'), whole(Math.floor(t.kwh - aux))], [S('stats_detail_auxiliary'), whole(aux)]];
-          const split = ids.length > 1 ? '<div class="st-split" data-hl="st-split"><div class="a-sub">' + esc(S('stats_split_title')) + '</div>' +
-            t.segs.map((g) => '<div class="st-splitrow"><span class="st-pill" style="--pc:' + color(g.pid) + '">' + esc(profName(g.pid)) + '</span><span class="st-track"><i style="width:' + (g.km / t.km * 100).toFixed(1) + '%;background:' + color(g.pid) + '"></i></span><b>' + esc(this.statsDistance(g.km)) + '</b></div>').join('') + '</div>' : '';
+          if (ids.length > 1) h += this.statsSplit(t, color);
+          h += this.tripCurve(t);
           h += this.detailBox(energy.concat([
             [S('stats_detail_regen'), '− ' + this.num(t.regen, 1) + ' kWh'],
             [S('stats_detail_consumption'), t.short ? S('stats_detail_consumption_short') : cons],
             [S('stats_detail_battery'), t.soc[0] + ' % → ' + t.soc[1] + ' %'], [S('stats_detail_temp'), this.num(t.temp, 1) + ' °C']
-          ]), split + this.tripCurve(t));
+          ]));
         }
       });
-      return h + this.statsPager('trips', shown, list.length);
+      return h + this.statsPager('trips', shown, list.length) + '</div>';
     }
     /**
      * Graphique d'un trajet (TripCurveView) : une barre par tronçon, largeur choisie à l'affichage
@@ -3357,39 +3833,82 @@
       const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
       const n = Math.max(3, Math.min(120, Math.floor(t.km / 0.2))), avg = t.kwh / t.km * 100;
       const bars = [], speed = [], alt = [];
-      let a = 80 + rnd() * 60, v = t.speed;
+      const nominalSpeed = t.speed || 30;
+      let a = 80 + rnd() * 60, v = nominalSpeed;
       for (let i = 0; i < n; i++) {
         v = clamp(v + (rnd() - 0.5) * 12, 15, 130); a = clamp(a + (rnd() - 0.48) * 4, 20, 400);
         const slope = i ? alt[i - 1] - a : 0;
-        bars.push(rnd() < 0.07 ? -Math.round((2 + rnd() * 6) * 10) / 10 : Math.round((avg * (0.6 + v / t.speed * 0.4) - slope * 1.2 + (rnd() - 0.5) * 4) * 10) / 10);
+        bars.push(rnd() < 0.07 ? -Math.round((2 + rnd() * 6) * 10) / 10 : Math.round((avg * (0.6 + v / nominalSpeed * 0.4) - slope * 1.2 + (rnd() - 0.5) * 4) * 10) / 10);
         speed.push(v); alt.push(a);
       }
-      const W = 900, top = 10, H = 110, BH = 46;
       const bands = state.stats.bands || {};
-      const shown = [['speed', speed, 'var(--dash-accent)'], ['elev', alt, '#A78BFA']].filter(([key]) => bands[key]);
-      const max = Math.max(30, ...bars), min = Math.min(0, ...bars), y0 = top + H * max / (max - min), bw = W / n;
-      const col = (x) => (x < 0 ? '#15803D' : x < 14 ? '#22C55E' : x <= 22 ? '#F59E0B' : '#F43F5E');
-      let svg = '<svg viewBox="0 0 ' + W + ' ' + (top + H + 8 + BH * shown.length) + '" class="st-curve" aria-hidden="true"><line x1="0" x2="' + W + '" y1="' + y0.toFixed(1) + '" y2="' + y0.toFixed(1) + '" stroke="var(--dash-border)"/>';
-      bars.forEach((x, i) => {
-        const y = top + H * (max - Math.max(x, 0)) / (max - min), hh = Math.abs(x) * H / (max - min);
-        svg += '<rect x="' + (i * bw + bw * 0.12).toFixed(1) + '" y="' + (x >= 0 ? y : y0).toFixed(1) + '" width="' + (bw * 0.76).toFixed(1) + '" height="' + Math.max(1, hh).toFixed(1) + '" rx="1.5" fill="' + col(x) + '"/>';
+      // 1920 − menu (184) − deux marges de page et de liste (14 + 14) − marges du graphique (12).
+      const width = 1656, left = 66, right = width - 6, top = 7, mainHeight = 120;
+      const bandHeight = 40, bandGap = 12, axisHeight = 18;
+      const bw = (right - left) / n;
+      const miles = clMiles(), unit = this.statsUnit();
+      const speedFactor = miles ? 1 / MI_KM : 1;
+      const speedValues = speed.map((v) => v * speedFactor);
+      const speedMax = Math.ceil(Math.max(...speedValues));
+      const altMin = Math.floor(Math.min(...alt)), altMax = Math.ceil(Math.max(...alt));
+      const altFloor = Math.min(altMin, Math.floor((altMin + altMax - 10) / 2));
+      const altCeiling = Math.max(altMax, altFloor + 10);
+      const colors = { eco: 'var(--dash-eco)', normal: 'var(--dash-accent)', high: 'var(--dash-warn)',
+        regen: 'color-mix(in srgb, var(--dash-eco) 65%, black)', speed: 'var(--text-secondary)', elev: '#9B7FD4' };
+      const shown = [];
+      if (bands.speed) shown.push([speedValues, 0, Math.max(miles ? 20 : 30, speedMax), speedMax, colors.speed, miles ? 'mph' : 'km/h']);
+      if (bands.elev) shown.push([alt, altFloor, altCeiling, altMax, colors.elev, 'm']);
+      const height = top + mainHeight + shown.length * (bandHeight + bandGap) + axisHeight;
+      const quantities = bars.map((v) => this.statsPerDistance(v));
+      const max = Math.min(this.statsPerDistance(80), Math.max(this.statsPerDistance(35), Math.ceil(Math.max(...quantities) / 5) * 5));
+      const min = Math.max(this.statsPerDistance(-60), Math.min(this.statsPerDistance(-20), Math.floor(Math.min(...quantities) / 5) * 5));
+      const y = (v) => top + mainHeight * (max - clamp(v, min, max)) / (max - min);
+      const axisLabel = (x, y, value, anchor = 'end') => '<text x="' + x + '" y="' + y + '" text-anchor="' + anchor + '">' + esc(value) + '</text>';
+      const line = (y, paint, style = '') => '<line x1="' + left + '" x2="' + right + '" y1="' + y + '" y2="' + y + '" stroke="' + paint + '"' + style + '/>';
+      const levels = new Set([min, 0, ...(miles ? [15, 30, 45] : [10, 20, 30]), max]);
+      let svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" height="' + height + '" preserveAspectRatio="none" class="st-curve" aria-hidden="true">';
+      for (const level of levels) {
+        if (level < min || level > max) continue;
+        const yy = y(level);
+        svg += line(yy, 'var(--dash-border)', level ? ' opacity=".55"' : '') + axisLabel(left - 6, yy + 4, Math.round(level));
+      }
+      const zero = y(0);
+      bars.forEach((v, i) => {
+        const yy = y(quantities[i]);
+        const fill = v < 0 ? colors.regen : v < 14 ? colors.eco : v <= 22 ? colors.normal : colors.high;
+        svg += '<rect x="' + (left + i * bw + 0.75).toFixed(2) + '" y="' + Math.min(yy, zero).toFixed(2) +
+          '" width="' + (bw - 1.5).toFixed(2) + '" height="' + Math.max(1, Math.abs(yy - zero)).toFixed(2) + '" rx="1.5" fill="' + fill + '"/>';
       });
-      shown.forEach(([, vals, color], i) => {
-        const lo = Math.min(...vals), hi = Math.max(...vals), b0 = top + H + 8 + i * BH;
-        const pts = vals.map((x, i) => ((i + 0.5) * bw).toFixed(1) + ',' + (b0 + BH - 4 - (BH - 8) * (x - lo) / Math.max(1, hi - lo)).toFixed(1)).join(' ');
-        svg += '<line x1="0" x2="' + W + '" y1="' + (b0 + 4) + '" y2="' + (b0 + 4) + '" stroke="' + color + '" stroke-dasharray="4 4" opacity=".45"/>' +
-          '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2"/>';
-      });
+      let bottom = top + mainHeight;
+      for (const [values, low, high, peak, color, suffix] of shown) {
+        const start = bottom + bandGap;
+        bottom = start + bandHeight;
+        const bandY = (v) => bottom - bandHeight * (v - low) / (high - low);
+        const points = values.map((v, i) => (left + (i + 0.5) * bw).toFixed(2) + ',' + bandY(v).toFixed(2)).join(' ');
+        svg += line(bandY(peak), color, ' stroke-dasharray="4 4" opacity=".55"') +
+          '<polygon points="' + (left + bw / 2) + ',' + bottom + ' ' + points + ' ' + (right - bw / 2) + ',' + bottom + '" fill="' + color + '" opacity=".14"/>' +
+          '<polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.5"/>' +
+          axisLabel(left - 6, start + 4, high + ' ' + suffix) + axisLabel(left - 6, bottom, low);
+      }
+      const total = t.km * speedFactor;
+      const graduation = [1, 2, 5, 10, 20, 50, 100, 200].find((step) => total / step <= 6) || 500;
+      for (let distance = 0; distance <= total + 0.01; distance += graduation) {
+        const x = left + (right - left) * distance / total;
+        svg += axisLabel(clamp(x, left + 22, right - 22), height - 4, distance + ' ' + unit, 'middle');
+      }
       svg += '</svg>';
       let up = 0, down = 0; for (let i = 1; i < alt.length; i++) { const d = alt[i] - alt[i - 1]; if (d > 0) up += d; else down -= d; }
-      const btn = (b, key) => '<button class="b sm' + (bands[b] ? ' on' : '') + '" data-a="stBand" data-v="' + b + '" aria-pressed="' + !!bands[b] + '">' + esc(S(key)) + '</button>';
-      const legend = [S('stats_curve_legend_regen') + ' < 0'];
-      if (bands.speed) legend.push(S('stats_curve_legend_speed'));
-      if (bands.elev) legend.push(S('stats_curve_elevation_value', S('stats_curve_elevation'), Math.round(up), Math.round(down)));
-      return '<div class="st-graph" data-hl="st-curve"><div class="a-row" style="min-height:30px"><span class="a-sub" style="flex:1;margin:0">' + esc(S('stats_curve_title')) + '</span>' +
-        '<span class="a-desc">' + esc(S('stats_curve_summary', this.num(this.statsPerDistance(avg), 1), this.num(this.statsPerDistance(Math.max(...bars)), 0)) + ' ' + this.statsUnit()) + '</span></div>' + svg +
-        '<div class="a-row" style="min-height:36px">' + btn('speed', 'stats_curve_speed') + btn('elev', 'stats_curve_elevation') + '<span class="a-desc" style="flex:1;text-align:right">' +
-        esc(legend.join(' · ')) + '</span></div></div>';
+      const btn = (b, key) => '<button class="st-chip' + (bands[b] ? ' on' : '') + '" data-a="stBand" data-v="' + b + '" aria-pressed="' + !!bands[b] + '">' + esc(S(key)) + '</button>';
+      const ecoLimit = Math.round(this.statsPerDistance(14)), normalLimit = Math.round(this.statsPerDistance(22));
+      const legend = [['< ' + ecoLimit, colors.eco], [ecoLimit + '–' + normalLimit, colors.normal],
+        ['> ' + normalLimit + ' kWh/100 ' + unit, colors.high], [S('stats_curve_legend_regen'), colors.regen]];
+      if (bands.speed) legend.push([S('stats_curve_legend_speed'), colors.speed]);
+      if (bands.elev) legend.push([S('stats_curve_legend_altitude'), colors.elev]);
+      const summary = S('stats_curve_summary', this.num(this.statsPerDistance(avg), 1), this.num(Math.max(...quantities), 0)) + ' ' + unit;
+      return '<div class="st-graph" data-hl="st-curve"><div class="st-graph-head"><div><div>' + esc(S('stats_curve_title')) + '</div><small>' +
+        esc(summary) + '</small></div>' + btn('speed', 'stats_curve_speed') + btn('elev', 'stats_curve_elevation') + '</div>' + svg +
+        '<div class="st-legend">' + legend.map(([label, color]) => '<span><i style="--pc:' + color + '"></i>' + esc(label) + '</span>').join('') + '</div>' +
+        (bands.elev ? '<div class="st-elevation">' + esc(S('stats_curve_elevation_value', S('stats_curve_elevation'), Math.round(up), Math.round(down))) + '</div>' : '') + '</div>';
     }
     /** Export (ExportDialog) : la maquette annonce les fichiers écrits, sans rien télécharger. */
     exportGo() {
@@ -3403,22 +3922,26 @@
     statsCharges() {
       const s = this.statsSummary(), u = this.ui, st = state.stats;
       // Tant que la batterie n'a été ni choisie ni confirmée, l'onglet rappelle de la vérifier.
-      const banner = st.batteryConfirmed ? '' : '<div class="st-banner" data-hl="st-banner"><div class="a-row"><span class="lbl">' + esc(S('stats_battery_banner', st.battery + ' kWh')) + '</span>' +
-        '<button class="b sm" style="padding:0 14px" data-a="stBatOk">' + esc(S('stats_battery_banner_ok')) + '</button>' +
-        '<button class="b sm on warn" style="padding:0 14px" data-a="stBatChange">' + esc(S('stats_battery_banner_change')) + '</button></div></div>';
-      let h = banner + '<div class="a-sec" data-hl="st-charges"><div class="st-title">' + esc(S('stats_cat_charges')) + '</div>' + this.periodRow() + this.tiles([
+      const banner = !st.enabled || st.batteryConfirmed ? '' : '<div class="st-banner" data-hl="st-banner"><div class="a-row"><span class="lbl">' + esc(S('stats_battery_banner', st.battery + ' kWh')) + '</span>' +
+        '<button class="b" data-a="stBatOk">' + esc(S('stats_battery_banner_ok')) + '</button>' +
+        '<button class="b on warn" data-a="stBatChange">' + esc(S('stats_battery_banner_change')) + '</button></div></div>';
+      let h = banner + '<div class="a-card" data-hl="st-charges"><div class="st-title">' + esc(S('stats_cat_charges')) + '</div>' + this.periodRow() + this.tiles([
         [S('stats_tile_charged'), this.num(s.charged, 1) + ' kWh'], [S('stats_tile_cost_total'), this.money(s.chargeCost)],
         [S('stats_tile_avg_price'), s.avgPrice != null ? this.num(s.avgPrice, 3) + ' ' + st.currency : '—'],
         [S('stats_tile_sessions'), s.charges.length + ' · ' + s.ac + ' AC / ' + s.dc + ' DC']
-      ]) + '</div>';
-      if (!s.charges.length) return h + '<div class="a-sec st-empty">' + esc(S('stats_no_charge')) + '</div>';
+      ]) + '</div><div class="a-card st-list">';
+      if (!s.charges.length) return h + '<div class="st-empty">' + esc(S('stats_no_charge')) + '</div></div>';
       const shown = u.stChargesShown ?? ST_PAGE_SIZE;
       s.charges.slice(0, shown).forEach((c) => {
         const i = st.charges.indexOf(c);
         const open = u.statsOpen === 'c' + i;
         const type = S(c.type === 'DC' ? 'stats_charge_dc' : c.type === 'AC' ? 'stats_charge_ac' : 'stats_charge_unknown');
-        h += '<div class="st-row" data-a="stOpen" data-v="c' + i + '" data-hl="st-charge-row"><div><b>' + esc(this.dateLine(c.start, c.end)) + (c.reconstructed ? ' <span class="st-badge">' + esc(S('stats_charge_reconstructed')) + '</span>' : '') + '</b><small>' + esc(type + ' · ' + this.dur(c.end - c.start)) + '</small></div>' +
-          '<div class="st-r"><b>+ ' + esc(this.num(c.kwh, 1)) + ' kWh</b><small>' + esc(this.money(c.kwh * s.price(c))) + '</small></div></div>';
+        const date = this.dateLine(c.start, c.end) + (c.fixedPrice != null ? ' · ' + S('stats_tariff_fixed') : '');
+        const duration = c.reconstructed && !c.timesKnown ? S('stats_charge_reconstructed') : this.dur(c.end - c.start);
+        const power = c.powerMeasured || c.powerComputed;
+        const soc = c.soc[0] + ' % → ' + c.soc[1] + ' %';
+        const meta = [power ? this.num(power, 1) + ' kW' : '', soc, this.money(c.kwh * s.price(c))].filter(Boolean).join(' · ');
+        h += this.statsRow('charge', i, open, date, type + ' · ' + duration, '+ ' + this.num(c.kwh, 1) + ' kWh', meta);
         if (open) {
           const pr = s.price(c);
           const tariff = this.num(pr, 3) + ' ' + st.currency + '/kWh · ' + (c.fixedPrice != null ? S('stats_tariff_instead', this.num(c.type === 'DC' ? st.priceDc : st.priceAc, 3)) : S('stats_tariff_default'));
@@ -3430,15 +3953,17 @@
           else lines.push([S('stats_detail_origin'), S(c.timesKnown ? 'stats_detail_origin_completed' : 'stats_detail_origin_estimated')]);
           if (c.powerMeasured) lines.push([S('stats_detail_power_measured'), this.num(c.powerMeasured, 1) + ' kW']);
           else if (c.powerComputed) lines.push([S('stats_detail_power_computed'), this.num(c.powerComputed, 1) + ' kW']);
-          lines.push([S('stats_detail_battery'), c.soc[0] + ' % → ' + c.soc[1] + ' %'], [S('stats_detail_temp'), this.num(c.temp, 1) + ' °C'], [S('stats_detail_tariff'), tariff]);
-          h += this.detailBox(lines, '<div class="a-grid g2" style="margin-top:6px"><button class="b sm" data-a="stFix" data-v="' + i + '">' + esc(S('stats_fix_tariff')) + '</button>' +
-            (c.reconstructed ? '<button class="b sm primary" data-a="stComplete" data-v="' + i + '">' + esc(S('stats_complete_session')) + '</button>' : '<span></span>') + '</div>');
+          lines.push([S('stats_detail_battery'), soc], [S('stats_detail_temp'), this.num(c.temp, 1) + ' °C'], [S('stats_detail_tariff'), tariff]);
+          h += this.detailBox(lines, '<div class="st-charge-actions">' +
+            (c.reconstructed ? '<button class="b primary" data-a="stComplete" data-v="' + i + '">' + esc(S('stats_complete_session')) + '</button>' : '') +
+            '<button class="b" data-a="stFix" data-v="' + i + '">' + esc(S('stats_fix_tariff')) + '</button></div>');
         }
       });
-      return h + this.statsPager('charges', shown, s.charges.length);
+      return h + this.statsPager('charges', shown, s.charges.length) + '</div>';
     }
     detailBox(lines, extra) {
-      return '<div class="st-detail">' + lines.map(([k, v, hl]) => '<div class="a-row"' + (hl ? ' data-hl="' + hl + '"' : '') + ' style="min-height:30px"><span class="lbl" style="font-size:14px;color:var(--text-secondary)">' + esc(k) + '</span><span style="font-size:14px">' + esc(v) + '</span></div>').join('') + (extra || '') + '</div>';
+      return '<div class="st-detail">' + lines.map(([k, v, hl]) => '<div class="st-detail-line"' + (hl ? ' data-hl="' + hl + '"' : '') +
+        '><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>').join('') + (extra || '') + '</div>';
     }
 
     // ── Overlays ───────────────────────────────────────────────────────────
@@ -3963,10 +4488,7 @@
      */
     shortcutsHtml() {
       const sc = state.sc;
-      const cur = String(this.ui.tabs.sc || 'classic');
-      const master = cur === 'classic' ? '<div class="a-master" data-hl="sc-master"><span>' + esc(S('shortcuts_enabled_short')) + '</span>' + sw(sc.enabled, 'scOn') + '</div>' : '';
-      const cfg = ['onepedal', 'adas', 'regen', 'drivemode', 'profiles', 'sources', 'preclim'].includes(cur) ? 'sc-cfg' : '';
-      const body = this.railLayout('sc', [
+      const tabs = [
         { id: 'classic', label: S('shortcuts_cat_classic'), icon: 'steering', page: this.wheelPage(), hl: 'sc-wheel' },
         { id: 'onepedal', label: S('shortcuts_cat_onepedal'), icon: 'pedal', page: this.assigned('ONE_PEDAL') ? this.scOnePedal() : '', hl: 'sc-sub-onepedal' },
         { id: 'adas', label: S('shortcuts_cat_adas'), icon: 'shield', page: this.assigned('ADAS_CYCLE') && caps().known ? this.scAdasCfg() : '', hl: 'sc-sub-adas' },
@@ -3979,8 +4501,12 @@
         { id: 'quick', label: S('shortcuts_cat_quick'), icon: 'cat_adjust', page: this.assigned('QUICK_SETTINGS') || this.ui.qsPage ? this.scQuick() : '', hl: 'sc-sub-quick' },
         { id: 'floating', label: S('shortcuts_cat_floating'), icon: 'circle_dot', page: this.scFloating(), hl: 'sc-floating' },
         { id: 'custom', label: S('shortcuts_cat_custom'), icon: 'wand', page: this.scCustom(), hl: 'sc-custom' }
-      ], cfg, master);
-      return '<div class="a-page">' + body + '</div>';
+      ];
+      const cur = tabs.find((t) => t.id === this.ui.tabs.sc && t.page)?.id || 'classic';
+      this.ui.tabs.sc = cur;
+      const master = cur === 'classic' ? '<div class="a-master" data-hl="sc-master"><span>' + esc(S('shortcuts_enabled_short')) + '</span>' + sw(sc.enabled, 'scOn') + '</div>' : '';
+      const cfg = ['onepedal', 'adas', 'regen', 'drivemode', 'profiles', 'sources', 'preclim'].includes(cur);
+      return '<div class="a-page sc-page">' + this.railLayout('sc', tabs, cfg ? 'sc-pages sc-cfg' : 'sc-pages', master) + '</div>';
     }
     /** Fonction attribuée à une touche, une bulle ou (Réglages rapides) une automatisation. */
     assigned(action) {
@@ -4040,10 +4566,10 @@
       const scope = u.wkScope || '';
       const status = !sc.advService ? ['wheel_status_service_off', 'advGrant', 'wheel_open_settings', 'warn']
         : sc.advOn ? ['wheel_status_on', 'advOn', 'wheel_disable', 'ok'] : ['wheel_status_off', 'advOn', 'wheel_enable', ''];
-      let h = '<div class="wk-status ' + status[3] + '" data-hl="adv-service"><span class="dot"></span><span class="lbl">' + esc(S(status[0])) + '</span>' +
+      let h = '<div class="wk-status ' + (status[3] || 'warn') + '" data-hl="adv-service"><span class="lbl">' + esc(S(status[0])) + '</span>' +
         '<button class="b sm' + (status[3] === 'ok' ? '' : ' primary') + '" data-a="' + status[1] + '">' + esc(S(status[2])) + '</button></div>';
       if (capture && state.profiles.length) {
-        h += '<div class="wk-scope" data-hl="adv-scope"><span class="a-sub" style="margin:0">' + esc(S('wheel_scope_label')) + '</span><div class="cl-chips">' +
+        h += '<div class="wk-scope" data-hl="adv-scope" data-sk="wk-scope"><span class="a-sub">' + esc(S('wheel_scope_label')) + '</span><div class="cl-chips">' +
           [{ id: '', name: S('adv_sc_all_profiles') }].concat(state.profiles).map((p) => '<button class="cl-chip' + (scope === p.id ? ' on' : '') + '" data-a="wkScope" data-v="' + p.id + '">' + esc(p.name) +
             (p.id && p.id === state.activeProfileId ? ' ●' : '') + '</button>').join('') + '</div></div>';
       }
@@ -4053,9 +4579,9 @@
           const sl = this.wheelSlot(code, p, scope);
           const sel = sl.locked ? '<span class="wk-locked">🔒 ' + esc(S('wheel_locked')) + '</span>'
             : this.actionSelect(sl.action, 'wkSel', 'data-key="' + code + '" data-press="' + p + '"', sl.extra) + (sl.inherited ? '<span class="wk-inh">' + esc(S('wheel_inherited_fmt', this.actionLabel(sl.inherited.action, sl.inherited))) + '</span>' : '');
-          return '<div class="wk-row' + (sl.locked ? ' locked' : '') + '"><span class="wk-p">' + esc(S(key)) + '</span><div class="wk-v">' + sel + '</div></div>';
+          return '<div class="wk-row' + (sl.locked ? ' locked' : '') + '"><span class="wk-p">' + esc(S(key)) + '</span><div class="wk-v' + (sl.action !== 'NONE' ? ' assigned' : '') + '">' + sel + '</div></div>';
         }).join('');
-        return '<div class="a-card wk-card" data-hl="' + (code === 17 ? 'sc-btn1' : code === 286 ? 'sc-btn2' : 'wk-key') + '"><div class="wk-head"><span class="wk-t">' + esc(this.wheelName(code)) + '</span><small></small>' +
+        return '<div class="a-card wk-card" data-hl="' + (code === 17 ? 'sc-btn1' : code === 286 ? 'sc-btn2' : 'wk-key') + '"><div class="wk-head"><span class="wk-t">' + esc(this.wheelName(code)) + '</span>' +
           '<button class="wk-menu" data-a="wkMenu" data-v="' + code + '" aria-label="' + esc(S('rule_menu_title')) + '">⋮</button></div>' + rows + '</div>';
       }).join('') +
         '<button class="a-card wk-add' + (u.adv.rec ? ' rec' : '') + (sc.advService ? '' : ' dis') + '" data-a="wkAdd" data-hl="adv-key"' + (sc.advService ? '' : ' disabled') + '><b>' + esc(u.adv.rec ? S('wheel_capture_title') : '+ ' + S('wheel_add_key')) + '</b><small>' + esc(u.adv.rec ? S('wheel_capture_msg') : S('wheel_add_key_hint')) + '</small></button></div>';
@@ -4067,25 +4593,51 @@
       const u = this.ui;
       if (!u.driveDraft) u.driveDraft = driveOrder().slice();
       const d = u.driveDraft;
-      const btn = (m) => { const i = d.indexOf(m); return '<button class="b' + (i >= 0 ? ' on' : '') + '" data-a="dcToggle" data-v="' + m + '">' + (i >= 0 ? '<span class="rc-n">' + (i + 1) + '</span>' : '') + esc(driveName(m)) + '</button>'; };
-      const ok = d.length >= 2;
+      const btn = (m) => this.scCycleOption('dcToggle', m, driveName(m), d.indexOf(m));
       return '<div class="a-sec" data-hl="sc-drivemode"><div class="a-h">' + esc(S('shortcuts_action_drive_cycle')) + '</div>' +
         '<div class="a-desc">' + esc(S('shortcuts_cfg_drive_hint')) + '</div>' +
-        '<div class="a-grid g5" style="margin-top:8px">' + DRIVE.map(btn).join('') + '</div>' +
-        '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map(driveName).join(' → '))) : '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_drive_min')) + '</span>') + '</span></div>' +
-        '<div class="a-grid g2"><button class="b" data-a="dcClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="dcSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
+        '<div class="a-grid g5 sc-cycle-options">' + DRIVE.map(btn).join('') + '</div>' +
+        this.scCycleFooter(d.map(driveName), 'shortcuts_cfg_drive_min', 'dcClear', 'dcSave') + '</div>';
     }
-    /** Page « Réglages rapides » (QuickSettingsPage) : tuiles du pop-up dans l'ordre, catalogue en pastilles. */
+    /** QuickSettingsPage : tuiles dans l'ordre, catalogue par catégorie et aperçu en quatre colonnes. */
     scQuick() {
       const mine = qtTiles(), k = caps();
-      const row = (t, i) => '<div class="qs-row"><span class="qs-grip">⋮⋮</span><span class="lbl">' + esc(S(QT[t].key)) + (QT[t].stop ? '<small>' + esc(S('quick_stopped_only')) + '</small>' : '') + '</span><span class="qs-val">' + esc(qtValue(t)) + '</span>' +
-        '<button class="b sm" data-a="qsUp" data-v="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button class="b sm" data-a="qsDown" data-v="' + i + '"' + (i < mine.length - 1 ? '' : ' disabled') + '>↓</button>' +
-        '<button class="b sm danger" data-a="qsDel" data-v="' + t + '">−</button></div>';
-      const free = Object.keys(QT).filter((t) => QT[t].ok(k) && !mine.includes(t));
-      return '<div class="a-sec" data-hl="qs-mine"><div class="a-h">' + esc(S('quick_card_mine')) + ' · ' + mine.length + ' / ' + QT_MAX + '</div><div class="a-desc">' + esc(S('quick_hint_mine')) + '</div>' +
-        mine.map(row).join('') + '<div class="a-grid g2" style="margin-top:8px"><button class="b" data-a="qsDefaults">' + esc(S('quick_defaults')) + '</button><button class="b primary" data-a="qsOpen">' + esc(S('quick_card_preview')) + '</button></div></div>' +
-        '<div class="a-sec" data-hl="qs-add"><div class="a-h">' + esc(S('quick_card_add')) + '</div><div class="cl-chips">' +
-        free.map((t) => '<button class="cl-chip" data-a="qsAdd" data-v="' + t + '"' + (mine.length >= QT_MAX ? ' disabled' : '') + '>+ ' + esc(S(QT[t].key)) + '</button>').join('') + '</div></div>';
+      const groups = QT_GROUPS.map(([label, icon, tiles]) => [label, icon, tiles.filter((t) => QT[t].ok(k))])
+        .filter(([, , tiles]) => tiles.length);
+      const current = groups.find(([label]) => label === this.ui.qsCat) || groups[0];
+      const head = (key, extra = '') => '<div class="a-h sc-quick-head"><span>' + esc(S(key)) + '</span>' + extra + '</div>';
+      const row = (t, i) => {
+        const all = QT[t].opts(), kept = qtOptions(t).map(([v]) => v);
+        const values = all.length > 2 ? '<div class="qs-values"><div class="qs-values-head"><span>' +
+          esc(S('quick_values_label')) + '</span>' + (kept.length === 2 ? '<span>' + esc(S('quick_values_toggle')) + '</span>' : '') +
+          '</div><div class="cl-chips">' + all.map(([v, label]) => '<button class="cl-chip' + (kept.includes(v) ? ' on' : '') +
+            '" data-a="qsOption" data-x="' + t + '" data-v="' + esc(JSON.stringify(v)) + '" aria-pressed="' + kept.includes(v) +
+            '">' + esc(label) + '</button>').join('') + '</div></div>' : '';
+        return '<div class="qs-entry"><div class="qs-row"><span class="qs-rank">' + (i + 1) + '</span><span class="lbl">' +
+          esc(S(QT[t].key)) + '</span>' + (QT[t].stop ? '<span class="qs-stop">' + esc(S('quick_stopped_only')) + '</span>' : '') +
+          '<button class="b sm" data-a="qsUp" data-v="' + i + '"' + (i ? '' : ' disabled') + '>↑</button>' +
+          '<button class="b sm" data-a="qsDown" data-v="' + i + '"' + (i < mine.length - 1 ? '' : ' disabled') + '>↓</button>' +
+          '<button class="b sm" data-a="qsDel" data-v="' + t + '">−</button></div>' + values + '</div>';
+      };
+      const tile = (t) => {
+        const added = mine.includes(t);
+        return '<button class="b qs-catalog-tile" data-a="qsAdd" data-v="' + t + '"' +
+          (added || mine.length >= QT_MAX ? ' disabled' : '') + '><span>' + esc(S(QT[t].key)) + '</span>' +
+          (QT[t].stop ? '<small>' + esc(S('quick_stopped_only')) + '</small>' : '') + '<b>' + (added ? '✓' : '+') + '</b></button>';
+      };
+      const cats = groups.map(([label, icon]) => '<button class="cl-chip' + (current?.[0] === label ? ' on' : '') +
+        '" data-a="qsCat" data-v="' + label + '">' + (icon === 'battery' ? MW.battery : ico(icon)) + esc(S(label)) + '</button>').join('');
+      const preview = mine.map((t) => '<div class="qs-tile"><span>' + esc(S(QT[t].key)) + '</span><b>' + esc(qtValue(t)) + '</b></div>').join('') +
+        (mine.length < QT_MAX ? '<div class="qs-tile qs-add">+ ' + esc(S('quick_choose_tiles')) + '</div>' : '');
+      return '<div class="sc-quick-columns"><div class="a-sec" data-hl="qs-mine">' +
+        head('quick_card_mine', '<span>' + mine.length + ' / ' + QT_MAX + '</span>') +
+        '<div class="a-desc">' + esc(S('quick_hint_mine')) + '</div><div class="qs-order">' + mine.map(row).join('') + '</div></div>' +
+        '<div class="a-sec" data-hl="qs-add">' + head('quick_card_add', '<span>' + esc(S('quick_by_firmware')) + '</span>') +
+        '<div class="qs-cats cl-chips" data-sk="qs-cats">' + cats + '</div><div class="a-grid g3 qs-catalog">' +
+        (current ? current[2].map(tile).join('') : '') + '</div><div class="qs-actions"><button class="b" data-a="qsDefaults">' +
+        esc(S('quick_defaults')) + '</button></div></div></div>' +
+        '<div class="a-sec" data-hl="qs-preview">' + head('quick_card_preview') + '<div class="qs-grid">' + preview +
+        '</div><div class="qs-actions"><button class="b primary" data-a="qsOpen">' + esc(S('quick_title')) + '</button></div></div>';
     }
 
     // ── Pop-up Réglages rapides (QuickSettingsOverlay) ───────────────────────
@@ -4099,7 +4651,7 @@
     quickHtml(o) {
       const tiles = qtTiles(), moving = car().speed > 3;
       const grid = tiles.map((t, i) => {
-        const off = moving && QT[t].stop, opts = QT[t].opts(), two = opts.length === 2, yn = two && opts.some(([v]) => v === true);
+        const off = moving && QT[t].stop, opts = qtOptions(t), two = opts.length === 2, yn = two && opts.some(([v]) => v === true);
         const lit = yn && QT[t].get() === true;
         // Bulle des valeurs, accrochée à la tuile (au-dessus ; en dessous pour la première rangée).
         const cur = QT[t].get();
@@ -4122,13 +4674,14 @@
         { label: S('automation_cat_leave'), icon: 'door_exit', page: this.windowsCard() + this.doorCard() },
         { label: S('sound_title'), icon: 'music', page: k.door ? cards.c6 : '' },
         { id: 'rules', label: S('rule_page_title'), icon: 'branch', page: this.rulesPage(), hl: 'auto-rules' }
-      ]);
+      ], 'auto-pages');
     }
     /** Page « Mes automatisations » (CustomRulesPage) : interrupteur général, liste, outils. */
     rulesPage() {
       const R = state.rules, u = this.ui;
       const tool = (key, a) => '<button class="rl-tool" data-a="' + a + '">' + esc(S(key)) + '</button>';
-      const head = '<div class="rl-head" data-hl="rules-head"><div class="a-row"><span class="a-title" style="flex:1">' + esc(S('rule_page_title')) + ' <small class="rl-count">' + esc(S('rule_count_fmt', R.list.length, RULES_MAX)) + '</small></span>' +
+      const head = '<div class="rl-head" data-hl="rules-head"><div class="a-row"><span class="a-title">' + esc(S('rule_page_title')) +
+        '</span><span class="rl-count">' + esc(S('rule_count_fmt', R.list.length, RULES_MAX)) + '</span>' +
         '<button class="b solid rl-new" data-a="rNew" data-hl="rules-new">' + esc(S('rule_new')) + '</button></div>' +
         '<div class="a-row rl-tools-row" data-hl="rules-tools"><span class="lbl" style="flex:0 0 auto">' + esc(S('rule_engine_switch')) + '</span>' + sw(R.engine, 'rEngine') + '<span style="flex:1"></span>' +
         tool('rule_tool_history', 'rHist') + tool('rule_tool_variables', 'rVars') + tool('rule_tool_places', 'rPlaces') + tool('abrp_tool', 'rAbrp') +
@@ -4150,6 +4703,10 @@
     ruleEditHtml() {
       const e = this.ui.rEdit; if (!e) return '';
       const r = e.rule;
+      rNormalizeActions(r.act);
+      const conditionModes = (path, current) => '<div class="rl-condition-mode"><span>' + esc(S('rule_group_prefix')) +
+        '</span><div class="ov-seg rv-seg">' + Object.keys(rGroups).map((op) => '<button class="' + (op === (current || 'all') ? 'on' : '') +
+          '" data-a="rCondOp" data-v="' + path + '|' + op + '">' + esc(S('rule_group_' + op)) + '</button>').join('') + '</div></div>';
       const line = (kind, path, i, it, depth) => {
         const pv = kind + '|' + path + '|' + i;
         // Un seul ⋮ par ligne, comme l'éditeur : Modifier, Monter, Descendre, Dupliquer, Copier, Couper, Supprimer.
@@ -4160,34 +4717,53 @@
           const by = this.ruleLaunchers(r.id);
           h += '<div class="a-desc rl-by" style="margin-left:' + (depth * 26 + 12) + 'px">' + esc(by.length ? S('rule_manual_by_fmt', by.join(', ')) : S('rule_manual_none')) + '</div>';
         }
-        if (kind === 'act' && it.k === 'if') {
-          ['then', 'else'].forEach((b) => {
-            const p = path + '.' + i + '.' + b;
-            h += '<div class="rl-branch" style="margin-left:' + (depth + 1) * 26 + 'px">' + esc(b === 'then' ? S('rule_if_condition') : S('rule_if_else')) + '</div>' +
-              it[b].map((x, j) => line('act', p, j, x, depth + 2)).join('') +
-              '<button class="rl-add" style="margin-left:' + (depth + 2) * 26 + 'px" data-a="rAdd" data-v="act|' + p + '">+ ' + esc(S('rule_add_action')) + '</button>' + paste('act', p, depth + 2);
-          });
-        }
+        if (kind === 'cond' && it.k === 'group') h += branch('cond', 'children', null, it.children);
+        if (kind === 'act' && it.k === 'if') h += branch('cond', 'conditions', 'rule_if_condition', it.conditions);
+        if (kind === 'act' && it.k === 'wait_until') h += branch('cond', 'until', 'rule_if_condition', it.until);
+        if (kind === 'act' && (it.k === 'if' || it.k === 'repeat')) h += branch('act', 'then', it.k === 'if' ? 'rule_sec_then' : null, it.then);
+        if (kind === 'act' && it.k === 'if') h += branch('act', 'else', 'rule_if_else', it.else);
         return h;
+
+        function branch(type, field, label, children) {
+          const p = path + '.' + i + '.' + field;
+          const indent = (depth + 1) * 26;
+          const add = type === 'act' ? 'rule_add_action' : 'rule_add_condition';
+          return (label ? '<div class="rl-branch" style="margin-left:' + indent + 'px">' + esc(S(label)) + '</div>' : '') +
+            (field === 'conditions' && (children.length >= 2 || it.conditionOp === 'not') ?
+              '<div style="margin-left:' + indent + 'px">' + conditionModes(path + '|' + i, it.conditionOp) + '</div>' : '') +
+            children.map((x, j) => line(type, p, j, x, depth + 1)).join('') +
+            (it.k === 'wait_until' && children.length ? '' :
+              '<button class="rl-add" style="margin-left:' + indent + 'px" data-a="rAdd" data-v="' + type + '|' + p + '">+ ' +
+              esc(S(add)) + '</button>' + paste(type, p, depth + 1));
+        }
       };
       // « Coller » n'apparaît que là où l'élément copié a sa place (même section).
       const clip = this.ui.rClip;
       function paste(kind, path, depth) {
-        return clip && clip.kind === kind ? '<button class="rl-add paste" style="margin-left:' + (depth || 0) * 26 + 'px" data-a="rPaste" data-v="' + kind + '|' + path + '">📋 ' + esc(S('rule_paste')) + ' · ' + esc(rTxt(kind, clip.item)) + '</button>' : '';
+        return clip && clip.kind === kind && rFits(kind, clip.item, path, r.id) ?
+          '<button class="rl-add paste" style="margin-left:' + (depth || 0) * 26 + 'px" data-a="rPaste" data-v="' + kind + '|' + path + '">📋 ' +
+          esc(S('rule_paste')) + ' · ' + esc(rTxt(kind, clip.item)) + '</button>' : '';
       }
       const sec = (kind, titleKey, hintKey, emptyKey, addKey) => '<div class="a-card rl-sec" data-hl="rule-' + kind + '"><div class="rl-sh">' + esc(S(titleKey)) + '</div><div class="a-desc">' + esc(S(hintKey)) + '</div>' +
+        (kind === 'cond' && (r.cond.length >= 2 || r.conditionOp === 'not') ? conditionModes('', r.conditionOp) : '') +
         (r[kind].length ? r[kind].map((it, i) => line(kind, kind, i, it, 0)).join('') : '<div class="a-desc rl-empty">' + esc(S(emptyKey)) + '</div>') +
         '<button class="rl-add" data-a="rAdd" data-v="' + kind + '|' + kind + '">+ ' + esc(S(addKey)) + '</button>' + paste(kind, kind, 0) + '</div>';
       const o = r.opt;
       const opts = '<div class="a-card rl-sec" data-hl="rule-opt"><div class="rl-sh">' + esc(S('rule_sec_options')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('rule_opt_if_running')) + '</span><div class="a-grid g2" style="flex:0 0 360px"><button class="b sm' + (o.restart ? '' : ' on') + '" data-a="rOptRestart" data-v="0">' + esc(S('rule_opt_ignore')) + '</button>' +
         '<button class="b sm' + (o.restart ? ' on' : '') + '" data-a="rOptRestart" data-v="1">' + esc(S('rule_opt_restart')) + '</button></div></div>' +
+        '<label class="a-row"><span class="lbl">' + esc(S('rule_opt_cooldown')) + '<small>' + esc(S('rule_opt_cooldown_hint')) +
+        '</small></span><input class="a-input num" type="number" min="0" max="240" step="1" data-c="rCooldown" data-fid="rCooldown" value="' +
+        (o.cooldown || 0) + '"><span data-out="rCooldown">' + esc(o.cooldown ? S('rule_minutes_fmt', o.cooldown) : S('rule_opt_cooldown_none')) + '</span></label>' +
         '<div class="a-row"><span class="lbl">' + esc(S('rule_opt_ready')) + '</span>' + sw(o.ready, 'rOptReady') + '</div></div>';
-      const head = '<div class="a-card rl-ehead"><div class="a-row"><input class="a-input" style="flex:1" data-c="rName" data-fid="rName" maxlength="40" placeholder="' + esc(S('rule_name_hint')) + '" value="' + esc(r.name) + '">' +
-        '<span class="lbl" style="flex:0 0 auto">' + esc(S('rule_enabled')) + '</span>' + sw(r.on, 'rEditOn') + '</div></div>';
-      const foot = '<div class="a-grid g3"><button class="b" data-a="rCancel">' + esc(S('profile_cancel')) + '</button><button class="b" data-a="rTestDraft">' + esc(S('rule_test')) + '</button>' +
-        '<button class="b green" data-a="rSave" data-hl="rule-save">' + esc(S('rule_save')) + '</button></div>';
-      return '<div class="a-page">' + head + '<div class="a-scroll"><div class="a-stack">' + sec('trg', 'rule_sec_when', 'rule_sec_when_hint', 'rule_none_triggers', 'rule_add_trigger') +
+      const head = '<div class="rl-ehead"><label class="pe-name"><input class="a-input" data-c="rName" data-fid="rName" maxlength="40" placeholder=" " value="' +
+        esc(r.name) + '"><span>' + esc(S('rule_name_hint')) + '</span></label>' +
+        '<span class="lbl">' + esc(S('rule_enabled')) + '</span>' + sw(r.on, 'rEditOn') + '</div>';
+      const foot = '<div class="rl-efoot"><div><button class="b" data-a="rHist" data-v="' + esc(r.id || '') + '">' +
+        esc(S('rule_journal')) + '</button><button class="b" data-a="rTestDraft">' + esc(S('rule_test')) + '</button></div>' +
+        '<div><button class="b" data-a="rCancel">' + esc(S('profile_cancel')) + '</button><button class="b green" data-a="rSave" data-hl="rule-save">' +
+        esc(S('rule_save')) + '</button></div></div>';
+      return '<div class="a-page rl-editor">' + head + '<div class="a-scroll"><div class="a-stack">' + sec('trg', 'rule_sec_when', 'rule_sec_when_hint', 'rule_none_triggers', 'rule_add_trigger') +
         sec('cond', 'rule_sec_if', 'rule_sec_if_hint', 'rule_none_conditions', 'rule_add_condition') + sec('act', 'rule_sec_then', 'rule_sec_then_hint', 'rule_none_actions', 'rule_add_action') + opts + '</div></div>' + foot + '</div>';
     }
     /** Ce qui lance l'automatisation [id] : touches du volant, bulles, autres automatisations. */
@@ -4202,16 +4778,18 @@
       Object.keys(state.floating.sets).forEach((pid) => state.floating.sets[pid].list.forEach((b) => {
         if (b.action === 'RUN_RULE' && (b.ruleId || (b.extra || {}).ruleId) === id) out.push(S('rule_manual_bubble_fmt', b.title || S(ACTION_KEY.RUN_RULE)));
       }));
-      const lance = (l) => l.some((a) => (a.k === 'run_rule' && a.id === id) || (a.k === 'if' && (lance(a.then) || lance(a.else))));
+      const lance = (l) => l.some((a) => (a.k === 'run_rule' && a.id === id) ||
+        (a.then && lance(a.then)) || (a.else && lance(a.else)));
       state.rules.list.forEach((x) => { if (x.id !== id && lance(x.act)) out.push(S('rule_manual_rule_fmt', x.name)); });
       return Array.from(new Set(out));
     }
     /** Question Oui / Non d'une automatisation (bandeau en bas de l'écran) : sans réponse, Non. */
-    ruleAsk(msg) {
+    ruleAsk(msg, seconds = popupDelay(), timeoutAnswer = false) {
       return new Promise((ok) => {
+        if (this.ui.dialog?.type === 'rAsk') this.act('rAskNo');
         this.ui.dialog = { type: 'rAsk', msg, done: ok };
         clearTimeout(this._askT);
-        this._askT = setTimeout(() => { const d = this.ui.dialog; if (d && d.type === 'rAsk') { this.ui.dialog = null; this.render(); d.done(false); } }, popupDelay() * 1000);
+        this._askT = setTimeout(() => { const d = this.ui.dialog; if (d && d.type === 'rAsk') { this.ui.dialog = null; this.render(); d.done(timeoutAnswer); } }, seconds * 1000);
         this.render();
       });
     }
@@ -4228,7 +4806,7 @@
           // Grande fenêtre (Assistant.afficherGrand) : catégories à gauche, recherche, grille à droite.
           // Une tuile par option ; la recherche la trouve aussi par les mots de ses modes (2026-11-12).
           const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          const subs = rSubjects(d.kind).filter((x) => !(d.kind === 'act' && x.id === 'if' && d.path !== 'act')), q = norm((d.q || '').trim());
+          const subs = rSubjects(d.kind, d.path), q = norm((d.q || '').trim());
           const words = (x) => norm(x.name + ' ' + x.modes.map((m) => m.label + ' ' + (m.w || '')).join(' '));
           const hit = subs.filter((x) => !q || q.split(/\s+/).every((w) => words(x).includes(w)));
           const cats = R_CATS.filter((c) => subs.some((x) => x.cat === c));
@@ -4287,18 +4865,27 @@
           const sel = this.ui.clSel || [];
           const subtitle = sel.length > 1 ? S('settings_cluster_profiles_many', sel.length) :
             sel.length ? S('settings_cluster_profiles_one', profName(sel[0])) : '';
-          return win(1440, '<div class="mw-t">' + esc(S('cluster_layout_title')) + '</div>' +
-            (subtitle ? '<div class="mw-s">' + esc(subtitle) + '</div>' : '') +
+          return win(1440, '<div class="cll-head"><div class="mw-t">' + esc(S('cluster_layout_title')) + '</div>' +
+            (subtitle ? '<div class="mw-s">' + esc(subtitle) + '</div>' : '') + '</div>' +
             '<div class="cll-body"><div class="cll-left"><svg class="cll-sq" viewBox="0 0 260 260" data-clprev="' + c.mod + '" data-cllay role="img"></svg>' +
-            '<div class="mw-hint">' + esc(S('cluster_layout_hint')) + '</div></div><div class="cll-panel" data-sk="clpanel">' + panel + '</div></div>' +
-            '<div class="mw-acts cll-acts">' + B(S('cluster_layout_reset'), 'clLayReset') + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'clLaySave', 'p') + '</div>', 'cll-modal', 'cl-layout');
+            '<div class="cll-instruction">' + esc(S('cluster_layout_hint')) + '</div></div><div class="cll-panel" data-sk="clpanel">' + panel + '</div></div>' +
+            '<div class="mw-acts cll-acts">' + B(S('cluster_layout_reset'), 'clLayReset') + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'clLaySave', 'p') + '</div>', 'set-dialog cll-modal', 'cl-layout');
         }
         case 'clLayoutPick': {
           const c = this.ui.clLay, cur = c.L.slots[c.sel]?.info ?? null;
-          const items = [null, ...clInfoChoices()].map((info) => '<button class="mw-choice' + (cur === info ? ' on' : '') + '" data-a="clLayInfo" data-v="' + (info || '') + '"><b>' +
-            esc(info ? clInfoName(info) : S('cluster_layout_info_none')) + '</b></button>').join('');
-          return win(920, head(MW.list, S('floating_info_pick_title')) + '<div class="mw-grid three long" data-sk="clinfo">' + items + '</div>' +
-            '<div class="mw-acts">' + B(S('profile_cancel'), 'clLayPickClose') + '</div>', '', 'cl-layout-pick');
+          const search = esc(S('dialog_search')), query = d.query.trim().toLocaleLowerCase(appLang());
+          const choices = [null, ...clInfoChoices()].map((info) => [info, info ? clInfoName(info) : S('cluster_layout_info_none')]);
+          const items = choices.filter(([, label]) => label.toLocaleLowerCase(appLang()).includes(query)).map(([info, label]) => {
+            const path = CL_INFO_ICON[info];
+            return '<button class="mw-choice' + (cur === info ? ' on' : '') + '" data-a="clLayInfo" data-v="' + (info || '') + '">' +
+              (path ? '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="' +
+                path + '"/></svg>' : '') + '<b>' + esc(label) + '</b></button>';
+          }).join('');
+          const field = choices.length > 9 ? '<input class="a-input mw-imsearch" data-c="clPickQuery" data-fid="clPickQuery" aria-label="' +
+            search + '" placeholder="' + search + '" value="' + esc(d.query) + '">' : '';
+          return win(1040, head(MW.list, S('floating_info_pick_title')) + field +
+            '<div class="mw-grid long" data-sk="clinfo">' + (items || '<div class="mw-imempty">' + esc(S('dialog_search_none')) + '</div>') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'clLayPickClose') + '</div>', 'set-dialog', 'cl-layout-pick');
         }
         case 'rLineMenu': {
           // Menu ⋮ d'une ligne (CustomRuleEditFragment.menu) : seuls les gestes possibles à cette place.
@@ -4312,21 +4899,23 @@
         }
         case 'rMode': {
           // Le mode, après le toucher : « Régler sur… », « Bascule », un sens, un seuil…
-          const x = rSubjects(d.kind).find((y) => y.id === d.sid); if (!x) return null;
+          const x = rSubjects(d.kind, d.path).find((y) => y.id === d.sid); if (!x) return null;
           return win(900, head(MW.list, x.name, null) + '<div class="mw-grid" data-sk="rmode">' + x.modes.map((m, i) => '<button class="mw-choice" data-a="rModeOk" data-v="' + i + '"><b>' + esc(m.label) + '</b></button>').join('') + '</div>' +
             '<div class="mw-acts">' + B('←', 'rvBack') + B(S('profile_cancel'), 'dlgClose') + '</div>', '', 'rule-mode');
         }
         case 'rVal': return this.ruleValueDialog(d, h);
         case 'rHist': {
           // Toutes / Exécutées / Ignorées (2026-11-08) ; une entrée ignorée dit pourquoi.
-          const all = state.rules.hist, f = d.f || 'all';
+          const all = d.ruleId ? state.rules.hist.filter((x) => x.id === d.ruleId) : state.rules.hist;
+          const f = d.f || 'all';
           const H = all.filter((x) => f === 'all' || (f === 'skip' ? !!x.skipped : !x.skipped));
           const seg = '<div class="ov-seg mw-seg mt12">' + [['all', 'rule_hist_filter_all'], ['runs', 'rule_hist_filter_runs'], ['skip', 'rule_hist_filter_skipped']]
             .map(([v, k]) => '<button' + (f === v ? ' class="on"' : '') + ' data-a="rHistF" data-v="' + v + '">' + esc(S(k)) + '</button>').join('') + '</div>';
           const row = (x) => '<div class="rl-hrow' + (x.skipped ? ' skip' : '') + '"><b>' + esc(x.at + ' · ' + x.name) + '</b>' +
             (x.skipped ? (x.skipped.by ? '<div>' + esc(S('rule_hist_by_fmt', x.skipped.by)) + '</div>' : '') + '<div class="rl-skip">' + esc(S('rule_hist_skipped_fmt', x.skipped.long || S('rule_skip_short_conditions'))) + '</div>'
               : x.journal.map((l) => '<div>' + esc(l) + '</div>').join('')) + '</div>';
-          return win(1000, head(MW.list, S('rule_tool_history'), S('rule_hist_count_fmt', all.length, 20)) + seg + '<div class="mw-scroll rl-hist mt12" data-sk="hist">' +
+          return win(1000, head(MW.list, d.ruleId ? S('rule_journal_title_fmt', this.ui.rEdit?.rule.name || '') : S('rule_tool_history'),
+            S('rule_hist_count_fmt', all.length, 20)) + seg + '<div class="mw-scroll rl-hist mt12" data-sk="hist">' +
             (H.length ? H.map(row).join('') : '<div class="a-desc">' + esc(all.length ? S('rule_hist_empty_filter') : S('rule_never_run')) + '</div>') + '</div>' +
             '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
         }
@@ -4353,15 +4942,37 @@
             row.items.map((it, i) => '<button class="mw-choice" data-a="rImpPick" data-v="' + i + '"><b>' + esc(it) + '</b></button>').join('') + '</div>' +
             '<div class="mw-acts">' + B(S('profile_cancel'), 'rImpBack') + '</div>', '', 'mw-pick');
         }
-        case 'rInfo':
-          return confirm({ ico: MW.info, title: d.title, msg: d.msg, yes: S('nav_close') });
+        case 'rResources': {
+          const R = state.rules, places = d.resource === 'places', vars = !places;
+          const items = places ? R.places : Object.entries(R.variables).map(([name, value]) => ({ id: name, name, value }));
+          const title = S(places ? 'rule_tool_places' : 'rule_tool_variables');
+          const field = (id, label, value, attrs = '') => '<label class="rv-field"><span>' + esc(label) +
+            '</span><input class="a-input" data-c="rResourceField" data-x="' + id + '" data-fid="r-resource-' + id +
+            '" maxlength="32" ' + attrs + ' value="' + esc(value) + '"></label>';
+          const rows = items.map((item) => '<div class="a-row"><span class="lbl"><b>' + esc(item.name) + '</b> · ' +
+            esc(vars ? typeof item.value === 'boolean' ? S(item.value ? 'rule_var_true' : 'rule_var_false') : item.value :
+              S(item.inside ? 'rule_place_inside' : 'rule_place_outside') + ' · ' + item.radius + ' m') + '</span>' +
+            B(S(vars ? 'rule_var_edit_value' : item.inside ? 'rule_place_outside' : 'rule_place_move_here'), vars ? 'rResourceEdit' : 'rPlaceToggle', '', item.id) +
+            B(S('rule_delete'), 'rResourceDel', 'd', item.id) + '</div>').join('');
+          const fields = field('name', S(vars ? 'rule_var_name' : 'rule_place_name'), d.name || '') +
+            field('value', S(vars ? 'rule_var_number' : 'rule_place_radius'), d.value ?? (vars ? 0 : 200), 'type="number"') +
+            (vars ? '<div class="mw-acts">' + B(S('rule_var_true'), 'rResourceSave', '', 'true') + B(S('rule_var_false'), 'rResourceSave', '', 'false') +
+              B(S('rule_save'), 'rResourceSave', 'p', 'number') + '</div>' : '<div class="mw-acts">' + B(S('rule_place_here'), 'rResourceSave', 'p') + '</div>');
+          return win(900, head(MW.list, title, null) + '<div class="rv-body">' + (rows ||
+            '<div class="mw-cm">' + esc(S(vars ? 'rule_vars_empty' : 'rule_places_empty')) + '</div>') + '<div class="mw-pan">' + fields +
+            '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
+        }
         case 'rAbrp': {
-          // AbrpDialogs.comptes : un compte d'exemple, les trois tuiles, puis Fermer.
-          const tile = (key) => '<button class="mw-choice" data-a="rAbrpDemo"><b>' + esc(S(key)) + '</b></button>';
-          return win(900, head(MW.list, S('abrp_title'), S('abrp_subtitle_fmt', 1, 5)) +
-            '<div class="mw-pan mt14"><div class="a-row"><span class="lbl"><b>' + esc(L('Ma MG4', 'My MG4')) + '</b><br><small>••••1a2b · ' + esc(S('abrp_key_mg4')) + '</small></span>' +
-            '<button class="b sm" data-a="rAbrpDemo">' + esc(S('abrp_edit')) + '</button></div></div>' +
-            '<div class="mw-grid three mt14">' + tile('abrp_add') + tile('abrp_import_usb') + tile('abrp_template') + '</div>' +
+          const accounts = state.rules.accounts;
+          const rows = accounts.map((a) => '<div class="a-row"><span class="lbl"><b>' + esc(a.name) + '</b></span>' +
+            B(S('abrp_edit'), 'rAbrpEdit', '', a.id) + B(S('rule_delete'), 'rAbrpRemove', 'd', a.id) + '</div>').join('');
+          const fields = '<label class="rv-field"><span>' + esc(S('abrp_field_name')) +
+            '</span><input class="a-input" data-c="rResourceField" data-x="name" data-fid="r-abrp-name" maxlength="32" value="' +
+            esc(d.name || '') + '"></label><div class="mw-acts">' + B(S('rule_save'), 'rAbrpSave', 'p') + '</div>';
+          return win(900, head(MW.list, S('abrp_title'), S('abrp_subtitle_fmt', accounts.length, 5)) +
+            '<div class="rv-body"><div class="mw-pan">' + rows +
+            '<div class="a-desc">' + esc(L('Comptes de démonstration. Saisissez un nom pour tester le choix du compte dans une règle.', 'Demo accounts. Enter a name to test selecting an account in a rule.')) +
+            '</div>' + fields + '</div></div>' +
             '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose', 'p') + '</div>');
         }
         case 'rAsk':
@@ -4386,60 +4997,143 @@
           const tile = (v, t, s) => '<button class="mw-choice' + (d.dest === v ? ' on' : '') + '" data-a="expDest" data-v="' + v + '"><b>' + esc(t) + '</b><small>' + esc(s) + '</small></button>';
           return win(900, head(MW.download, d.title, d.sub) + '<div class="mw-grid three">' + tile('dl', S('stats_export_downloads'), 'Download/MG4Control') +
             tile('usb', L('Clé USB', 'USB drive'), 'MG4Control') + tile('other', L('Autre dossier…', 'Other folder…'), L('Parcourir', 'Browse')) + '</div>' +
-            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(d.go, 'expGo', 'p') + '</div>');
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(d.go, 'expGo', 'p') + '</div>',
+            d.what === 'stats' ? 'st-dialog' : '');
         }
         default: return null;
       }
     }
     /** Valeur d'une ligne (RuleValueDialogs) : boutons − / + maintenus, segments, texte ; rien au clavier sauf un message. */
     ruleValueDialog(d, h) {
-      const { B, win, head } = h, it = d.item, k = caps();
-      const stepper = (field, label, unit, min, max) => '<div class="rv-row"><span class="mw-cap">' + esc(label) + '</span><button class="mw-b" data-rep data-a="rvStep" data-v="' + field + ':-1:' + min + ':' + max + '">−</button>' +
-        '<b class="rv-v">' + esc(String(it[field]) + (unit || '')) + '</b><button class="mw-b" data-rep data-a="rvStep" data-v="' + field + ':1:' + min + ':' + max + '">+</button></div>';
+      const { B, win, head } = h, it = d.item;
+      const stepper = (field, label, unit, min, max, step = 1, display) => '<div class="rv-row"><span class="mw-cap">' + esc(label) +
+        '</span><button class="mw-b" data-rep data-a="rvStep" data-v="' + [field, -1, min, max, step].join(':') + '">−</button>' +
+        '<b class="rv-v">' + esc(display ?? (String(it[field] ?? 0) + (unit || ''))) +
+        '</b><button class="mw-b" data-rep data-a="rvStep" data-v="' + [field, 1, min, max, step].join(':') + '">+</button></div>';
       const seg = (field, opts) => '<div class="ov-seg rv-seg">' + opts.map(([v, lab]) => '<button class="' + (JSON.stringify(it[field]) === JSON.stringify(v) ? 'on' : '') + '" data-a="rvSet" data-v="' + esc(field + '=' + JSON.stringify(v)) + '">' + esc(lab) + '</button>').join('') + '</div>';
+      const choose = (field, label, opts) => '<label class="rv-field"><span>' + esc(label) +
+        '</span><select class="a-select" data-c="rvChoice" data-x="' + field + '">' + opts.map(([value, name]) =>
+        '<option value="' + esc(JSON.stringify(value)) + '"' + (it[field] === value ? ' selected' : '') + '>' + esc(name) + '</option>').join('') + '</select></label>';
+      const input = (field, label) => '<label class="rv-field"><span>' + esc(label) + '</span><input class="a-input" data-c="rvField" data-x="' +
+        field + '" data-fid="rv-' + field + '" maxlength="80" value="' + esc(it[field] ?? '') + '"></label>';
+      const variable = (field) => {
+        const names = Object.keys(state.rules.variables).sort();
+        return (names.length ? choose(field, S('rule_choose_variable'), [['', S('rule_var_new')], ...names.map((n) => [n, n])]) : '') +
+          input(field, S('rule_var_name'));
+      };
+      const place = () => {
+        const places = state.rules.places;
+        const current = places.length ? choose('id', S('rule_choose_place'), [['', '—'], ...places.map((p) => [p.id, p.name])]) : '';
+        return current + '<button class="mw-b" data-a="rvNewPlace">' + esc(S('rule_place_here')) + '</button>' +
+            (d.newPlace || !it.id ? input('placeName', S('rule_place_name')) + stepper('radius', S('rule_place_radius'), ' m', 50, 5000, 50) : '');
+      };
+      const month = (i, label) => '<div><div class="mw-cap">' + esc(label) + '</div>' +
+        stepper('m' + i, S('rule_cond_season'), '', 1, 12, 1, rMonthDay(it['m' + i], it['d' + i])) +
+        stepper('d' + i, S('rule_days_title'), '', 1, new Date(2024, it['m' + i], 0).getDate()) + '</div>';
       let body = '';
       switch (it.k) {
-        case 'soc_below': case 'soc_above': body = stepper('v', S('rule_sig_soc'), ' %', 5, 95); break;
+        case 'compare': {
+          const s = R_SIGNALS[it.sig];
+          if (!s) break;
+          const label = rSignalName(it.sig);
+          if (s.type === 'number') body = seg('op', ['above', 'below'].map((op) => [op, S(rOps[op])])) +
+            stepper('v', label, s.number[4], s.number[0], s.number[1], s.number[3]);
+          else if (s.type === 'bool') body = seg('op', ['yes', 'no'].map((op) => [op, S(rOps[op])]));
+          else body = seg('op', ['is', 'not'].map((op) => [op, S(rOps[op])])) +
+            (s.choices ? choose('v', label, s.choices()) : input('v', label));
+          break;
+        }
+        case 'changed': body = choose('sig', S('rule_choose_signal'), rSignals().filter(([, s]) => s.type !== 'number' || s.changes)
+          .map(([id]) => [id, rSignalName(id)])); break;
+        case 'group': body = seg('op', Object.entries(rGroups).map(([op, key]) => [op, S(key)])); break;
+        case 'season': body = '<div class="rv-pair">' + month(0, S('rule_range_from')) + month(1, S('rule_range_to')) + '</div>'; break;
+        case 'place': body = place() + seg('op', [['yes', S('rule_place_inside')], ['no', S('rule_place_outside')]]); break;
+        case 'navigate': body = place(); break;
+        case 'variable':
+          body = variable('name');
+          if (d.kind === 'cond') {
+            body += choose('op', S('rule_cond_variable'), [['yes', S('rule_var_true')], ['no', S('rule_var_false')],
+              ...['above', 'below', 'is', 'not'].map((op) => [op, S(rOps[op])])]);
+            if (!['yes', 'no'].includes(it.op)) body += stepper('v', S('rule_var_number'), '', -9999, 9999);
+          } else {
+            body += seg('op', ['true', 'false', 'number', 'add'].map((op) => [op, S('rule_var_' + op)]));
+            if (it.op === 'number' || it.op === 'add') {
+              const bound = it.op === 'add' ? 1000 : 9999;
+              body += stepper('v', S('rule_var_number'), '', -bound, bound);
+            }
+          }
+          break;
+        case 'save_value': body = choose('sig', S('rule_choose_signal'), rSignals().map(([id]) => [id, rSignalName(id)])) + variable('name'); break;
+        case 'soc_below': case 'soc_above': body = stepper('v', S('rule_sig_soc'), ' %', 0, 100); break;
         case 'seat_above': case 'seat_below': body = stepper('v', S('rule_key_seat_left'), '', 0, 3); break;
-        case 'temp_below': case 'temp_above': body = stepper('v', S('rule_sig_outside_temp'), ' °C', -20, 45); break;
-        case 'alt_below': case 'alt_above': body = stepper('v', S('rule_sig_altitude'), ' m', 0, 4000); break;
+        case 'temp_below': case 'temp_above': body = stepper('v', S('rule_sig_outside_temp'), ' °C', -30, 50); break;
+        case 'alt_below': case 'alt_above': body = stepper('v', S('rule_sig_altitude'), ' m', 0, 4000, 50); break;
         case 'steering_for': case 'seat_for': body = stepper('min', S('rule_for_title'), ' min', 1, 60); break;
-        case 'every': body = stepper('min', S('rule_every_title'), ' min', 1, 120) + '<div class="mw-hint">' + esc(S('rule_every_hint')) + '</div>'; break;
+        case 'every': body = stepper('min', S('rule_every_title'), ' min', 1, 1440) + '<div class="mw-hint">' + esc(S('rule_every_hint')) + '</div>'; break;
+        case 'sunrise': case 'sunset': body = stepper('offset', S('rule_sun_offset'), ' min', -180, 180, 5) +
+          '<div class="mw-hint">' + esc(S('rule_sun_offset_hint')) + '</div>'; break;
         case 'time': body = '<div class="mw-cap">' + esc(S('rule_time_title')) + '</div>' + stepper('h', 'h', '', 0, 23) + stepper('m', 'min', '', 0, 59); break;
         case 'time_range': body = '<div class="mw-cap">' + esc(S('rule_range_from')) + '</div>' + stepper('a0', 'h', '', 0, 23) + stepper('a1', 'min', '', 0, 59) +
           '<div class="mw-cap">' + esc(S('rule_range_to')) + '</div>' + stepper('b0', 'h', '', 0, 23) + stepper('b1', 'min', '', 0, 59) + '<div class="mw-hint">' + esc(S('rule_range_hint')) + '</div>'; break;
         case 'days': body = '<div class="mw-cap">' + esc(S('rule_days_title')) + '</div><div class="ov-seg rv-seg">' + DAY_KEYS.map((x) => '<button class="' + (it.d.includes(x) ? 'on' : '') + '" data-a="rvDay" data-v="' + x + '">' + esc(dayName(x)) + '</button>').join('') + '</div>'; break;
         case 'sun_up': case 'ready': body = seg('is', [[true, S('rule_on')], [false, S('rule_off')]]); break;
-        case 'random': body = stepper('p', S('rule_cond_random'), ' %', 5, 95) + '<div class="mw-hint">' + esc(S('rule_random_hint')) + '</div>'; break;
+        case 'random': body = stepper('p', S('rule_cond_random'), ' %', 1, 99) + '<div class="mw-hint">' + esc(S('rule_random_hint')) + '</div>'; break;
         case 'drive_mode': body = seg('m', DRIVE.map((m) => [m, driveName(m)])); break;
         case 'set': {
-          const keys = Object.keys(SET_KEYS).filter((x) => SET_KEYS[x].ok(k)), sk = SET_KEYS[it.key];
-          body = (d.lockKey ? '' : '<div class="mw-cap">' + esc(S('rule_choose_setting')) + '</div><div class="ov-seg rv-seg wrap">' + keys.map((x) => '<button class="' + (it.key === x ? 'on' : '') + '" data-a="rvKey" data-v="' + x + '">' + esc(S('rule_key_' + x)) + '</button>').join('') + '</div>') +
-            (sk.bool ? seg('v', [[true, S('rule_on')], [false, S('rule_off')]]) : sk.opts ? seg('v', sk.opts.map((n) => [n, valTxt(it.key, n)])) : stepper('v', S('rule_key_' + it.key), ' °C', sk.min, sk.max));
+          const sk = SET_KEYS[it.key], names = Object.keys(state.rules.variables).sort();
+          if (!sk) break;
+          const fixed = sk.bool ? seg('v', [[true, S('segment_yes')], [false, S('segment_no')]]) :
+            sk.opts ? seg('v', sk.opts.map((n) => [n, valTxt(it.key, n)])) :
+              stepper('v', rSetName(it.key), sk.unit, sk.min, typeof sk.max === 'function' ? sk.max() : sk.max, sk.step, valTxt(it.key, it.v));
+          body = (names.length ? choose('variable', rSetName(it.key), [['', S('rule_value_fixed')], ...names.map((n) => [n, S('rule_value_from_var') + ' · ' + n])]) : '') +
+            (it.variable ? '' : fixed);
           break;
         }
-        case 'brightness': body = stepper('v', S('rule_sig_brightness'), ' %', briMin(), 100); break;
+        case 'brightness': body = stepper('v', S('rule_sig_brightness'), ' %', 0, 100, 5); break;
         case 'volume': body = stepper('v', S('rule_sig_volume'), '', 0, car().volMax); break;
-        case 'wait': body = stepper('s', S('rule_wait_title'), ' s', 1, 30); break;
+        case 'wait': body = stepper('s', S('rule_wait_title'), ' s', 1, 3600); break;
+        case 'wait_until': body = stepper('s', S('rule_wait_until_title'), ' s', 1, 3600) + '<div class="mw-hint">' + esc(S('rule_wait_until_hint')) + '</div>'; break;
+        case 'repeat': body = stepper('count', S('rule_repeat_title'), '', 2, 20); break;
         case 'windows': body = seg('close', [[true, S('shortcuts_action_windows_close')], [false, S('shortcuts_action_windows_open')]]); break;
         case 'media': body = seg('play', [[true, S('rule_act_media_play')], [false, S('rule_act_media_pause')]]); break;
-        case 'abrp': body = seg('on', [[true, S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4'))], [false, S('abrp_rule_stop')]]); break;
+        case 'abrp': body = seg('on', [[true, S('abrp_rule_action')], [false, S('abrp_rule_stop')]]) +
+          (it.on ? (state.rules.accounts.length ? choose('id', S('abrp_tool'), state.rules.accounts.map((a) => [a.id, S('abrp_rule_start_fmt', a.name)])) :
+            '<div class="mw-hint">' + esc(S('abrp_no_accounts')) + '</div>') : ''); break;
+        case 'android':
+          if (it.w === 'settings') body = choose('target', S('rule_settings_page_title'), R_ANDROID_PAGES.map((p) => [p, S('rule_settings_page_' + p)]));
+          else if (it.w === 'close') body = choose('target', S('rule_close_app_title'), rClosableApps().map((p) => [p, p]));
+          break;
+        case 'open_app': body = choose('target', S('shortcuts_pick_app_title'), APPS.map((p) => [p, p])); break;
+        case 'custom': body = choose('id', S('rule_act_custom'), state.sc.custom.map((c) => [c.id, c.name])); break;
+        case 'sound': {
+          body = choose('sound', S('rule_choose_sound'), rSoundChoices()) + '<button class="mw-b" data-a="rvSoundPicker">' + esc(S('rule_sound_import')) + '</button>';
+          if (state.rules.sounds.length) body += '<button class="mw-b" data-a="rvSoundDelete">' + esc(S('rule_sound_delete')) + '</button>';
+          if (d.soundPicker) body += '<div class="mw-grid">' + USB_SOUNDS.map(([file]) => B(file, 'rvSoundImport', '', file)).join('') + '</div>';
+          if (d.soundDelete) body += '<div class="mw-grid">' + state.rules.sounds.map((s) => B(s.name, 'rvSoundRemove', 'd', s.id)).join('') + '</div>';
+          if (it.sound === 'beep') body += stepper('volume', S('rule_sound_beep_volume'), ' %', 10, 100, 10);
+          else if (!it.sound?.startsWith('page:')) body += stepper('volume', S('rule_sound_volume'), '', 0, car().volMax, 1, it.volume || S('rule_sound_volume_unchanged'));
+          break;
+        }
         case 'profile': body = '<div class="mw-grid" data-sk="rvp">' + state.profiles.map((p) => '<button class="mw-choice' + (it.id === p.id ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('id=' + JSON.stringify(p.id)) + '">' + modePill(p) + '<b>' + esc(p.name) + '</b></button>').join('') + '</div>'; break;
-        case 'stop_rule':
-        case 'run_rule': body = '<div class="mw-grid" data-sk="rvr">' + state.rules.list.filter((r) => !this.ui.rEdit || r.id !== this.ui.rEdit.rule.id).map((r) => '<button class="mw-choice' + (it.id === r.id ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('id=' + JSON.stringify(r.id)) + '"><b>' + esc(r.name) + '</b></button>').join('') + '</div>'; break;
+        case 'stop_rule': case 'run_rule': case 'rule_enable':
+          body = choose('id', S('rule_act_rule'), state.rules.list.filter((r) => it.k === 'rule_enable' || r.id !== this.ui.rEdit?.rule.id).map((r) => [r.id, r.name]));
+          if (it.k === 'rule_enable') body += seg('on', [[true, S('rule_rule_enable')], [false, S('rule_rule_disable')]]);
+          break;
         case 'shortcut': body = '<div class="mw-grid long" data-sk="rvs">' + availableActions().filter((a) => !['NONE', 'APPLY_PROFILE', 'OPEN_CUSTOM_APP', 'CUSTOM', 'RUN_RULE'].includes(a)).map((a) =>
           '<button class="mw-choice' + (it.a === a ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('a=' + JSON.stringify(a)) + '"><b>' + esc(S(ACTION_KEY[a])) + '</b></button>').join('') + '</div>'; break;
         case 'notify': case 'speak': case 'confirm':
-          body = '<div class="mw-cap">' + esc(S(it.k === 'notify' ? 'rule_notify_title' : it.k === 'speak' ? 'rule_speak_title' : 'rule_confirm_title')) + '</div><input class="a-input" style="width:100%" data-c="rvMsg" data-fid="rvMsg" maxlength="80" value="' + esc(it.msg) + '">'; break;
-        case 'if': body = '<div class="mw-cap">' + esc(S('rule_if_condition')) + '</div><div class="ov-seg rv-seg wrap">' + ['sun_up', 'ready', 'temp_below', 'temp_above', 'soc_below', 'drive_mode', 'random'].map((x) =>
-          '<button class="' + (it.c.k === x ? 'on' : '') + '" data-a="rvIf" data-v="' + x + '">' + esc(R_COND[x].name()) + '</button>').join('') + '</div><div class="mw-hint">' + esc(R_COND[it.c.k].txt(it.c)) + '</div>'; break;
+          body = input('msg', S(it.k === 'notify' ? 'rule_notify_title' : it.k === 'speak' ? 'rule_speak_title' : 'rule_confirm_title'));
+          if (it.k === 'confirm') body += stepper('s', S('rule_confirm_delay'), ' s', 5, 120) +
+            choose('timeoutAnswer', S('rule_confirm_no_answer'), [[false, S('rule_confirm_no_answer_stop')], [true, S('rule_confirm_no_answer_go')]]);
+          break;
+        case 'if': body = '<div class="mw-hint">' + esc(rConditionSummary(it)) + '</div>'; break;
         default: body = '<div class="mw-cm">' + esc(rTxt(d.kind, it)) + '</div>';
       }
       // « Pendant combien de temps ? » pour chaque déclencheur qui suit un état (2026-11-12).
       if (d.kind === 'trg' && !R_MOMENTS.includes(it.k)) {
         const f = it.for || 0;
-        body += '<div class="rv-row"><span class="mw-cap">' + esc(S('rule_for_title')) + '</span><button class="mw-b" data-rep data-a="rvStep" data-v="for:-1:0:3600">−</button>' +
-          '<b class="rv-v">' + esc(f ? rDur(f) : S('rule_for_now')) + '</b><button class="mw-b" data-rep data-a="rvStep" data-v="for:1:0:3600">+</button></div><div class="mw-hint">' + esc(S('rule_for_hint')) + '</div>';
+        body += stepper('for', S('rule_for_title'), '', 0, 3600, 1, f ? rDur(f) : S('rule_for_now')) +
+          '<div class="mw-hint">' + esc(S('rule_for_hint')) + '</div>';
       }
       return win(900, head(MW.list, d.title || rItem(d.kind, it).name(), rTxt(d.kind, it)) + '<div class="rv-body">' + body + '</div>' +
         '<div class="mw-acts">' + (d.back ? B(S('rule_keep_editing').replace(/.*/, '←'), 'rvBack') : '') + B(S('profile_cancel'), 'dlgClose') + B('OK', 'rvOk', 'p') + '</div>', '', 'rule-val');
@@ -4447,23 +5141,41 @@
     /** Une ligne neuve à régler avant d'entrer dans la règle ; sans réglage à faire, elle entre tout de suite. */
     rulePicked(kind, path, k, pre, title) {
       const d = R_DEF[kind][k], it = Object.assign({ k }, rClone(d.def || {}), rClone(pre || {}));
-      if (kind === 'act' && k === 'profile' && !it.id) it.id = (state.profiles[0] || {}).id;
-      if (kind === 'act' && (k === 'run_rule' || k === 'stop_rule')) { const o = state.rules.list.find((r) => !this.ui.rEdit || r.id !== this.ui.rEdit.rule.id); it.id = o ? o.id : null; }
-      if (kind === 'act' && k === 'if') Object.assign(it, { c: { k: 'sun_up', is: true }, then: [], else: [] });
-      if ((kind === 'act' && (k === 'notify' || k === 'speak' || k === 'confirm'))) it.msg = '';
-      if (kind === 'act' && k === 'set') { const sk = SET_KEYS[it.key]; it.v = sk.bool ? true : sk.opts ? sk.opts[sk.opts.length - 1] : 21; }
+      if (kind === 'act') {
+        const rules = state.rules.list.filter((r) => k === 'rule_enable' || r.id !== this.ui.rEdit.rule.id);
+        if (['run_rule', 'stop_rule', 'rule_enable'].includes(k) && !rules.length) return this.toast(S('rule_none_to_pick'));
+        if (['run_rule', 'stop_rule', 'rule_enable'].includes(k)) it.id = rules[0].id;
+        if (k === 'if') Object.assign(it, { conditions: [], then: [], else: [] });
+        if (k === 'set') it.v = rSetDefault(it.key);
+        if (k === 'abrp') it.id = state.rules.accounts[0]?.id || '';
+        if (k === 'android' && it.w === 'close') it.target = rClosableApps()[0];
+        if (k === 'android' && it.w === 'settings') it.target = R_ANDROID_PAGES[0];
+        if (k === 'open_app') it.target = APPS[0];
+        if (k === 'custom' && !state.sc.custom.length) return this.toast(S('custom_page_empty'));
+        if (k === 'custom') it.id = state.sc.custom[0].id;
+      }
+      if (k === 'place' || k === 'navigate') {
+        it.id = state.rules.places[0]?.id || '';
+        it.radius = 200;
+      }
+      if (k === 'compare' && R_SIGNALS[it.sig]?.choices && !R_SIGNALS[it.sig].choices().length) {
+        return this.toast(S(it.sig === 'BT_DEVICE' ? 'rule_no_phones' : 'rule_no_profiles'));
+      }
       if (kind === 'cond' && k === 'time_range') { it.a0 = 22; it.a1 = 0; it.b0 = 6; it.b1 = 0; }
       if (kind === 'trg' && !R_MOMENTS.includes(k)) it.for = 0;
-      // Rien à régler : la ligne entre tout de suite. Un état demande toujours « Pendant ».
-      const simple = kind === 'trg' ? R_MOMENTS.includes(k) && !d.def
-        : d.def ? Object.keys(d.def).every((f) => pre && f in pre) : !['run_rule', 'stop_rule', 'if'].includes(k);
+      const simple = kind === 'trg' ? ['app_start', 'manual'].includes(k)
+        : kind === 'cond' ? k === 'group' || (k === 'compare' && R_SIGNALS[it.sig].type === 'bool')
+        : ['shortcut', 'media', 'profile', 'stop', 'windows', 'if'].includes(k) || (k === 'android' && ['home', 'back'].includes(it.w));
       if (simple) { rList(this.ui.rEdit.rule, path).push(it); this.ui.dialog = null; return this.render(); }
-      this.ui.dialog = { type: 'rVal', kind, path, idx: null, item: it, back: { kind, path }, lockKey: kind === 'act' && k === 'set', title };
+      this.ui.dialog = { type: 'rVal', kind, path, idx: null, item: it, back: { kind, path }, title };
       this.render();
     }
     /** Ce qu'une ligne range vraiment (time_range garde ses heures en a/b). */
     ruleFix(it) {
       if (it.k === 'time_range' && it.a0 != null) { it.a = [it.a0, it.a1]; it.b = [it.b0, it.b1]; delete it.a0; delete it.a1; delete it.b0; delete it.b1; }
+      if (Object.hasOwn(it, 'name')) it.name = rVariableName(it.name);
+      delete it.placeName;
+      delete it.radius;
       return it;
     }
 
@@ -4503,7 +5215,15 @@
         case 'dcClear': u.driveDraft = []; this.render(); return true;
         case 'dcSave': if (u.driveDraft && u.driveDraft.length >= 2) { sc.driveCycle = u.driveDraft.slice(); commit(); this.toast(S('shortcuts_cfg_regen_saved')); } return true;
         // Réglages rapides
-        case 'qsAdd': { const t = qtTiles(); if (t.length < QT_MAX) { state.quick.tiles = t.concat([v]); commit(); } return true; }
+        case 'qsCat': u.qsCat = v; this.render(); return true;
+        case 'qsOption': {
+          const t = el.getAttribute('data-x'), all = QT[t].opts(), val = JSON.parse(v);
+          const kept = qtOptions(t).map(([x]) => x), has = kept.includes(val);
+          if (has && kept.length <= 2) return true;
+          state.quick.values[t] = all.map(([x]) => x).filter((x) => x === val ? !has : kept.includes(x));
+          commit(); return true;
+        }
+        case 'qsAdd': { const t = qtTiles(); if (t.length < QT_MAX && !t.includes(v)) { state.quick.tiles = t.concat([v]); commit(); } return true; }
         case 'qsDel': state.quick.tiles = qtTiles().filter((x) => x !== v); commit(); return true;
         case 'qsUp': case 'qsDown': { const t = qtTiles(), i = +v, j = a === 'qsUp' ? i - 1 : i + 1; if (j >= 0 && j < t.length) { [t[i], t[j]] = [t[j], t[i]]; state.quick.tiles = t; commit(); } return true; }
         case 'qsDefaults': state.quick.tiles = null; commit(); return true;
@@ -4517,7 +5237,7 @@
         case 'qsTile': {
           const o = u.overlay; if (!o) return true;
           o.left = popupDelay();
-          const opts = QT[v].opts();
+          const opts = qtOptions(v);
           // Deux valeurs proposées : un toucher bascule, sans bulle.
           if (opts.length === 2) { o.sel = null; const cur = QT[v].get(), nx = opts.find(([x]) => x !== cur) || opts[0]; if (QT[v].set(nx[0]) === false) this.toast(S('quick_write_failed')); commit(); return true; }
           o.sel = o.sel === v ? null : v; this.render(); return true;
@@ -4536,14 +5256,57 @@
         case 'rEdit': { const r = R.list.find((x) => x.id === v); if (r) { u.rEdit = { rule: rClone(r), isNew: false }; u.screen = 'ruleEdit'; this.render(); } return true; }
         case 'rTest': { const r = R.list.find((x) => x.id === v); if (r) { runRule(r, S('rule_test'), true); this.toast(S('rule_test_started', r.name)); } return true; }
         case 'rDel': u.dialog = { type: 'rDelete', id: v }; this.render(); return true;
-        case 'rDelOk': R.list = R.list.filter((x) => x.id !== u.dialog.id); u.dialog = null; commit(); return true;
-        case 'rHist': u.dialog = { type: 'rHist', f: 'all' }; this.render(); return true;
+        case 'rDelOk': {
+          const id = u.dialog.id;
+          rStop(id);
+          rLastRun.delete(id);
+          Object.keys(rSeen).filter((key) => key.startsWith(id + ':')).forEach((key) => delete rSeen[key]);
+          R.list = R.list.filter((r) => r.id !== id);
+          u.dialog = null; commit(); return true;
+        }
+        case 'rHist': u.dialog = { type: 'rHist', f: 'all', ruleId: v }; this.render(); return true;
         case 'rHistF': if (u.dialog) u.dialog.f = v; this.render(); return true;
-        // Variables et lieux : la maquette n'en crée pas, la fenêtre « vide » de l'application s'affiche.
-        case 'rVars': u.dialog = { type: 'rInfo', title: S('rule_tool_variables'), msg: S('rule_vars_empty') }; this.render(); return true;
-        case 'rPlaces': u.dialog = { type: 'rInfo', title: S('rule_tool_places'), msg: S('rule_places_empty') }; this.render(); return true;
+        case 'rVars': case 'rPlaces': u.dialog = { type: 'rResources', resource: a === 'rVars' ? 'variables' : 'places' }; this.render(); return true;
+        case 'rResourceEdit': u.dialog.name = v; u.dialog.value = R.variables[v]; this.render(); return true;
+        case 'rResourceDel':
+          if (u.dialog.resource === 'places') R.places = R.places.filter((p) => p.id !== v);
+          else delete R.variables[v];
+          this.render(); return true;
+        case 'rPlaceToggle': {
+          const place = R.places.find((p) => p.id === v);
+          if (place) place.inside = !place.inside;
+          this.render(); return true;
+        }
+        case 'rResourceSave': {
+          const d = u.dialog, name = (d.name || '').trim();
+          if (d.resource === 'places') {
+            if (!name) return this.toast(S('rule_place_name'));
+            R.places.push({ id: uid(), name, radius: clamp(+d.value || 200, 50, 5000), inside: true });
+          } else {
+            if (!rVariableName(name)) return this.toast(S('rule_var_name'));
+            R.variables[rVariableName(name)] = v === 'number' ? clamp(+d.value || 0, -9999, 9999) : v === 'true';
+          }
+          d.name = ''; d.value = null; this.render(); return true;
+        }
         case 'rAbrp': u.dialog = { type: 'rAbrp' }; this.render(); return true;
-        case 'rAbrpDemo': this.toast(L('Démonstration : dans l\'application, le compte se saisit au clavier ou s\'importe depuis la clé USB.', 'Demo: in the app, the account is typed in or imported from the USB drive.'), 3200); return true;
+        case 'rAbrpEdit': {
+          const account = R.accounts.find((a) => a.id === v);
+          if (account) Object.assign(u.dialog, { id: account.id, name: account.name });
+          this.render(); return true;
+        }
+        case 'rAbrpRemove':
+          R.accounts = R.accounts.filter((a) => a.id !== v);
+          if (R.abrp === v) R.abrp = null;
+          if (u.dialog.id === v) { u.dialog.id = null; u.dialog.name = ''; }
+          this.render(); return true;
+        case 'rAbrpSave': {
+          const d = u.dialog, name = (d.name || '').trim(), account = R.accounts.find((a) => a.id === d.id);
+          if (!name) return this.toast(S('abrp_field_name'));
+          if (account) account.name = name;
+          else if (R.accounts.length < 5) R.accounts.push({ id: uid(), name });
+          else return this.toast(S('abrp_subtitle_fmt', R.accounts.length, 5));
+          d.id = null; d.name = ''; this.render(); return true;
+        }
         case 'rExport': u.dialog = { type: 'export', what: 'rules', dest: 'dl', title: S('rule_export_title'), sub: S('rule_export_subtitle', R.list.length), go: S('rule_tool_export') }; this.render(); return true;
         case 'rImport': {
           // Démonstration (2026-11-14) : un fichier venu d'une autre voiture, deux automatisations coupées ;
@@ -4582,6 +5345,11 @@
         case 'rEditOn': if (e) { e.rule.on = !e.rule.on; this.render(); } return true;
         case 'rOptReady': if (e) { e.rule.opt.ready = !e.rule.opt.ready; this.render(); } return true;
         case 'rOptRestart': if (e) { e.rule.opt.restart = v === '1'; this.render(); } return true;
+        case 'rCondOp': {
+          const bits = v.split('|');
+          const target = bits[0] ? rList(e.rule, bits[0])[+bits[1]] : e.rule;
+          target.conditionOp = bits.at(-1); this.render(); return true;
+        }
         case 'rCancel': u.rEdit = null; u.screen = 'automation'; u.tabs.auto = 'rules'; this.render(); return true;
         case 'rTestDraft': if (e) { runRule(e.rule, S('rule_test'), true); this.toast(S('rule_test_started', e.rule.name)); } return true;
         case 'rSave': {
@@ -4590,22 +5358,27 @@
           if (!e.rule.act.length) { this.toast(S('rule_need_action')); return true; }
           const i = R.list.findIndex((x) => x.id === e.rule.id);
           if (i >= 0) R.list[i] = e.rule; else R.list.push(e.rule);
+          Object.keys(rSeen).filter((key) => key.startsWith(e.rule.id + ':')).forEach((key) => delete rSeen[key]);
           u.rEdit = null; u.screen = 'automation'; u.tabs.auto = 'rules'; commit(); return true;
         }
         case 'rAdd': { const [kind, path] = v.split('|'); u.dialog = { type: 'rPick', kind, path, q: '', cat: null }; this.render(); return true; }
         case 'rCat': if (u.dialog) { u.dialog.cat = v || null; this.render(); } return true;
         case 'rPickOk': {
-          const d = u.dialog, x = rSubjects(d.kind).find((y) => y.id === v); if (!x) return true;
+          const d = u.dialog, x = rSubjects(d.kind, d.path).find((y) => y.id === v); if (!x) return true;
           if (x.modes.length === 1) { this.rulePicked(d.kind, d.path, x.modes[0].k, x.modes[0].pre, x.name); return true; }
           u.dialog = { type: 'rMode', kind: d.kind, path: d.path, sid: v, back: { kind: d.kind, path: d.path } }; this.render(); return true;
         }
         case 'rModeOk': {
-          const d = u.dialog, x = rSubjects(d.kind).find((y) => y.id === d.sid), m = x && x.modes[+v];
+          const d = u.dialog, x = rSubjects(d.kind, d.path).find((y) => y.id === d.sid), m = x && x.modes[+v];
           if (m) this.rulePicked(d.kind, d.path, m.k, m.pre, x.name); return true;
         }
         case 'rEditLine': {
           const [kind, path, i] = v.split('|'), it = rList(e.rule, path)[+i];
           const copy = rClone(it); if (copy.k === 'time_range') { copy.a0 = copy.a[0]; copy.a1 = copy.a[1]; copy.b0 = copy.b[0]; copy.b1 = copy.b[1]; }
+          if (copy.k === 'place' || copy.k === 'navigate') copy.radius = 200;
+          if (copy.k === 'confirm') { copy.s ??= 15; copy.timeoutAnswer ??= false; }
+          if (copy.k === 'sound') { copy.sound ??= 'beep'; copy.volume ??= 70; }
+          if (copy.k === 'variable' && kind === 'cond' && !copy.op) copy.op = 'yes';
           u.dialog = { type: 'rVal', kind, path, idx: +i, item: copy }; this.render(); return true;
         }
         case 'rDelLine': { const [p, i] = pathIdx(); rList(e.rule, p).splice(i, 1); this.render(); return true; }
@@ -4632,29 +5405,57 @@
         }
         case 'rPaste': {
           const [kind, p] = v.split('|'), c = u.rClip; if (!c || c.kind !== kind) return true;
-          // Une automatisation ne peut pas se lancer elle-même.
-          if (c.item.k === 'run_rule' && c.item.id === e.rule.id) { this.toast(S('rule_paste_self'), 3000); return true; }
+          if (!rFits(kind, c.item, p, e.rule.id)) return true;
           rList(e.rule, p).push(rClone(c.item)); this.render(); return true;
         }
         case 'rUp': case 'rDown': { const [p, i] = pathIdx(), l = rList(e.rule, p), j = a === 'rUp' ? i - 1 : i + 1; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; this.render(); return true; }
         // Fenêtre de valeur
         case 'rvStep': {
-          const [f, dir, min, max] = v.split(':'), it = u.dialog.item;
-          if (f === 'for') {
-            // Comme l'éditeur : par 5 s jusqu'à une minute, par 15 s jusqu'à 10 min, puis par minute.
-            const cur = +it.for || 0, sens = +dir, pas = sens > 0 ? (cur < 60 ? 5 : cur < 600 ? 15 : 60) : (cur <= 60 ? 5 : cur <= 600 ? 15 : 60);
-            it.for = clamp(cur + sens * pas, 0, 3600); this.render(); return true;
+          const [f, dir, min, max, fixed] = v.split(':'), it = u.dialog.item;
+          const cur = +it[f] || 0, previous = cur - (+dir < 0 ? 1 : 0);
+          let step = +fixed || 1;
+          if (f === 'for' || (f === 's' && (it.k === 'wait' || it.k === 'wait_until'))) step = previous < 60 ? 1 : previous < 600 ? 15 : 60;
+          if (f === 'min' && it.k === 'every') step = previous < 15 ? 1 : previous < 120 ? 5 : 30;
+          if (f === 'radius') step = previous < 500 ? 50 : 250;
+          it[f] = clamp(cur + (+dir) * step, +min, +max);
+          if (it.k === 'season' && (f === 'm0' || f === 'm1')) {
+            const day = 'd' + f[1];
+            it[day] = Math.min(it[day], new Date(2024, it[f], 0).getDate());
           }
-          const step = f === 'v' && it.k === 'brightness' ? 5 : f === 'v' && (it.k === 'alt_above' || it.k === 'alt_below') ? 50 : f === 'min' && it.k === 'every' ? 5 : 1;
-          it[f] = clamp((+it[f] || 0) + (+dir) * step, +min, +max); this.render(); return true;
+          this.render(); return true;
         }
         case 'rvSet': { const i = v.indexOf('='), it = u.dialog.item; it[v.slice(0, i)] = JSON.parse(v.slice(i + 1)); this.render(); return true; }
-        case 'rvKey': { const it = u.dialog.item, sk = SET_KEYS[v]; it.key = v; it.v = sk.bool ? true : sk.opts ? sk.opts[sk.opts.length - 1] : 21; this.render(); return true; }
         case 'rvDay': { const it = u.dialog.item, x = +v, i = it.d.indexOf(x); if (i >= 0) { if (it.d.length > 1) it.d.splice(i, 1); } else { it.d.push(x); it.d.sort(); } this.render(); return true; }
-        case 'rvIf': { const it = u.dialog.item; it.c = Object.assign({ k: v }, rClone(R_COND[v].def || {})); this.render(); return true; }
+        case 'rvNewPlace': u.dialog.newPlace = !u.dialog.newPlace; this.render(); return true;
+        case 'rvSoundPicker': u.dialog.soundPicker = !u.dialog.soundPicker; this.render(); return true;
+        case 'rvSoundDelete': u.dialog.soundDelete = !u.dialog.soundDelete; this.render(); return true;
+        case 'rvSoundImport': {
+          let sound = R.sounds.find((s) => s.name === v);
+          if (!sound) {
+            if (R.sounds.length >= 12) return this.toast(S('rule_sound_full', 12));
+            sound = { id: uid(), name: v }; R.sounds.push(sound);
+          }
+          u.dialog.item.sound = sound.id; u.dialog.item.volume = 0; u.dialog.soundPicker = false; this.render(); return true;
+        }
+        case 'rvSoundRemove':
+          R.sounds = R.sounds.filter((s) => s.id !== v);
+          if (u.dialog.item.sound === v) { u.dialog.item.sound = 'beep'; u.dialog.item.volume = 70; }
+          u.dialog.soundDelete = false; this.render(); return true;
         case 'rvBack': { const b = u.dialog.back; u.dialog = { type: 'rPick', kind: b.kind, path: b.path, q: '', cat: null }; this.render(); return true; }
         case 'rvOk': {
-          const d = u.dialog, it = this.ruleFix(d.item), l = rList(e.rule, d.path);
+          const d = u.dialog, item = d.item;
+          if (item.k === 'place' || item.k === 'navigate') {
+            const name = (item.placeName || '').trim();
+            if (d.newPlace || !item.id) {
+              if (!name) return this.toast(S('rule_place_name'));
+              const place = { id: uid(), name, radius: item.radius || 200, inside: true };
+              R.places.push(place); item.id = place.id;
+            }
+          }
+          if (Object.hasOwn(item, 'name') && !rVariableName(item.name)) return this.toast(S('rule_var_name'));
+          if (item.k === 'abrp' && item.on && !item.id) return this.toast(S('abrp_no_accounts'));
+          if (item.k === 'compare' && R_SIGNALS[item.sig]?.type === 'text' && !String(item.v || '').trim()) return this.toast(rSignalName(item.sig));
+          const it = this.ruleFix(item), l = rList(e.rule, d.path);
           if (d.idx == null) l.push(it); else l[d.idx] = it;
           u.dialog = null; this.render(); return true;
         }
@@ -4680,8 +5481,24 @@
         }
         case 'wkName': case 'pName': if (u.dialog) u.dialog.name = t.value; return true;
         case 'rName': if (u.rEdit) u.rEdit.rule.name = t.value; return true;
+        case 'rCooldown': {
+          if (!u.rEdit) return true;
+          const value = clamp(Math.floor(+t.value || 0), 0, 240);
+          u.rEdit.rule.opt.cooldown = value;
+          t.value = String(value);
+          const out = this.app.querySelector('[data-out="rCooldown"]');
+          if (out) out.textContent = value ? S('rule_minutes_fmt', value) : S('rule_opt_cooldown_none');
+          return true;
+        }
         case 'rQ': if (u.dialog) { u.dialog.q = t.value; this.render(); } return true;
-        case 'rvMsg': if (u.dialog) u.dialog.item.msg = t.value; return true;
+        case 'rvField': if (u.dialog?.item) u.dialog.item[t.dataset.x] = t.value; return true;
+        case 'rvChoice': {
+          if (!u.dialog?.item || !t.value) return true;
+          const it = u.dialog.item, key = t.dataset.x;
+          it[key] = JSON.parse(t.value);
+          if (key === 'sound') it.volume = it.sound === 'beep' ? 70 : 0;
+          this.render(); return true;
+        }
         default: return false;
       }
     }
@@ -4698,7 +5515,8 @@
         const tone = o.tone || '';
         const body = o.html ? '<div class="mw-cm left">' + o.html + '</div>' : o.msg ? '<div class="mw-cm' + (o.msg.indexOf('\n\n') >= 0 ? ' left' : '') + '">' + esc(o.msg) + '</div>' : '';
         return win(640, '<span class="mw-badge big ' + tone + '">' + (o.ico || (tone ? MW.warning : MW.question)) + '</span><div class="mw-ct">' + esc(o.title) + '</div>' + body +
-          '<div class="mw-acts tall">' + (o.no ? B(o.no, o.noAct || 'dlgClose') : '') + B(o.yes, o.yesAct || 'dlgClose', tone === 'danger' ? 'd' : tone === 'warn' ? 'w' : 'p') + '</div>', 'c');
+          '<div class="mw-acts tall">' + (o.no ? B(o.no, o.noAct || 'dlgClose') : '') + B(o.yes, o.yesAct || 'dlgClose', tone === 'danger' ? 'd' : tone === 'warn' ? 'w' : 'p') + '</div>',
+          o.cls ? 'c ' + o.cls : 'c');
       };
       const ext = this.extDialog(d, { B, win, head, confirm });
       if (ext) return ext;
@@ -4709,30 +5527,31 @@
           return win(700, '<span class="mw-badge big warn">' + MW.warning + '</span><div class="mw-ct">' + esc(S('fw_unknown_title').replace(/^⚠\s*/, '')) + '</div>' +
             '<div class="mw-fw"><span>' + esc(S('settings_firmware_version')) + '</span><b>SWI???-00000</b></div><div class="mw-cm">' + esc(S('fw_unknown_body')) + '</div>' +
             '<div class="mw-hint">' + esc(S('fw_unknown_hint_settings', S('nav_settings'), S('settings_cat_info'))) + '</div>' +
-            '<div class="mw-acts tall">' + B(S('fw_unknown_btn_close'), 'fwClose') + B(S('fw_unknown_btn_continue'), 'fwContinue', 'w') + '</div>', 'c');
+            '<div class="mw-acts tall">' + B(S('fw_unknown_btn_close'), 'fwClose') + B(S('fw_unknown_btn_continue'), 'fwContinue', 'w') + '</div>', 'c set-dialog');
         case 'lang': {
           // Chaque langue s'écrit dans SA langue ; la question est redite en anglais sous le titre.
           const tile = (code) => '<button class="mw-lang" data-a="pickLang" data-v="' + code + '"><b>' + esc(S('settings_language_' + code)) + '</b><span>' + code.toUpperCase() + '</span></button>';
           const title = S('settings_language_pick_title'), en = 'Choose your language';
           return win(820, '<span class="mw-badge mid">' + MW.language + '</span><div class="mw-ct">' + esc(title) + '</div>' + (title !== en ? '<div class="mw-s center">' + en + '</div>' : '') +
-            [['fr', 'en', 'de', 'es', 'pt'], ['it', 'tr', 'pl', 'nb', 'cs']].map((r) => '<div class="mw-langs">' + r.map(tile).join('') + '</div>').join(''), 'c');
+            [['fr', 'en', 'de', 'es', 'pt'], ['it', 'tr', 'pl', 'nb', 'cs']].map((r) => '<div class="mw-langs">' + r.map(tile).join('') + '</div>').join(''), 'c set-dialog', 'language-dialog');
         }
         case 'update': {
           // Trois états sous le même en-tête (UpdateDialogManager) : les nouveautés et les actions,
           // le téléchargement, l'installation à la main. Hors Wi-Fi, une confirmation passe devant.
-          if (d.step === 'data') return confirm({ tone: 'warn', title: S('update_data_warn_title'), msg: S('update_data_warn_message'), yes: S('update_continue'), no: S('update_cancel'), yesAct: 'updDownload', noAct: 'updBack' });
+          if (d.step === 'data') return confirm({ tone: 'warn', title: S('update_data_warn_title'), msg: S('update_data_warn_message'),
+            yes: S('update_continue'), no: S('update_cancel'), yesAct: 'updDownload', noAct: 'updBack', cls: 'set-dialog' });
           const top = head(MW.download, S('update_available_title'), null, '<span class="mw-vers"><span class="mw-pillv">v' + esc(APP_VERSION) + '</span>' + MW.arrow + '<span class="mw-pillv acc">v2.x.x</span></span>');
           if (d.step === 'progress') return win(1100, top + '<div class="mw-pan mt16"><div class="mw-status">' + esc(S('update_downloading_pct', d.pct || 0)) + '</div><div class="mw-prog"><i style="width:' + (d.pct || 0) + '%"></i></div></div>' +
-            '<div class="mw-acts">' + B(S('update_cancel'), 'dlgClose') + '</div>');
+            '<div class="mw-acts">' + B(S('update_cancel'), 'dlgClose') + '</div>', 'set-dialog', 'update-dialog');
           if (d.step === 'manual' || d.step === 'done') return win(1100, top + '<div class="mw-cols mt16"><div class="mw-pan grow"><div class="mw-cap">' + esc(S('update_manual_title')) + '</div>' +
             '<div class="mw-text">' + esc(S(d.step === 'done' ? 'update_downloaded_instructions' : 'update_manual_instructions')) + '</div></div>' +
-            '<div class="mw-pan" style="width:240px">' + qrBox('releases', S('update_gh_releases_link'), 'https://github.com/SliDeeN/MG4Control/releases/latest', 160) + '</div></div><div class="mw-acts">' + B(S('update_close'), 'dlgClose') + '</div>');
+            '<div class="mw-pan" style="width:240px">' + qrBox('releases', S('update_gh_releases_link'), 'https://github.com/SliDeeN/MG4Control/releases/latest', 160) + '</div></div><div class="mw-acts">' + B(S('update_close'), 'dlgClose') + '</div>', 'set-dialog', 'update-dialog');
           const notes = L('(exemple : le texte des notes de version de GitHub s\'affiche ici)\n\n• Pop-up HVAC : nouvelle présentation\n• Sélecteur de profils en cartes\n• Bandeaux de confirmation en bas de l\'écran\n• Délai de fermeture des pop-ups réglable\n• Interrupteur par catégorie dans les profils\n• Automatisation selon le niveau de batterie\n• Luminosité automatique\n• Chauffage intelligent de la batterie\n• Feux de route automatiques\n• Cycle de profils au volant',
             '(example: the GitHub release notes are shown here)\n\n• HVAC pop-up: new look\n• Profile picker as cards\n• Confirmation banners at the bottom of the screen\n• Adjustable pop-up closing delay\n• Per-category switch in profiles\n• Automation based on battery level\n• Automatic brightness\n• Smart battery heating\n• Automatic high beams\n• Profile cycle on the steering wheel');
           return win(1100, top + '<div class="mw-cols mt16" style="height:320px"><div class="mw-col grow"><div class="mw-pan grow"><div class="mw-cap">' + esc(S('update_release_notes_label')) + '</div>' +
             '<div class="mw-scroll mw-text" data-sk="notes">' + esc(notes) + '</div></div><div class="mw-warn">' + esc(S('update_data_warning')) + '</div></div>' +
             '<div class="mw-col" style="width:330px">' + B(S('update_auto_btn'), 'updAuto', 'p xl') + B(S('update_manual_btn'), 'updManual') + B(S('update_later_btn'), 'dlgClose') +
-            '<button class="mw-link" data-a="dlgClose">' + esc(S('update_skip_btn')) + '</button></div></div>');
+            '<button class="mw-link" data-a="dlgClose">' + esc(S('update_skip_btn')) + '</button></div></div>', 'set-dialog', 'update-dialog');
         }
         case 'restore': {
           // La carte liste les profils retrouvés (RestoreProfilesDialog) ; sans profil dans la maquette, trois exemples.
@@ -4742,7 +5561,7 @@
             '<div class="mw-acts tall">' + B(S('profile_restore_cancel'), 'dlgClose') + B(S('profile_restore_confirm'), 'restoreYes', 'p', null, MW.restore) + '</div>');
         }
         case 'apiConfirm':
-          return confirm({ tone: 'danger', title: S('external_api_confirm_title'), yes: S('external_api_confirm_ok'), no: S('profile_cancel'), yesAct: 'apiOk',
+          return confirm({ tone: 'danger', title: S('external_api_confirm_title'), yes: S('external_api_confirm_ok'), no: S('profile_cancel'), yesAct: 'apiOk', cls: 'set-dialog',
             html: '<b class="red">' + esc(S('external_api_confirm_warn')) + '</b>\n\n' + esc(S('external_api_confirm_msg')) + '\n\n<span class="red">' + esc(S('external_api_confirm_risk')) + '</span>' });
         case 'advWarn':
           return confirm({ tone: 'warn', title: S('adv_sc_enable_warn_title'), msg: S('adv_sc_enable_warn_msg'), yes: S('adv_sc_enable_warn_ok'), no: S('profile_cancel'), yesAct: 'advWarnOk' });
@@ -4761,7 +5580,7 @@
         case 'immWarn': {
           // Avertissement (conflits possibles) puis l'astuce du glissement, « Astuce » en gras.
           const tip = S(car().rhd ? 'immersive_tip_right' : 'immersive_tip_left');
-          return confirm({ tone: 'warn', title: S('immersive_title'), yes: S('immersive_confirm_ok'), no: S('profile_cancel'), yesAct: 'immOk',
+          return confirm({ tone: 'warn', title: S('immersive_title'), yes: S('immersive_confirm_ok'), no: S('profile_cancel'), yesAct: 'immOk', cls: 'set-dialog',
             html: esc(S('immersive_confirm_msg')) + '\n\n<b>' + esc(S('immersive_tip_label')) + '</b> — ' + esc(tip) });
         }
         case 'immApps': {
@@ -4780,7 +5599,7 @@
             (apps.length > 6 ? '<input class="a-input mw-imsearch" data-c="immQuery" data-fid="immQuery" aria-label="' + search + '" placeholder="' + search + '" value="' + esc(d.query) + '">' : '') +
             '<div class="mw-imhint">' + esc(S('immersive_hint')) + '</div>' +
             '<div class="mw-imlist" data-sk="imm">' + (visible.length ? visible.map(ligne).join('') : '<div class="mw-imempty">' + esc(S('immersive_empty')) + '</div>') + '</div>' +
-            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('profile_save'), 'immSave', 'p') + '</div>', 'mw-immersive', 'imm-apps');
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('profile_save'), 'immSave', 'p') + '</div>', 'set-dialog mw-immersive', 'imm-apps');
         }
         case 'flIcon': {
           // Choix de l'icône (BubbleIcons.choisir) : catégories à gauche, recherche, grille.
@@ -4802,7 +5621,8 @@
             '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + '</div>', 'mw-iconpick', 'fl-icon');
         }
         case 'powerOff':
-          return confirm({ tone: 'danger', ico: MW.power, title: S('vehicle_power_dialog_title'), msg: S('vehicle_power_dialog_msg'), yes: S('vehicle_power_dialog_confirm'), no: S('vehicle_power_dialog_cancel'), yesAct: 'powerOk' });
+          return confirm({ tone: 'danger', ico: MW.power, title: S('vehicle_power_dialog_title'), msg: S('vehicle_power_dialog_msg'),
+            yes: S('vehicle_power_dialog_confirm'), no: S('vehicle_power_dialog_cancel'), yesAct: 'powerOk', cls: 'set-dialog' });
         case 'pickApp': case 'pickProfile': {
           // Grille de tuiles qui défile (AppDialog.choisir) : trois lignes et demie visibles, la tuile
           // coupée montre qu'il y a une suite ; le choix en cours est marqué.
@@ -4882,7 +5702,7 @@
             '<div class="actions">' + acts + '</div></div></div>';
         }
         case 'stClear':
-          return confirm({ tone: 'danger', ico: MW.trash, title: S('stats_clear'), msg: S('stats_clear_confirm', state.stats.trips.length, state.stats.charges.length), yes: S('stats_clear'), no: S('nav_close'), yesAct: 'stClearOk' });
+          return confirm({ tone: 'danger', ico: MW.trash, title: S('stats_clear'), msg: S('stats_clear_confirm', state.stats.trips.length, state.stats.charges.length), yes: S('stats_clear'), no: S('nav_close'), yesAct: 'stClearOk', cls: 'st-dialog' });
         case 'stFix':
           // Sans clavier (StatsDialogs.tarif) : le prix entre un − et un +, et dessous le pas de ces
           // boutons. Un appui maintenu répète le pas.
@@ -4890,7 +5710,7 @@
             '<div class="mw-pan mt14"><div class="mw-price"><button class="mw-step big" data-a="stFixStep" data-v="-1" data-rep>' + MW.minus + '</button><div><b>' + esc(this.price(d.val)) + '</b><span>' + esc(state.stats.currency) + '/kWh</span></div>' +
             '<button class="mw-step big" data-a="stFixStep" data-v="1" data-rep>' + MW.plus + '</button></div>' +
             '<div class="ov-seg mw-seg sm">' + d.steps.map((st, i) => '<button' + (i === d.stepI ? ' class="on"' : '') + ' data-a="stFixPas" data-v="' + i + '">± ' + esc(this.price(st)) + '</button>').join('') + '</div></div>' +
-            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + B(S('stats_tariff_default'), 'stFixDef') + B(S('stats_save'), 'stFixOk', 'p') + '</div>');
+            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + B(S('stats_tariff_default'), 'stFixDef') + B(S('stats_save'), 'stFixOk', 'p') + '</div>', 'st-dialog');
         case 'stComplete': {
           // Sans clavier (StatsDialogs.completer). Une heure reste « non renseignée » tant qu'on n'y
           // touche pas : enregistrer le seul type de prise ne doit pas inventer des horaires. Le
@@ -4906,7 +5726,7 @@
           return win(820, head(MW.plug, S('stats_complete_session'), S('stats_complete_note')) + '<div class="mw-cap mt14 mb6">' + esc(S('stats_complete_type')) + '</div>' +
             '<div class="ov-seg mw-seg">' + types.map(([v, key]) => '<button' + ((d.typeSel || '') === v ? ' class="on"' : '') + ' data-a="stType" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div>' +
             '<div class="mw-cols mt12">' + time('start', 'stats_complete_start') + time('end', 'stats_complete_end') + '</div>' +
-            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + B(S('stats_save'), 'stCompleteOk', 'p') + '</div>');
+            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + B(S('stats_save'), 'stCompleteOk', 'p') + '</div>', 'st-dialog');
         }
         case 'pMenu': {
           // AppDialog.choisir : le nom du profil en titre, les trois gestes en tuiles.
@@ -4929,13 +5749,37 @@
             '<div class="mw-pills">' + pill('info_version_label', APP_VERSION) + pill('info_firmware_label', state.fw === 'UNKNOWN' ? 'SWI???-00000' : state.fw + '-xxxxx') + '</div>' +
             '<div class="mw-credit">' + esc(S('info_made_with_love')) + '</div><div class="mw-thanks">' + esc(S('info_special_thanks')) + '</div></div>' +
             '<div class="mw-pan mw-qrs">' + qrBox('github', 'GitHub', 'https://github.com/SliDeeN/MG4Control', 150) +
-            qrBox('gitlab', 'GitLab', 'https://gitlab.com/SliDeeN/mg4control', 150) + '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
+            qrBox('gitlab', 'GitLab', 'https://gitlab.com/SliDeeN/mg4control', 150) + '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>', 'set-dialog');
+        }
+        case 'chargeState': {
+          const c = car(), ch = c.charge;
+          // Exemples du véhicule virtuel, avec les mêmes codes que ChargeStateNames.
+          const [status, label] = ch?.done ? [2, 'Charging complete'] : ch?.type === 'DC' ?
+            [10, 'Fast charging (offboard)'] : ch ? [1, 'Slow charging (onboard)'] : [0, 'Unplugged'];
+          if (d.status != null && d.status !== status) {
+            d.history.unshift(nowHM() + ' · ' + d.status + ' → ' + status + ' · ' + c.soc + ' %');
+            if (d.history.length > 6) d.history.pop();
+          }
+          d.status = status;
+          const charging = status !== 0 && status !== 2;
+          const source = S('charge_state_saic_name', label);
+          const close = '<button class="mw-round" data-a="dlgClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button>';
+          const history = d.history.length ? d.history.map((row) => '<div>' + esc(row) + '</div>').join('') :
+            '<div>' + esc(S('charge_state_history_empty')) + '</div>';
+          const readings = 'BMS_CHRG_STS = ' + status + '\nSOC = ' + c.soc + ' %' +
+            (ch ? '\n' + ch.type + ' · ' + this.num(ch.kw, 1) + ' kW' : '');
+          return win(1100, head(MW.plug, S('btn_charge_state'), null, close) +
+            '<div class="mw-pan mt14 set-charge-fields"><div><b class="set-charge-number' + (charging ? ' on' : '') + '">' + status +
+            '</b><div>' + esc(source) + '</div><small>' + esc(S(charging ? 'charge_state_ours_charging' : 'charge_state_ours_idle')) +
+            '</small></div><pre>' + esc(readings) + '</pre></div>' +
+            '<div class="mw-pan mt12 set-charge-history"><b>' + esc(S('charge_state_history')) + '</b>' + history + '</div>' +
+            '<div class="mw-s mt12">' + esc(S('charge_state_hint')) + '</div>', 'set-dialog', 'charge-state');
         }
         case 'diag':
           // Le journal plein cadre (dialog_diagnostic.xml) : les actions restent en haut, le reste défile.
           return win(1320, head(MW.bug, S('diag_title'), null, '<div class="mw-tools">' + B(S(d.copied ? 'diag_copied' : 'diag_copy'), 'diagCopy', 'sm') + B(S('diag_save'), 'diagDl', 'sm') +
             '<button class="mw-round" data-a="dlgClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>') +
-            '<div class="mw-pan mw-log" data-sk="diag"><pre>' + esc(diagSample()) + '</pre></div>');
+            '<div class="mw-pan mw-log" data-sk="diag"><pre>' + esc(diagSample()) + '</pre></div>', 'set-dialog');
         default: return '';
       }
     }
@@ -5013,6 +5857,12 @@
           if (id === 'pkBri' && this.ui.overlay) this.ui.overlay.left = popupDelay();
         } else if (t.getAttribute('data-c') === 'eName' && this.ui.edit) {
           this.ui.edit.name = t.value;
+        } else if (t.getAttribute('data-c') === 'rName' && this.ui.rEdit) {
+          this.ui.rEdit.rule.name = t.value;
+        } else if (t.getAttribute('data-c') === 'rvField' && this.ui.dialog?.item) {
+          this.ui.dialog.item[t.dataset.x] = t.value;
+        } else if (t.getAttribute('data-c') === 'rResourceField' && this.ui.dialog) {
+          this.ui.dialog[t.dataset.x] = t.value;
         } else if (t.getAttribute('data-c') === 'rQ' && this.ui.dialog) {
           this.ui.dialog.q = t.value; this.render();   // recherche de la grande fenêtre, à chaque lettre
         } else if (t.getAttribute('data-c') === 'flIconQ' && this.ui.dialog?.type === 'flIcon') {
@@ -5021,6 +5871,10 @@
         } else if (t.getAttribute('data-c') === 'immQuery' && this.ui.dialog?.type === 'immApps') {
           this.ui.dialog.query = t.value;
           this.app.querySelector('.mw-imlist').scrollTop = 0;
+          this.render();
+        } else if (t.getAttribute('data-c') === 'clPickQuery' && this.ui.dialog?.type === 'clLayoutPick') {
+          this.ui.dialog.query = t.value;
+          this.app.querySelector('[data-sk="clinfo"]').scrollTop = 0;
           this.render();
         }
       });
@@ -5290,6 +6144,7 @@
         case 'cleanApk': u.apkFb = S('clean_apk_none'); this.render(); clearTimeout(this._apkT); this._apkT = setTimeout(() => { u.apkFb = null; this.render(); }, 3000); return;
         case 'about': u.dialog = { type: 'about' }; return this.render();
         case 'diag': u.dialog = { type: 'diag' }; return this.render();
+        case 'chargeState': u.dialog = { type: 'chargeState', history: [] }; return this.render();
         case 'diagCopy': if (u.dialog) u.dialog.copied = true; return this.render();   // le bouton dit « Copié ! », la fenêtre reste
         case 'diagDl': return this.toast(S('diag_saved'));
         case 'force': state.forced = v; state.fwDismissed = true; return r();
@@ -5525,7 +6380,7 @@
         case 'clLayConsKw': u.clLay.L.consKw = !u.clLay.L.consKw || null; return this.render();
         case 'clLayPowerCons': u.clLay.L.powerCons = u.clLay.L.powerCons === false ? null : false; return this.render();
         case 'clLayHp': u.clLay.L.powerUnit = v === 'hp' ? 'hp' : null; return this.render();
-        case 'clLayPick': u.dialog = { type: 'clLayoutPick' }; return this.render();
+        case 'clLayPick': u.dialog = { type: 'clLayoutPick', query: '' }; return this.render();
         case 'clLayPickClose': u.dialog = { type: 'clLayout' }; return this.render();
         case 'clLayInfo': {
           const { L, sel } = u.clLay, before = L.slots[sel];
@@ -5553,6 +6408,7 @@
           if (s.fullscreen) this.toast(L('Simulation : sur la voiture, la barre d\'état et la barre de navigation disparaissent.', 'Simulation: in the car, the status and navigation bars disappear.'), 3200);
           return;
         case 'hvacZone': s.hvacZone = !s.hvacZone; return r();
+        case 'replaceHvac': s.replaceHvac = !s.replaceHvac; return r();
         case 'projKick': s.projKick = !s.projKick; return r();
         // Applications en plein écran : avertissement à CHAQUE activation ; Annuler laisse l'option coupée.
         case 'immersive': if (s.immersive) { s.immersive = false; return r(); } u.dialog = { type: 'immWarn' }; return this.render();
@@ -5942,10 +6798,18 @@
         case 'newLook': u.screen = 'dashboard'; u.tabs.dash = 0; commit(); this.highlight('topbar'); return true;
         case 'navSide': u.screen = 'settings'; u.tabs.set = 1; commit(); this.highlight('s-navside'); return true;
         case 'wheel': u.screen = 'shortcuts'; u.tabs.sc = 'classic'; commit(); this.highlight('adv-service'); return true;
+        case 'wheelScopes':
+          sc.advService = sc.advOn = true;
+          this.go('shortcuts', 'classic');
+          return true;
         case 'quick':
           give('QUICK_SETTINGS', 'btn2_long');
           u.screen = 'shortcuts'; u.tabs.sc = 'quick'; commit();
-          setTimeout(() => this.openQuick(), 350); return true;
+          clearTimeout(this._quickDemoT);
+          this._quickDemoT = setTimeout(() => {
+            if (u.screen === 'shortcuts' && u.tabs.sc === 'quick' && !u.dialog) this.openQuick();
+          }, 350);
+          return true;
         case 'driveCycle': give('DRIVE_MODE_CYCLE', 'btn2_single'); u.screen = 'shortcuts'; u.tabs.sc = 'drivemode'; commit(); this.highlight('sc-drivemode'); return true;
         case 'runRule':
           give('RUN_RULE', 'btn1_long', { ruleId: (state.rules.list[0] || {}).id });
@@ -6489,6 +7353,11 @@
     commit();
   }
   function reset() {
+    for (const id of rActive.keys()) rStop(id);
+    rActive.clear();
+    rLastRun.clear();
+    Object.keys(rSeen).forEach((key) => delete rSeen[key]);
+    rMinute = null;
     const fw = state.fw;
     state = initialState(); state.fw = fw;
     clearTimeout(cycleTimer); cycleTarget = null;
@@ -6572,6 +7441,7 @@
       '<label class="dock-f"><span><span data-l10n="dock-temp"></span> <b data-o="temp"></b></span><input type="range" min="-15" max="45" step="1" data-d="temp"></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-soc"></span> <b data-o="soc"></b></span><input type="range" min="5" max="100" step="1" data-d="soc"></label>' +
       '<div class="dock-f"><span data-l10n="dock-lights"></span><div class="dock-row"><button type="button" class="dock-btn" data-d="lights"></button></div></div>' +
+      '<div class="dock-f" data-hvac-panel><span data-l10n="dock-climate"></span><div class="dock-row"><button type="button" class="dock-btn" data-d="hvacPanel" data-l10n="dock-climate-button"></button></div></div>' +
       '<div class="dock-f"><span><span data-l10n="dock-charge"></span> <b data-o="charge"></b></span><div class="dock-row"><button type="button" class="dock-btn" data-chg="AC"></button><button type="button" class="dock-btn" data-chg="DC"></button></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-bt"></span><div class="dock-row" data-o="bt"></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-doors"></span><div class="dock-row"><button type="button" class="dock-btn" data-door="L"></button><button type="button" class="dock-btn" data-door="R"></button></div></div>' +
@@ -6619,6 +7489,13 @@
       if (b.on && b.lights && b.follow && c.ready) autoBrightness();
       commit();
     });
+    q('[data-d=hvacPanel]').addEventListener('click', () => {
+      const sim = activeSim();
+      if (!sim || !caps().replaceHvac) return;
+      toggle(false);
+      if (state.settings.replaceHvac && !garage()) sim.openHvacPopup();
+      else sim.toast(L('Simulation · ouverture du panneau de climatisation d’origine', 'Simulation · opening the stock climate panel'));
+    });
     q('[data-o=bt]').addEventListener('click', (e) => { const b = e.target.closest('[data-mac]'); if (b) toggleBt(b.getAttribute('data-mac')); });
     el.querySelectorAll('[data-chg]').forEach((b) => b.addEventListener('click', () => {
       const t = b.getAttribute('data-chg'), ch = car().charge;
@@ -6655,11 +7532,13 @@
         'dock-temp': L('Temp. extérieure', 'Outside temp.'), 'dock-bt': L('Bluetooth connecté', 'Bluetooth connected'),
         'dock-doors': L('Portes avant', 'Front doors'), 'dock-media': L('Volume média', 'Media volume'), 'dock-wheel': L('Volant', 'Steering wheel'),
         'dock-active': L('Profil en cours (dernier appliqué)', 'Current profile (last applied)'),
-        'dock-soc': L('Batterie', 'Battery'), 'dock-lights': L('Feux', 'Lights'), 'dock-charge': L('Borne de recharge', 'Charger')
+        'dock-soc': L('Batterie', 'Battery'), 'dock-lights': L('Feux', 'Lights'), 'dock-charge': L('Borne de recharge', 'Charger'),
+        'dock-climate': L('Climatisation', 'Climate'), 'dock-climate-button': L('Touche climatisation', 'Climate button')
       };
       el.querySelectorAll('[data-l10n]').forEach((n) => { n.textContent = L10N[n.getAttribute('data-l10n')] || ''; });
       q('.dock-sum').textContent = L('Véhicule virtuel', 'Virtual vehicle') + ' · ' + (state.fw === 'UNKNOWN' && state.forced ? 'UNKNOWN→' + state.forced : state.fw) + ' · ' + c.speed + ' km/h · ' + c.outside + ' °C';
       q('[data-d=fw]').value = state.fw;
+      q('[data-hvac-panel]').hidden = !caps().replaceHvac;
       q('[data-d=mg4Dash]').value = c.mg4Dash;
       q('[data-d=driverSide]').value = c.rhd ? 'right' : 'left';
       q('[data-d=speed]').value = c.speed; q('[data-o=speed]').textContent = c.speed + ' km/h';

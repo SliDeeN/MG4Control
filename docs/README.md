@@ -1,7 +1,7 @@
 # Site MG4Control (GitHub Pages)
 
 Site statique de présentation de [MG4Control](https://github.com/SliDeeN/MG4Control), en français et
-en anglais, construit autour d'une maquette interactive de l'application (écran 1280 × 480) et d'un
+en anglais, construit autour d'une maquette interactive de l'application (écran 1920 × 720) et d'un
 « véhicule virtuel ». La maquette reste collée en haut de l'écran ; cliquer une fonctionnalité dans la
 liste l'amène au bon écran et surligne l'élément concerné.
 
@@ -171,6 +171,15 @@ Les règles par firmware sont regroupées dans la fonction `caps()` de `sim.js`,
 actions de raccourci dans `availableActions()`. Ce sont les deux endroits à relire lorsqu'une
 fonctionnalité change.
 
+Les sélecteurs de « Mes automatisations » reprennent les signaux, réglages et modes exposés par
+`CustomRuleEditFragment`. Les variables, lieux, sons USB et comptes ABRP se configurent avec des
+données de démonstration dans le navigateur. Les actions Android et l'envoi ABRP sont simulés.
+
+Le cadre du simulateur est de 1920 × 720. Les onglets principaux utilisent les cotes Android sur ce
+cadre, ainsi que les éditeurs de profils et de règles, les fenêtres de Statistiques et la
+personnalisation de l'écran conducteur. Les superpositions qui utilisent le repère de 1280 × 480
+sont agrandies proportionnellement.
+
 Les pop-ups et les fenêtres reprennent les mises en page de l'application, avec leurs dimensions :
 
 - `overlayHtml()` et `bannerHtml()` : ce qui se pose par-dessus l'écran de la voiture (sélecteur de
@@ -178,7 +187,7 @@ Les pop-ups et les fenêtres reprennent les mises en page de l'application, avec
   1108 × 392 dp occupe dans la maquette la même part d'écran que sur la voiture ;
 - `dialogHtml()` : les fenêtres de l'application, d'après `res/layout/dialog_*.xml`. Elles sont
   dessinées à leurs dimensions puis réduites d'un bloc par la classe `.mw` (`zoom` dans `sim.css`),
-  la plus large faisant 1320 dp pour un écran de maquette de 1280 ;
+  la plus large faisant 1320 dp pour les 1280 unités de leur repère ;
 - le bloc `MW` : les pictogrammes, dont les tracés sont recopiés des drawables de l'application
   (`ic_hvac_*`, `ic_overlay_*`, `ic_dialog_*`, `ic_heat_level_*`). Un pictogramme qui change dans
   l'application est à recopier ici.
