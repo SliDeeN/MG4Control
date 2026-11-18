@@ -242,6 +242,8 @@
     <string name="settings_auto_scope_loop_kept">Vaše nastavení zůstane</string>
     <string name="settings_auto_scope_note">Vše zaškrtnuto = standardní chování vozu. U nezaškrtnutých voleb MG4Control obnoví vaše nastavení ihned po zapnutí AUTO (okno klimatizace, stránka Klimatizace, profily a automatizace A/C).</string>
     <string name="settings_keep_ac_title">Klimatizace · A/C</string>
+    <string name="settings_replace_hvac_panel">Nahradit panel klimatizace</string>
+    <string name="settings_replace_hvac_panel_desc">Po krátkém stisku fyzického tlačítka klimatizace nahradí původní panel oknem MG4Control, pokud se panel otevře při zapnutém větrání.</string>
     <string name="settings_keep_ac">Nechat A/C vypnuté při změně teploty</string>
     <string name="settings_keep_ac_desc">Vůz při každé změně požadované teploty znovu zapne A/C. Pokud bylo vypnuté, MG4Control je opět vypne: při změně v MG4Control a zkušebně i na obrazovce vozu. Nikdy v režimu AUTO ani při zapnutém odmlžování čelního skla.</string>
     <string name="settings_projection_title">Android Auto · CarPlay</string>

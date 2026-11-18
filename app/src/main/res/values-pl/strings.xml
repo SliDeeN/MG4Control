@@ -286,6 +286,8 @@
     <string name="settings_auto_scope_loop_kept">Twój zostaje</string>
     <string name="settings_auto_scope_note">Wszystko zaznaczone = zachowanie samochodu. Odznaczone: MG4Control przywraca Twoje ustawienie zaraz po włączeniu AUTO (okno HVAC, strona Klimatyzacja, profile i automatyzacja A/C).</string>
     <string name="settings_keep_ac_title">Klimatyzacja · A/C</string>
+    <string name="settings_replace_hvac_panel">Zastąp panel klimatyzacji</string>
+    <string name="settings_replace_hvac_panel_desc">Po krótkim naciśnięciu fizycznego przycisku klimatyzacji zastępuje fabryczny panel oknem MG4Control, jeśli panel otworzy się przy włączonym nawiewie.</string>
     <string name="settings_keep_ac">Nie włączaj A/C przy zmianie temperatury</string>
     <string name="settings_keep_ac_desc">Samochód włącza A/C ponownie przy każdej zmianie temperatury zadanej. Jeśli było wyłączone, MG4Control wyłącza je znowu: z MG4Control oraz, testowo, z ekranu samochodu. Nigdy w AUTO ani przy włączonym odmrażaniu przedniej szyby.</string>
     <string name="settings_projection_title">Android Auto · CarPlay</string>

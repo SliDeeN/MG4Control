@@ -29,6 +29,9 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 
 /**
  * Pop-up HVAC (issues #120 et #125) : réglage rapide de la clim par-dessus n'importe quel écran,
@@ -75,6 +78,7 @@ object HvacPopupOverlay {
 
     /** Lectures et écritures clim : appels binder, certains bloquants (bascules relues). */
     private val vehicule = Executors.newSingleThreadExecutor()
+    private val lectures by lazy { vehicule.asCoroutineDispatcher() }
 
     /**
      * Sièges chauffants réglés à un niveau PRÉCIS : jusqu'à trois
@@ -212,6 +216,39 @@ object HvacPopupOverlay {
         }
     }
 
+    /**
+     * Relais de la touche d'origine : garde le panneau SAIC si on ne peut pas prendre la relève.
+     * Si notre pop-up est déjà là, seul le panneau SAIC est refermé.
+     */
+    internal suspend fun remplacerPanneauSaic(
+        context: Context,
+        autorise: () -> Boolean,
+        fermerSaic: suspend () -> Boolean,
+    ): Boolean = withContext(Dispatchers.Main.immediate) {
+        if (!autorise() || ouvertureEnCours) return@withContext false
+        val dejaAffichee = overlayView
+        ouvertureEnCours = true
+        try {
+            val (etatLu, chauds) = withContext(lectures) {
+                val lu = lireEtat()
+                lu to if (lu?.powerOn == true && dejaAffichee == null) lireChauffages() else null
+            }
+            if (etatLu?.powerOn != true || !autorise()) return@withContext false
+            if (dejaAffichee != null) return@withContext overlayView === dejaAffichee && fermerSaic()
+            showOnMain(context, etatLu, chauds)
+            val affichee = overlayView ?: return@withContext false
+            var ferme = false
+            try {
+                ferme = fermerSaic()
+                ferme
+            } finally {
+                if (!ferme && overlayView === affichee) fermer()
+            }
+        } finally {
+            ouvertureEnCours = false
+        }
+    }
+
     private fun lireEtat(): MG4Hardware.ClimateState? = try {
         MG4Hardware.getClimateState()
     } catch (e: Exception) {
@@ -289,7 +326,12 @@ object HvacPopupOverlay {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply { gravity = Gravity.CENTER }
-        wm.addView(view, params)
+        try {
+            wm.addView(view, params)
+        } catch (e: RuntimeException) {
+            AppLogger.w(TAG, "Pop-up HVAC non affiché — fenêtre : ${e.javaClass.simpleName} ${e.message}")
+            return
+        }
         gestionnaire = wm
         vues = v
         etat = lu

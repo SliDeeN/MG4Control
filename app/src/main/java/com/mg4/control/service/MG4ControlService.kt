@@ -175,6 +175,8 @@ class MG4ControlService : Service() {
     // ── Receiver API externe (issue #79) ─────────────────────────────────────
     private var externalApiReceiver: BroadcastReceiver? = null
 
+    private val panneauClimSaic by lazy { SaicHvacPanel(applicationContext) }
+
     // ── Listener de cycle d'allumage (Katman5) ──────────────────────────────
     private var vehicleConditionListener: ((Int) -> Unit)? = null
 
@@ -350,6 +352,7 @@ class MG4ControlService : Service() {
         externalApiReceiver?.let { unregisterReceiver(it) } // issue #79
         externalApiReceiver = null
         ProjectionKick.stop(this)            // issue #251
+        panneauClimSaic.stop()
         ImmersiveApps.unwatch(this)          // issue #248
         ClusterModuleOverlay.stop()
     }
@@ -544,11 +547,6 @@ class MG4ControlService : Service() {
         // n'avaient jamais été configurés.
         if (GarageMode.isOn(this)) return
 
-        val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
-
-        // Raccourcis désactivés globalement → on laisse le launcher gérer
-        if (!prefs.getBoolean("shortcut_enabled", false)) return
-
         // Lecture du keycode (plusieurs noms d'extra selon le firmware)
         val keycode = intent.getIntExtra("android.intent.extra.hardkey.keycode", -1)
             .takeIf { it >= 0 }
@@ -560,6 +558,14 @@ class MG4ControlService : Service() {
                      || intent.getBooleanExtra("down", false)
         val isLong = intent.getBooleanExtra("android.intent.extra.hardkey.longpress", false)
                      || intent.getBooleanExtra("longpress", false)
+
+        if (keycode == SaicHvacPanel.KEYCODE) {
+            panneauClimSaic.touche(isDown, isLong)
+            return
+        }
+        val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
+        // L'option HVAC est indépendante des raccourcis classiques.
+        if (!prefs.getBoolean("shortcut_enabled", false)) return
 
         AppLogger.i(TAG, "HARDKEY keycode=$keycode down=$isDown long=$isLong")
 

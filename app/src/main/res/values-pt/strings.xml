@@ -286,6 +286,8 @@
     <string name="settings_auto_scope_loop_kept">A sua é mantida</string>
     <string name="settings_auto_scope_note">Tudo marcado = comportamento do carro. Desmarcado: o MG4Control repõe a sua definição logo após ativar o AUTO (pop-up HVAC, página Clima, perfis e automatização A/C).</string>
     <string name="settings_keep_ac_title">Climatização · A/C</string>
+    <string name="settings_replace_hvac_panel">Substituir o painel da climatização</string>
+    <string name="settings_replace_hvac_panel_desc">Após um toque breve no botão físico da climatização, substitui o painel original pela janela do MG4Control se o painel abrir com a ventilação ativa.</string>
     <string name="settings_keep_ac">Manter o A/C desligado ao mudar a temperatura</string>
     <string name="settings_keep_ac_desc">O carro volta a ligar o A/C quando se muda a temperatura. Se estava desligado, o MG4Control desliga-o de novo: a partir do MG4Control e, em teste, a partir do ecrã do carro. Nunca em AUTO nem com o desembaciamento dianteiro.</string>
     <string name="settings_projection_title">Android Auto · CarPlay</string>

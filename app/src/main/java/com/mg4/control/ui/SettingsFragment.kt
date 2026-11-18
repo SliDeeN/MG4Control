@@ -61,6 +61,7 @@ import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.FullScreen
 import com.mg4.control.util.FloatingButtonSettings
 import com.mg4.control.service.ProjectionHvacZone
+import com.mg4.control.service.SaicHvacPanel
 import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ChargePopupSettings
 import com.mg4.control.util.ClusterModuleSettings
@@ -717,6 +718,12 @@ class SettingsFragment : Fragment() {
         view.findViewById<Switch>(R.id.switch_keep_ac).apply {
             isChecked = com.mg4.control.automation.AcKeepOff.isOn(requireContext())
             setOnCheckedChangeListener { _, checked -> com.mg4.control.automation.AcKeepOff.setOn(requireContext(), checked) }
+        }
+        view.findViewById<View>(R.id.row_replace_hvac_panel).visibility =
+            if (SaicHvacPanel.supported()) View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_replace_hvac_panel).apply {
+            isChecked = SaicHvacPanel.isOn(requireContext())
+            setOnCheckedChangeListener { _, checked -> SaicHvacPanel.setOn(requireContext(), checked) }
         }
 
         // ── Applis en plein écran (issue #248), désactivé par défaut ──

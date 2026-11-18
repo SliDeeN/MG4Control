@@ -286,6 +286,8 @@
     <string name="settings_auto_scope_loop_kept">Ihre wird beibehalten</string>
     <string name="settings_auto_scope_note">Alles aktiviert = Verhalten des Autos. Deaktiviert: MG4Control stellt Ihre Einstellung direkt nach dem Einschalten von AUTO wieder her (HVAC-Pop-up, Klimaseite, Profile und A/C-Automatisierung).</string>
     <string name="settings_keep_ac_title">Klimaanlage · A/C</string>
+    <string name="settings_replace_hvac_panel">Klimabedienfeld ersetzen</string>
+    <string name="settings_replace_hvac_panel_desc">Ersetzt nach einem kurzen Druck auf die physische Klimataste das Originalfenster durch das MG4Control-Fenster, wenn es sich bei laufender Lüftung öffnet.</string>
     <string name="settings_keep_ac">A/C ausgeschaltet lassen, wenn sich die Temperatur ändert</string>
     <string name="settings_keep_ac_desc">Das Fahrzeug schaltet die A/C bei jeder Änderung der Solltemperatur wieder ein. War sie aus, schaltet MG4Control sie wieder ab: aus MG4Control und testweise auch vom Fahrzeugbildschirm. Nie im AUTO-Modus oder mit Frontscheibenenteisung.</string>
     <string name="settings_projection_title">Android Auto · CarPlay</string>
