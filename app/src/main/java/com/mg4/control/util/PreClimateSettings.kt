@@ -25,7 +25,6 @@ object PreClimateSettings {
     private const val KEY_SURV_SCREEN = "preclim_surv_follows_screen"
     private const val KEY_SURV_NOCAM = "preclim_surv_without_camera"
     private const val KEY_MAX = "preclim_max_min"
-    private const val KEY_FIRST = "preclim_first_minute"
     private const val KEY_RUN = "preclim_run_min"
     private const val KEY_RUNS = "preclim_runs"
     private const val KEY_PAUSE = "preclim_pause_min"
@@ -95,8 +94,8 @@ object PreClimateSettings {
         return PreClimateRequest(
             mode = PreClimateMode.NOW,
             maxMin = PreClimatePlan.clampMax(p.getInt(KEY_MAX, PreClimatePlan.DEFAULT_MAX_MIN)),
-            firstMinuteOfDay = p.getInt(KEY_FIRST, -1).takeIf { it in 0 until 1440 }
-                ?: PreClimatePlan.defaultFirst(nowMinuteOfDay),
+            // L'heure part toujours de maintenant (issue #262) : elle n'est plus reprise d'une fois sur l'autre.
+            firstMinuteOfDay = PreClimatePlan.defaultFirst(nowMinuteOfDay),
             runMin = PreClimatePlan.clampRun(p.getInt(KEY_RUN, PreClimatePlan.DEFAULT_RUN_MIN)),
             runs = PreClimatePlan.clampRuns(p.getInt(KEY_RUNS, PreClimatePlan.DEFAULT_RUNS)),
             pauseMin = PreClimatePlan.clampPause(p.getInt(KEY_PAUSE, PreClimatePlan.DEFAULT_PAUSE_MIN)),
@@ -110,7 +109,6 @@ object PreClimateSettings {
     fun saveRequest(ctx: Context, r: PreClimateRequest) {
         prefs(ctx).edit()
             .putInt(KEY_MAX, r.maxMin)
-            .putInt(KEY_FIRST, r.firstMinuteOfDay)
             .putInt(KEY_RUN, r.runMin)
             .putInt(KEY_RUNS, r.runs)
             .putInt(KEY_PAUSE, r.pauseMin)

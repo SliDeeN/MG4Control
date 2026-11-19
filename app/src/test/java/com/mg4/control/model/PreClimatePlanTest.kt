@@ -107,8 +107,13 @@ class PreClimatePlanTest {
         assertEquals(1105, PreClimatePlan.stepFirst(1110, -1))
         assertEquals(1435, PreClimatePlan.stepFirst(0, -1))
         assertEquals(0, PreClimatePlan.stepFirst(1435, 1))
-        // Proposée la première fois : dans une heure, aux 5 minutes suivantes (17:18 → 18:20).
-        assertEquals(18 * 60 + 20, PreClimatePlan.defaultFirst(maintenant))
+        // Proposée à chaque ouverture (issue #262) : maintenant, aux 5 minutes suivantes, au moins
+        // une minute plus tard (17:18 → 17:20 ; 17:20:30 → 17:25) — jamais renvoyée au lendemain.
+        assertEquals(17 * 60 + 20, PreClimatePlan.defaultFirst(17 * 60 + 18.0))
+        assertEquals(17 * 60 + 25, PreClimatePlan.defaultFirst(17 * 60 + 20.5))
+        assertEquals(17 * 60 + 25, PreClimatePlan.defaultFirst(17 * 60 + 19.2))
+        assertEquals(0, PreClimatePlan.defaultFirst(23 * 60 + 57.0))
+        assertFalse(PreClimatePlan.isTomorrow(PreClimatePlan.defaultFirst(17 * 60 + 20.5), 17 * 60 + 20.5))
     }
 
     @Test fun `les reglages restent dans leurs bornes`() {

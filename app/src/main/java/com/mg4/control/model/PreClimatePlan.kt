@@ -257,10 +257,14 @@ object PreClimatePlan {
         return Math.floorMod(suivante, MINUTES_PAR_JOUR)
     }
 
-    /** Heure proposée la première fois : dans une heure, arrondie aux 5 minutes suivantes. */
+    /**
+     * Heure proposée à chaque ouverture (issue #262, 2026-11-19) : l'heure actuelle, arrondie aux
+     * 5 minutes suivantes, au moins une minute plus tard — sinon [isTomorrow] la renverrait au
+     * lendemain (17:18 → 17:20 ; 17:20:30 → 17:25).
+     */
     fun defaultFirst(nowMinuteOfDay: Double): Int {
-        val dans = (nowMinuteOfDay + 60).toInt()
-        return Math.floorMod(dans + (FIRST_STEP - dans % FIRST_STEP) % FIRST_STEP, MINUTES_PAR_JOUR)
+        val m = kotlin.math.ceil(nowMinuteOfDay + 1).toInt()
+        return Math.floorMod(m + (FIRST_STEP - m % FIRST_STEP) % FIRST_STEP, MINUTES_PAR_JOUR)
     }
 }
 
