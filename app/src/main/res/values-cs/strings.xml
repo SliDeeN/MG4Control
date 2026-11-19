@@ -1012,6 +1012,7 @@
     <string name="charge_state_hint">Nechte okno otevřené během nabíjení: připojení, začátek, konec, odpojení. Každá změna se zapíše i do protokolu Diagnostiky.</string>
     <string name="shortcuts_action_preclim">Hlídání vozu</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="shortcuts_action_track_mode">Track mode (okruh)</string>
     <string name="projection_no_phone">Není připojen žádný telefon (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Nelze otevřít %1$s</string>
     <string name="projection_redetect">Telefon je připojen: probíhá nový pokus o rozpoznání…</string>

@@ -1110,6 +1110,7 @@
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Fahrzeugwächter</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="shortcuts_action_track_mode">Track Mode (Rennstrecke)</string>
     <string name="projection_no_phone">Kein Telefon verbunden (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">%1$s lässt sich nicht öffnen</string>
     <string name="projection_redetect">Telefon angeschlossen: neuer Erkennungsversuch …</string>

@@ -115,6 +115,8 @@ object ShortcutCatalog {
             // Android Auto / CarPlay : le service AllGo est sur les six firmwares ; vérifié quand même,
             // un raccourci qui ne trouverait personne ne dirait que « aucun téléphone ».
             if (allgoPresent(ctx)) add(Item(ctx.getString(R.string.shortcuts_action_projection), ShortcutAction.PROJECTION))
+            // Track mode (issue #202) : seulement là où l'appli d'entretien SAIC le contient (SWI133, SWI68…).
+            if (com.mg4.control.util.TrackMode.available(ctx)) add(Item(ctx.getString(R.string.shortcuts_action_track_mode), ShortcutAction.TRACK_MODE))
             add(Item(ctx.getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(Item(ctx.getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
             add(Item(ctx.getString(R.string.shortcuts_action_android_settings), ShortcutAction.ANDROID_SETTINGS))

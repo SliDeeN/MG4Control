@@ -112,7 +112,10 @@ enum class ShortcutAction(val id: Int) {
     DRIVE_MODE_CYCLE(52),
     // Pop-up Réglages rapides (issue #197) : les tuiles choisies dans Raccourcis › Réglages rapides
     // (voir QuickSettingsOverlay). Un second appui le referme.
-    QUICK_SETTINGS(53);
+    QUICK_SETTINGS(53),
+    // Track mode (issue #202, 2026-11-19) : l'écran « circuit » de l'XPower, caché dans l'appli
+    // d'entretien SAIC (voir TrackMode) ; proposé seulement là où il existe. N'écrit rien.
+    TRACK_MODE(54);
 
     companion object {
         /**

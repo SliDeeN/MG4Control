@@ -1110,6 +1110,7 @@
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Araç bekçisi</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="shortcuts_action_track_mode">Track mode (pist)</string>
     <string name="projection_no_phone">Bağlı telefon yok (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">%1$s açılamadı</string>
     <string name="projection_redetect">Telefon takılı: yeniden algılanmaya çalışılıyor…</string>

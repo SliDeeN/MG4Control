@@ -1110,6 +1110,7 @@
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Custode dell’auto</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="shortcuts_action_track_mode">Track mode (pista)</string>
     <string name="projection_no_phone">Nessun telefono collegato (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Impossibile aprire %1$s</string>
     <string name="projection_redetect">Telefono collegato: nuovo tentativo di rilevamento…</string>

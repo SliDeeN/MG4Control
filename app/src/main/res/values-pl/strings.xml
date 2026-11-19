@@ -1110,6 +1110,7 @@
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Opiekun auta</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="shortcuts_action_track_mode">Track mode (tor)</string>
     <string name="projection_no_phone">Brak połączonego telefonu (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Nie udało się otworzyć %1$s</string>
     <string name="projection_redetect">Telefon podłączony: ponowna próba wykrycia…</string>

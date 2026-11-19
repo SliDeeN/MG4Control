@@ -1128,6 +1128,7 @@
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Garde-voiture</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="shortcuts_action_track_mode">Track mode (circuit)</string>
     <string name="projection_no_phone">Aucun téléphone connecté (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Impossible d’ouvrir %1$s</string>
     <string name="projection_redetect">Téléphone branché : nouvelle tentative de détection…</string>

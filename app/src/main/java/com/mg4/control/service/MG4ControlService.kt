@@ -1040,6 +1040,12 @@ class MG4ControlService : Service() {
             return
         }
 
+        // TRACK_MODE (issue #202) : l'écran circuit de l'appli d'entretien SAIC ; déjà affiché, l'écran d'avant.
+        if (action == ShortcutAction.TRACK_MODE) {
+            com.mg4.control.util.TrackMode.open(this@MG4ControlService, pressKey)
+            return
+        }
+
         // ANDROID_SETTINGS : ouvre les paramètres Android (ou dit qu'aucun écran n'a été trouvé).
         if (action == ShortcutAction.ANDROID_SETTINGS) {
             com.mg4.control.util.AndroidSettings.open(this@MG4ControlService)
