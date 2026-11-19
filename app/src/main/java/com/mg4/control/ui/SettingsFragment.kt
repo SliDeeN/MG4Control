@@ -377,6 +377,8 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        setupBubbleHideApps(view)
+
         // ── Pop-up de charge (2026-10-16) : activé par défaut. Le suivi démarre ou s'arrête aussitôt.
         view.findViewById<Switch>(R.id.switch_charge_popup).apply {
             isChecked = ChargePopupSettings.isEnabled(requireContext())
@@ -1081,6 +1083,44 @@ class SettingsFragment : Fragment() {
      * Applis en plein écran (issue #248) : interrupteur, résumé des applis choisies et leur mode,
      * bouton vers la fenêtre de choix. En pause tant qu'un MG4Dash qui ne fusionne pas est installé.
      */
+    /**
+     * Boutons flottants masqués dans des applications choisies (issue #261) : interrupteur, puis
+     * « Applications choisies » et Choisir (n), grisés quand l'option est coupée. Les bulles
+     * suivent aussitôt (FloatingButtonsOverlay.refresh).
+     */
+    private fun setupBubbleHideApps(view: View) {
+        val ctx = requireContext()
+        val resume = view.findViewById<TextView>(R.id.tv_bubble_hide_apps_summary)
+        val bouton = view.findViewById<MaterialButton>(R.id.btn_bubble_hide_apps_choose)
+        val rangee = view.findViewById<View>(R.id.row_bubble_hide_apps)
+        fun maj() {
+            val choisies = FloatingButtonSettings.hideApps(ctx)
+            val noms = BubbleHideAppsDialog.candidates(ctx).filter { it.first in choisies }.map { it.second }
+            resume.text = noms.joinToString(", ").ifEmpty { getString(R.string.immersive_apps_none) }
+            bouton.text = getString(R.string.immersive_choose, noms.size)
+            val on = FloatingButtonSettings.isHideInAppsOn(ctx)
+            rangee.alpha = if (on) 1f else 0.4f
+            bouton.isEnabled = on
+        }
+        maj()
+        view.findViewById<Switch>(R.id.switch_bubble_hide_apps).apply {
+            isChecked = FloatingButtonSettings.isHideInAppsOn(ctx)
+            setOnCheckedChangeListener { _, checked ->
+                FloatingButtonSettings.setHideInAppsOn(ctx, checked)
+                AppLogger.i("MG4_SETTINGS", "Boutons flottants masqués dans des applications ${if (checked) "activé" else "désactivé"}")
+                com.mg4.control.service.FloatingButtonsOverlay.refresh(ctx)
+                maj()
+            }
+        }
+        bouton.setOnClickListener {
+            BubbleHideAppsDialog.show(ctx) {
+                AppLogger.i("MG4_SETTINGS", "Boutons flottants masqués dans : ${FloatingButtonSettings.hideApps(ctx).sorted().joinToString()}")
+                com.mg4.control.service.FloatingButtonsOverlay.refresh(ctx)
+                if (isAdded) maj()
+            }
+        }
+    }
+
     private fun setupImmersive(view: View) {
         val ctx = requireContext()
         val resume = view.findViewById<TextView>(R.id.tv_immersive_summary)

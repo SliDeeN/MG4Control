@@ -1136,6 +1136,11 @@
     <string name="floating_hide_reverse">Skrýt při couvání (zadní kamera)</string>
     <string name="floating_hvac_zone">Lišta klimatizace při používání Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Během projekce nelze horní lištou otevřít původní ovládání klimatizace. Klepnutí na tuto oblast místo něj otevře okno klimatizace MG4Control.</string>
+    <string name="bubble_hide_apps_title">Plovoucí tlačítka a aplikace</string>
+    <string name="bubble_hide_apps_switch">Skrýt plovoucí tlačítka v některých aplikacích</string>
+    <string name="bubble_hide_apps_desc">Tlačítka zmizí, když je některá z těchto aplikací na obrazovce, a vrátí se, jakmile ji opustíte.</string>
+    <string name="bubble_hide_apps_dialog_title">Skrýt tlačítka v…</string>
+    <string name="bubble_hide_apps_dialog_count">Vybráno: %1$d</string>
     <string name="floating_profiles_title">Tlačítka pro:</string>
     <string name="floating_profiles_info">Každý profil má vlastní bubliny. Dokud je tato stránka otevřená, zobrazí se bubliny zvoleného profilu, abyste je mohli rozmístit.</string>
     <string name="floating_copy">Kopírovat tato tlačítka do…</string>

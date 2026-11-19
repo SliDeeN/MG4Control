@@ -1254,6 +1254,11 @@
     <string name="floating_hide_reverse">Masquer en marche arrière (caméra de recul)</string>
     <string name="floating_hvac_zone">Barre clim pendant Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Pendant la projection, la barre du haut n’ouvre plus la clim : un appui à cet endroit ouvre le pop-up HVAC de MG4Control.</string>
+    <string name="bubble_hide_apps_title">Boutons flottants et applications</string>
+    <string name="bubble_hide_apps_switch">Masquer les boutons flottants dans certaines applications</string>
+    <string name="bubble_hide_apps_desc">Les boutons disparaissent quand une de ces applications est à l’écran, et reviennent quand vous la quittez.</string>
+    <string name="bubble_hide_apps_dialog_title">Masquer les boutons dans…</string>
+    <string name="bubble_hide_apps_dialog_count">Choisies : %1$d</string>
     <string name="floating_profiles_title">Boutons de :</string>
     <string name="floating_profiles_info">Chaque profil a ses propres bulles. Pendant que cette page est ouverte, celles du profil choisi s’affichent pour que vous puissiez les placer.</string>
     <string name="floating_copy">Copier ces boutons vers…</string>

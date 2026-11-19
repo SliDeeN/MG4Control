@@ -1234,6 +1234,11 @@
     <string name="floating_hide_reverse">Ukrywaj na wstecznym (kamera cofania)</string>
     <string name="floating_hvac_zone">Pasek klimatyzacji podczas Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Podczas projekcji górny pasek nie otwiera już sterowania klimatyzacją: dotknięcie go otwiera okno HVAC MG4Control.</string>
+    <string name="bubble_hide_apps_title">Przyciski pływające i aplikacje</string>
+    <string name="bubble_hide_apps_switch">Ukryj przyciski pływające w wybranych aplikacjach</string>
+    <string name="bubble_hide_apps_desc">Przyciski znikają, gdy jedna z tych aplikacji jest na ekranie, i wracają po jej opuszczeniu.</string>
+    <string name="bubble_hide_apps_dialog_title">Ukryj przyciski w…</string>
+    <string name="bubble_hide_apps_dialog_count">Wybrane: %1$d</string>
     <string name="floating_profiles_title">Przyciski profilu:</string>
     <string name="floating_profiles_info">Każdy profil ma własne bańki. Gdy ta strona jest otwarta, wyświetlane są bańki wybranego profilu, aby można je było rozmieścić.</string>
     <string name="floating_copy">Skopiuj te przyciski do…</string>

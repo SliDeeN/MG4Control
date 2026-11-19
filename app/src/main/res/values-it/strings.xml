@@ -1234,6 +1234,11 @@
     <string name="floating_hide_reverse">Nascondi in retromarcia (telecamera posteriore)</string>
     <string name="floating_hvac_zone">Barra clima durante Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Durante la proiezione, la barra in alto non apre più il clima: un tocco lì apre il pop-up HVAC di MG4Control.</string>
+    <string name="bubble_hide_apps_title">Pulsanti mobili e app</string>
+    <string name="bubble_hide_apps_switch">Nascondi i pulsanti mobili in alcune app</string>
+    <string name="bubble_hide_apps_desc">I pulsanti scompaiono mentre una di queste app è sullo schermo e ricompaiono quando la lasci.</string>
+    <string name="bubble_hide_apps_dialog_title">Nascondi i pulsanti in…</string>
+    <string name="bubble_hide_apps_dialog_count">Selezionate: %1$d</string>
     <string name="floating_profiles_title">Pulsanti di:</string>
     <string name="floating_profiles_info">Ogni profilo ha le sue bolle. Finché questa pagina è aperta, vengono mostrate quelle del profilo scelto per poterle posizionare.</string>
     <string name="floating_copy">Copia questi pulsanti in…</string>

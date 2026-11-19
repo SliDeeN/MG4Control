@@ -1234,6 +1234,11 @@
     <string name="floating_hide_reverse">Hide in reverse (rear camera)</string>
     <string name="floating_hvac_zone">Climate bar during Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">During projection, the top bar no longer opens the climate controls: a tap there opens the MG4Control HVAC pop-up.</string>
+    <string name="bubble_hide_apps_title">Floating buttons and apps</string>
+    <string name="bubble_hide_apps_switch">Hide floating buttons in some apps</string>
+    <string name="bubble_hide_apps_desc">The buttons disappear while one of these apps is on screen, and come back when you leave it.</string>
+    <string name="bubble_hide_apps_dialog_title">Hide the buttons in…</string>
+    <string name="bubble_hide_apps_dialog_count">Selected: %1$d</string>
     <string name="floating_profiles_title">Buttons of:</string>
     <string name="floating_profiles_info">Each profile has its own bubbles. While this page is open, the chosen profile’s bubbles are shown so you can place them.</string>
     <string name="floating_copy">Copy these buttons to…</string>

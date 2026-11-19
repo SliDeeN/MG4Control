@@ -22,6 +22,7 @@ import android.widget.TextView
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.R
+import com.mg4.control.model.BubbleHideApps
 import com.mg4.control.model.BubbleIcon
 import com.mg4.control.model.BubbleInfo
 import com.mg4.control.model.BubbleLook
@@ -102,6 +103,11 @@ object FloatingButtonsOverlay {
     private var fenetres: WindowManager? = null
     private val bulles = LinkedHashMap<String, Bulle>()
     @Volatile private var marcheArriere = false
+    /** Une application choisie (issue #261) est au premier plan : bulles masquées. */
+    @Volatile private var appliMasquante = false
+    /** Tour de surveillance de l'application au premier plan ; 0 = aucune. */
+    @Volatile private var appliTour = 0
+    private var dernierPremierPlan: String? = null
     /** Tour de surveillance du rapport en cours ; 0 = aucune. Un nouveau tour fait taire l'ancien. */
     @Volatile private var rapportTour = 0
     private var dernierRapport: Int? = null
@@ -172,6 +178,8 @@ object FloatingButtonsOverlay {
         retirerTout()
         val boutons = aPoser(ctx)
         if (boutons.isEmpty()) {
+            appliTour = 0
+            appliMasquante = false
             rapportTour = 0
             etatTour = 0
             infoTour = 0
@@ -185,6 +193,16 @@ object FloatingButtonsOverlay {
         if (bulles.values.any { dansLaBarre(it) }) main.postDelayed(recalage, RECALAGE_MS)
         val surveiller = FloatingButtonSettings.hideInReverse(ctx)
         if (!surveiller) marcheArriere = false
+        // Issue #261 : la liste est relue à chaque reconstruction (réglage changé).
+        val choisies = FloatingButtonSettings.hideApps(ctx)
+        if (BubbleHideApps.surveiller(FloatingButtonSettings.isHideInAppsOn(ctx), choisies)) {
+            val tour = appliTour + 1
+            appliTour = tour
+            lecteur.post { dernierPremierPlan = null; lirePremierPlan(ctx, tour, choisies) }
+        } else {
+            appliTour = 0
+            appliMasquante = false
+        }
         appliquerVisibilite()
         if (surveiller) {
             val tour = rapportTour + 1
@@ -768,7 +786,32 @@ object FloatingButtonsOverlay {
     }
 
     private fun appliquerVisibilite() {
-        bulles.values.forEach { it.vue.visibility = if (marcheArriere) View.GONE else View.VISIBLE }
+        bulles.values.forEach { it.vue.visibility = if (marcheArriere || appliMasquante) View.GONE else View.VISIBLE }
+    }
+
+    /**
+     * Application au premier plan relue chaque seconde (fil mg4-float), tant que l'option de
+     * l'issue #261 est active avec une liste : les bulles suivent sur le fil principal.
+     */
+    private fun lirePremierPlan(ctx: Context, tour: Int, choisies: Set<String>) {
+        if (appliTour != tour) return
+        @Suppress("DEPRECATION")
+        val devant = runCatching {
+            (ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager)
+                .getRunningTasks(1).firstOrNull()?.topActivity?.packageName
+        }.getOrNull()
+        if (devant != dernierPremierPlan) {
+            dernierPremierPlan = devant
+            val masquer = BubbleHideApps.masquer(true, choisies, devant)
+            main.post {
+                if (appliTour == tour && appliMasquante != masquer) {
+                    appliMasquante = masquer
+                    AppLogger.i(TAG, if (masquer) "$devant au premier plan → boutons masqués" else "boutons réaffichés ($devant au premier plan)")
+                    appliquerVisibilite()
+                }
+            }
+        }
+        lecteur.postDelayed({ lirePremierPlan(ctx, tour, choisies) }, BubbleHideApps.SONDE_MS)
     }
 
     /** Rapport relu tant que des bulles sont posées et l'option cochée (fil mg4-float). */

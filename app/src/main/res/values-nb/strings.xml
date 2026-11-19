@@ -1235,6 +1235,11 @@
     <string name="floating_hide_reverse">Skjul i revers (bakkamera)</string>
     <string name="floating_hvac_zone">Klimabar under Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Under projeksjon åpner ikke den øverste linjen klimakontrollene lenger: et trykk der åpner popup-vinduet for MG4Control HVAC.</string>
+    <string name="bubble_hide_apps_title">Flytende knapper og apper</string>
+    <string name="bubble_hide_apps_switch">Skjul flytende knapper i enkelte apper</string>
+    <string name="bubble_hide_apps_desc">Knappene forsvinner mens en av disse appene er på skjermen, og kommer tilbake når du forlater den.</string>
+    <string name="bubble_hide_apps_dialog_title">Skjul knappene i…</string>
+    <string name="bubble_hide_apps_dialog_count">Valgt: %1$d</string>
     <string name="floating_profiles_title">Knapper til:</string>
     <string name="floating_profiles_info">En profil om gangen. Mens denne siden er åpen, viser skjermen knappene slik at du kan plassere dem.</string>
     <string name="floating_copy">Kopier disse knappene til...</string>

@@ -1234,6 +1234,11 @@
     <string name="floating_hide_reverse">Geri viteste gizle (geri görüş kamerası)</string>
     <string name="floating_hvac_zone">Android Auto / CarPlay sırasında klima çubuğu</string>
     <string name="floating_hvac_zone_desc">Yansıtma sırasında üst çubuk artık klimayı açmıyor: oraya dokunmak MG4Control HVAC açılır penceresini açar.</string>
+    <string name="bubble_hide_apps_title">Kayan düğmeler ve uygulamalar</string>
+    <string name="bubble_hide_apps_switch">Kayan düğmeleri bazı uygulamalarda gizle</string>
+    <string name="bubble_hide_apps_desc">Bu uygulamalardan biri ekrandayken düğmeler kaybolur, uygulamadan çıkınca geri gelir.</string>
+    <string name="bubble_hide_apps_dialog_title">Düğmeleri şurada gizle…</string>
+    <string name="bubble_hide_apps_dialog_count">Seçilen: %1$d</string>
     <string name="floating_profiles_title">Profil düğmeleri:</string>
     <string name="floating_profiles_info">Her profilin kendi baloncukları vardır. Bu sayfa açıkken, yerleştirebilmeniz için seçilen profilin baloncukları gösterilir.</string>
     <string name="floating_copy">Bu düğmeleri kopyala…</string>

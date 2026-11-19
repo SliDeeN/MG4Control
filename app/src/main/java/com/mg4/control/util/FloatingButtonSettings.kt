@@ -31,6 +31,9 @@ object FloatingButtonSettings {
      * 2026-10-30 (sa demande) : seul un « ON » mis par l'utilisateur l'active.
      */
     private const val KEY_HVAC_ZONE = "floating_hvac_zone"
+    /** Issue #261 : bulles masquées dans des applications choisies (commun à tous les profils). */
+    private const val KEY_HIDE_APPS_ON = "floating_hide_apps_on"
+    private const val KEY_HIDE_APPS = "floating_hide_apps"
 
     private val gson = Gson()
     private val type = object : TypeToken<List<FloatingButton>>() {}.type
@@ -62,6 +65,13 @@ object FloatingButtonSettings {
 
     fun isHvacZoneEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HVAC_ZONE, false)
     fun setHvacZoneEnabled(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HVAC_ZONE, on).apply()
+
+    fun isHideInAppsOn(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HIDE_APPS_ON, false)
+    fun setHideInAppsOn(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HIDE_APPS_ON, on).apply()
+
+    /** Paquets où les bulles se cachent. */
+    fun hideApps(ctx: Context): Set<String> = prefs(ctx).getStringSet(KEY_HIDE_APPS, null)?.toSet() ?: emptySet()
+    fun setHideApps(ctx: Context, apps: Set<String>) = prefs(ctx).edit().putStringSet(KEY_HIDE_APPS, apps.toSet()).apply()
 
     fun buttons(ctx: Context): List<FloatingButton> = FloatingProfiles.buttons(ctx) ?: legacyButtons(ctx)
 
