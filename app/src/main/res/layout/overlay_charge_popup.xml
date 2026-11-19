@@ -50,6 +50,22 @@
                 android:maxLines="1"
                 android:ellipsize="end" />
 
+            <!-- Commencer / Arrêter la charge (variante A, 2026-11-19) : à gauche de la pastille, montré
+                 en charge ou prise branchée ; fond, icône et texte peints par le code. -->
+            <TextView
+                android:id="@+id/charge_control"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:layout_marginEnd="10dp"
+                android:gravity="center"
+                android:paddingStart="12dp"
+                android:paddingEnd="16dp"
+                android:drawablePadding="6dp"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/charge_pill"
                 android:layout_width="wrap_content"
@@ -82,8 +98,8 @@
             android:baselineAligned="false">
 
             <!-- ── Gauche : batterie, curseur de la limite, heure de fin ──
-                 290 × 314 dp, 288 dp de contenu : tout est compté (2026-10-18). Avec la taille de
-                 texte Standard il reste ~24 dp, en Grand ~5 dp ; en Très grand la dernière ligne
+                 290 × 314 dp, 288 dp de contenu : tout est compté (2026-10-18 ; refait le 2026-11-19
+                 avec le courant AC). Avec la taille de texte Standard il reste ~19 dp, en Grand ~1 dp ; en Très grand la dernière ligne
                  peut être rognée (accepté). clipChildren="false" : la poignée agrandie et son halo,
                  pendant le glissement, débordent un peu au-dessus de la barre. -->
             <LinearLayout
@@ -110,7 +126,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/text_primary"
-                    android:textSize="58sp"
+                    android:textSize="42sp"
                     android:textStyle="bold"
                     android:includeFontPadding="false"
                     android:maxLines="1"
@@ -119,8 +135,8 @@
                 <com.mg4.control.ui.widget.ChargeLimitSliderView
                     android:id="@+id/charge_slider"
                     android:layout_width="match_parent"
-                    android:layout_height="54dp"
-                    android:layout_marginTop="6dp" />
+                    android:layout_height="50dp"
+                    android:layout_marginTop="2dp" />
 
                 <TextView
                     android:id="@+id/charge_hint"
@@ -160,42 +176,77 @@
 
                 </LinearLayout>
 
+                <!-- Courant de charge AC (#215, variante A) : 6 A · 8 A · 16 A · Max, sous la limite.
+                     Le titre devient l'envoi, le refus ou « AC seulement » en charge DC. Les cases
+                     sont ajoutées et peintes par le code. -->
+                <TextView
+                    android:id="@+id/charge_current_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/charge_popup_current"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <LinearLayout
+                    android:id="@+id/charge_current"
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:layout_marginTop="3dp"
+                    android:background="@drawable/bg_dialog_segments"
+                    android:orientation="horizontal"
+                    android:padding="3dp"
+                    android:baselineAligned="false" />
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1" />
 
-                <!-- L'heure de fin, en grand, sur tous les firmwares. -->
+                <!-- L'heure de fin, en grand, sur tous les firmwares. Depuis le courant AC (#215,
+                     2026-11-19), « Fin estimée » est sur la même ligne que l'heure, pour la place. -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginTop="4dp"
                     android:background="@color/dash_border" />
 
-                <TextView
-                    android:id="@+id/charge_end_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    android:maxLines="1" />
-
-                <!-- Hauteur fixe en dp : l'heure garde sa taille quelle que soit la taille du texte
-                     choisie, c'est ce qui laisse tenir la colonne. -->
-                <TextView
-                    android:id="@+id/charge_end_time"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:textColor="@color/text_primary"
-                    android:textStyle="bold"
-                    android:includeFontPadding="false"
-                    android:maxLines="1"
-                    android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="18sp"
-                    android:autoSizeMaxTextSize="40sp"
-                    android:autoSizeStepGranularity="1sp"
-                    tools:text="16:11" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/charge_end_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:maxLines="2"
+                        android:ellipsize="end" />
+
+                    <!-- Hauteur fixe en dp : l'heure garde sa taille quelle que soit la taille du
+                         texte choisie, c'est ce qui laisse tenir la colonne. -->
+                    <TextView
+                        android:id="@+id/charge_end_time"
+                        android:layout_width="150dp"
+                        android:layout_height="40dp"
+                        android:gravity="end|center_vertical"
+                        android:textColor="@color/text_primary"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="18sp"
+                        android:autoSizeMaxTextSize="40sp"
+                        android:autoSizeStepGranularity="1sp"
+                        tools:text="16:11" />
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/charge_end_left"

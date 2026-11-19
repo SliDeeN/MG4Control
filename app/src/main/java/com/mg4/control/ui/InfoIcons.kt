@@ -21,6 +21,7 @@ object InfoIcons {
         val s = BubbleInfo.signal(key) ?: return R.drawable.ic_cat_clock
         return when (s) {
             RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.CHARGE_LIMIT, RuleSignal.BATTERY_HEAT -> R.drawable.ic_cat_battery
+            RuleSignal.CHARGE_CURRENT -> R.drawable.ic_cat_plug
             RuleSignal.PLUGGED, RuleSignal.CHARGE_DC -> R.drawable.ic_cat_plug
             // Les températures (extérieure, consigne) : un thermomètre, pas le flocon de la clim.
             RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_TEMP -> R.drawable.ic_info_thermometer

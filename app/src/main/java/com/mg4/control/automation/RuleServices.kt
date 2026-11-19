@@ -20,6 +20,8 @@ import com.google.gson.reflect.TypeToken
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.model.ChargeControl
+import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.RuleKeys
 import com.mg4.control.model.RuleLogic
 import com.mg4.control.model.RulePlace
@@ -441,6 +443,8 @@ object RuleWrites {
             RuleKeys.AUTO_HIGH_BEAM -> MG4Hardware.hasAutoHighBeam() && MG4Hardware.setAutoHighBeam(on)
             RuleKeys.BATTERY_HEAT -> MG4Hardware.hasBatteryHeating() && MG4Hardware.setBatteryHeating(on)
             RuleKeys.CHARGE_LIMIT -> n != null && EnergyReader.setChargeLimitPercent(n.coerceIn(40, 100))
+            RuleKeys.CHARGE_CURRENT -> ChargeCurrent.code(value)?.let { EnergyReader.setAcCurrentCode(it) } == true
+            RuleKeys.CHARGE_CONTROL -> ChargeControl.code(value)?.let { EnergyReader.setChargeControl(it) } == true
             RuleKeys.WIFI -> AndroidControls.setWifi(ctx, on)
             RuleKeys.BLUETOOTH -> AndroidControls.setBluetooth(on)
             RuleKeys.HOTSPOT -> AndroidControls.setHotspot(ctx, on)

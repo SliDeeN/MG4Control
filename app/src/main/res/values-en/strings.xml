@@ -1034,6 +1034,16 @@
     <string name="charge_popup_end_left">%1$s left · to %2$d %%</string>
     <string name="charge_popup_lfp_info">Charge limit not adjustable (LFP battery)</string>
     <string name="charge_popup_limit_fixed">Charge limit not adjustable on this vehicle</string>
+    <string name="charge_popup_current">AC charging current</string>
+    <string name="charge_popup_current_ac_only">Applies to AC charging only</string>
+    <string name="charge_popup_current_sending">Sending %1$s to the car…</string>
+    <string name="charge_popup_current_refused">The car did not accept %1$s</string>
+    <string name="charge_current_max">Max</string>
+    <string name="charge_control_start">Start charging</string>
+    <string name="charge_control_stop">Stop charging</string>
+    <string name="charge_control_preparing">Preparing…</string>
+    <string name="charge_control_refused">Refused by the car</string>
+    <string name="charge_popup_title_stopped">Charging stopped</string>
     <string name="charge_popup_legend_power">Power (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Battery (%)</string>
     <string name="charge_popup_since">since the start of the charge (%1$s)</string>
@@ -1673,6 +1683,7 @@
     <string name="rule_key_air_flow">Air direction</string>
     <string name="rule_key_auto_high_beam">Auto high beam</string>
     <string name="rule_key_auto_volume">AUTO air volume</string>
+    <string name="rule_key_charge_control">Start / stop charging</string>
     <string name="rule_key_battery_heat">Battery heating</string>
     <string name="rule_key_speed_limit_tone">Speed limit chime</string>
     <string name="rule_key_volume_step">Volume + / −</string>

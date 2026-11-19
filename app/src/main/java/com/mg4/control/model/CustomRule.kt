@@ -97,6 +97,8 @@ enum class RuleSignal(val kind: Kind) {
     DATA_TODAY_MB(Kind.NUMBER),
     DATA_MONTH_MB(Kind.NUMBER),
     CHARGE_LIMIT(Kind.NUMBER),
+    /** Courant de charge AC (#215) : `6A`, `8A`, `16A` ou `MAX` ([ChargeCurrent.TEXTES]). */
+    CHARGE_CURRENT(Kind.TEXT),
     PLUGGED(Kind.BOOL),
     CHARGE_DC(Kind.BOOL),
     /** Nom de la génération de firmware (`SWI133`…). */

@@ -32,6 +32,80 @@ object ChargeLimit {
 }
 
 /**
+ * Courant de charge AC (#215, 2026-11-19) : `BMS_ALTNG_CHRG_CRNT` 0x2140f40b, un code de 1 à 4 pour
+ * 6 A, 8 A, 16 A et Max — les quatre crans du widget batterie d'origine, code = rang + 1. Même
+ * propriété et mêmes codes sur les deux familles (SWI133 `VehicleChargingBinder.setChargingCurrent`,
+ * A9 `EvCharge`) ; 12 ou 24 A n'existent pas. Ne vaut que pour le chargeur embarqué (charge AC).
+ */
+object ChargeCurrent {
+
+    const val CODE_MAX = 4
+
+    /** Valeurs des automatisations, dans l'ordre des codes. */
+    val TEXTES = listOf("6A", "8A", "16A", "MAX")
+
+    fun valide(code: Int?): Boolean = code != null && code in 1..CODE_MAX
+
+    /** Ampères d'un code ; `null` pour Max ou hors de 1..4. */
+    fun amperes(code: Int?): Int? = when (code) { 1 -> 6; 2 -> 8; 3 -> 16; else -> null }
+
+    /** Code → valeur d'automatisation, `null` hors de 1..4. */
+    fun texte(code: Int?): String? = code?.takeIf { valide(it) }?.let { TEXTES[it - 1] }
+
+    /** Valeur d'automatisation (« 16A », « 16 A », « 16 », « max »…) → code, `null` si inconnue. */
+    fun code(texte: String?): Int? {
+        val t = texte?.trim()?.uppercase()?.replace(" ", "")?.removeSuffix("A")?.takeIf { it.isNotEmpty() } ?: return null
+        return when (t) {
+            "6" -> 1
+            "8" -> 2
+            "16" -> 3
+            "MAX" -> CODE_MAX
+            else -> null
+        }
+    }
+}
+
+/**
+ * Marche / arrêt de la charge (2026-11-19) : `0x2140f412`, l'interrupteur des écrans SAIC (widget
+ * batterie SWI133, réglages SWI68/165, `EvCharge` des A9). Écriture 1 = démarrer, 2 = arrêter ;
+ * lecture 1 = démarrée, 2 = arrêtée, 3 = en préparation (bouton inerte), 0 traité comme arrêtée
+ * par les A9.
+ */
+object ChargeControl {
+
+    const val START = 1
+    const val STOP = 2
+    const val PREPARING = 3
+
+    /** Statut de charge 0x2140f409 « arrêtée » (`CHARGING_STATUS_CEASE`), pas « terminée ». */
+    const val STATUT_ARRETEE = 8
+
+    /** Valeurs des automatisations. */
+    const val TEXTE_START = "START"
+    const val TEXTE_STOP = "STOP"
+
+    /** Vrai : le bouton propose d'arrêter. La valeur lue d'abord ; inconnue, selon que la voiture charge. */
+    fun proposeArret(lu: Int?, enCharge: Boolean): Boolean = when (lu) {
+        START -> true
+        STOP -> false
+        else -> enCharge
+    }
+
+    /** Bouton montré : en charge, ou prise branchée (l'écran d'origine le coupe câble débranché). */
+    fun visible(enCharge: Boolean, branchee: Boolean?): Boolean = enCharge || branchee == true
+
+    /** La voiture a pris [demande] : elle lit la même valeur, ou « préparation » après un démarrage. */
+    fun pris(demande: Int, lu: Int?): Boolean = lu == demande || (demande == START && lu == PREPARING)
+
+    /** Valeur d'automatisation → code, `null` si inconnue. */
+    fun code(texte: String?): Int? = when (texte?.trim()?.uppercase()) {
+        TEXTE_START, "1" -> START
+        TEXTE_STOP, "2" -> STOP
+        else -> null
+    }
+}
+
+/**
  * La limite de charge est-elle réglable sur cette voiture ? Règle de l'appli de charge SAIC des A9
  * (`EvCharge` SWI69 / SWI131 / SWI132, `isEH32EuukCanSettingChargeTargetbBatteryQuantity`, décodée
  * le 2026-10-18) : elle ne montre son réglage — et n'accepte le toucher sur la barre — que si le code

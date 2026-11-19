@@ -1034,6 +1034,16 @@
     <string name="charge_popup_end_left">%1$s kaldı · hedef %%%2$d</string>
     <string name="charge_popup_lfp_info">Şarj sınırı ayarlanamaz (LFP batarya)</string>
     <string name="charge_popup_limit_fixed">Bu araçta şarj sınırı ayarlanamaz</string>
+    <string name="charge_popup_current">AC şarj akımı</string>
+    <string name="charge_popup_current_ac_only">Yalnızca AC şarjda geçerlidir</string>
+    <string name="charge_popup_current_sending">%1$s araca gönderiliyor…</string>
+    <string name="charge_popup_current_refused">Araç %1$s değerini kabul etmedi</string>
+    <string name="charge_current_max">Maks.</string>
+    <string name="charge_control_start">Şarjı başlat</string>
+    <string name="charge_control_stop">Şarjı durdur</string>
+    <string name="charge_control_preparing">Hazırlanıyor…</string>
+    <string name="charge_control_refused">Araç reddetti</string>
+    <string name="charge_popup_title_stopped">Şarj durduruldu</string>
     <string name="charge_popup_legend_power">Güç (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batarya (%)</string>
     <string name="charge_popup_since">şarjın başından beri (%1$s)</string>
@@ -1673,6 +1683,7 @@
     <string name="rule_key_air_flow">Hava yönü</string>
     <string name="rule_key_auto_high_beam">Otomatik uzun far</string>
     <string name="rule_key_auto_volume">AUTO hava debisi</string>
+    <string name="rule_key_charge_control">Şarjı başlat / durdur</string>
     <string name="rule_key_battery_heat">Batarya ısıtma</string>
     <string name="rule_key_speed_limit_tone">Hız sınırı uyarı sesi</string>
     <string name="rule_key_volume_step">Ses + / −</string>

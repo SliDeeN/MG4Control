@@ -1034,6 +1034,16 @@
     <string name="charge_popup_end_left">ancora %1$s · fino al %2$d %%</string>
     <string name="charge_popup_lfp_info">Limite di ricarica non regolabile (batteria LFP)</string>
     <string name="charge_popup_limit_fixed">Limite di ricarica non regolabile su questo veicolo</string>
+    <string name="charge_popup_current">Corrente di ricarica AC</string>
+    <string name="charge_popup_current_ac_only">Vale solo per la ricarica AC</string>
+    <string name="charge_popup_current_sending">Invio di %1$s all\'auto…</string>
+    <string name="charge_popup_current_refused">L\'auto non ha accettato %1$s</string>
+    <string name="charge_current_max">Max</string>
+    <string name="charge_control_start">Avvia la ricarica</string>
+    <string name="charge_control_stop">Interrompi la ricarica</string>
+    <string name="charge_control_preparing">Preparazione…</string>
+    <string name="charge_control_refused">Rifiutato dall\'auto</string>
+    <string name="charge_popup_title_stopped">Ricarica interrotta</string>
     <string name="charge_popup_legend_power">Potenza (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batteria (%)</string>
     <string name="charge_popup_since">dall\'inizio della ricarica (%1$s)</string>
@@ -1680,6 +1690,7 @@
     <string name="rule_key_air_flow">Direzione dell\'aria</string>
     <string name="rule_key_auto_high_beam">Abbaglianti automatici</string>
     <string name="rule_key_auto_volume">Portata in AUTO</string>
+    <string name="rule_key_charge_control">Avvio / arresto della ricarica</string>
     <string name="rule_key_battery_heat">Riscaldamento batteria</string>
     <string name="rule_key_speed_limit_tone">Avviso limite di velocità</string>
     <string name="rule_key_volume_step">Volume + / −</string>

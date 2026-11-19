@@ -13,6 +13,7 @@ import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.ProjectionReader
 import com.mg4.control.hardware.ReadyWatcher
+import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.AndroidActions
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.ChargeLimit
@@ -714,6 +715,7 @@ object CustomRules {
         RuleSignal.DATA_TODAY_MB -> DataUsage.ethernet(ctx, DataUsage.startOfDay(), System.currentTimeMillis())?.total?.let { it / 1_048_576.0 }
         RuleSignal.DATA_MONTH_MB -> DataUsage.ethernet(ctx, DataUsage.startOfMonth(), System.currentTimeMillis())?.total?.let { it / 1_048_576.0 }
         RuleSignal.CHARGE_LIMIT -> EnergyReader.chargeLimitCode()?.let { ChargeLimit.pct(it) }?.toDouble()
+        RuleSignal.CHARGE_CURRENT -> ChargeCurrent.texte(EnergyReader.acCurrentCode())
         RuleSignal.PLUGGED -> EnergyReader.plugged()
         RuleSignal.CHARGE_DC -> EnergyReader.plugged()?.let { it && EnergyReader.plugType() == ChargeType.DC }
         RuleSignal.FIRMWARE -> FirmwareInfo.getGeneration().name

@@ -24,6 +24,8 @@ import com.mg4.control.automation.CustomRuleStore
 import com.mg4.control.automation.CustomRules
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.model.ChargeControl
+import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.AndroidActions
 import com.mg4.control.model.CustomRule
 import com.mg4.control.model.DriveMode
@@ -829,7 +831,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
         RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES, RuleSignal.PROFILE -> Cat.DRIVING
         RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
-        RuleSignal.BATTERY_HEAT -> Cat.BATTERY
+        RuleSignal.CHARGE_CURRENT, RuleSignal.BATTERY_HEAT -> Cat.BATTERY
         RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP,
         RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> Cat.CLIMATE
         RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT, RuleSignal.KEY_AWAY -> Cat.COMFORT
@@ -846,7 +848,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleKeys.BRIGHTNESS, RuleKeys.VOLUME, RuleKeys.VOLUME_STEP -> Cat.SCREEN_SOUND
         RuleKeys.AEB, RuleKeys.TSR, RuleKeys.ESC, RuleKeys.DROWSINESS, RuleKeys.OVERSPEED_ALARM, RuleKeys.SPEED_LIMIT_TONE,
         RuleKeys.AUTO_HIGH_BEAM -> Cat.ADAS
-        RuleKeys.BATTERY_HEAT, RuleKeys.CHARGE_LIMIT -> Cat.BATTERY
+        RuleKeys.BATTERY_HEAT, RuleKeys.CHARGE_LIMIT, RuleKeys.CHARGE_CURRENT, RuleKeys.CHARGE_CONTROL -> Cat.BATTERY
         RuleKeys.WIFI, RuleKeys.BLUETOOTH, RuleKeys.HOTSPOT -> Cat.CONNECTIONS
         else -> Cat.CLIMATE
     }
@@ -860,7 +862,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
             RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES,
             RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
-            RuleSignal.BATTERY_HEAT,
+            RuleSignal.CHARGE_CURRENT, RuleSignal.BATTERY_HEAT,
             RuleSignal.OUTSIDE_TEMP, RuleSignal.NIGHT, RuleSignal.SUN_UP, RuleSignal.ALTITUDE,
             RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP, RuleSignal.FAN,
             RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR,
@@ -908,6 +910,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.DRIVE_MODE -> DriveMode.entries.map { mots.driveMode(it) to it.name }
         RuleSignal.REGEN -> RegenLevel.entries.map { mots.regen(it) to it.name }
         RuleSignal.RECIRC -> listOf("INNER", "OUTSIDE", "AUTO").map { mots.value(sig, it) to it }
+        RuleSignal.CHARGE_CURRENT -> ChargeCurrent.TEXTES.map { mots.value(sig, it) to it }
         RuleSignal.FIRMWARE -> com.mg4.control.util.FirmwareInfo.Gen.entries.map { it.name to it.name }
         RuleSignal.BT_DEVICE -> runCatching { BluetoothProfileManager.getBondedDevices(ctx) }.getOrNull().orEmpty()
             .map { it.name to it.mac.uppercase() }
@@ -1369,6 +1372,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         // Batterie et charge
         reglage(RuleKeys.BATTERY_HEAT, Cat.BATTERY, lancer(ShortcutAction.BATTERY_HEAT_TOGGLE, bascule))
         reglage(RuleKeys.CHARGE_LIMIT, Cat.BATTERY)
+        reglage(RuleKeys.CHARGE_CURRENT, Cat.BATTERY)
+        reglage(RuleKeys.CHARGE_CONTROL, Cat.BATTERY)
         seul(ShortcutAction.CHARGE_POPUP, Cat.BATTERY)
         // Climatisation
         reglage(ExternalApi.SET_HVAC_POWER, Cat.CLIMATE, lancer(ShortcutAction.HVAC_TOGGLE, bascule))
@@ -1565,6 +1570,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             if (MG4Hardware.hasAutoHighBeam()) add(RuleKeys.AUTO_HIGH_BEAM)
             if (MG4Hardware.hasBatteryHeating()) add(RuleKeys.BATTERY_HEAT)
             add(RuleKeys.CHARGE_LIMIT)
+            add(RuleKeys.CHARGE_CURRENT)
+            add(RuleKeys.CHARGE_CONTROL)
             add(RuleKeys.WIFI)
             add(RuleKeys.BLUETOOTH)
             add(RuleKeys.HOTSPOT)
@@ -1608,6 +1615,10 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 RuleKeys.VOLUME_STEP -> RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: 2, -10, 10,
                     texte = { if (it > 0) "+$it" else "$it" }) { fini("$it") }
                 RuleKeys.CHARGE_LIMIT -> nombre(40, 100, 80, " %", 10)
+                RuleKeys.CHARGE_CURRENT -> valeurs(nom, ChargeCurrent.TEXTES.map { mots.value(RuleSignal.CHARGE_CURRENT, it) to it },
+                    meme, ok = ::fini)
+                RuleKeys.CHARGE_CONTROL -> valeurs(nom, listOf(s(R.string.charge_control_start) to ChargeControl.TEXTE_START,
+                    s(R.string.charge_control_stop) to ChargeControl.TEXTE_STOP), meme, ok = ::fini)
                 ExternalApi.SET_HVAC_RECIRC -> valeurs(nom, listOf("INNER", "OUTSIDE", "AUTO").map { v ->
                     (AndroidRuleWords.recircRes(v)?.let { s(it) } ?: v) to v }, meme, ok = ::fini)
                 else -> valeurs(nom, ouiNon, meme, ok = ::fini)

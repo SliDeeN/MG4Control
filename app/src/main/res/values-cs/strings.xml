@@ -939,6 +939,16 @@
     <string name="charge_popup_end_left">zbývá %1$s · do %2$d %%</string>
     <string name="charge_popup_lfp_info">Limit nabíjení nelze nastavit (baterie LFP)</string>
     <string name="charge_popup_limit_fixed">Limit nabíjení nelze u tohoto vozu nastavit</string>
+    <string name="charge_popup_current">Nabíjecí proud AC</string>
+    <string name="charge_popup_current_ac_only">Platí jen pro nabíjení AC</string>
+    <string name="charge_popup_current_sending">Odesílání %1$s do vozu…</string>
+    <string name="charge_popup_current_refused">Vůz nepřijal %1$s</string>
+    <string name="charge_current_max">Max</string>
+    <string name="charge_control_start">Spustit nabíjení</string>
+    <string name="charge_control_stop">Zastavit nabíjení</string>
+    <string name="charge_control_preparing">Příprava…</string>
+    <string name="charge_control_refused">Vůz odmítl</string>
+    <string name="charge_popup_title_stopped">Nabíjení zastaveno</string>
     <string name="charge_popup_legend_power">Výkon (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Nabití baterie (%)</string>
     <string name="charge_popup_since">od začátku nabíjení (%1$s)</string>
@@ -1585,6 +1595,7 @@
     <string name="rule_key_air_flow">Směr proudění vzduchu</string>
     <string name="rule_key_auto_high_beam">Automatická dálková světla</string>
     <string name="rule_key_auto_volume">Intenzita ventilace v režimu AUTO</string>
+    <string name="rule_key_charge_control">Spuštění / zastavení nabíjení</string>
     <string name="rule_key_battery_heat">Vyhřívání baterie</string>
     <string name="rule_key_speed_limit_tone">Zvuk při změně rychlostního limitu</string>
     <string name="rule_key_volume_step">Hlasitost + / −</string>

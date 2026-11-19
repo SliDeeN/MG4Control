@@ -19,6 +19,8 @@ import android.widget.TextView
 import android.widget.Toast
 import com.mg4.control.R
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.ChargeControl
+import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.PriceStepper
 import com.mg4.control.model.StatsTracker
@@ -217,6 +219,15 @@ object ChargePopupOverlay {
         val prixAncien: TextView = racine.findViewById(R.id.price_cost_old)
         val prixDefaut: View = racine.findViewById(R.id.price_default)
         val prixOk: View = racine.findViewById(R.id.price_ok)
+        val controle: TextView = racine.findViewById(R.id.charge_control)
+        /** Marche / arrêt touché, montré « en préparation » jusqu'à ce que le suivi en parle. */
+        var controleVise: Int? = null
+        val courantTitre: TextView = racine.findViewById(R.id.charge_current_title)
+        val courant: LinearLayout = racine.findViewById(R.id.charge_current)
+        /** Les quatre cases du courant AC, codes 1..4. */
+        val casesCourant = mutableListOf<TextView>()
+        /** Courant touché, montré tout de suite, jusqu'à ce que le suivi en parle. */
+        var courantVise: Int? = null
 
         val cAccent = themed.getColor(R.color.dash_accent)
         val cVert = themed.getColor(R.color.dash_eco)
@@ -259,6 +270,36 @@ object ChargePopupOverlay {
             v.aide.setTextColor(v.cAccent)
         }
 
+        // Commencer / Arrêter la charge : le bouton propose le contraire de l'état lu.
+        v.controle.setOnClickListener { bouton ->
+            val e = dernier ?: return@setOnClickListener
+            if (!bouton.isEnabled) return@setOnClickListener
+            val code = if (ChargeControl.proposeArret(e.controle, e.enCharge)) ChargeControl.STOP else ChargeControl.START
+            AppLogger.i(TAG, "Pop-up de charge — ${if (code == ChargeControl.STOP) "arrêt" else "démarrage"} de la charge demandé")
+            v.controleVise = code
+            ChargeMonitor.demanderControle(code)
+            peindreControle(v, e)
+        }
+
+        // Courant de charge AC (#215) : quatre cases, une écriture au toucher.
+        val gonfleur = LayoutInflater.from(v.themed)
+        for (code in 1..ChargeCurrent.CODE_MAX) {
+            val case = (gonfleur.inflate(R.layout.item_dialog_segment, v.courant, false) as TextView).also {
+                it.text = libelleCourant(v, code)
+                it.textSize = 14f
+                it.setOnClickListener { touche ->
+                    if (!touche.isEnabled || code == (v.courantVise ?: dernier?.courantCode)) return@setOnClickListener
+                    AppLogger.i(TAG, "Pop-up de charge — courant AC demandé : ${libelleCourant(v, code)} (code $code)")
+                    v.courantVise = code
+                    ChargeMonitor.demanderCourant(code)
+                    peindreCourant(v, dernier)
+                }
+            }
+            v.courant.addView(case)
+            v.casesCourant += case
+        }
+        peindreCourant(v, null)
+
         v.prixAnnuler.setOnClickListener { fermerEditeur(v) }
         v.prixDefaut.setOnClickListener {
             ChargeMonitor.fixerPrix(null)
@@ -298,7 +339,7 @@ object ChargePopupOverlay {
     private fun peindre(v: Vues, e: ChargeMonitor.Etat) {
         dernier = e
         val couleur = if (e.finie) v.cVert else v.cAccent
-        v.titre.text = v.s(if (e.finie) R.string.charge_popup_title_done else R.string.charge_popup_title)
+        v.titre.text = v.s(titre(e))
         v.icone.setColorFilter(couleur)
         v.pastille.text = v.s(when (e.type) {
             ChargeType.AC -> R.string.charge_popup_type_ac
@@ -312,6 +353,8 @@ object ChargePopupOverlay {
         v.curseur.enCharge = e.enCharge
         v.curseur.finie = e.finie
         if (!v.limiteFixe) aide(v, e)
+        peindreCourant(v, e)
+        peindreControle(v, e)
 
         // Heure de fin, en grand, et ce qu'il reste.
         fin(v, e, StatsTracker.clockPlausible(e.horlogeMs))
@@ -370,7 +413,7 @@ object ChargePopupOverlay {
         val cible = if (v.limiteFixe) PLEIN_PCT else e.limitePct
         when {
             e.finie -> {
-                v.finTitre.text = v.s(R.string.charge_popup_title_done)
+                v.finTitre.text = v.s(titre(e))
                 v.finHeure.text = if (fiable) heure(v, e.horlogeMs) else "–"
                 v.finReste.text = ""
             }
@@ -387,6 +430,92 @@ object ChargePopupOverlay {
                 v.finTitre.text = v.s(R.string.charge_popup_end_label)
                 v.finHeure.text = "–"
                 v.finReste.text = cible?.let { v.s(R.string.charge_popup_until_unknown, it) } ?: ""
+            }
+        }
+    }
+
+    /** Titre : en cours, terminée, ou arrêtée (statut 8 : arrêtée par le bouton, l'appli ou la borne). */
+    private fun titre(e: ChargeMonitor.Etat): Int = when {
+        !e.finie -> R.string.charge_popup_title
+        e.arretee -> R.string.charge_popup_title_stopped
+        else -> R.string.charge_popup_title_done
+    }
+
+    /**
+     * Bouton « Commencer / Arrêter la charge » (variante A) : caché câble débranché ; « Préparation… »
+     * inerte pendant l'envoi ou quand la voiture prépare la charge ; refus montré quelques secondes.
+     */
+    private fun peindreControle(v: Vues, e: ChargeMonitor.Etat?) {
+        val vise = v.controleVise
+        if (vise != null && e != null && (e.controleEnAttente || e.controleRefuse != null || ChargeControl.pris(vise, e.controle)))
+            v.controleVise = null
+        if (e == null || (v.controleVise == null && !ChargeControl.visible(e.enCharge, e.branchee))) {
+            v.controle.visibility = View.GONE
+            return
+        }
+        v.controle.visibility = View.VISIBLE
+        val ctx = v.themed
+        val attente = v.controleVise != null || e.controleEnAttente || e.controle == ChargeControl.PREPARING
+        val refuse = e.controleRefuse
+        val arreter = ChargeControl.proposeArret(e.controle, e.enCharge)
+        val (texte, icone, couleur, fond) = when {
+            attente -> Quadruple(R.string.charge_control_preparing, null, v.cTexte2, ctx.getColor(R.color.dash_btn))
+            refuse != null -> Quadruple(R.string.charge_control_refused, null, v.cWarn, ctx.getColor(R.color.dash_warn_dim))
+            arreter -> Quadruple(R.string.charge_control_stop, R.drawable.ic_charge_stop, ctx.getColor(R.color.dash_danger), ctx.getColor(R.color.dash_danger_dim))
+            else -> Quadruple(R.string.charge_control_start, R.drawable.ic_charge_start, v.cVert, ctx.getColor(R.color.dash_eco_dim))
+        }
+        v.controle.text = v.s(texte)
+        v.controle.setTextColor(couleur)
+        val d = icone?.let { ctx.getDrawable(it)?.mutate() }?.also {
+            val taille = (18 * ctx.resources.displayMetrics.density).roundToInt()
+            it.setBounds(0, 0, taille, taille)
+            it.setTint(couleur)
+        }
+        v.controle.setCompoundDrawables(d, null, null, null)
+        OverlayKit.fond(v.controle, fond, rayon = 17f * ctx.resources.displayMetrics.density)
+        v.controle.isEnabled = !attente
+    }
+
+    private data class Quadruple(val texte: Int, val icone: Int?, val couleur: Int, val fond: Int)
+
+    private fun libelleCourant(v: Vues, code: Int?): String =
+        ChargeCurrent.amperes(code)?.let { "$it A" } ?: v.s(R.string.charge_current_max)
+
+    /**
+     * Les cases du courant AC et leur titre : le courant demandé ou lu en surbrillance ; titre qui dit
+     * l'envoi, le refus (l'ancienne valeur revient), ou, en charge DC, que le réglage n'y vaut pas —
+     * les cases sont alors grisées et inertes.
+     */
+    private fun peindreCourant(v: Vues, e: ChargeMonitor.Etat?) {
+        if (v.courantVise != null && e != null &&
+            (e.courantEnAttente || e.courantRefuse != null || e.courantCode == v.courantVise)) v.courantVise = null
+        val dc = e?.type == ChargeType.DC
+        val choisi = v.courantVise ?: e?.courantCode
+        val rayon = 9f * v.themed.resources.displayMetrics.density
+        v.casesCourant.forEachIndexed { i, case ->
+            val on = i + 1 == choisi
+            OverlayKit.fond(case, if (on) v.themed.getColor(R.color.hvac_segment_on) else android.graphics.Color.TRANSPARENT, rayon = rayon)
+            case.setTextColor(if (on) v.cTexte else v.cTexte2)
+            case.isEnabled = !dc
+        }
+        v.courant.alpha = if (dc) 0.4f else 1f
+        val refuse = e?.courantRefuse
+        when {
+            dc -> {
+                v.courantTitre.text = v.s(R.string.charge_popup_current_ac_only)
+                v.courantTitre.setTextColor(v.cTexteBas)
+            }
+            v.courantVise != null || e?.courantEnAttente == true -> {
+                v.courantTitre.text = v.s(R.string.charge_popup_current_sending, libelleCourant(v, choisi))
+                v.courantTitre.setTextColor(v.cAccent)
+            }
+            refuse != null -> {
+                v.courantTitre.text = v.s(R.string.charge_popup_current_refused, libelleCourant(v, refuse))
+                v.courantTitre.setTextColor(v.cWarn)
+            }
+            else -> {
+                v.courantTitre.text = v.s(R.string.charge_popup_current)
+                v.courantTitre.setTextColor(v.cTexte2)
             }
         }
     }

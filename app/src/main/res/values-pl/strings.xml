@@ -1034,6 +1034,16 @@
     <string name="charge_popup_end_left">pozostało %1$s · do %2$d %%</string>
     <string name="charge_popup_lfp_info">Limitu ładowania nie można ustawić (bateria LFP)</string>
     <string name="charge_popup_limit_fixed">Limitu ładowania nie można ustawić w tym pojeździe</string>
+    <string name="charge_popup_current">Prąd ładowania AC</string>
+    <string name="charge_popup_current_ac_only">Dotyczy tylko ładowania AC</string>
+    <string name="charge_popup_current_sending">Wysyłanie %1$s do samochodu…</string>
+    <string name="charge_popup_current_refused">Samochód nie przyjął %1$s</string>
+    <string name="charge_current_max">Maks.</string>
+    <string name="charge_control_start">Rozpocznij ładowanie</string>
+    <string name="charge_control_stop">Zatrzymaj ładowanie</string>
+    <string name="charge_control_preparing">Przygotowanie…</string>
+    <string name="charge_control_refused">Odrzucone przez samochód</string>
+    <string name="charge_popup_title_stopped">Ładowanie zatrzymane</string>
     <string name="charge_popup_legend_power">Moc (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Bateria (%)</string>
     <string name="charge_popup_since">od początku ładowania (%1$s)</string>
@@ -1687,6 +1697,7 @@
     <string name="rule_key_air_flow">Kierunek powietrza</string>
     <string name="rule_key_auto_high_beam">Auto. światła drogowe</string>
     <string name="rule_key_auto_volume">Ilość powietrza w AUTO</string>
+    <string name="rule_key_charge_control">Uruchom / zatrzymaj ładowanie</string>
     <string name="rule_key_battery_heat">Podgrzewanie baterii</string>
     <string name="rule_key_speed_limit_tone">Sygnał limitu prędkości</string>
     <string name="rule_key_volume_step">Głośność + / −</string>

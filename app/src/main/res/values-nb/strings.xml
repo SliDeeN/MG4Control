@@ -1035,6 +1035,16 @@
     <string name="charge_popup_end_left">%1$s venstre · til %2$d %%</string>
     <string name="charge_popup_lfp_info">Ladegrense kan ikke justeres (LFP-batteri)</string>
     <string name="charge_popup_limit_fixed">Ladegrense kan ikke justeres på denne bilen</string>
+    <string name="charge_popup_current">AC-ladestrøm</string>
+    <string name="charge_popup_current_ac_only">Gjelder kun AC-lading</string>
+    <string name="charge_popup_current_sending">Sender %1$s til bilen…</string>
+    <string name="charge_popup_current_refused">Bilen godtok ikke %1$s</string>
+    <string name="charge_current_max">Maks</string>
+    <string name="charge_control_start">Start lading</string>
+    <string name="charge_control_stop">Stopp lading</string>
+    <string name="charge_control_preparing">Forbereder…</string>
+    <string name="charge_control_refused">Avvist av bilen</string>
+    <string name="charge_popup_title_stopped">Lading stoppet</string>
     <string name="charge_popup_legend_power">Effekt (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batteri (%)</string>
     <string name="charge_popup_since">siden starten av ladingen (%1$s)</string>
@@ -1674,6 +1684,7 @@
     <string name="rule_key_air_flow">Luftretning</string>
     <string name="rule_key_auto_high_beam">Automatisk fjernlys</string>
     <string name="rule_key_auto_volume">Luftmengde i AUTO</string>
+    <string name="rule_key_charge_control">Start / stopp lading</string>
     <string name="rule_key_battery_heat">Batterioppvarming</string>
     <string name="rule_key_speed_limit_tone">Lydvarsel for fartsgrense</string>
     <string name="rule_key_volume_step">Volum + / −</string>

@@ -1,6 +1,8 @@
 package com.mg4.control.hardware
 
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.ChargeControl
+import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeLimit
 import com.mg4.control.model.ChargeType
@@ -50,6 +52,10 @@ object EnergyReader {
     private const val PROP_CHARGE_PLUG = 0x2140f408
     private const val PROP_CHARGE_TIME = 0x2140f417
     private const val PROP_CHARGE_TARGET = 0x2140f40c
+    /** Courant de charge AC, code 1..4 ([ChargeCurrent], #215). */
+    private const val PROP_AC_CURRENT = 0x2140f40b
+    /** Marche / arrêt de la charge ([ChargeControl]). */
+    private const val PROP_CHARGE_CONTROL = 0x2140f412
     // Sonde seulement (2026-10-16) : position de la trappe et validité du signal continu
     // (`CCU_OFFBD_CHRG_PLUG_ON_V`, true = invalide comme les autres drapeaux « V »).
     private const val PROP_CHARGE_DOOR = 0x2140f43b
@@ -195,32 +201,65 @@ object EnergyReader {
     fun setChargeLimitPercent(pct: Int): Boolean {
         val code = ChargeLimit.code(pct)
         if (!VehicleWriteGate.allow("limite de charge $pct %")) return false
+        return ecrireBms(PROP_CHARGE_TARGET, code, "limite de charge → $pct % (code $code)")
+    }
+
+    /** Code du courant de charge AC ([ChargeCurrent]), `null` si illisible ou hors de 1..4. */
+    fun acCurrentCode(): Int? = int(PROP_AC_CURRENT)?.takeIf { ChargeCurrent.valide(it) }
+
+    /**
+     * Courant de charge AC (#215) : même voie que la limite ([setChargeLimitPercent]) sur la
+     * propriété 0x2140f40b, code 1..4 (6 A, 8 A, 16 A, Max). Vrai si une voie a accepté : relire.
+     */
+    fun setAcCurrentCode(code: Int): Boolean {
+        if (!ChargeCurrent.valide(code)) return false
+        val quoi = "courant de charge AC → ${ChargeCurrent.amperes(code)?.let { "$it A" } ?: "Max"} (code $code)"
+        if (!VehicleWriteGate.allow(quoi)) return false
+        return ecrireBms(PROP_AC_CURRENT, code, quoi)
+    }
+
+    /** Interrupteur de charge lu ([ChargeControl]) : 1 démarrée, 2 arrêtée, 3 préparation ; `null` si illisible. */
+    fun chargeControl(): Int? = int(PROP_CHARGE_CONTROL)?.takeIf { it in 0..ChargeControl.PREPARING }
+
+    /** Démarre ([ChargeControl.START]) ou arrête ([ChargeControl.STOP]) la charge. Vrai si une voie a accepté : relire. */
+    fun setChargeControl(code: Int): Boolean {
+        if (code != ChargeControl.START && code != ChargeControl.STOP) return false
+        val quoi = if (code == ChargeControl.START) "démarrage de la charge (1)" else "arrêt de la charge (2)"
+        if (!VehicleWriteGate.allow(quoi)) return false
+        return ecrireBms(PROP_CHARGE_CONTROL, code, quoi)
+    }
+
+    /**
+     * Écriture d'une propriété de charge : `CarBMSManager.setGlobalProperty(Integer, prop, code)`, la
+     * voie des applis SAIC, puis la même propriété par le CarPropertyManager, zone globale puis 0.
+     */
+    private fun ecrireBms(prop: Int, code: Int, quoi: String): Boolean {
         val bms = MG4Hardware.car()?.let { car ->
             runCatching { car.javaClass.getMethod("getCarManager", String::class.java).invoke(car, "bms") }.getOrNull()
         }
         if (bms != null) {
             val ok = runCatching {
                 bms.javaClass.getMethod("setGlobalProperty", Class::class.java, Int::class.javaPrimitiveType, Any::class.java)
-                    .invoke(bms, Integer::class.java, PROP_CHARGE_TARGET, code)
+                    .invoke(bms, Integer::class.java, prop, code)
             }
             if (ok.isSuccess) {
-                AppLogger.i(CHARGE_TAG, "limite de charge → $pct % (code $code) par le gestionnaire bms")
+                AppLogger.i(CHARGE_TAG, "$quoi par le gestionnaire bms")
                 return true
             }
-            AppLogger.w(CHARGE_TAG, "limite de charge par le gestionnaire bms : ${ok.exceptionOrNull()?.let { (it.cause ?: it).javaClass.simpleName + " " + (it.cause ?: it).message }}")
+            AppLogger.w(CHARGE_TAG, "$quoi par le gestionnaire bms : ${ok.exceptionOrNull()?.let { (it.cause ?: it).javaClass.simpleName + " " + (it.cause ?: it).message }}")
         }
         val cpm = MG4Hardware.carPropertyManager() ?: return false
         for (zone in intArrayOf(AREA_GLOBAL, 0)) {
             val ok = runCatching {
                 cpm.javaClass.getMethod("setIntProperty", Int::class.java, Int::class.java, Int::class.java)
-                    .invoke(cpm, PROP_CHARGE_TARGET, zone, code)
+                    .invoke(cpm, prop, zone, code)
             }
             if (ok.isSuccess) {
-                AppLogger.i(CHARGE_TAG, "limite de charge → $pct % (code $code) par le CPM, zone 0x${Integer.toHexString(zone)}")
+                AppLogger.i(CHARGE_TAG, "$quoi par le CPM, zone 0x${Integer.toHexString(zone)}")
                 return true
             }
         }
-        AppLogger.w(CHARGE_TAG, "limite de charge $pct % : aucune voie n'a accepté l'écriture")
+        AppLogger.w(CHARGE_TAG, "$quoi : aucune voie n'a accepté l'écriture")
         return false
     }
 

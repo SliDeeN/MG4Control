@@ -34,6 +34,8 @@ class ChargePopupStringsTest {
         "charge_popup_tariff_default" to arrayOf("0,490", "€", "DC"),
         "charge_popup_tariff_fixed" to arrayOf("0,490", "€"),
         "charge_popup_since_time" to arrayOf("15:31"),
+        "charge_popup_current_sending" to arrayOf("16 A"),
+        "charge_popup_current_refused" to arrayOf("16 A"),
     )
 
     private fun textes(dossier: String): Map<String, String> {

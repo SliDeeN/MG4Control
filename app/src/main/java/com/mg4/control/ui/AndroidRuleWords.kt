@@ -4,6 +4,8 @@ import android.content.Context
 import com.mg4.control.R
 import com.mg4.control.api.ExternalApi
 import com.mg4.control.bluetooth.BluetoothProfileManager
+import com.mg4.control.model.ChargeControl
+import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.automation.CustomRuleStore
@@ -53,6 +55,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
         RuleSignal.DRIVE_MODE -> DriveMode.entries.firstOrNull { it.name.equals(text, true) }?.let { driveMode(it) } ?: text
         RuleSignal.REGEN -> RegenLevel.entries.firstOrNull { it.name.equals(text, true) }?.let { regen(it) } ?: text
         RuleSignal.RECIRC -> recircRes(text)?.let { t(it) } ?: text
+        RuleSignal.CHARGE_CURRENT -> chargeCurrent(text)
         else -> text
     }
 
@@ -81,12 +84,15 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override val always: String get() = t(R.string.rule_always)
 
     override fun set(key: String, value: String): String {
+        // « Commencer la charge » se lit seul, sans « Marche / arrêt de la charge : » devant.
+        if (key == RuleKeys.CHARGE_CONTROL) chargeControl(value)?.let { return it }
         val nom = keyRes(key)?.let { t(it) } ?: key
         val valeur = when (key) {
             RuleKeys.BRIGHTNESS, RuleKeys.CHARGE_LIMIT -> "$value %"
             RuleKeys.VOLUME -> value
             RuleKeys.VOLUME_STEP -> if (value.startsWith("-")) value else "+$value"
             RuleKeys.AIR_FLOW -> value
+            RuleKeys.CHARGE_CURRENT -> chargeCurrent(value)
             RuleKeys.AUTO_VOLUME -> t(when (value) { "0" -> R.string.rule_level_high; "1" -> R.string.rule_level_medium; else -> R.string.rule_level_low })
             in RuleKeys.ALL -> when (value) {
                 "1", "true" -> t(R.string.rule_on)
@@ -108,6 +114,19 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             else -> value
         }
         return t(R.string.rule_set_fmt, nom, valeur)
+    }
+
+    /** Courant de charge AC (#215) : « 6 A », « 16 A », « Max »… ; texte inconnu tel quel. */
+    fun chargeCurrent(v: String): String {
+        val code = ChargeCurrent.code(v) ?: return v
+        return ChargeCurrent.amperes(code)?.let { "$it A" } ?: t(R.string.charge_current_max)
+    }
+
+    /** Valeur de l'action marche / arrêt : « Commencer la charge » ou « Arrêter la charge ». */
+    fun chargeControl(v: String): String? = when (ChargeControl.code(v)) {
+        ChargeControl.START -> t(R.string.charge_control_start)
+        ChargeControl.STOP -> t(R.string.charge_control_stop)
+        else -> null
     }
 
     fun regen(n: RegenLevel): String = t(when (n) {
@@ -251,6 +270,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleSignal.DATA_TODAY_MB -> R.string.rule_sig_data_today
             RuleSignal.DATA_MONTH_MB -> R.string.rule_sig_data_month
             RuleSignal.CHARGE_LIMIT -> R.string.rule_sig_charge_limit
+            RuleSignal.CHARGE_CURRENT -> R.string.charge_popup_current
             RuleSignal.PLUGGED -> R.string.rule_sig_plugged
             RuleSignal.CHARGE_DC -> R.string.rule_sig_charge_dc
             RuleSignal.FIRMWARE -> R.string.rule_sig_firmware
@@ -303,6 +323,8 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleKeys.AUTO_HIGH_BEAM -> R.string.rule_key_auto_high_beam
             RuleKeys.BATTERY_HEAT -> R.string.rule_key_battery_heat
             RuleKeys.CHARGE_LIMIT -> R.string.rule_sig_charge_limit
+            RuleKeys.CHARGE_CURRENT -> R.string.charge_popup_current
+            RuleKeys.CHARGE_CONTROL -> R.string.rule_key_charge_control
             RuleKeys.WIFI -> R.string.rule_sig_wifi_on
             RuleKeys.BLUETOOTH -> R.string.rule_sig_bt_on
             RuleKeys.HOTSPOT -> R.string.rule_sig_hotspot

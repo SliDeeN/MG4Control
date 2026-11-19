@@ -109,6 +109,8 @@ object RuleKeys {
     const val AUTO_HIGH_BEAM = "rule_auto_high_beam"
     const val BATTERY_HEAT = "rule_battery_heat"
     const val CHARGE_LIMIT = "rule_charge_limit"      // 40..100 %
+    const val CHARGE_CURRENT = "rule_charge_current"  // 6A, 8A, 16A, MAX (#215)
+    const val CHARGE_CONTROL = "rule_charge_control"  // START, STOP
     // Lot 2 : Android
     const val WIFI = "rule_wifi"
     const val BLUETOOTH = "rule_bluetooth"
@@ -116,7 +118,7 @@ object RuleKeys {
 
     val ALL = setOf(BRIGHTNESS, VOLUME, VOLUME_STEP, ONE_PEDAL, ENERGY_SAVING, AEB, TSR, ESC, DROWSINESS,
         OVERSPEED_ALARM, SPEED_LIMIT_TONE, HVAC_ECO, AIR_FLOW, AUTO_VOLUME, AUTO_HIGH_BEAM, BATTERY_HEAT,
-        CHARGE_LIMIT, WIFI, BLUETOOTH, HOTSPOT)
+        CHARGE_LIMIT, CHARGE_CURRENT, CHARGE_CONTROL, WIFI, BLUETOOTH, HOTSPOT)
 }
 
 /** Un son importé depuis l'éditeur de Mes automatisations (2026-11-06). Dans `model` pour Gson. */

@@ -9,6 +9,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.BatteryTypeConfig
 import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.ReadyWatcher
+import com.mg4.control.model.ChargeControl
 import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeLimit
 import com.mg4.control.model.ChargeLog
@@ -38,8 +39,9 @@ import com.mg4.control.util.FirmwareInfo
  *    borne rapide marque parfois une pause.
  *  - Au passage en READY, le pop-up se ferme ([ReadyWatcher]).
  *
- * Écritures véhicule : la seule est la limite de charge, demandée par le curseur du pop-up
- * ([demanderLimite]) et suivie jusqu'à ce que la voiture la reflète. Le prix du kWh corrigé dans
+ * Écritures véhicule : la limite de charge, demandée par le curseur du pop-up ([demanderLimite]),
+ * le courant de charge AC (#215, [demanderCourant]) et la marche / l'arrêt de la charge
+ * ([demanderControle]), chacun suivi jusqu'à ce que la voiture le reflète. Le prix du kWh corrigé dans
  * le pop-up ne vaut que pour cette charge : il passe à la session de l'onglet Statistiques
  * ([avecTarif], [fixerPrix]).
  */
@@ -90,6 +92,20 @@ object ChargeMonitor {
         val horlogeMs: Long,
         val ecouleMs: Long,
         val points: List<ChargePoint>,
+        /** Courant de charge AC ([com.mg4.control.model.ChargeCurrent], code 1..4) : demandé, sinon lu. */
+        val courantCode: Int? = null,
+        val courantEnAttente: Boolean = false,
+        /** Code que la voiture n'a pas pris, montré quelques secondes. */
+        val courantRefuse: Int? = null,
+        /** Interrupteur de charge ([com.mg4.control.model.ChargeControl]) : demandé, sinon lu. */
+        val controle: Int? = null,
+        val controleEnAttente: Boolean = false,
+        /** Demande que la voiture n'a pas prise, montrée quelques secondes. */
+        val controleRefuse: Int? = null,
+        /** Prise branchée ; `null` si non relue (en READY). Vraie en charge. */
+        val branchee: Boolean? = null,
+        /** Hors charge, la voiture dit la charge arrêtée (statut 8) et non terminée. */
+        val arretee: Boolean = false,
     )
 
     private val fil = HandlerThread("mg4-charge").apply { start() }
@@ -111,6 +127,18 @@ object ChargeMonitor {
     private var consigneMs = 0L
     private var refus: Int? = null
     private var refusMs = 0L
+    private var courantLu: Int? = null
+    private var courantConsigne: Int? = null
+    private var courantConsigneMs = 0L
+    private var courantRefus: Int? = null
+    private var courantRefusMs = 0L
+    private var controleLu: Int? = null
+    private var controleConsigne: Int? = null
+    private var controleConsigneMs = 0L
+    private var controleRefus: Int? = null
+    private var controleRefusMs = 0L
+    private var branchee: Boolean? = null
+    private var statutHorsCharge: Int? = null
     /** Prise signalée sans charge : la charge peut commencer d'un instant à l'autre. */
     private var priseBranchee = false
     /** Tranches de 1 % apprises pendant la charge en cours, pour le journal de fin de charge. */
@@ -178,6 +206,38 @@ object ChargeMonitor {
             } else {
                 refus = pct
                 refusMs = SystemClock.elapsedRealtime()
+            }
+            publier(SystemClock.elapsedRealtime())
+        }
+    }
+
+    /** Courant de charge AC choisi dans le pop-up (#215) : écrit, puis suivi comme la limite. */
+    fun demanderCourant(code: Int) {
+        worker.post {
+            val ok = runCatching { EnergyReader.setAcCurrentCode(code) }.getOrDefault(false)
+            if (ok) {
+                courantConsigne = code
+                courantConsigneMs = SystemClock.elapsedRealtime()
+                courantRefus = null
+            } else {
+                courantRefus = code
+                courantRefusMs = SystemClock.elapsedRealtime()
+            }
+            publier(SystemClock.elapsedRealtime())
+        }
+    }
+
+    /** Bouton « Commencer / Arrêter la charge » du pop-up : écrit, puis suivi comme la limite. */
+    fun demanderControle(code: Int) {
+        worker.post {
+            val ok = runCatching { EnergyReader.setChargeControl(code) }.getOrDefault(false)
+            if (ok) {
+                controleConsigne = code
+                controleConsigneMs = SystemClock.elapsedRealtime()
+                controleRefus = null
+            } else {
+                controleRefus = code
+                controleRefusMs = SystemClock.elapsedRealtime()
             }
             publier(SystemClock.elapsedRealtime())
         }
@@ -284,6 +344,10 @@ object ChargeMonitor {
                 brut = null
                 consigne = null
                 refus = null
+                courantConsigne = null
+                courantRefus = null
+                controleConsigne = null
+                controleRefus = null
                 nouvelle = true
                 tranchesApprises = 0
                 AppLogger.i(TAG, "charge détectée (${soc ?: "?"} %) : suivi depuis maintenant")
@@ -304,8 +368,15 @@ object ChargeMonitor {
         }
         enCharge = charge
         // Branchée sans charger, hors READY : on resserre la cadence pour voir le début de la charge.
-        if (!charge) priseBranchee = ReadyWatcher.ready != true &&
-            runCatching { EnergyReader.chargeRaw() }.getOrNull()?.let { ChargeDisplay.priseSignalee(it.ac, it.dc) } == true
+        if (!charge) {
+            val raw = if (ReadyWatcher.ready != true) runCatching { EnergyReader.chargeRaw() }.getOrNull() else null
+            branchee = raw?.let { ChargeDisplay.priseSignalee(it.ac, it.dc) }
+            statutHorsCharge = raw?.statut
+            priseBranchee = branchee == true
+        } else {
+            branchee = true
+            statutHorsCharge = null
+        }
         val l = log ?: return
 
         if (charge) {
@@ -313,9 +384,10 @@ object ChargeMonitor {
             kw = EnergyReader.dischargeKw()?.let { -it }
             EnergyReader.soc()?.let { soc = it }
             val tranche = l.ajouter(maintenant, kw, soc)
-            if (dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS || consigne != null) {
+            if (dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS || consigne != null || courantConsigne != null) {
                 dernierLentMs = maintenant
                 brut = EnergyReader.chargeRaw()
+                courantLu = EnergyReader.acCurrentCode()
                 EnergyReader.rangeKm()?.let { autonomie = it }
                 if (l.type == null) l.type = brut?.let { ChargeDisplay.type(it.ac, it.dc) }
             }
@@ -358,6 +430,36 @@ object ChargeMonitor {
             }
         }
         if (refus != null && maintenant - refusMs > REFUS_MS) refus = null
+        val cc = courantConsigne
+        if (cc != null) {
+            // Hors charge, le relevé lent ne tourne plus : relire ici ce qui vient d'être demandé.
+            if (!enCharge) courantLu = EnergyReader.acCurrentCode()
+            if (courantLu == cc) {
+                AppLogger.i(TAG, "courant AC (code $cc) reflété par la voiture après ${maintenant - courantConsigneMs} ms")
+                courantConsigne = null
+            } else if (maintenant - courantConsigneMs > CONSIGNE_MS) {
+                AppLogger.w(TAG, "courant AC (code $cc) toujours pas reflété (lu : ${courantLu ?: "?"}) : refusé")
+                courantConsigne = null
+                courantRefus = cc
+                courantRefusMs = maintenant
+            }
+        }
+        if (courantRefus != null && maintenant - courantRefusMs > REFUS_MS) courantRefus = null
+        // Interrupteur de charge : relu seulement quand le pop-up le montre, ou qu'une demande attend.
+        if (ChargePopupOverlay.isShowing() || controleConsigne != null) controleLu = EnergyReader.chargeControl()
+        val ctl = controleConsigne
+        if (ctl != null) {
+            if (ChargeControl.pris(ctl, controleLu)) {
+                AppLogger.i(TAG, "marche/arrêt de la charge ($ctl) pris par la voiture (lu $controleLu) après ${maintenant - controleConsigneMs} ms")
+                controleConsigne = null
+            } else if (maintenant - controleConsigneMs > CONSIGNE_MS) {
+                AppLogger.w(TAG, "marche/arrêt de la charge ($ctl) toujours pas pris (lu : ${controleLu ?: "?"}) : refusé")
+                controleConsigne = null
+                controleRefus = ctl
+                controleRefusMs = maintenant
+            }
+        }
+        if (controleRefus != null && maintenant - controleRefusMs > REFUS_MS) controleRefus = null
         val type = r?.let { ChargeDisplay.type(it.ac, it.dc) }
         val reglages = runCatching { StatsStore(ctx).settings() }.getOrNull()
         val prixDefaut = reglages?.priceFor(type) ?: 0f
@@ -384,6 +486,14 @@ object ChargeMonitor {
             horlogeMs = System.currentTimeMillis(),
             ecouleMs = (l.finMs ?: maintenant) - l.debutMs,
             points = l.courbe(),
+            courantCode = courantConsigne ?: courantLu,
+            courantEnAttente = courantConsigne != null,
+            courantRefuse = courantRefus,
+            controle = controleConsigne ?: controleLu,
+            controleEnAttente = controleConsigne != null,
+            controleRefuse = controleRefus,
+            branchee = branchee,
+            arretee = !enCharge && statutHorsCharge == ChargeControl.STATUT_ARRETEE,
         )
         etat = e
         main.post { ecouteur?.invoke(e) }

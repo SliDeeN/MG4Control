@@ -1034,6 +1034,16 @@
     <string name="charge_popup_end_left">faltan %1$s · hasta %2$d %%</string>
     <string name="charge_popup_lfp_info">Límite de carga no ajustable (batería LFP)</string>
     <string name="charge_popup_limit_fixed">Límite de carga no ajustable en este vehículo</string>
+    <string name="charge_popup_current">Corriente de carga AC</string>
+    <string name="charge_popup_current_ac_only">Solo se aplica a la carga AC</string>
+    <string name="charge_popup_current_sending">Enviando %1$s al coche…</string>
+    <string name="charge_popup_current_refused">El coche no aceptó %1$s</string>
+    <string name="charge_current_max">Máx.</string>
+    <string name="charge_control_start">Iniciar la carga</string>
+    <string name="charge_control_stop">Detener la carga</string>
+    <string name="charge_control_preparing">Preparando…</string>
+    <string name="charge_control_refused">Rechazado por el coche</string>
+    <string name="charge_popup_title_stopped">Carga detenida</string>
     <string name="charge_popup_legend_power">Potencia (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batería (%)</string>
     <string name="charge_popup_since">desde el inicio de la carga (%1$s)</string>
@@ -1680,6 +1690,7 @@
     <string name="rule_key_air_flow">Dirección del aire</string>
     <string name="rule_key_auto_high_beam">Luces largas automáticas</string>
     <string name="rule_key_auto_volume">Caudal en AUTO</string>
+    <string name="rule_key_charge_control">Iniciar / detener la carga</string>
     <string name="rule_key_battery_heat">Calefacción de batería</string>
     <string name="rule_key_speed_limit_tone">Aviso de límite de velocidad</string>
     <string name="rule_key_volume_step">Volumen + / −</string>

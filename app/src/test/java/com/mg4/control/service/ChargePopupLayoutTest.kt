@@ -39,12 +39,18 @@ class ChargePopupLayoutTest {
     private fun localise(langue: String): Context =
         app.createConfigurationContext(Configuration(app.resources.configuration).apply { setLocale(Locale.forLanguageTag(langue)) })
 
-    private fun etat(finie: Boolean = false, limite: Int? = 80, restant: Int? = 21) = ChargeMonitor.Etat(
-        enCharge = !finie, finie = finie, type = ChargeType.DC, soc = 62.4f, kw = 90f, kwMax = 134f,
+    private fun etat(finie: Boolean = false, limite: Int? = 80, restant: Int? = 21, type: ChargeType = ChargeType.DC,
+                     courant: Int? = 4, courantEnAttente: Boolean = false, courantRefuse: Int? = null,
+                     controle: Int? = null, controleEnAttente: Boolean = false, controleRefuse: Int? = null,
+                     branchee: Boolean? = true, arretee: Boolean = false) = ChargeMonitor.Etat(
+        enCharge = !finie, finie = finie, type = type, soc = 62.4f, kw = 90f, kwMax = 134f,
         energieKwh = 27.4f, dureeMin = 14, restantMin = restant, limitePct = limite, limiteEnAttente = false,
         limiteRefusee = null, autonomieKm = 237, autonomieGagneeKm = 169, prix = 0.49f, prixCorrige = false,
         prixDefaut = 0.49f, devise = "€", debutHorlogeMs = 1_760_621_460_000L, horlogeMs = 1_760_622_300_000L,
         ecouleMs = 14 * 60_000L, points = (0..168).map { ChargePoint(it * 5_000L, 120f - it * 0.2f, 18f + it * 0.26f) },
+        courantCode = courant, courantEnAttente = courantEnAttente, courantRefuse = courantRefuse,
+        controle = controle, controleEnAttente = controleEnAttente, controleRefuse = controleRefuse,
+        branchee = if (finie) branchee else true, arretee = arretee,
     )
 
     @Test
@@ -120,6 +126,61 @@ class ChargePopupLayoutTest {
             val bas = colonne.height - colonne.paddingBottom
             assertTrue("$langue ×$echelle lfp=$lfp : finit à ${dernier.bottom} px pour $bas", dernier.bottom <= bas)
         }
+    }
+
+    /** Courant de charge AC (#215) : choisi en surbrillance en AC, grisé et inerte en DC, titre selon l'état. */
+    @Test
+    fun `le courant AC se peint selon la prise et l envoi`() {
+        val loc = localise("fr")
+        val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
+        val titre = { v: View -> v.findViewById<TextView>(R.id.charge_current_title).text.toString() }
+
+        val (ac, vuesAc) = ChargePopupOverlay.preparer(themed, loc, etat(type = ChargeType.AC, courant = 3))
+        assertEquals(4, vuesAc.casesCourant.size)
+        assertEquals(listOf("6 A", "8 A", "16 A", loc.getString(R.string.charge_current_max)), vuesAc.casesCourant.map { it.text.toString() })
+        assertTrue(vuesAc.casesCourant.all { it.isEnabled })
+        assertEquals(loc.getString(R.string.charge_popup_current), titre(ac))
+        assertEquals(vues(ac).getColor(R.color.text_primary), vuesAc.casesCourant[2].currentTextColor)
+
+        val (dc, vuesDc) = ChargePopupOverlay.preparer(themed, loc, etat(type = ChargeType.DC))
+        assertTrue(vuesDc.casesCourant.none { it.isEnabled })
+        assertEquals(loc.getString(R.string.charge_popup_current_ac_only), titre(dc))
+
+        val (envoi, _) = ChargePopupOverlay.preparer(themed, loc, etat(type = ChargeType.AC, courant = 2, courantEnAttente = true))
+        assertEquals(loc.getString(R.string.charge_popup_current_sending, "8 A"), titre(envoi))
+        val (refus, _) = ChargePopupOverlay.preparer(themed, loc, etat(type = ChargeType.AC, courant = 4, courantRefuse = 1))
+        assertEquals(loc.getString(R.string.charge_popup_current_refused, "6 A"), titre(refus))
+    }
+
+    private fun vues(v: View): Context = v.context
+
+    /** Commencer / Arrêter la charge (variante A) : selon la valeur lue, la prise et l'envoi. */
+    @Test
+    fun `le bouton de charge suit la voiture et la prise`() {
+        val loc = localise("fr")
+        val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
+        fun bouton(e: ChargeMonitor.Etat): TextView =
+            ChargePopupOverlay.preparer(themed, loc, e).first.findViewById(R.id.charge_control)
+
+        val enCharge = bouton(etat(controle = 1))
+        assertEquals(View.VISIBLE, enCharge.visibility)
+        assertEquals(loc.getString(R.string.charge_control_stop), enCharge.text.toString())
+        assertTrue(enCharge.isEnabled)
+
+        val arretee = ChargePopupOverlay.preparer(themed, loc, etat(finie = true, restant = null, controle = 2, arretee = true)).first
+        assertEquals(loc.getString(R.string.charge_control_start), arretee.findViewById<TextView>(R.id.charge_control).text.toString())
+        assertEquals(loc.getString(R.string.charge_popup_title_stopped), arretee.findViewById<TextView>(R.id.charge_title).text.toString())
+        // Terminée (pas le statut 8) : le titre d'avant.
+        val terminee = ChargePopupOverlay.preparer(themed, loc, etat(finie = true, restant = null, controle = 2)).first
+        assertEquals(loc.getString(R.string.charge_popup_title_done), terminee.findViewById<TextView>(R.id.charge_title).text.toString())
+
+        val prep = bouton(etat(controle = 3))
+        assertEquals(loc.getString(R.string.charge_control_preparing), prep.text.toString())
+        assertFalse(prep.isEnabled)
+        assertFalse(bouton(etat(controle = 2, controleEnAttente = true)).isEnabled)
+        assertEquals(loc.getString(R.string.charge_control_refused), bouton(etat(controle = 1, controleRefuse = 2)).text.toString())
+
+        assertEquals(View.GONE, bouton(etat(finie = true, restant = null, controle = 2, branchee = false)).visibility)
     }
 
     @Test
