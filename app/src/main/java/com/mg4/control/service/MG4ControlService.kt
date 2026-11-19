@@ -985,6 +985,12 @@ class MG4ControlService : Service() {
         if (action == ShortcutAction.CUSTOM) {
             val id = customId ?: prefs.getString("shortcut_${pressKey}_custom_id", null)
             AppLogger.i(TAG, "SHORTCUT CUSTOM — raccourci perso ${id ?: "non choisi"} (emplacement $pressKey)")
+            // Raccourci perso qui ouvre une appli (2026-11-19) : déjà à l'écran, l'écran d'avant revient.
+            val perso = com.mg4.control.util.CustomShortcutSettings.get(this@MG4ControlService, id)
+            val ouvreAppli = perso != null && com.mg4.control.model.CustomShortcuts.kindOf(perso) in
+                setOf(com.mg4.control.model.CustomKind.APP, com.mg4.control.model.CustomKind.APP_SHORTCUT)
+            if (ouvreAppli && com.mg4.control.model.AppToggle.appliesTo(pressKey) &&
+                AppToggleRunner.backIfFront(this@MG4ControlService, perso?.packageName)) return
             CustomShortcutRunner.run(this@MG4ControlService, id)
             return
         }
@@ -1125,6 +1131,8 @@ class MG4ControlService : Service() {
                     MG4Hardware.setAebMode(mode)
                 }
                 ShortcutAction.OPEN_APP -> {
+                    // Déjà à l'écran (2026-11-19) : l'écran d'avant revient, comme pour Android Auto / CarPlay.
+                    if (com.mg4.control.model.AppToggle.appliesTo(pressKey) && AppToggleRunner.backIfFront(this@MG4ControlService, packageName)) return@launch
                     val intent = Intent(this@MG4ControlService, MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     }
@@ -1133,6 +1141,7 @@ class MG4ControlService : Service() {
                 ShortcutAction.OPEN_CUSTOM_APP -> {
                     // Bouton flottant : l'appli de la bulle (2026-11-17) ; sinon celle de l'emplacement.
                     val pkg = customId ?: prefs.getString("shortcut_${pressKey}_custom_app", null)
+                    if (com.mg4.control.model.AppToggle.appliesTo(pressKey) && AppToggleRunner.backIfFront(this@MG4ControlService, pkg)) return@launch
                     if (pkg != null) {
                         val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
                         if (launchIntent != null) {
