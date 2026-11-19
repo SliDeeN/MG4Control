@@ -42,6 +42,8 @@ jobs:
       - name: Run scanners (SARIF, non-blocking)
         run: |
           # Always produce a valid SARIF even if a scanner fails -> the upload never breaks.
+          # The fallback uses the scanner's own SARIF tool name ("Semgrep OSS"), otherwise code
+          # scanning sees a second tool that goes stale once the scanner works again.
           empty_sarif() {
             printf '%s' '{"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0.json","runs":[{"tool":{"driver":{"name":"'"$1"'","rules":[]}},"results":[]}]}' > "$2"
           }
@@ -49,7 +51,7 @@ jobs:
           mobsfscan --sarif -o mobsfscan.sarif . || true
           [ -s mobsfscan.sarif ] || empty_sarif mobsfscan mobsfscan.sarif
           semgrep --config p/kotlin --config p/security-audit --sarif -o semgrep.sarif . || true
-          [ -s semgrep.sarif ] || empty_sarif semgrep semgrep.sarif
+          [ -s semgrep.sarif ] || empty_sarif "Semgrep OSS" semgrep.sarif
 
       - name: Upload mobsfscan SARIF
         if: always()
