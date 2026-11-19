@@ -183,6 +183,105 @@ class ChargePopupLayoutTest {
         assertEquals(View.GONE, bouton(etat(finie = true, restant = null, controle = 2, branchee = false)).visibility)
     }
 
+    /** Ouvert au raccourci sans charge suivie (2026-11-19) : message à la place de la courbe, réglages actifs. */
+    private fun sansCharge(branchee: Boolean? = true, verrou: Int? = 1) = ChargeMonitor.vide().copy(
+        soc = 74.5f, limitePct = 80, autonomieKm = 281, prixDefaut = 0.25f, prix = 0.25f, type = ChargeType.AC,
+        courantCode = 3, branchee = branchee, verrou = verrou)
+
+    @Test
+    fun `sans charge suivie, le pop-up s ouvre quand meme dans les dix langues`() {
+        for (langue in listOf("fr", "en", "de", "es", "it", "pt", "tr", "pl", "nb", "cs")) {
+            val loc = localise(langue)
+            val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
+            for (e in listOf(ChargeMonitor.vide(), sansCharge(), sansCharge(branchee = false), sansCharge(branchee = null, verrou = null))) {
+                val (vue, vues) = ChargePopupOverlay.preparer(themed, loc, e)
+                assertEquals(loc.getString(R.string.charge_popup_none), vue.findViewById<TextView>(R.id.charge_title).text.toString())
+                assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_idle).visibility)
+                assertEquals(View.INVISIBLE, vues.courbe.visibility)
+                assertEquals("–", vues.energie.valeur.text.toString())
+                assertEquals(View.GONE, vues.cout.crayon.visibility)
+            }
+        }
+        val loc = localise("fr")
+        val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
+        val (branchee, vb) = ChargePopupOverlay.preparer(themed, loc, sansCharge())
+        assertEquals(loc.getString(R.string.charge_popup_plugged), branchee.findViewById<TextView>(R.id.charge_pill).text.toString())
+        assertEquals(loc.getString(R.string.charge_control_start), branchee.findViewById<TextView>(R.id.charge_control).text.toString())
+        assertEquals(loc.getString(R.string.charge_popup_range_now), branchee.findViewById<TextView>(R.id.charge_end_title).text.toString())
+        assertTrue(branchee.findViewById<TextView>(R.id.charge_end_time).text.toString().startsWith("281"))
+        assertTrue(vb.casesCourant.all { it.isEnabled })
+        assertTrue(vb.curseur.reglable)
+        // Le prix n'est pas modifiable : pas de charge à corriger.
+        vb.cout.vue.performClick()
+        assertEquals(View.GONE, branchee.findViewById<View>(R.id.charge_price_editor).visibility)
+
+        val (debranchee, _) = ChargePopupOverlay.preparer(themed, loc, sansCharge(branchee = false))
+        assertEquals(loc.getString(R.string.charge_popup_unplugged), debranchee.findViewById<TextView>(R.id.charge_pill).text.toString())
+        assertEquals(View.GONE, debranchee.findViewById<View>(R.id.charge_control).visibility)
+        assertEquals(View.VISIBLE, debranchee.findViewById<View>(R.id.charge_port_lock).visibility)
+
+        val (inconnue, _) = ChargePopupOverlay.preparer(themed, loc, sansCharge(branchee = null))
+        assertEquals(View.GONE, inconnue.findViewById<View>(R.id.charge_pill).visibility)
+
+        // Avec une charge suivie : la courbe, pas le message.
+        val (charge, vc) = ChargePopupOverlay.preparer(themed, loc, etat())
+        assertEquals(View.GONE, charge.findViewById<View>(R.id.charge_idle).visibility)
+        assertEquals(View.VISIBLE, vc.courbe.visibility)
+    }
+
+    /** Verrou de la prise (variante A) : dit ce qu'il fera, envoi, refus ; caché quand la voiture ne le donne pas. */
+    @Test
+    fun `le bouton du verrou de la prise suit la voiture`() {
+        val loc = localise("fr")
+        val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
+        fun bouton(e: ChargeMonitor.Etat, a9: Boolean = false): TextView =
+            ChargePopupOverlay.preparer(themed, loc, e, a9 = a9, codeBatterie = if (a9) 7 else null).first.findViewById(R.id.charge_port_lock)
+
+        val verrouillee = bouton(etat().copy(verrou = 1))
+        assertEquals(View.VISIBLE, verrouillee.visibility)
+        assertEquals(loc.getString(R.string.charge_port_unlock), verrouillee.text.toString())
+        assertTrue(verrouillee.isEnabled)
+        assertEquals(loc.getString(R.string.charge_port_lock), bouton(etat().copy(verrou = 2)).text.toString())
+
+        assertEquals(View.GONE, bouton(etat().copy(verrou = 0)).visibility)
+        assertEquals(View.GONE, bouton(etat().copy(verrou = null)).visibility)
+        assertEquals(loc.getString(R.string.charge_port_lock), bouton(etat().copy(verrou = 0), a9 = true).text.toString())
+
+        val envoi = bouton(etat().copy(verrou = 2, verrouEnAttente = true))
+        assertEquals(loc.getString(R.string.charge_port_sending), envoi.text.toString())
+        assertFalse(envoi.isEnabled)
+        assertEquals(loc.getString(R.string.charge_control_refused), bouton(etat().copy(verrou = 1, verrouRefuse = 2)).text.toString())
+    }
+
+    /**
+     * Barre du haut au plus chargé (verrou, marche / arrêt, pastille) en Standard et en Grand, dans
+     * les langues aux textes les plus longs : le titre garde de la place, la croix reste dans la carte.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `la barre du haut tient avec le verrou et la marche de la charge`() {
+        for (echelle in listOf(1f, 1.125f)) for (langue in listOf("fr", "de", "tr", "pt", "cs")) {
+            val loc = app.createConfigurationContext(Configuration(app.resources.configuration).apply {
+                setLocale(Locale.forLanguageTag(langue))
+                fontScale = echelle
+            })
+            val (vue, _) = ChargePopupOverlay.preparer(ContextThemeWrapper(loc, R.style.Theme_MG4Control), loc,
+                sansCharge(verrou = 1))
+            val d = loc.resources.displayMetrics.density
+            vue.measure(
+                View.MeasureSpec.makeMeasureSpec((1300 * d).toInt(), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec((500 * d).toInt(), View.MeasureSpec.EXACTLY))
+            vue.layout(0, 0, vue.measuredWidth, vue.measuredHeight)
+            val titre = vue.findViewById<View>(R.id.charge_title)
+            val croix = vue.findViewById<View>(R.id.charge_close)
+            val barre = croix.parent as View
+            assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_port_lock).visibility)
+            assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_control).visibility)
+            assertTrue("$langue ×$echelle : titre de ${titre.width / d} dp", titre.width >= 150 * d)
+            assertTrue("$langue ×$echelle : croix à ${croix.right} pour ${barre.width}", croix.right <= barre.width)
+        }
+    }
+
     @Test
     fun `l editeur du prix s ouvre et suit les boutons`() {
         val loc = localise("fr")

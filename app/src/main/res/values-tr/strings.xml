@@ -1043,6 +1043,15 @@
     <string name="charge_control_stop">Şarjı durdur</string>
     <string name="charge_control_preparing">Hazırlanıyor…</string>
     <string name="charge_control_refused">Araç reddetti</string>
+    <string name="charge_popup_plugged">Takılı</string>
+    <string name="charge_popup_unplugged">Takılı değil</string>
+    <string name="charge_popup_range_now">Menzil</string>
+    <string name="charge_popup_idle">Henüz izlenen şarj yok</string>
+    <string name="charge_popup_idle_hint">Grafik bir sonraki şarjla başlar.</string>
+    <string name="charge_port_lock">Şarj soketini kilitle</string>
+    <string name="charge_port_unlock">Şarj soketinin kilidini aç</string>
+    <string name="charge_port_sending">Gönderiliyor…</string>
+    <string name="rule_key_charge_port_lock">Şarj soketi kilidi</string>
     <string name="charge_popup_title_stopped">Şarj durduruldu</string>
     <string name="charge_popup_legend_power">Güç (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batarya (%)</string>

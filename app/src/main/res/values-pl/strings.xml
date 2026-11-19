@@ -1043,6 +1043,15 @@
     <string name="charge_control_stop">Zatrzymaj ładowanie</string>
     <string name="charge_control_preparing">Przygotowanie…</string>
     <string name="charge_control_refused">Odrzucone przez samochód</string>
+    <string name="charge_popup_plugged">Podłączony</string>
+    <string name="charge_popup_unplugged">Odłączony</string>
+    <string name="charge_popup_range_now">Zasięg</string>
+    <string name="charge_popup_idle">Brak śledzonego ładowania</string>
+    <string name="charge_popup_idle_hint">Wykres zacznie się przy następnym ładowaniu.</string>
+    <string name="charge_port_lock">Zablokuj gniazdo</string>
+    <string name="charge_port_unlock">Odblokuj gniazdo</string>
+    <string name="charge_port_sending">Wysyłanie…</string>
+    <string name="rule_key_charge_port_lock">Blokada gniazda ładowania</string>
     <string name="charge_popup_title_stopped">Ładowanie zatrzymane</string>
     <string name="charge_popup_legend_power">Moc (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Bateria (%)</string>

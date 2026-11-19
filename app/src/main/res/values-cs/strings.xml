@@ -948,6 +948,15 @@
     <string name="charge_control_stop">Zastavit nabíjení</string>
     <string name="charge_control_preparing">Příprava…</string>
     <string name="charge_control_refused">Vůz odmítl</string>
+    <string name="charge_popup_plugged">Připojeno</string>
+    <string name="charge_popup_unplugged">Odpojeno</string>
+    <string name="charge_popup_range_now">Dojezd</string>
+    <string name="charge_popup_idle">Zatím žádné sledované nabíjení</string>
+    <string name="charge_popup_idle_hint">Graf začne s dalším nabíjením.</string>
+    <string name="charge_port_lock">Zamknout nabíjecí zásuvku</string>
+    <string name="charge_port_unlock">Odemknout nabíjecí zásuvku</string>
+    <string name="charge_port_sending">Odesílání…</string>
+    <string name="rule_key_charge_port_lock">Zámek nabíjecí zásuvky</string>
     <string name="charge_popup_title_stopped">Nabíjení zastaveno</string>
     <string name="charge_popup_legend_power">Výkon (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Nabití baterie (%)</string>

@@ -1043,6 +1043,15 @@
     <string name="charge_control_stop">Parar a carga</string>
     <string name="charge_control_preparing">A preparar…</string>
     <string name="charge_control_refused">Recusado pelo carro</string>
+    <string name="charge_popup_plugged">Ligado</string>
+    <string name="charge_popup_unplugged">Desligado</string>
+    <string name="charge_popup_range_now">Autonomia</string>
+    <string name="charge_popup_idle">Ainda nenhum carregamento registado</string>
+    <string name="charge_popup_idle_hint">A curva começa com o próximo carregamento.</string>
+    <string name="charge_port_lock">Bloquear a tomada</string>
+    <string name="charge_port_unlock">Desbloquear a tomada</string>
+    <string name="charge_port_sending">A enviar…</string>
+    <string name="rule_key_charge_port_lock">Bloqueio da tomada de carregamento</string>
     <string name="charge_popup_title_stopped">Carga parada</string>
     <string name="charge_popup_legend_power">Potência (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Bateria (%)</string>

@@ -1043,6 +1043,15 @@
     <string name="charge_control_stop">Laden beenden</string>
     <string name="charge_control_preparing">Vorbereitung…</string>
     <string name="charge_control_refused">Vom Fahrzeug abgelehnt</string>
+    <string name="charge_popup_plugged">Eingesteckt</string>
+    <string name="charge_popup_unplugged">Nicht eingesteckt</string>
+    <string name="charge_popup_range_now">Reichweite</string>
+    <string name="charge_popup_idle">Noch kein Ladevorgang erfasst</string>
+    <string name="charge_popup_idle_hint">Die Kurve beginnt mit dem nächsten Ladevorgang.</string>
+    <string name="charge_port_lock">Ladeanschluss verriegeln</string>
+    <string name="charge_port_unlock">Ladeanschluss entriegeln</string>
+    <string name="charge_port_sending">Wird gesendet…</string>
+    <string name="rule_key_charge_port_lock">Verriegelung des Ladeanschlusses</string>
     <string name="charge_popup_title_stopped">Laden gestoppt</string>
     <string name="charge_popup_legend_power">Leistung (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batterie (%)</string>

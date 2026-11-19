@@ -21,6 +21,7 @@ import com.mg4.control.R
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeControl
 import com.mg4.control.model.ChargeCurrent
+import com.mg4.control.model.ChargePortLock
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.PriceStepper
 import com.mg4.control.model.StatsTracker
@@ -85,18 +86,14 @@ object ChargePopupOverlay {
                 fermer("second appui du raccourci")
                 return@post
             }
-            val texte = when {
-                !ChargePopupSettings.isEnabled(app) -> R.string.charge_popup_disabled
-                ChargeMonitor.etat == null -> R.string.charge_popup_none
-                else -> null
-            }
-            if (texte != null) {
-                AppLogger.i(TAG, "Pop-up de charge — raccourci sans effet (" +
-                    (if (texte == R.string.charge_popup_disabled) "option coupée" else "aucune charge suivie") + ")")
-                Toast.makeText(app, LocaleHelper.applyLocale(app).getString(texte), Toast.LENGTH_SHORT).show()
+            // Sans charge suivie, il s'ouvre quand même (2026-11-19) : limite, courant AC, verrou de
+            // la prise et marche de la charge restent réglables.
+            if (!ChargePopupSettings.isEnabled(app)) {
+                AppLogger.i(TAG, "Pop-up de charge — raccourci sans effet (option coupée)")
+                Toast.makeText(app, LocaleHelper.applyLocale(app).getString(R.string.charge_popup_disabled), Toast.LENGTH_SHORT).show()
                 return@post
             }
-            ouvrir(app, "raccourci")
+            ouvrir(app, if (ChargeMonitor.etat == null) "raccourci, aucune charge suivie" else "raccourci")
         }
     }
 
@@ -105,7 +102,7 @@ object ChargePopupOverlay {
         if (vue != null) return
         val c = OverlayKit.contextes(context, LARGEUR_DP, HAUTEUR_DP)
         val (racine, v) = try {
-            val (gonflee, liees) = preparer(c.themed, c.localized, ChargeMonitor.etat)
+            val (gonflee, liees) = preparer(c.themed, c.localized, ChargeMonitor.etat ?: ChargeMonitor.vide())
             OverlayKit.tenirDansLaFenetre(gonflee, (MARGE_FENETRE_DP * c.mesures.density).roundToInt(), "Pop-up de charge")
             gonflee to liees
         } catch (e: Exception) {
@@ -143,7 +140,7 @@ object ChargePopupOverlay {
         a9: Boolean = FirmwareInfo.isA9(), codeBatterie: Int? = if (a9) BatteryTypeConfig.code() else null,
     ): Pair<View, Vues> {
         val gonflee = LayoutInflater.from(themed).inflate(R.layout.overlay_charge_popup, null)
-        val liees = Vues(gonflee, localized, !ChargeLimitSupport.reglable(a9, codeBatterie), codeBatterie == ChargeLimitSupport.CODE_LFP)
+        val liees = Vues(gonflee, localized, !ChargeLimitSupport.reglable(a9, codeBatterie), codeBatterie == ChargeLimitSupport.CODE_LFP, a9)
         brancher(liees)
         etat?.let { peindre(liees, it) }
         return gonflee to liees
@@ -182,7 +179,7 @@ object ChargePopupOverlay {
      * nomme la LFP si [lfp]), courbe sans ligne de limite. L'heure de fin en grand, en bas, est la
      * même partout.
      */
-    internal class Vues(val racine: View, val loc: Context, val limiteFixe: Boolean, val lfp: Boolean) {
+    internal class Vues(val racine: View, val loc: Context, val limiteFixe: Boolean, val lfp: Boolean, val a9: Boolean = false) {
         val themed: Context = racine.context
         val locale: Locale = loc.resources.configuration.locales[0]
         val icone: ImageView = racine.findViewById(R.id.charge_title_icon)
@@ -222,6 +219,11 @@ object ChargePopupOverlay {
         val controle: TextView = racine.findViewById(R.id.charge_control)
         /** Marche / arrêt touché, montré « en préparation » jusqu'à ce que le suivi en parle. */
         var controleVise: Int? = null
+        val verrou: TextView = racine.findViewById(R.id.charge_port_lock)
+        /** Verrou touché, montré « Envoi… » jusqu'à ce que le suivi en parle. */
+        var verrouVise: Int? = null
+        val courbeVide: View = racine.findViewById(R.id.charge_idle)
+        val courbeVideIcone: ImageView = racine.findViewById(R.id.charge_idle_icon)
         val courantTitre: TextView = racine.findViewById(R.id.charge_current_title)
         val courant: LinearLayout = racine.findViewById(R.id.charge_current)
         /** Les quatre cases du courant AC, codes 1..4. */
@@ -280,6 +282,18 @@ object ChargePopupOverlay {
             ChargeMonitor.demanderControle(code)
             peindreControle(v, e)
         }
+
+        // Verrou de la prise : le bouton propose le contraire de l'état lu.
+        v.verrou.setOnClickListener { bouton ->
+            val e = dernier ?: return@setOnClickListener
+            if (!bouton.isEnabled) return@setOnClickListener
+            val code = ChargePortLock.propose(e.verrou, v.a9) ?: return@setOnClickListener
+            AppLogger.i(TAG, "Pop-up de charge — ${if (code == ChargePortLock.LOCK) "verrouillage" else "déverrouillage"} de la prise demandé")
+            v.verrouVise = code
+            ChargeMonitor.demanderVerrou(code)
+            peindreVerrou(v, e)
+        }
+        v.courbeVideIcone.setColorFilter(v.cTexteBas)
 
         // Courant de charge AC (#215) : quatre cases, une écriture au toucher.
         val gonfleur = LayoutInflater.from(v.themed)
@@ -341,11 +355,19 @@ object ChargePopupOverlay {
         val couleur = if (e.finie) v.cVert else v.cAccent
         v.titre.text = v.s(titre(e))
         v.icone.setColorFilter(couleur)
-        v.pastille.text = v.s(when (e.type) {
-            ChargeType.AC -> R.string.charge_popup_type_ac
-            ChargeType.DC -> R.string.charge_popup_type_dc
-            null -> R.string.charge_popup_type_unknown
-        })
+        // Sans charge suivie : la pastille dit si le câble est branché (rien si non relu, en READY).
+        val pastille = when {
+            !e.sansCharge -> when (e.type) {
+                ChargeType.AC -> R.string.charge_popup_type_ac
+                ChargeType.DC -> R.string.charge_popup_type_dc
+                null -> R.string.charge_popup_type_unknown
+            }
+            e.branchee == true -> R.string.charge_popup_plugged
+            e.branchee == false -> R.string.charge_popup_unplugged
+            else -> null
+        }
+        v.pastille.visibility = if (pastille == null) View.GONE else View.VISIBLE
+        pastille?.let { v.pastille.text = v.s(it) }
         v.soc.text = e.soc?.let { decimale(v.locale).format(it) + " %" } ?: "–"
 
         if (!v.curseur.enGlissement()) v.curseur.limite = if (v.limiteFixe) null else e.limitePct
@@ -355,9 +377,21 @@ object ChargePopupOverlay {
         if (!v.limiteFixe) aide(v, e)
         peindreCourant(v, e)
         peindreControle(v, e)
+        peindreVerrou(v, e)
 
         // Heure de fin, en grand, et ce qu'il reste.
         fin(v, e, StatsTracker.clockPlausible(e.horlogeMs))
+
+        // Sans charge suivie : un message à la place de la courbe, des tirets à droite.
+        if (e.sansCharge) {
+            peindreSansCharge(v, e)
+            return
+        }
+        v.courbeVide.visibility = View.GONE
+        v.courbe.visibility = View.VISIBLE
+        v.legendePuissance.visibility = View.VISIBLE
+        v.legendeBatterie.visibility = View.VISIBLE
+        v.cout.crayon.visibility = View.VISIBLE
 
         // Courbe, depuis le début de la charge.
         val debut = e.debutHorlogeMs
@@ -403,6 +437,23 @@ object ChargePopupOverlay {
         if (prixEdite != null) peindreEditeur(v)
     }
 
+    /** Ouvert sans charge suivie : rien à tracer ni à compter ; le tarif du kWh reste indiqué. */
+    private fun peindreSansCharge(v: Vues, e: ChargeMonitor.Etat) {
+        v.courbe.visibility = View.INVISIBLE
+        v.courbeVide.visibility = View.VISIBLE
+        v.legendePuissance.visibility = View.INVISIBLE
+        v.legendeBatterie.visibility = View.INVISIBLE
+        v.depuis.text = ""
+        ligne(v.puissance, "–", "", null)
+        ligne(v.energie, "–", "", null)
+        ligne(v.autonomie, "–", "", null)
+        ligne(v.cout, "–", "", if (e.prixDefaut > 0f)
+            v.s(R.string.charge_popup_tariff_default, prix(v.locale, e.prixDefaut), e.devise, typeCourt(e.type)) else null)
+        ligne(v.duree, "–", "", null)
+        v.cout.crayon.visibility = View.GONE
+        if (prixEdite != null) fermerEditeur(v)
+    }
+
     /**
      * Bas de la colonne, sur tous les firmwares (2026-10-18) : l'heure de fin en grand ; dessous,
      * le temps restant et la cible (la limite, ou 100 % sur les A9). Sans horloge crédible (réveil
@@ -412,6 +463,13 @@ object ChargePopupOverlay {
         val restant = e.restantMin
         val cible = if (v.limiteFixe) PLEIN_PCT else e.limitePct
         when {
+            // Sans charge suivie : l'autonomie, dans l'unité de distance générale.
+            e.sansCharge -> {
+                val distance = com.mg4.control.util.DistanceSetting.unit(v.loc)
+                v.finTitre.text = v.s(R.string.charge_popup_range_now)
+                v.finHeure.text = e.autonomieKm?.let { "${kotlin.math.round(distance.fromKm(it.toFloat())).toInt()} ${distance.short}" } ?: "–"
+                v.finReste.text = ""
+            }
             e.finie -> {
                 v.finTitre.text = v.s(titre(e))
                 v.finHeure.text = if (fiable) heure(v, e.horlogeMs) else "–"
@@ -436,6 +494,7 @@ object ChargePopupOverlay {
 
     /** Titre : en cours, terminée, ou arrêtée (statut 8 : arrêtée par le bouton, l'appli ou la borne). */
     private fun titre(e: ChargeMonitor.Etat): Int = when {
+        e.sansCharge -> R.string.charge_popup_none
         !e.finie -> R.string.charge_popup_title
         e.arretee -> R.string.charge_popup_title_stopped
         else -> R.string.charge_popup_title_done
@@ -477,6 +536,42 @@ object ChargePopupOverlay {
     }
 
     private data class Quadruple(val texte: Int, val icone: Int?, val couleur: Int, val fond: Int)
+
+    /**
+     * Bouton du verrou de la prise (variante A, 2026-11-19) : il dit ce qu'il fera (« Déverrouiller
+     * la prise » quand elle est verrouillée) ; « Envoi… » inerte pendant la demande, refus montré
+     * quelques secondes ; caché quand la voiture ne donne pas le verrou ([ChargePortLock.propose]).
+     */
+    private fun peindreVerrou(v: Vues, e: ChargeMonitor.Etat?) {
+        val vise = v.verrouVise
+        if (vise != null && e != null && (e.verrouEnAttente || e.verrouRefuse != null || ChargePortLock.pris(vise, e.verrou)))
+            v.verrouVise = null
+        val propose = e?.let { ChargePortLock.propose(it.verrou, v.a9) }
+        val attente = v.verrouVise != null || e?.verrouEnAttente == true
+        val refuse = e?.verrouRefuse
+        if (e == null || (!attente && refuse == null && propose == null)) {
+            v.verrou.visibility = View.GONE
+            return
+        }
+        v.verrou.visibility = View.VISIBLE
+        val ctx = v.themed
+        val (texte, icone, couleur, fond) = when {
+            attente -> Quadruple(R.string.charge_port_sending, null, v.cTexte2, ctx.getColor(R.color.dash_btn))
+            refuse != null -> Quadruple(R.string.charge_control_refused, null, v.cWarn, ctx.getColor(R.color.dash_warn_dim))
+            propose == ChargePortLock.UNLOCK -> Quadruple(R.string.charge_port_unlock, R.drawable.ic_sym_lock_open, v.cAccent, ctx.getColor(R.color.dash_btn))
+            else -> Quadruple(R.string.charge_port_lock, R.drawable.ic_sym_lock, v.cAccent, ctx.getColor(R.color.dash_btn))
+        }
+        v.verrou.text = v.s(texte)
+        v.verrou.setTextColor(couleur)
+        val d = icone?.let { ctx.getDrawable(it)?.mutate() }?.also {
+            val taille = (18 * ctx.resources.displayMetrics.density).roundToInt()
+            it.setBounds(0, 0, taille, taille)
+            it.setTint(couleur)
+        }
+        v.verrou.setCompoundDrawables(d, null, null, null)
+        OverlayKit.fond(v.verrou, fond, rayon = 17f * ctx.resources.displayMetrics.density)
+        v.verrou.isEnabled = !attente
+    }
 
     private fun libelleCourant(v: Vues, code: Int?): String =
         ChargeCurrent.amperes(code)?.let { "$it A" } ?: v.s(R.string.charge_current_max)
@@ -564,6 +659,7 @@ object ChargePopupOverlay {
 
     private fun ouvrirEditeur(v: Vues) {
         val e = dernier ?: return
+        if (e.sansCharge) return
         prixEdite = e.prix
         pas = PriceStepper.steps(if (e.prixDefaut > 0f) e.prixDefaut else e.prix)
         rangPas = PAS_PAR_DEFAUT.coerceAtMost(pas.lastIndex)

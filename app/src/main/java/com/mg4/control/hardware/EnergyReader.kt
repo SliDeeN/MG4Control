@@ -5,6 +5,7 @@ import com.mg4.control.model.ChargeControl
 import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeLimit
+import com.mg4.control.model.ChargePortLock
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergySnapshot
 import com.mg4.control.model.PowerIntegrator
@@ -56,6 +57,8 @@ object EnergyReader {
     private const val PROP_AC_CURRENT = 0x2140f40b
     /** Marche / arrêt de la charge ([ChargeControl]). */
     private const val PROP_CHARGE_CONTROL = 0x2140f412
+    /** Verrou de la prise de charge ([ChargePortLock]). */
+    private const val PROP_PORT_LOCK = 0x2140f413
     // Sonde seulement (2026-10-16) : position de la trappe et validité du signal continu
     // (`CCU_OFFBD_CHRG_PLUG_ON_V`, true = invalide comme les autres drapeaux « V »).
     private const val PROP_CHARGE_DOOR = 0x2140f43b
@@ -227,6 +230,17 @@ object EnergyReader {
         val quoi = if (code == ChargeControl.START) "démarrage de la charge (1)" else "arrêt de la charge (2)"
         if (!VehicleWriteGate.allow(quoi)) return false
         return ecrireBms(PROP_CHARGE_CONTROL, code, quoi)
+    }
+
+    /** Verrou de la prise lu ([ChargePortLock]) : 1 verrouillée, 2 déverrouillée, 0 indisponible ; `null` si illisible. */
+    fun portLock(): Int? = int(PROP_PORT_LOCK)?.takeIf { it in 0..ChargePortLock.UNLOCK }
+
+    /** Verrouille ([ChargePortLock.LOCK]) ou déverrouille ([ChargePortLock.UNLOCK]) la prise. Vrai si une voie a accepté : relire. */
+    fun setPortLock(code: Int): Boolean {
+        if (code != ChargePortLock.LOCK && code != ChargePortLock.UNLOCK) return false
+        val quoi = if (code == ChargePortLock.LOCK) "verrouillage de la prise (1)" else "déverrouillage de la prise (2)"
+        if (!VehicleWriteGate.allow(quoi)) return false
+        return ecrireBms(PROP_PORT_LOCK, code, quoi)
     }
 
     /**

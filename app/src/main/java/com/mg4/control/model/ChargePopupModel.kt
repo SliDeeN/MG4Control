@@ -106,6 +106,43 @@ object ChargeControl {
 }
 
 /**
+ * Verrou de la prise de charge (2026-11-19), propriété 0x2140f413 `ELEC_CLCK_CTRL`, le bouton de
+ * l'écran de gestion de la charge d'origine : `VehicleChargingBinder.get/setChargingLockSwitch` sur
+ * SWI133 / 68 / 165, `EvCharge` `g0()` / `j1()` sur les A9. Lu : 1 verrouillée, 2 déverrouillée,
+ * 0 indisponible ; écrit : 1 verrouiller, 2 déverrouiller.
+ */
+object ChargePortLock {
+
+    const val LOCK = 1
+    const val UNLOCK = 2
+
+    /** Valeurs des automatisations. */
+    const val TEXTE_LOCK = "LOCK"
+    const val TEXTE_UNLOCK = "UNLOCK"
+
+    /**
+     * Ce que le bouton propose, `null` pour le cacher : le contraire de l'état lu. Lu 0 : les A9
+     * verrouillent (règle d'EvCharge), l'écran des anciens SDK ignore l'appui — bouton caché.
+     */
+    fun propose(lu: Int?, a9: Boolean): Int? = when (lu) {
+        LOCK -> UNLOCK
+        UNLOCK -> LOCK
+        0 -> if (a9) LOCK else null
+        else -> null
+    }
+
+    /** La voiture a pris [demande] : elle relit la même valeur. */
+    fun pris(demande: Int, lu: Int?): Boolean = lu == demande
+
+    /** Valeur d'automatisation → code, `null` si inconnue. */
+    fun code(texte: String?): Int? = when (texte?.trim()?.uppercase()) {
+        TEXTE_LOCK, "1" -> LOCK
+        TEXTE_UNLOCK, "2" -> UNLOCK
+        else -> null
+    }
+}
+
+/**
  * La limite de charge est-elle réglable sur cette voiture ? Règle de l'appli de charge SAIC des A9
  * (`EvCharge` SWI69 / SWI131 / SWI132, `isEH32EuukCanSettingChargeTargetbBatteryQuantity`, décodée
  * le 2026-10-18) : elle ne montre son réglage — et n'accepte le toucher sur la barre — que si le code

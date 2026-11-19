@@ -24,6 +24,7 @@ import com.mg4.control.automation.CustomRuleStore
 import com.mg4.control.automation.CustomRules
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.model.ChargePortLock
 import com.mg4.control.model.TurnSignal
 import com.mg4.control.model.ChargeControl
 import com.mg4.control.model.ChargeCurrent
@@ -849,7 +850,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleKeys.BRIGHTNESS, RuleKeys.VOLUME, RuleKeys.VOLUME_STEP -> Cat.SCREEN_SOUND
         RuleKeys.AEB, RuleKeys.TSR, RuleKeys.ESC, RuleKeys.DROWSINESS, RuleKeys.OVERSPEED_ALARM, RuleKeys.SPEED_LIMIT_TONE,
         RuleKeys.AUTO_HIGH_BEAM -> Cat.ADAS
-        RuleKeys.BATTERY_HEAT, RuleKeys.CHARGE_LIMIT, RuleKeys.CHARGE_CURRENT, RuleKeys.CHARGE_CONTROL -> Cat.BATTERY
+        RuleKeys.BATTERY_HEAT, RuleKeys.CHARGE_LIMIT, RuleKeys.CHARGE_CURRENT, RuleKeys.CHARGE_CONTROL,
+        RuleKeys.CHARGE_PORT_LOCK -> Cat.BATTERY
         RuleKeys.WIFI, RuleKeys.BLUETOOTH, RuleKeys.HOTSPOT -> Cat.CONNECTIONS
         else -> Cat.CLIMATE
     }
@@ -1376,6 +1378,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         reglage(RuleKeys.CHARGE_LIMIT, Cat.BATTERY)
         reglage(RuleKeys.CHARGE_CURRENT, Cat.BATTERY)
         reglage(RuleKeys.CHARGE_CONTROL, Cat.BATTERY)
+        reglage(RuleKeys.CHARGE_PORT_LOCK, Cat.BATTERY)
         seul(ShortcutAction.CHARGE_POPUP, Cat.BATTERY)
         // Climatisation
         reglage(ExternalApi.SET_HVAC_POWER, Cat.CLIMATE, lancer(ShortcutAction.HVAC_TOGGLE, bascule))
@@ -1574,6 +1577,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             add(RuleKeys.CHARGE_LIMIT)
             add(RuleKeys.CHARGE_CURRENT)
             add(RuleKeys.CHARGE_CONTROL)
+            add(RuleKeys.CHARGE_PORT_LOCK)
             add(RuleKeys.WIFI)
             add(RuleKeys.BLUETOOTH)
             add(RuleKeys.HOTSPOT)
@@ -1621,6 +1625,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                     meme, ok = ::fini)
                 RuleKeys.CHARGE_CONTROL -> valeurs(nom, listOf(s(R.string.charge_control_start) to ChargeControl.TEXTE_START,
                     s(R.string.charge_control_stop) to ChargeControl.TEXTE_STOP), meme, ok = ::fini)
+                RuleKeys.CHARGE_PORT_LOCK -> valeurs(nom, listOf(s(R.string.charge_port_lock) to ChargePortLock.TEXTE_LOCK,
+                    s(R.string.charge_port_unlock) to ChargePortLock.TEXTE_UNLOCK), meme, ok = ::fini)
                 ExternalApi.SET_HVAC_RECIRC -> valeurs(nom, listOf("INNER", "OUTSIDE", "AUTO").map { v ->
                     (AndroidRuleWords.recircRes(v)?.let { s(it) } ?: v) to v }, meme, ok = ::fini)
                 else -> valeurs(nom, ouiNon, meme, ok = ::fini)

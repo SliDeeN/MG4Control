@@ -1061,6 +1061,15 @@
     <string name="charge_control_stop">Arrêter la charge</string>
     <string name="charge_control_preparing">Préparation…</string>
     <string name="charge_control_refused">Refusé par la voiture</string>
+    <string name="charge_popup_plugged">Branchée</string>
+    <string name="charge_popup_unplugged">Débranchée</string>
+    <string name="charge_popup_range_now">Autonomie</string>
+    <string name="charge_popup_idle">Aucune charge suivie pour l’instant</string>
+    <string name="charge_popup_idle_hint">La courbe démarre avec la prochaine charge.</string>
+    <string name="charge_port_lock">Verrouiller la prise</string>
+    <string name="charge_port_unlock">Déverrouiller la prise</string>
+    <string name="charge_port_sending">Envoi…</string>
+    <string name="rule_key_charge_port_lock">Verrou de la prise de charge</string>
     <string name="charge_popup_title_stopped">Charge arrêtée</string>
     <string name="charge_popup_legend_power">Puissance (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batterie (%)</string>

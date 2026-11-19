@@ -1044,6 +1044,15 @@
     <string name="charge_control_stop">Stopp lading</string>
     <string name="charge_control_preparing">Forbereder…</string>
     <string name="charge_control_refused">Avvist av bilen</string>
+    <string name="charge_popup_plugged">Tilkoblet</string>
+    <string name="charge_popup_unplugged">Frakoblet</string>
+    <string name="charge_popup_range_now">Rekkevidde</string>
+    <string name="charge_popup_idle">Ingen lading registrert ennå</string>
+    <string name="charge_popup_idle_hint">Kurven starter med neste lading.</string>
+    <string name="charge_port_lock">Lås ladeporten</string>
+    <string name="charge_port_unlock">Lås opp ladeporten</string>
+    <string name="charge_port_sending">Sender…</string>
+    <string name="rule_key_charge_port_lock">Lås for ladeporten</string>
     <string name="charge_popup_title_stopped">Lading stoppet</string>
     <string name="charge_popup_legend_power">Effekt (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batteri (%)</string>

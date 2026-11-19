@@ -4,6 +4,7 @@ import android.content.Context
 import com.mg4.control.R
 import com.mg4.control.api.ExternalApi
 import com.mg4.control.bluetooth.BluetoothProfileManager
+import com.mg4.control.model.ChargePortLock
 import com.mg4.control.model.TurnSignal
 import com.mg4.control.model.ChargeControl
 import com.mg4.control.model.ChargeCurrent
@@ -94,6 +95,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun set(key: String, value: String): String {
         // « Commencer la charge » se lit seul, sans « Marche / arrêt de la charge : » devant.
         if (key == RuleKeys.CHARGE_CONTROL) chargeControl(value)?.let { return it }
+        if (key == RuleKeys.CHARGE_PORT_LOCK) portLock(value)?.let { return it }
         val nom = keyRes(key)?.let { t(it) } ?: key
         val valeur = when (key) {
             RuleKeys.BRIGHTNESS, RuleKeys.CHARGE_LIMIT -> "$value %"
@@ -134,6 +136,13 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     fun chargeControl(v: String): String? = when (ChargeControl.code(v)) {
         ChargeControl.START -> t(R.string.charge_control_start)
         ChargeControl.STOP -> t(R.string.charge_control_stop)
+        else -> null
+    }
+
+    /** Valeur de l'action du verrou : « Verrouiller la prise » ou « Déverrouiller la prise ». */
+    fun portLock(v: String): String? = when (ChargePortLock.code(v)) {
+        ChargePortLock.LOCK -> t(R.string.charge_port_lock)
+        ChargePortLock.UNLOCK -> t(R.string.charge_port_unlock)
         else -> null
     }
 
@@ -334,6 +343,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleKeys.CHARGE_LIMIT -> R.string.rule_sig_charge_limit
             RuleKeys.CHARGE_CURRENT -> R.string.charge_popup_current
             RuleKeys.CHARGE_CONTROL -> R.string.rule_key_charge_control
+            RuleKeys.CHARGE_PORT_LOCK -> R.string.rule_key_charge_port_lock
             RuleKeys.WIFI -> R.string.rule_sig_wifi_on
             RuleKeys.BLUETOOTH -> R.string.rule_sig_bt_on
             RuleKeys.HOTSPOT -> R.string.rule_sig_hotspot

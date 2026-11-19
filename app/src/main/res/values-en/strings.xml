@@ -1043,6 +1043,15 @@
     <string name="charge_control_stop">Stop charging</string>
     <string name="charge_control_preparing">Preparing…</string>
     <string name="charge_control_refused">Refused by the car</string>
+    <string name="charge_popup_plugged">Plugged in</string>
+    <string name="charge_popup_unplugged">Unplugged</string>
+    <string name="charge_popup_range_now">Range</string>
+    <string name="charge_popup_idle">No charge tracked yet</string>
+    <string name="charge_popup_idle_hint">The graph starts with the next charge.</string>
+    <string name="charge_port_lock">Lock charge port</string>
+    <string name="charge_port_unlock">Unlock charge port</string>
+    <string name="charge_port_sending">Sending…</string>
+    <string name="rule_key_charge_port_lock">Charge port lock</string>
     <string name="charge_popup_title_stopped">Charging stopped</string>
     <string name="charge_popup_legend_power">Power (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Battery (%)</string>

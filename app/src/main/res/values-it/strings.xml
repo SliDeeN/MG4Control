@@ -1043,6 +1043,15 @@
     <string name="charge_control_stop">Interrompi la ricarica</string>
     <string name="charge_control_preparing">Preparazione…</string>
     <string name="charge_control_refused">Rifiutato dall\'auto</string>
+    <string name="charge_popup_plugged">Collegato</string>
+    <string name="charge_popup_unplugged">Scollegato</string>
+    <string name="charge_popup_range_now">Autonomia</string>
+    <string name="charge_popup_idle">Nessuna ricarica registrata finora</string>
+    <string name="charge_popup_idle_hint">Il grafico parte con la prossima ricarica.</string>
+    <string name="charge_port_lock">Blocca la presa</string>
+    <string name="charge_port_unlock">Sblocca la presa</string>
+    <string name="charge_port_sending">Invio…</string>
+    <string name="rule_key_charge_port_lock">Blocco della presa di ricarica</string>
     <string name="charge_popup_title_stopped">Ricarica interrotta</string>
     <string name="charge_popup_legend_power">Potenza (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batteria (%)</string>

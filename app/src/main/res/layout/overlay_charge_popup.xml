@@ -50,6 +50,22 @@
                 android:maxLines="1"
                 android:ellipsize="end" />
 
+            <!-- Verrou de la prise (variante A, 2026-11-19) : dit ce qu'il fera ; caché si la voiture
+                 ne le donne pas. Fond, icône et texte peints par le code. -->
+            <TextView
+                android:id="@+id/charge_port_lock"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:layout_marginEnd="10dp"
+                android:gravity="center"
+                android:paddingStart="12dp"
+                android:paddingEnd="16dp"
+                android:drawablePadding="6dp"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:visibility="gone" />
+
             <!-- Commencer / Arrêter la charge (variante A, 2026-11-19) : à gauche de la pastille, montré
                  en charge ou prise branchée ; fond, icône et texte peints par le code. -->
             <TextView
@@ -309,12 +325,58 @@
 
                 </LinearLayout>
 
-                <com.mg4.control.ui.widget.ChargeCurveView
-                    android:id="@+id/charge_curve"
+                <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:layout_marginTop="6dp" />
+                    android:layout_marginTop="6dp">
+
+                    <com.mg4.control.ui.widget.ChargeCurveView
+                        android:id="@+id/charge_curve"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                    <!-- Ouvert sans charge suivie (2026-11-19) : ce message à la place de la courbe. -->
+                    <LinearLayout
+                        android:id="@+id/charge_idle"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:visibility="gone">
+
+                        <ImageView
+                            android:id="@+id/charge_idle_icon"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_info_chart" />
+
+                        <TextView
+                            android:id="@+id/charge_idle_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:gravity="center"
+                            android:text="@string/charge_popup_idle"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp" />
+
+                        <TextView
+                            android:id="@+id/charge_idle_hint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center"
+                            android:text="@string/charge_popup_idle_hint"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="14sp" />
+
+                    </LinearLayout>
+
+                </FrameLayout>
 
             </LinearLayout>
 
