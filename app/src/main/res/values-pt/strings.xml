@@ -1825,6 +1825,11 @@
     <string name="rule_trg_phone_off">Um telefone desliga-se</string>
     <string name="rule_trg_profile_changes">O perfil ativo muda</string>
     <string name="rule_sig_front_door">Porta dianteira aberta</string>
+    <string name="rule_sig_turn_signal">Pisca</string>
+    <string name="turn_signal_off">Desligado</string>
+    <string name="turn_signal_left">Esquerda</string>
+    <string name="turn_signal_right">Direita</string>
+    <string name="turn_signal_hazard">Quatro piscas</string>
     <string name="rule_act_media_play">Reproduzir (retomar)</string>
     <string name="rule_act_media_pause">Pausa</string>
     <string name="rule_act_mode_set">Definir para…</string>

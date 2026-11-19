@@ -4,6 +4,7 @@ import android.content.Context
 import com.mg4.control.R
 import com.mg4.control.api.ExternalApi
 import com.mg4.control.bluetooth.BluetoothProfileManager
+import com.mg4.control.model.TurnSignal
 import com.mg4.control.model.ChargeControl
 import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.DriveMode
@@ -56,6 +57,13 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
         RuleSignal.REGEN -> RegenLevel.entries.firstOrNull { it.name.equals(text, true) }?.let { regen(it) } ?: text
         RuleSignal.RECIRC -> recircRes(text)?.let { t(it) } ?: text
         RuleSignal.CHARGE_CURRENT -> chargeCurrent(text)
+        RuleSignal.TURN_SIGNAL -> when (text) {
+            TurnSignal.OFF -> t(R.string.turn_signal_off)
+            TurnSignal.LEFT -> t(R.string.turn_signal_left)
+            TurnSignal.RIGHT -> t(R.string.turn_signal_right)
+            TurnSignal.HAZARD -> t(R.string.turn_signal_hazard)
+            else -> text
+        }
         else -> text
     }
 
@@ -261,6 +269,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleSignal.STEERING_HEAT -> R.string.rule_key_steering
             RuleSignal.BATTERY_HEAT -> R.string.rule_key_battery_heat
             RuleSignal.FRONT_DOOR -> R.string.rule_sig_front_door
+            RuleSignal.TURN_SIGNAL -> R.string.rule_sig_turn_signal
             RuleSignal.LOCKED -> R.string.rule_sig_locked
             RuleSignal.KEY_AWAY -> R.string.rule_sig_key_away
             RuleSignal.BRIGHTNESS -> R.string.rule_sig_brightness

@@ -24,6 +24,7 @@ import com.mg4.control.automation.CustomRuleStore
 import com.mg4.control.automation.CustomRules
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.model.TurnSignal
 import com.mg4.control.model.ChargeControl
 import com.mg4.control.model.ChargeCurrent
 import com.mg4.control.model.AndroidActions
@@ -826,7 +827,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     private fun catSignal(sig: RuleSignal): Cat = when (sig) {
         // « Nuit (feux auto) » (2026-11-18) : rangée avec la voiture, introuvable sous « Écran et son ».
-        RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.NIGHT -> Cat.CAR
+        RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.NIGHT, RuleSignal.TURN_SIGNAL -> Cat.CAR
         RuleSignal.BT_DEVICE, RuleSignal.ALTITUDE -> Cat.PLACES
         RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
         RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES, RuleSignal.PROFILE -> Cat.DRIVING
@@ -868,7 +869,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR,
             RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT,
             RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
-            RuleSignal.LOCKED, RuleSignal.FRONT_DOOR,
+            RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.TURN_SIGNAL,
             RuleSignal.PROFILE, RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON,
             RuleSignal.PROJECTION, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL, RuleSignal.BRIGHTNESS, RuleSignal.VOLUME,
             RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB, RuleSignal.FIRMWARE,
@@ -910,6 +911,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.DRIVE_MODE -> DriveMode.entries.map { mots.driveMode(it) to it.name }
         RuleSignal.REGEN -> RegenLevel.entries.map { mots.regen(it) to it.name }
         RuleSignal.RECIRC -> listOf("INNER", "OUTSIDE", "AUTO").map { mots.value(sig, it) to it }
+        RuleSignal.TURN_SIGNAL -> TurnSignal.TEXTES.map { mots.value(sig, it) to it }
         RuleSignal.CHARGE_CURRENT -> ChargeCurrent.TEXTES.map { mots.value(sig, it) to it }
         RuleSignal.FIRMWARE -> com.mg4.control.util.FirmwareInfo.Gen.entries.map { it.name to it.name }
         RuleSignal.BT_DEVICE -> runCatching { BluetoothProfileManager.getBondedDevices(ctx) }.getOrNull().orEmpty()

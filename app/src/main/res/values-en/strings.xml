@@ -1818,6 +1818,11 @@
     <string name="rule_trg_phone_off">A phone disconnects</string>
     <string name="rule_trg_profile_changes">The active profile changes</string>
     <string name="rule_sig_front_door">Front door open</string>
+    <string name="rule_sig_turn_signal">Turn signal</string>
+    <string name="turn_signal_off">Off</string>
+    <string name="turn_signal_left">Left</string>
+    <string name="turn_signal_right">Right</string>
+    <string name="turn_signal_hazard">Hazard lights</string>
     <string name="rule_act_media_play">Play (resume)</string>
     <string name="rule_act_media_pause">Pause</string>
     <string name="rule_act_mode_set">Set to…</string>

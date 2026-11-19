@@ -85,6 +85,8 @@ enum class RuleSignal(val kind: Kind) {
     BATTERY_HEAT(Kind.BOOL),
     /** Une porte avant est ouverte (2026-11-06) : seulement là où la voiture la signale (SWI132, SWI133). */
     FRONT_DOOR(Kind.BOOL),
+    /** Clignotant (2026-11-19) : `OFF`, `LEFT`, `RIGHT` ou `HAZARD` ([TurnSignal]). */
+    TURN_SIGNAL(Kind.TEXT),
     LOCKED(Kind.BOOL),
     /** Clé qui s'éloigne (chargeur sans fil 0x2140f445 = 8, relevé SWI133 seulement). */
     KEY_AWAY(Kind.BOOL),

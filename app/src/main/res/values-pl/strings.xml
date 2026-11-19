@@ -1832,6 +1832,11 @@
     <string name="rule_trg_phone_off">Telefon się rozłącza</string>
     <string name="rule_trg_profile_changes">Zmiana aktywnego profilu</string>
     <string name="rule_sig_front_door">Przednie drzwi otwarte</string>
+    <string name="rule_sig_turn_signal">Kierunkowskaz</string>
+    <string name="turn_signal_off">Wyłączony</string>
+    <string name="turn_signal_left">Lewy</string>
+    <string name="turn_signal_right">Prawy</string>
+    <string name="turn_signal_hazard">Światła awaryjne</string>
     <string name="rule_act_media_play">Odtwarzaj (wznów)</string>
     <string name="rule_act_media_pause">Pauza</string>
     <string name="rule_act_mode_set">Ustaw na…</string>

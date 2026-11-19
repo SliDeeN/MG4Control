@@ -1818,6 +1818,11 @@
     <string name="rule_trg_phone_off">Bir telefonun bağlantısı kesilir</string>
     <string name="rule_trg_profile_changes">Etkin profil değişir</string>
     <string name="rule_sig_front_door">Ön kapı açık</string>
+    <string name="rule_sig_turn_signal">Sinyal</string>
+    <string name="turn_signal_off">Kapalı</string>
+    <string name="turn_signal_left">Sol</string>
+    <string name="turn_signal_right">Sağ</string>
+    <string name="turn_signal_hazard">Dörtlü flaşör</string>
     <string name="rule_act_media_play">Oynat (devam et)</string>
     <string name="rule_act_media_pause">Duraklat</string>
     <string name="rule_act_mode_set">Şuna ayarla…</string>

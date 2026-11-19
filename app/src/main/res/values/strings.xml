@@ -1849,6 +1849,11 @@
     <string name="rule_trg_phone_off">Un téléphone se déconnecte</string>
     <string name="rule_trg_profile_changes">Le profil actif change</string>
     <string name="rule_sig_front_door">Porte avant ouverte</string>
+    <string name="rule_sig_turn_signal">Clignotant</string>
+    <string name="turn_signal_off">Éteint</string>
+    <string name="turn_signal_left">Gauche</string>
+    <string name="turn_signal_right">Droit</string>
+    <string name="turn_signal_hazard">Warnings</string>
     <string name="rule_act_media_play">Lecture (reprendre)</string>
     <string name="rule_act_media_pause">Pause</string>
     <!-- Choix des actions : une tuile par sujet, puis son mode (2026-11-12). -->

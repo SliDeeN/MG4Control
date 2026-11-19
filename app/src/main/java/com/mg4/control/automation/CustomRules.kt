@@ -1,5 +1,6 @@
 package com.mg4.control.automation
 
+import com.mg4.control.model.TurnSignal
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -287,6 +288,9 @@ object CustomRules {
             fermetureAbonnee = fermee
             if (fermee) MG4Hardware.addFrontDoorCloseListener(porteFermee) else MG4Hardware.removeFrontDoorCloseListener(porteFermee)
         }
+        // Clignotant (2026-11-19) : relevé rapide tant qu'une automatisation active s'en sert.
+        if (actives.any { RuleSignal.TURN_SIGNAL in RuleLogic.signals(it) }) TurnSignalWatcher.start(auClignotant)
+        else TurnSignalWatcher.stop()
         // La position n'est suivie que si une règle s'en sert (lieu, soleil).
         AndroidControls.followLocation(ctx, actives.any { besoinPosition(it) })
         val voulu = actives.any { r -> r.triggers.any { it.type in SUIVIS } }
@@ -314,6 +318,13 @@ object CustomRules {
     private val porteOuverte: () -> Unit = { fil.post { evenement(RuleEvent.FRONT_DOOR_OPEN) } }
     private val porteFermee: () -> Unit = { fil.post { evenement(RuleEvent.FRONT_DOOR_CLOSE) } }
     private var fermetureAbonnee = false
+    /** Nouvelle valeur stable du clignotant : ses déclencheurs sont comparés sans attendre le relevé. */
+    private val auClignotant: (String) -> Unit = {
+        fil.post {
+            runCatching { releverEtComparer { r -> r.triggers.any { t -> RuleSignal.TURN_SIGNAL in RuleLogic.signals(t) } } }
+                .onFailure { AppLogger.w(TAG, "clignotant : comparaison manquée : ${it.javaClass.simpleName} ${it.message}") }
+        }
+    }
 
     // ── Déclencheurs (fil mg4-rules) ─────────────────────────────────────────
 
@@ -326,11 +337,12 @@ object CustomRules {
         }
     }
 
-    private fun releverEtComparer() {
+    /** [filtre] : seulement ces automatisations (le clignotant compare les siennes sans attendre). */
+    private fun releverEtComparer(filtre: (CustomRule) -> Boolean = { true }) {
         val ctx = app ?: return
         recharger()
         if (GarageMode.isOn(ctx)) return
-        val suivies = actives(ctx).filter { r -> r.triggers.any { it.type in SUIVIS } }
+        val suivies = actives(ctx).filter { r -> r.triggers.any { it.type in SUIVIS } && filtre(r) }
         if (suivies.isEmpty()) return
         val signaux = suivies.flatMap { r -> r.triggers.flatMap { RuleLogic.signals(it) } }.toSet()
         val horloge = suivies.any { r -> r.triggers.any { it.type == RuleTrigger.Type.TIME || it.type == RuleTrigger.Type.SUN } }
@@ -703,6 +715,8 @@ object CustomRules {
         RuleSignal.STEERING_HEAT -> MG4Hardware.getSteeringHeatOrNull()
         RuleSignal.BATTERY_HEAT -> if (MG4Hardware.hasBatteryHeating()) MG4Hardware.isBatteryHeatingOn() else null
         RuleSignal.FRONT_DOOR -> MG4Hardware.isFrontDoorOpen()
+        RuleSignal.TURN_SIGNAL -> TurnSignalWatcher.stable
+            ?: TurnSignal.texte(MG4Hardware.readIntGlobal(TurnSignal.PROP).takeIf { it >= 0 })
         RuleSignal.LOCKED -> MG4Hardware.readCentralLock()
         RuleSignal.KEY_AWAY -> if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133)
             MG4Hardware.readIntGlobal(PROP_CLE_SANS_FIL).takeIf { it >= 0 }?.let { it == CLE_ELOIGNEE } else null

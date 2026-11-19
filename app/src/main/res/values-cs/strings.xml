@@ -1730,6 +1730,11 @@
     <string name="rule_trg_phone_off">Telefon se odpojí</string>
     <string name="rule_trg_profile_changes">Změní se aktivní profil</string>
     <string name="rule_sig_front_door">Přední dveře otevřeny</string>
+    <string name="rule_sig_turn_signal">Blinkr</string>
+    <string name="turn_signal_off">Vypnuto</string>
+    <string name="turn_signal_left">Vlevo</string>
+    <string name="turn_signal_right">Vpravo</string>
+    <string name="turn_signal_hazard">Výstražná světla</string>
     <string name="rule_act_media_play">Přehrát (pokračovat)</string>
     <string name="rule_act_media_pause">Pozastavit</string>
     <string name="rule_act_mode_set">Nastavit na…</string>

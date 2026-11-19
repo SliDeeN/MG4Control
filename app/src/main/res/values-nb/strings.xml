@@ -1819,6 +1819,11 @@
     <string name="rule_trg_phone_off">En telefon kobles fra</string>
     <string name="rule_trg_profile_changes">Den aktive profilen endres</string>
     <string name="rule_sig_front_door">Fordør åpen</string>
+    <string name="rule_sig_turn_signal">Blinklys</string>
+    <string name="turn_signal_off">Av</string>
+    <string name="turn_signal_left">Venstre</string>
+    <string name="turn_signal_right">Høyre</string>
+    <string name="turn_signal_hazard">Nødblink</string>
     <string name="rule_act_media_play">Spill av (fortsett)</string>
     <string name="rule_act_media_pause">Pause</string>
     <string name="rule_act_mode_set">Sett til…</string>

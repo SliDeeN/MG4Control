@@ -1825,6 +1825,11 @@
     <string name="rule_trg_phone_off">Un teléfono se desconecta</string>
     <string name="rule_trg_profile_changes">El perfil activo cambia</string>
     <string name="rule_sig_front_door">Puerta delantera abierta</string>
+    <string name="rule_sig_turn_signal">Intermitente</string>
+    <string name="turn_signal_off">Apagado</string>
+    <string name="turn_signal_left">Izquierda</string>
+    <string name="turn_signal_right">Derecha</string>
+    <string name="turn_signal_hazard">Luces de emergencia</string>
     <string name="rule_act_media_play">Reproducir (reanudar)</string>
     <string name="rule_act_media_pause">Pausa</string>
     <string name="rule_act_mode_set">Ajustar a…</string>
