@@ -161,6 +161,14 @@ class ClusterLayoutTest {
         assertEquals("6,94" to "kWh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_ENERGY), t, km, fr))
         assertEquals("+1210" to "Wh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_REGEN, unit = "wh"), t, km, fr))
         assertEquals("68" to ClusterInfo.UNIT_HP, ClusterInfo.tripValue(ClusterBlock(ClusterInfo.POWER, unit = "hp"), t, km, fr))
+        // Récupération : la puissance est négative, comme sur la jauge (retour du 2026-11-19).
+        val regen = t.copy(powerKw = -0.8f)
+        assertEquals("-0,8" to "kW", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.POWER), regen, km, fr))
+        assertEquals("-1" to ClusterInfo.UNIT_HP, ClusterInfo.tripValue(ClusterBlock(ClusterInfo.POWER, unit = "hp"), regen, km, fr))
+        assertEquals("-38" to "kW", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.POWER), t.copy(powerKw = -38.4f), km, fr))
+        // Presque nul : ni « -0,0 » ni « -0 ».
+        assertEquals("0,0" to "kW", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.POWER), t.copy(powerKw = -0.02f), km, fr))
+        assertEquals("0" to ClusterInfo.UNIT_HP, ClusterInfo.tripValue(ClusterBlock(ClusterInfo.POWER, unit = "hp"), t.copy(powerKw = -0.2f), km, fr))
         // Rien de mesuré : un tiret, jamais un zéro inventé.
         val vide = ClusterInfo.Trip(null, null, null, null, null)
         assertEquals(BubbleInfo.UNKNOWN to null, ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_AVERAGE), vide, km, fr))

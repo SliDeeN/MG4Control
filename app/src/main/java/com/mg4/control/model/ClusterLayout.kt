@@ -1,6 +1,7 @@
 package com.mg4.control.model
 
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -319,9 +320,14 @@ object ClusterInfo {
             TRIP_ENERGY -> energy(t.consumedKwh, unit(b), locale, "")
             TRIP_REGEN -> energy(t.regenWh?.div(1000f), unit(b), locale, "+")
             POWER -> t.powerKw?.let { kw ->
+                // Signée (2026-11-19, retour d'un utilisateur) : négative en récupération, comme la
+                // jauge. [ClusterGauge.formatKw] enlève le signe, utile au grand chiffre qui a son
+                // aiguille ; un bloc n'a que son chiffre. Pas de « -0,0 » ni de « -0 ».
                 // L'unité « ch » se traduit (PS, CV, hk…) : l'appelant remplace [UNIT_HP] par son mot.
-                if (unit(b) == UNIT_HP) (kw * HP_PER_KW).roundToInt().toString() to UNIT_HP
-                else ClusterGauge.formatKw(kw, locale) to "kW"
+                val texte = if (unit(b) == UNIT_HP) abs(kw * HP_PER_KW).roundToInt().toString()
+                    else ClusterGauge.formatKw(kw, locale)
+                val signe = if (kw < 0f && texte.any { it in '1'..'9' }) "-" else ""
+                (signe + texte) to (if (unit(b) == UNIT_HP) UNIT_HP else "kW")
             } ?: (BubbleInfo.UNKNOWN to null)
             else -> null
         }
