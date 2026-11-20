@@ -149,6 +149,12 @@ internal object ClusterModuleOverlay {
     /** Nom du module affiché ~1 s après le raccourci « Module suivant », et jusqu'à quand (elapsedRealtime). */
     @Volatile private var bandeau: Pair<String, Long>? = null
     private var dernierDefId: String? = null
+    /** Historique des derniers km (issue #217) : accumulé en READY, hors charge, quel que soit le module montré. */
+    private val histo = com.mg4.control.model.ClusterHistory.Accumulator()
+    private var dernierHistoMs = 0L
+    @Volatile private var altLue: Float? = null
+    @Volatile private var tempLue: Float? = null
+    @Volatile private var socLu: Float? = null
     private var dernierPreClim = false
     private var mode: DriveMode? = null
     /** Cases d'information (issue #229) : signaux relus toutes les [SIGNAUX_MS], mots de la langue choisie. */
@@ -500,6 +506,12 @@ internal object ClusterModuleOverlay {
             val kw = runCatching { EnergyReader.dischargeKw() }.getOrNull()
             val kmh = runCatching { MG4Hardware.getVehicleSpeedKmh() }.getOrNull()?.takeIf { it in 0f..300f }
             trajet.add(maintenant, kw, kmh)
+            // Graphique (issue #217) : une tranche de route tous les 200 m, en READY et hors charge.
+            val dtHisto = if (dernierHistoMs == 0L) 0f else (maintenant - dernierHistoMs) / 1000f
+            dernierHistoMs = maintenant
+            if (ReadyWatcher.ready == true && !session.active) {
+                histo.add(dtHisto, kw, kmh, altLue, tempLue, socLu)?.let { com.mg4.control.util.ClusterHistoryStore.add(ctx, it) }
+            }
             // Lissage par relevé : plus la cadence est rapide, plus la jauge suit vite. C'est ce
             // qu'on demande au curseur — le chiffre bouge aussi davantage. Style discret (issue
             // #153) : lissage dans le temps, deux secondes quelle que soit la cadence.
@@ -538,6 +550,10 @@ internal object ClusterModuleOverlay {
                 dernierLentMs = maintenant
                 dernierSocMs = maintenant
                 mode = runCatching { MG4Hardware.getDriveMode() }.getOrNull()
+                // Pour l'historique du graphique : altitude (GPS), température extérieure, batterie.
+                altLue = runCatching { com.mg4.control.automation.AndroidControls.altitude(ctx)?.toFloat() }.getOrNull()
+                tempLue = runCatching { MG4Hardware.getOutsideTempCelsius() }.getOrNull()
+                socLu = runCatching { EnergyReader.soc() }.getOrNull()
                 if (session.active) {
                     batterie = runCatching { EnergyReader.soc() }.getOrNull()
                     if (batterieDebut == null) batterieDebut = batterie
@@ -658,6 +674,8 @@ internal object ClusterModuleOverlay {
                     // Module « Pneus » : relevé partagé de moins de 2 s (ce fil, binder).
                     pneus = if (it == ClusterModule.TYRES) pneus(ctx) else null,
                     bandeau = bandeau?.takeIf { b -> maintenant < b.second }?.first,
+                    graphe = if (it == ClusterModule.GRAPH) com.mg4.control.ui.widget.ClusterGraphs.build(ctx, def,
+                        com.mg4.control.util.ClusterHistoryStore.bins(ctx), ctx.resources.configuration.locales[0]) else null,
                 )
             }
             main.post {
@@ -689,6 +707,7 @@ internal object ClusterModuleOverlay {
      */
     private fun finTrajet() {
         val ctx = appContext ?: return
+        com.mg4.control.util.ClusterHistoryStore.flush(ctx)
         val pointe = pointeTrajet
         pointeTrajet = 0f
         if (pointe <= 0f) return

@@ -112,6 +112,7 @@ object ClusterProfiles {
                     com.mg4.control.model.ClusterModule.CONSUMPTION -> com.mg4.control.R.string.settings_cluster_consumption
                     com.mg4.control.model.ClusterModule.POWER -> com.mg4.control.R.string.settings_cluster_power
                     com.mg4.control.model.ClusterModule.TYRES -> com.mg4.control.R.string.settings_cluster_tyres
+                    com.mg4.control.model.ClusterModule.GRAPH -> com.mg4.control.R.string.settings_cluster_graph
                 })
             }
             val nouvelId = { java.util.UUID.randomUUID().toString().take(12) }

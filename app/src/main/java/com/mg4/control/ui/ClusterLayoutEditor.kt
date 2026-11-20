@@ -135,9 +135,11 @@ class ClusterLayoutEditor(
         ClusterModule.CONSUMPTION -> R.string.settings_cluster_consumption
         ClusterModule.POWER -> R.string.settings_cluster_power
         ClusterModule.TYRES -> R.string.settings_cluster_tyres
+        ClusterModule.GRAPH -> R.string.settings_cluster_graph
     })
 
     private fun maj() {
+        apercu.graphDef = def
         apercu.moduleForce = module
         apercu.disposition = disposition
         apercu.reglages = ClusterModuleDefs.asConfig(def, commun)
@@ -264,7 +266,7 @@ class ClusterLayoutEditor(
                 }
             })
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        rangee(R.string.cluster_module_center, listOf(ClusterModule.CONSUMPTION, ClusterModule.POWER, ClusterModule.TYRES).map { m ->
+        rangee(R.string.cluster_module_center, listOf(ClusterModule.CONSUMPTION, ClusterModule.POWER, ClusterModule.TYRES, ClusterModule.GRAPH).map { m ->
             Option(nomType(m), module == m) {
                 if (module != m) {
                     // Vers les pneus : la disposition reste (cases comprises). D'une disposition sans
@@ -277,13 +279,16 @@ class ClusterLayoutEditor(
                 }
             }
         })
-        if (module != ClusterModule.TYRES) {
+        // Style : celui d'une jauge (ni pneus ni graphique) ; unité de consommation : pas pour les pneus.
+        if (module != ClusterModule.TYRES && module != ClusterModule.GRAPH) {
             rangee(R.string.settings_cluster_row_style, listOf(
                 ClusterGaugeStyle.DYNAMIC to R.string.settings_cluster_style_dynamic,
                 ClusterGaugeStyle.DISCREET to R.string.settings_cluster_style_discreet,
             ).map { (st, t) -> Option(ctx.getString(t), ClusterGaugeStyle.fromKey(style) == st) {
                 def = def.copy(style = st.key.takeIf { st != ClusterGaugeStyle.DYNAMIC }); maj()
             } })
+        }
+        if (module != ClusterModule.TYRES) {
             val distance = DistanceSetting.unit(ctx)
             rangee(R.string.cluster_module_unit, com.mg4.control.model.ConsumptionUnit.entries.map { u ->
                 Option(u.labelFor(distance), com.mg4.control.model.ConsumptionUnit.fromKey(def.unit) == u) {
@@ -293,7 +298,52 @@ class ClusterLayoutEditor(
         }
     }
 
+    /** Module « Graphique » (issue #217) : sa place, l'information, la distance, la forme, la moyenne, les couleurs. */
+    private fun panneauGraphe() {
+        titre(ctx.getString(R.string.settings_cluster_graph))
+        positionJauge()
+        etiquette(R.string.cluster_graph_info)
+        val infos = com.mg4.control.model.ClusterHistory.Info.entries
+        val actuelle = com.mg4.control.ui.widget.ClusterGraphs.info(def)
+        bouton(com.mg4.control.ui.widget.ClusterGraphs.nom(ctx, actuelle)) {
+            AppDialog.choisir(ctx, titre = ctx.getString(R.string.cluster_graph_info),
+                choix = infos.map { AppDialog.Choix(com.mg4.control.ui.widget.ClusterGraphs.nom(ctx, it)) },
+                annuler = ctx.getString(R.string.profile_cancel), choisi = infos.indexOf(actuelle)) { r ->
+                infos.getOrNull(r)?.let { def = def.copy(graphInfo = it.key); maj() }
+            }
+        }
+        val km = com.mg4.control.ui.widget.ClusterGraphs.km(def)
+        rangee(R.string.cluster_graph_distance, com.mg4.control.model.ClusterHistory.DISTANCES.map { d ->
+            Option("$d km", km == d) { def = def.copy(graphKm = d); maj() }
+        })
+        rangee(R.string.cluster_graph_form, listOf(false to R.string.cluster_graph_bars, true to R.string.cluster_graph_line).map { (l, t) ->
+            Option(ctx.getString(t), (def.graphLine == true) == l) { def = def.copy(graphLine = l.takeIf { it }); maj() }
+        })
+        interrupteur(R.string.cluster_graph_average, def.graphAverage != false) { def = def.copy(graphAverage = it.takeIf { v -> !v }) }
+        interrupteur(R.string.cluster_graph_minmax, def.graphMinMax != false) { def = def.copy(graphMinMax = it.takeIf { v -> !v }) }
+        // Seules les couleurs utiles à l'information choisie (maquette du 2026-11-20) : consommation
+        // (conso + récupération), récupération, ou la couleur du graphique pour le reste.
+        when (actuelle) {
+            com.mg4.control.model.ClusterHistory.Info.CONSUMPTION -> {
+                etiquette(R.string.cluster_layout_color_consumption)
+                couleur(disposition.consumptionColor, { ctx.getColor(R.color.dash_warn) }) { disposition = disposition.copy(consumptionColor = it) }
+                etiquette(R.string.cluster_layout_color_regen)
+                couleur(disposition.regenColor, { ctx.getColor(R.color.cluster_accent) }) { disposition = disposition.copy(regenColor = it) }
+            }
+            com.mg4.control.model.ClusterHistory.Info.REGEN -> {
+                etiquette(R.string.cluster_layout_color_regen)
+                couleur(disposition.regenColor, { ctx.getColor(R.color.cluster_accent) }) { disposition = disposition.copy(regenColor = it) }
+            }
+            else -> {
+                etiquette(R.string.cluster_graph_color)
+                couleur(def.graphColor, { com.mg4.control.ui.widget.ClusterGaugeView.GRAPH_DEFAULT_COLOR }) { def = def.copy(graphColor = it) }
+            }
+        }
+        note(R.string.cluster_graph_note)
+    }
+
     private fun panneauJauge() {
+        if (module == ClusterModule.GRAPH) { panneauGraphe(); return }
         titre(ctx.getString(R.string.cluster_layout_gauge))
         // Module « Pneus » (2026-11-20) : sa place et l'unité de pression ; les réglages de jauge
         // (style, épaisseur, couleurs, puissance) ne le concernent pas.
@@ -522,6 +572,7 @@ class ClusterLayoutEditor(
             // Pas de maj() : le panneau se referait sous le doigt pendant la saisie du code.
             apercu.disposition = disposition
             apercu.reglages = ClusterModuleDefs.asConfig(def, commun)
+            apercu.graphDef = def
         }.peindre(actuelle)
     }
 

@@ -43,8 +43,8 @@ class ClusterGaugeViewDrawTest {
         return image
     }
 
-    /** Les jauges ; le schéma des pneus (2026-11-20) n'a ni unité ni moyenne : ClusterLayoutDrawTest. */
-    private val jauges = ClusterModule.entries - ClusterModule.TYRES
+    /** Les jauges ; pneus et graphique (2026-11-20) ont leurs propres tests : ClusterLayoutDrawTest. */
+    private val jauges = ClusterModule.entries - ClusterModule.TYRES - ClusterModule.GRAPH
 
     @Test
     fun `chaque style, chaque module, chaque situation se dessine`() {

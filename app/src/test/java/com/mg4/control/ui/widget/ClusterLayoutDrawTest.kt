@@ -94,6 +94,30 @@ class ClusterLayoutDrawTest {
         assertFalse(normal.sameAs(rien))
     }
 
+    /** Module « Graphique » (issue #217) : barres, courbe, sans historique, autre information. */
+    @Test
+    fun `the graph module is drawn in place of the gauge`() {
+        val sim = ClusterGraphs.SIMULE
+        fun c(def: com.mg4.control.model.ClusterModuleDef, bins: List<com.mg4.control.model.ClusterHistory.Bin> = sim,
+              d: ClusterLayout = disposition) =
+            contenu(ClusterModule.GRAPH, ClusterGaugeStyle.DYNAMIC, d)
+                .copy(graphe = ClusterGraphs.build(ctx, def, bins, java.util.Locale.FRANCE))
+        val base = com.mg4.control.model.ClusterModuleDef("g", "G", type = "graph", unit = "kwh100")
+        val barres = dessiner("graph_bars", c(base))
+        val courbe = dessiner("graph_line", c(base.copy(graphLine = true, graphAverage = false)))
+        val vide = dessiner("graph_empty", c(base, emptyList()))
+        dessiner("graph_full_altitude", c(base.copy(graphInfo = "altitude"), d = ClusterLayout(slots = listOf(null, null, null, null))))
+        dessiner("graph_regen_20", c(base.copy(graphInfo = "regen", graphKm = 20)))
+        assertFalse(barres.sameAs(courbe))
+        assertFalse(barres.sameAs(vide))
+        // Min et max (pointillés), et couleur du graphique hors consommation (2026-11-20).
+        val sansMinMax = dessiner("graph_bars_no_minmax", c(base.copy(graphMinMax = false)))
+        assertFalse(barres.sameAs(sansMinMax))
+        val vitesse = dessiner("graph_speed", c(base.copy(graphInfo = "speed")))
+        val vitesseVerte = dessiner("graph_speed_green", c(base.copy(graphInfo = "speed", graphColor = 0xFF3DDC84.toInt())))
+        assertFalse(vitesse.sameAs(vitesseVerte))
+    }
+
     @Test
     fun `look settings change the drawing`() {
         val base = dessiner("base", contenu(ClusterModule.CONSUMPTION, ClusterGaugeStyle.DYNAMIC, disposition))

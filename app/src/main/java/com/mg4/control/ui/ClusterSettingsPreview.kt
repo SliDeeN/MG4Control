@@ -65,6 +65,8 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
     var disposition: ClusterLayout? = null
         set(v) { field = v; rafraichir() }
     var moduleForce: ClusterModule? = null
+    /** Module réglé (issue #217) : ce que montre le graphique, sur un trajet simulé. */
+    var graphDef: com.mg4.control.model.ClusterModuleDef? = null
         set(v) { field = v; rafraichir() }
 
     /** La jauge dessinée : le popup de personnalisation y pose sa sélection ([ClusterGaugeView.edition]). */
@@ -161,6 +163,8 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             disposition = d,
             blocs = blocs(d, p),
             // Module « Pneus » : les valeurs du relevé SWI133 du 2026-11-20, dans l'unité choisie.
+            graphe = if (module == ClusterModule.GRAPH) com.mg4.control.ui.widget.ClusterGraphs.build(ctx, graphDef,
+                com.mg4.control.ui.widget.ClusterGraphs.SIMULE, ctx.resources.configuration.locales[0]) else null,
             pneus = if (module == ClusterModule.TYRES) com.mg4.control.model.TyrePressure.display(
                 listOf(252, 248, 248, 256), listOf(0, 0, 0, 0), com.mg4.control.util.TyreUnitSetting.unit(ctx),
                 ctx.resources.configuration.locales[0], listOf(16, 16, 16, 16)) else null,

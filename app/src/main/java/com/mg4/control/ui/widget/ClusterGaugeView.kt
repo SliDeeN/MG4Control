@@ -169,6 +169,34 @@ class ClusterGaugeView(context: Context) : View(context) {
         val pneus: com.mg4.control.model.TyrePressure.Display? = null,
         /** Nom du module, ~1 s après le raccourci « Module suivant » (2026-11-20) ; `null` = rien. */
         val bandeau: String? = null,
+        /** Module « Graphique » (issue #217) : l'historique mis en mots ; `null` = rien à montrer. */
+        val graphe: Graphe? = null,
+    )
+
+    /** Ce que dessine le module « Graphique » ([ClusterGraphs.build]). */
+    data class Graphe(
+        val info: com.mg4.control.model.ClusterHistory.Info,
+        val titre: String,
+        val actuelle: String,
+        /** Les barres, de la plus ancienne à la plus récente ; `null` = pas de donnée. */
+        val valeurs: List<Float?>,
+        val moyenne: Float?,
+        val moyenneTexte: String?,
+        val courbe: Boolean,
+        val avecMoyenne: Boolean,
+        /** Plus petite et plus grande barre, avec leur texte ; dessinées si [avecMinMax]. */
+        val min: Float? = null,
+        val minTexte: String? = null,
+        val max: Float? = null,
+        val maxTexte: String? = null,
+        val avecMinMax: Boolean = false,
+        /** Couleur des barres hors consommation et récupération ; `null` = gris clair. */
+        val couleur: Int? = null,
+        val axeDebut: String,
+        val axeMilieu: String,
+        val axeFin: String,
+        /** Historique trop court : ce message à la place des barres. */
+        val vide: String?,
     )
 
     /**
@@ -361,6 +389,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         val e = minOf(zone.h / (bas - haut), zone.w / COTE, 1f)
         // Pneus (2026-11-20) : le schéma remplit toute sa zone, sans s'y réduire comme une jauge.
         if (c.module == ClusterModule.TYRES) pneus(canvas, c, zone.x, zone.y, zone.w, zone.h)
+        else if (c.module == ClusterModule.GRAPH) graphe(canvas, c, zone.x, zone.y, zone.w, zone.h)
         else if (e > 0.2f) {
             canvas.save()
             canvas.clipRect(zone.x, zone.y, zone.x + zone.w, zone.y + zone.h)
@@ -382,6 +411,7 @@ class ClusterGaugeView(context: Context) : View(context) {
 
     private fun jauge(canvas: Canvas, c: Contenu) = when {
         c.module == ClusterModule.TYRES -> pneus(canvas, c, 0f, 0f, COTE, COTE)
+        c.module == ClusterModule.GRAPH -> graphe(canvas, c, 0f, 0f, COTE, COTE)
         c.style == ClusterGaugeStyle.DISCREET && c.module == ClusterModule.POWER -> discretPuissance(canvas, c)
         c.style == ClusterGaugeStyle.DISCREET -> discretConsommation(canvas, c)
         c.module == ClusterModule.POWER -> puissance(canvas, c)
@@ -394,6 +424,133 @@ class ClusterGaugeView(context: Context) : View(context) {
         c.style == ClusterGaugeStyle.DISCREET -> 54f to 174f
         c.module == ClusterModule.POWER -> 6f to 194f
         else -> 4f to 200f
+    }
+
+    // ── Module « Graphique » (issue #217, maquette validée le 2026-11-20) ────
+
+    private val grTrait = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val grPlein = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val grChemin = android.graphics.Path()
+
+    /**
+     * Titre et valeur actuelle en haut, les barres (ou la courbe) au milieu — consommation en
+     * orange, récupération et kilomètres « en descente » en bleu, le reste en gris clair —, la ligne
+     * pointillée de la moyenne, et les distances en bas ; le plus récent à droite.
+     */
+    private fun graphe(canvas: Canvas, c: Contenu, zx: Float, zy: Float, zw: Float, zh: Float) {
+        val g = c.graphe ?: return
+        if (zh < 60f) return
+        val x0 = zx + 10f
+        val x1 = zx + zw - 10f
+        pneuTexte.typeface = Typeface.DEFAULT
+        pneuTexte.textSize = 11f
+        pneuTexte.color = cTexte2
+        pneuTexte.textAlign = Paint.Align.LEFT
+        canvas.drawText(g.titre, x0, zy + 14f, pneuTexte)
+        pneuTexte.typeface = moyen
+        pneuTexte.textSize = 14f
+        pneuTexte.color = cTexte
+        pneuTexte.textAlign = Paint.Align.RIGHT
+        canvas.drawText(g.actuelle, x1, zy + 15f, pneuTexte)
+        val haut = zy + 24f
+        val bas = zy + zh - 18f
+        pneuTexte.typeface = Typeface.DEFAULT
+        pneuTexte.textSize = 10f
+        pneuTexte.color = C_GRADUATION
+        pneuTexte.textAlign = Paint.Align.LEFT
+        canvas.drawText(g.axeDebut, x0, bas + 14f, pneuTexte)
+        pneuTexte.textAlign = Paint.Align.CENTER
+        canvas.drawText(g.axeMilieu, (x0 + x1) / 2f, bas + 14f, pneuTexte)
+        pneuTexte.textAlign = Paint.Align.RIGHT
+        canvas.drawText(g.axeFin, x1, bas + 14f, pneuTexte)
+        if (g.vide != null) {
+            pneuTexte.textAlign = Paint.Align.CENTER
+            pneuTexte.textSize = 12f
+            pneuTexte.color = cTexte2
+            canvas.drawText(g.vide, (x0 + x1) / 2f, (haut + bas) / 2f, pneuTexte)
+            return
+        }
+        val lues = g.valeurs.filterNotNull()
+        if (lues.isEmpty() || bas - haut < 20f) return
+        val parZero = g.info == com.mg4.control.model.ClusterHistory.Info.CONSUMPTION ||
+            g.info == com.mg4.control.model.ClusterHistory.Info.REGEN || g.info == com.mg4.control.model.ClusterHistory.Info.POWER ||
+            g.info == com.mg4.control.model.ClusterHistory.Info.SPEED
+        var mn = lues.minOrNull()!!
+        var mx = lues.maxOrNull()!!
+        if (parZero) { mn = minOf(0f, mn); mx = maxOf(mx, 0f) * 1.05f } else { val m = (mx - mn).coerceAtLeast(1f) * 0.08f; mn -= m; mx += m }
+        if (mx - mn < 1e-3f) mx = mn + 1f
+        fun y(v: Float) = bas - (v - mn) / (mx - mn) * (bas - haut)
+        val zero = if (parZero) y(0f) else bas
+        grTrait.strokeWidth = 1f
+        grTrait.color = cPiste
+        grTrait.pathEffect = null
+        canvas.drawLine(x0, zero, x1, zero, grTrait)
+        val n = g.valeurs.size
+        val w = (x1 - x0) / n
+        fun couleur(v: Float) = when (g.info) {
+            com.mg4.control.model.ClusterHistory.Info.CONSUMPTION -> if (v < 0f) cRecup else cConso
+            com.mg4.control.model.ClusterHistory.Info.REGEN -> cRecup
+            else -> g.couleur ?: C_CLAIR
+        }
+        if (g.courbe) {
+            grChemin.reset()
+            var debut = true
+            g.valeurs.forEachIndexed { i, v ->
+                if (v == null) { debut = true; return@forEachIndexed }
+                val x = x0 + w * (i + 0.5f)
+                if (debut) grChemin.moveTo(x, y(v)) else grChemin.lineTo(x, y(v))
+                debut = false
+            }
+            grTrait.strokeWidth = 2f
+            grTrait.color = couleur(lues.average().toFloat())
+            canvas.drawPath(grChemin, grTrait)
+        } else {
+            g.valeurs.forEachIndexed { i, v ->
+                if (v == null) return@forEachIndexed
+                grPlein.color = couleur(v)
+                val yv = y(v)
+                val h = kotlin.math.abs(zero - yv).coerceAtLeast(1f)
+                pneuRect.set(x0 + i * w + 0.6f, minOf(yv, zero), x0 + (i + 1) * w - 0.6f, minOf(yv, zero) + h)
+                canvas.drawRect(pneuRect, grPlein)
+            }
+        }
+        // Pointillés : min et max en gris, valeur à droite ; moyenne en blanc, valeur à gauche
+        // (maquette du 2026-11-20) — les étiquettes ne se chevauchent pas.
+        fun ligne(v: Float, texte: String?, couleur: Int, aDroite: Boolean) {
+            val yl = y(v)
+            grTrait.strokeWidth = 1f
+            grTrait.color = couleur
+            grTrait.pathEffect = android.graphics.DashPathEffect(floatArrayOf(4f, 3f), 0f)
+            // En chemin, pas en drawLine : l'accélération graphique ignore les pointillés d'une ligne
+            // (vu en voiture sur le graphique des trajets, 2026-11-09).
+            grChemin.reset()
+            grChemin.moveTo(x0, yl)
+            grChemin.lineTo(x1, yl)
+            canvas.drawPath(grChemin, grTrait)
+            grTrait.pathEffect = null
+            texte ?: return
+            pneuTexte.typeface = moyen
+            pneuTexte.textSize = 10f
+            pneuTexte.color = couleur
+            pneuTexte.textAlign = Paint.Align.LEFT
+            // Pastille sombre : le texte reste lisible par-dessus les barres.
+            val l = pneuTexte.measureText(texte)
+            val tx = if (aDroite) x1 - l - 3f else x0 + 3f
+            val ty = (yl - 4f).coerceAtLeast(haut + 10f)
+            pneuRect.set(tx - 3f, ty - 10f, tx + l + 3f, ty + 3f)
+            pneuRoue.color = Color.argb(215, Color.red(FOND), Color.green(FOND), Color.blue(FOND))
+            canvas.drawRoundRect(pneuRect, 3f, 3f, pneuRoue)
+            canvas.drawText(texte, tx, ty, pneuTexte)
+        }
+        if (g.avecMinMax) {
+            val mxv = g.max
+            val mnv = g.min
+            if (mxv != null) ligne(mxv, g.maxTexte, C_GRADUATION, true)
+            // Une seule barre lue (ou toutes égales) : une seule ligne.
+            if (mnv != null && mnv != mxv) ligne(mnv, g.minTexte, C_GRADUATION, true)
+        }
+        val moy = g.moyenne
+        if (g.avecMoyenne && moy != null) ligne(moy, g.moyenneTexte, cTexte, false)
     }
 
     /** Nom du module en pastille en haut du carré, par-dessus tout (raccourci « Module suivant »). */
@@ -1322,6 +1479,10 @@ class ClusterGaugeView(context: Context) : View(context) {
         private val C_CRAN = Color.rgb(0x4A, 0x4A, 0x52)
         /** La puissance consommée : un gris clair, pour ne pas attirer l'œil comme l'orange. */
         private val C_CLAIR = Color.rgb(0xD4, 0xD4, 0xD8)
+        /** Couleur du graphique sans choix (barres hors consommation et récupération). */
+        val GRAPH_DEFAULT_COLOR: Int get() = C_CLAIR
+        /** Distances sous le graphique (issue #217). */
+        private val C_GRADUATION = Color.rgb(0x7A, 0x86, 0x99)
         /** Module « charge » : une image toutes les 50 ms ; éclair et reflet sur ces périodes. */
         private const val IMAGE_CHARGE_MS = 50L
         private const val PULSATION_MS = 1_400L

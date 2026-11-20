@@ -21,6 +21,18 @@ data class ClusterModuleDef(
     val unit: String? = null,
     /** `null` = la disposition par défaut de son type ([ClusterModuleDefs.layout]). */
     val layout: ClusterLayout? = null,
+    /** Graphique (issue #217) : clé de [ClusterHistory.Info] ; `null` = consommation. */
+    val graphInfo: String? = null,
+    /** Graphique : distance montrée, 20, 50 ou 100 km ; `null` = 50. */
+    val graphKm: Int? = null,
+    /** Graphique : une courbe au lieu des barres. */
+    val graphLine: Boolean? = null,
+    /** Graphique : ligne de la moyenne ; `null` = affichée. */
+    val graphAverage: Boolean? = null,
+    /** Graphique : lignes du minimum et du maximum ; `null` = affichées (2026-11-20). */
+    val graphMinMax: Boolean? = null,
+    /** Graphique : couleur des barres hors consommation et récupération ; `null` = gris clair. */
+    val graphColor: Int? = null,
 )
 
 object ClusterModuleDefs {

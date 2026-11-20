@@ -473,6 +473,7 @@ class SettingsFragment : Fragment() {
             ClusterModule.CONSUMPTION -> R.string.settings_cluster_consumption
             ClusterModule.POWER -> R.string.settings_cluster_power
             ClusterModule.TYRES -> R.string.settings_cluster_tyres
+            ClusterModule.GRAPH -> R.string.settings_cluster_graph
         })
         fun nomOnglet(t: ClusterTab) = getString(if (t == ClusterTab.MEDIA) R.string.settings_cluster_row_media else R.string.settings_cluster_row_nav)
         /** Où un module est utilisé : « Paul · Navigation 1 »… pour tous les profils (ou les réglages communs). */
