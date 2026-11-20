@@ -3974,6 +3974,11 @@ object MG4Hardware {
             sb.appendLine(it)
             sb.appendLine()
         }
+        // Sonde pneus : tous les relevés gardés (Diagnostic et fenêtre Pneus), froids et chauds.
+        TyreProbe.reports.forEach {
+            sb.appendLine(it)
+            sb.appendLine()
+        }
 
         // Énergie intégrée (tension × courant) contre compteurs, trajet par trajet (issue #117) :
         // tout l'historique gardé, pour qu'un seul rapport couvre une semaine de trajets.

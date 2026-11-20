@@ -181,6 +181,7 @@ class MainActivity : AppCompatActivity() {
                 // Révèle immédiatement le bouton si l'onglet Réglages est déjà affiché
                 findViewById<View>(R.id.btn_diagnostic)?.visibility = View.VISIBLE
                 findViewById<View>(R.id.btn_charge_state)?.visibility = View.VISIBLE
+                findViewById<View>(R.id.btn_tyre_debug)?.visibility = View.VISIBLE
                 Toast.makeText(this, getString(R.string.diagnostic_unlocked), Toast.LENGTH_SHORT).show()
             }
         }

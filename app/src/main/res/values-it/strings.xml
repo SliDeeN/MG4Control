@@ -1126,6 +1126,11 @@
     <string name="charge_state_history">Modifiche dall’apertura</string>
     <string name="charge_state_history_empty">Nessuna modifica per ora</string>
     <string name="charge_state_hint">Lascia la finestra aperta durante una ricarica: collegamento, inizio, fine, scollegamento. Ogni modifica viene anche annotata nel registro della Diagnostica.</string>
+    <string name="btn_tyre_debug">Pneumatici</string>
+    <string name="tyre_debug_temp">Temperatura: %1$s</string>
+    <string name="tyre_debug_state">Stato: %1$s</string>
+    <string name="tyre_debug_unit">Unità del quadro strumenti: %1$s</string>
+    <string name="tyre_debug_hint">Valori grezzi, senza unità: confrontali con il quadro strumenti, a pneumatici freddi e poi dopo un viaggio. L’apertura aggiunge una lettura completa alla Diagnostica, e ogni cambiamento viene annotato nel suo registro.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Custode dell’auto</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

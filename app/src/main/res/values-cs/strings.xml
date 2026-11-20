@@ -1029,6 +1029,11 @@
     <string name="charge_state_history">Změny od otevření</string>
     <string name="charge_state_history_empty">Zatím žádná změna</string>
     <string name="charge_state_hint">Nechte okno otevřené během nabíjení: připojení, začátek, konec, odpojení. Každá změna se zapíše i do protokolu Diagnostiky.</string>
+    <string name="btn_tyre_debug">Pneumatiky</string>
+    <string name="tyre_debug_temp">Teplota: %1$s</string>
+    <string name="tyre_debug_state">Stav: %1$s</string>
+    <string name="tyre_debug_unit">Jednotka přístrojového displeje: %1$s</string>
+    <string name="tyre_debug_hint">Surové hodnoty bez jednotek: porovnejte je s přístrojovým displejem, se studenými pneumatikami a pak po jízdě. Otevření přidá do Diagnostiky úplné měření a každá změna se zapíše do jejího protokolu.</string>
     <string name="shortcuts_action_preclim">Hlídání vozu</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="shortcuts_action_track_mode">Track mode (okruh)</string>

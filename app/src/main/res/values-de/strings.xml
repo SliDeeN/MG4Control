@@ -1126,6 +1126,11 @@
     <string name="charge_state_history">Änderungen seit dem Öffnen</string>
     <string name="charge_state_history_empty">Noch keine Änderung</string>
     <string name="charge_state_hint">Lass das Fenster während eines Ladevorgangs offen: Einstecken, Beginn, Ende, Ausstecken. Jede Änderung wird auch im Diagnoseprotokoll vermerkt.</string>
+    <string name="btn_tyre_debug">Reifen</string>
+    <string name="tyre_debug_temp">Temperatur: %1$s</string>
+    <string name="tyre_debug_state">Zustand: %1$s</string>
+    <string name="tyre_debug_unit">Einheit im Kombiinstrument: %1$s</string>
+    <string name="tyre_debug_hint">Rohwerte ohne Einheit: Vergleiche sie mit dem Kombiinstrument, bei kalten Reifen und dann nach einer Fahrt. Das Öffnen fügt der Diagnose eine vollständige Messung hinzu, und jede Änderung wird in ihrem Protokoll vermerkt.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Fahrzeugwächter</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

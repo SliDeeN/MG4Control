@@ -1127,6 +1127,11 @@
     <string name="charge_state_history">Endringer siden åpning</string>
     <string name="charge_state_history_empty">Ingen endring ennå</string>
     <string name="charge_state_hint">La vinduet stå åpent under en lading: plugge inn, start, slutt, koble fra. Hver endring skrives også til diagnoseloggen.</string>
+    <string name="btn_tyre_debug">Dekk</string>
+    <string name="tyre_debug_temp">Temperatur: %1$s</string>
+    <string name="tyre_debug_state">Status: %1$s</string>
+    <string name="tyre_debug_unit">Enhet i instrumentgruppen: %1$s</string>
+    <string name="tyre_debug_hint">Råverdier uten enhet: sammenlign dem med instrumentgruppen, med kalde dekk og så etter en tur. Åpningen legger en fullstendig avlesning til Diagnostikk, og hver endring skrives i loggen.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Bilholder</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

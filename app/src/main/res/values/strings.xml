@@ -1144,6 +1144,11 @@
     <string name="charge_state_history">Changements depuis l’ouverture</string>
     <string name="charge_state_history_empty">Aucun changement pour l’instant</string>
     <string name="charge_state_hint">Laisse la fenêtre ouverte pendant une charge : branchement, début, fin, débranchement. Chaque changement est aussi noté dans le journal du Diagnostic.</string>
+    <string name="btn_tyre_debug">Pneus</string>
+    <string name="tyre_debug_temp">Température : %1$s</string>
+    <string name="tyre_debug_state">État : %1$s</string>
+    <string name="tyre_debug_unit">Unité du combiné : %1$s</string>
+    <string name="tyre_debug_hint">Valeurs brutes, sans unité : compare-les avec le combiné, pneus froids puis après un trajet. L’ouverture ajoute un relevé complet au Diagnostic, et chaque changement est noté dans son journal.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Garde-voiture</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

@@ -1126,6 +1126,11 @@
     <string name="charge_state_history">Açılıştan beri değişiklikler</string>
     <string name="charge_state_history_empty">Henüz değişiklik yok</string>
     <string name="charge_state_hint">Şarj sırasında pencereyi açık bırakın: takma, başlangıç, bitiş, çıkarma. Her değişiklik Teşhis günlüğüne de yazılır.</string>
+    <string name="btn_tyre_debug">Lastikler</string>
+    <string name="tyre_debug_temp">Sıcaklık: %1$s</string>
+    <string name="tyre_debug_state">Durum: %1$s</string>
+    <string name="tyre_debug_unit">Gösterge paneli birimi: %1$s</string>
+    <string name="tyre_debug_hint">Birimsiz ham değerler: lastikler soğukken ve bir sürüşten sonra gösterge paneliyle karşılaştır. Açılış Tanılama’ya tam bir ölçüm ekler ve her değişiklik günlüğüne yazılır.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Araç bekçisi</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

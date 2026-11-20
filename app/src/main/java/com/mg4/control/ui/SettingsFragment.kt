@@ -906,6 +906,12 @@ class SettingsFragment : Fragment() {
         btnChargeState.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
         btnChargeState.setOnClickListener { ChargeStateDialog.afficher(requireContext()) }
 
+        // Pneus : outil de relevé (2026-11-20), débloqué avec le Diagnostic, sous lui.
+        view.findViewById<MaterialButton>(R.id.btn_tyre_debug).apply {
+            visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
+            setOnClickListener { TyreDebugDialog.afficher(requireContext()) }
+        }
+
         btnUpdate.setOnClickListener {
             btnUpdate.isEnabled = false
 
@@ -1358,6 +1364,8 @@ class SettingsFragment : Fragment() {
             // autre manipulation. Sur le fil IO : une trentaine de propriétés, plusieurs voies
             // chacune, ça ne passe pas sur le fil principal.
             EnergyProbe.run("diagnostic")
+            // Sonde pneus (2026-11-20) : un relevé par ouverture, pneus froids puis après un trajet.
+            com.mg4.control.hardware.TyreProbe.run("diagnostic")
             // Sonde lumière/position : un relevé instantané, à prendre en plein jour, au crépuscule
             // et dans un parking couvert. Ceux pris automatiquement au READY sont déjà gardés.
             com.mg4.control.hardware.LightProbe.run("diagnostic")

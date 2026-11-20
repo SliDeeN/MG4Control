@@ -1126,6 +1126,11 @@
     <string name="charge_state_history">Zmiany od otwarcia</string>
     <string name="charge_state_history_empty">Jeszcze bez zmian</string>
     <string name="charge_state_hint">Zostaw okno otwarte podczas ładowania: podłączenie, start, koniec, odłączenie. Każda zmiana jest też zapisywana w dzienniku diagnostyki.</string>
+    <string name="btn_tyre_debug">Opony</string>
+    <string name="tyre_debug_temp">Temperatura: %1$s</string>
+    <string name="tyre_debug_state">Stan: %1$s</string>
+    <string name="tyre_debug_unit">Jednostka zestawu wskaźników: %1$s</string>
+    <string name="tyre_debug_hint">Surowe wartości bez jednostek: porównaj je z zestawem wskaźników, przy zimnych oponach, a potem po jeździe. Otwarcie dodaje pełny odczyt do Diagnostyki, a każda zmiana trafia do jej dziennika.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Opiekun auta</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

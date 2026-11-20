@@ -1126,6 +1126,11 @@
     <string name="charge_state_history">Alterações desde a abertura</string>
     <string name="charge_state_history_empty">Nenhuma alteração por agora</string>
     <string name="charge_state_hint">Deixa a janela aberta durante um carregamento: ligação, início, fim, desligação. Cada mudança fica também anotada no registo do Diagnóstico.</string>
+    <string name="btn_tyre_debug">Pneus</string>
+    <string name="tyre_debug_temp">Temperatura: %1$s</string>
+    <string name="tyre_debug_state">Estado: %1$s</string>
+    <string name="tyre_debug_unit">Unidade do painel de instrumentos: %1$s</string>
+    <string name="tyre_debug_hint">Valores em bruto, sem unidade: compara-os com o painel de instrumentos, com os pneus frios e depois de uma viagem. A abertura acrescenta uma leitura completa ao Diagnóstico, e cada alteração fica registada no seu registo.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Guardião do carro</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

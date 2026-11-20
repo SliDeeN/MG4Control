@@ -1126,6 +1126,11 @@
     <string name="charge_state_history">Changes since opening</string>
     <string name="charge_state_history_empty">No change yet</string>
     <string name="charge_state_hint">Leave the window open during a charge: plugging in, start, end, unplugging. Each change is also written to the Diagnostic log.</string>
+    <string name="btn_tyre_debug">Tyres</string>
+    <string name="tyre_debug_temp">Temperature: %1$s</string>
+    <string name="tyre_debug_state">State: %1$s</string>
+    <string name="tyre_debug_unit">Instrument cluster unit: %1$s</string>
+    <string name="tyre_debug_hint">Raw values, without units: compare them with the instrument cluster, with cold tyres and then after a drive. Opening adds a full reading to the Diagnostic, and each change is written to its log.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Car keeper</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
