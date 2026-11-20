@@ -1823,6 +1823,10 @@
     <string name="rule_sig_tyre_rl">Pressione pneumatico posteriore sinistro</string>
     <string name="rule_sig_tyre_rr">Pressione pneumatico posteriore destro</string>
     <string name="rule_sig_tyre_temp_max">Pneumatico più caldo</string>
+    <string name="rule_sig_tyre_temp_fl">Temperatura pneumatico anteriore sinistro</string>
+    <string name="rule_sig_tyre_temp_fr">Temperatura pneumatico anteriore destro</string>
+    <string name="rule_sig_tyre_temp_rl">Temperatura pneumatico posteriore sinistro</string>
+    <string name="rule_sig_tyre_temp_rr">Temperatura pneumatico posteriore destro</string>
     <string name="rule_sig_tyre_alert">Avviso pneumatico dell’auto</string>
     <string name="rule_sig_tsr">Segnali (TSR)</string>
     <string name="rule_sig_volume">Volume</string>

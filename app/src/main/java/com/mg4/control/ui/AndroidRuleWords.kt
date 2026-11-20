@@ -47,7 +47,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
         RuleSignal.RANGE -> " km"
         RuleSignal.OUTSIDE_TEMP -> " °C"
         RuleSignal.ALTITUDE -> " m"
-        RuleSignal.TYRE_TEMP_MAX -> " °C"
+        RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR -> " °C"
         else -> ""
     }
 
@@ -316,6 +316,10 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleSignal.TYRE_PRESSURE_RR -> R.string.rule_sig_tyre_rr
             RuleSignal.TYRE_TEMP_MAX -> R.string.rule_sig_tyre_temp_max
             RuleSignal.TYRE_ALERT -> R.string.rule_sig_tyre_alert
+            RuleSignal.TYRE_TEMP_FL -> R.string.rule_sig_tyre_temp_fl
+            RuleSignal.TYRE_TEMP_FR -> R.string.rule_sig_tyre_temp_fr
+            RuleSignal.TYRE_TEMP_RL -> R.string.rule_sig_tyre_temp_rl
+            RuleSignal.TYRE_TEMP_RR -> R.string.rule_sig_tyre_temp_rr
         }
 
         fun eventRes(e: RuleEvent): Int = when (e) {

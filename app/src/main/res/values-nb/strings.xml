@@ -1817,6 +1817,10 @@
     <string name="rule_sig_tyre_rl">Dekktrykk bak venstre</string>
     <string name="rule_sig_tyre_rr">Dekktrykk bak høyre</string>
     <string name="rule_sig_tyre_temp_max">Varmeste dekk</string>
+    <string name="rule_sig_tyre_temp_fl">Dekktemperatur foran venstre</string>
+    <string name="rule_sig_tyre_temp_fr">Dekktemperatur foran høyre</string>
+    <string name="rule_sig_tyre_temp_rl">Dekktemperatur bak venstre</string>
+    <string name="rule_sig_tyre_temp_rr">Dekktemperatur bak høyre</string>
     <string name="rule_sig_tyre_alert">Dekkvarsel fra bilen</string>
     <string name="rule_sig_tsr">Skiltgjenkjenning (TSR)</string>
     <string name="rule_sig_volume">Volum</string>

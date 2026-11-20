@@ -1823,6 +1823,10 @@
     <string name="rule_sig_tyre_rl">Pressão pneu traseiro esquerdo</string>
     <string name="rule_sig_tyre_rr">Pressão pneu traseiro direito</string>
     <string name="rule_sig_tyre_temp_max">Pneu mais quente</string>
+    <string name="rule_sig_tyre_temp_fl">Temperatura pneu dianteiro esquerdo</string>
+    <string name="rule_sig_tyre_temp_fr">Temperatura pneu dianteiro direito</string>
+    <string name="rule_sig_tyre_temp_rl">Temperatura pneu traseiro esquerdo</string>
+    <string name="rule_sig_tyre_temp_rr">Temperatura pneu traseiro direito</string>
     <string name="rule_sig_tyre_alert">Alerta de pneu do carro</string>
     <string name="rule_sig_tsr">Sinais (TSR)</string>
     <string name="rule_sig_volume">Volume</string>

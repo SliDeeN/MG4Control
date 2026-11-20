@@ -1846,6 +1846,10 @@
     <string name="rule_sig_tyre_rl">Pression pneu arrière gauche</string>
     <string name="rule_sig_tyre_rr">Pression pneu arrière droit</string>
     <string name="rule_sig_tyre_temp_max">Pneu le plus chaud</string>
+    <string name="rule_sig_tyre_temp_fl">Température pneu avant gauche</string>
+    <string name="rule_sig_tyre_temp_fr">Température pneu avant droit</string>
+    <string name="rule_sig_tyre_temp_rl">Température pneu arrière gauche</string>
+    <string name="rule_sig_tyre_temp_rr">Température pneu arrière droit</string>
     <string name="rule_sig_tyre_alert">Alerte pneu de la voiture</string>
     <string name="rule_sig_tsr">Panneaux (TSR)</string>
     <string name="rule_sig_volume">Volume</string>

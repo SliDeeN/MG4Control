@@ -1816,6 +1816,10 @@
     <string name="rule_sig_tyre_rl">Reifendruck hinten links</string>
     <string name="rule_sig_tyre_rr">Reifendruck hinten rechts</string>
     <string name="rule_sig_tyre_temp_max">Wärmster Reifen</string>
+    <string name="rule_sig_tyre_temp_fl">Reifentemperatur vorne links</string>
+    <string name="rule_sig_tyre_temp_fr">Reifentemperatur vorne rechts</string>
+    <string name="rule_sig_tyre_temp_rl">Reifentemperatur hinten links</string>
+    <string name="rule_sig_tyre_temp_rr">Reifentemperatur hinten rechts</string>
     <string name="rule_sig_tyre_alert">Reifenwarnung des Autos</string>
     <string name="rule_sig_tsr">Verkehrszeichen (TSR)</string>
     <string name="rule_sig_volume">Lautstärke</string>

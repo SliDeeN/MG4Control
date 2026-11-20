@@ -1816,6 +1816,10 @@
     <string name="rule_sig_tyre_rl">Sol arka lastik basıncı</string>
     <string name="rule_sig_tyre_rr">Sağ arka lastik basıncı</string>
     <string name="rule_sig_tyre_temp_max">En sıcak lastik</string>
+    <string name="rule_sig_tyre_temp_fl">Sol ön lastik sıcaklığı</string>
+    <string name="rule_sig_tyre_temp_fr">Sağ ön lastik sıcaklığı</string>
+    <string name="rule_sig_tyre_temp_rl">Sol arka lastik sıcaklığı</string>
+    <string name="rule_sig_tyre_temp_rr">Sağ arka lastik sıcaklığı</string>
     <string name="rule_sig_tyre_alert">Aracın lastik uyarısı</string>
     <string name="rule_sig_tsr">Trafik işaretleri (TSR)</string>
     <string name="rule_sig_volume">Ses</string>

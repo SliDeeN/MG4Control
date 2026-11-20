@@ -1823,6 +1823,10 @@
     <string name="rule_sig_tyre_rl">Presión neumático trasero izquierdo</string>
     <string name="rule_sig_tyre_rr">Presión neumático trasero derecho</string>
     <string name="rule_sig_tyre_temp_max">Neumático más caliente</string>
+    <string name="rule_sig_tyre_temp_fl">Temperatura neumático delantero izquierdo</string>
+    <string name="rule_sig_tyre_temp_fr">Temperatura neumático delantero derecho</string>
+    <string name="rule_sig_tyre_temp_rl">Temperatura neumático trasero izquierdo</string>
+    <string name="rule_sig_tyre_temp_rr">Temperatura neumático trasero derecho</string>
     <string name="rule_sig_tyre_alert">Alerta de neumático del coche</string>
     <string name="rule_sig_tsr">Señales (TSR)</string>
     <string name="rule_sig_volume">Volumen</string>

@@ -689,6 +689,10 @@ object CustomRules {
             RuleSignal.TYRE_PRESSURE_RL -> pression(com.mg4.control.hardware.TyreProbe.Roue.ARRIERE_GAUCHE)
             RuleSignal.TYRE_PRESSURE_RR -> pression(com.mg4.control.hardware.TyreProbe.Roue.ARRIERE_DROITE)
             RuleSignal.TYRE_TEMP_MAX -> com.mg4.control.model.TyrePressure.hottest(ordre.map { it?.temperature })?.toDouble()
+            RuleSignal.TYRE_TEMP_FL -> p.roues[com.mg4.control.hardware.TyreProbe.Roue.AVANT_GAUCHE]?.temperature?.toDouble()
+            RuleSignal.TYRE_TEMP_FR -> p.roues[com.mg4.control.hardware.TyreProbe.Roue.AVANT_DROITE]?.temperature?.toDouble()
+            RuleSignal.TYRE_TEMP_RL -> p.roues[com.mg4.control.hardware.TyreProbe.Roue.ARRIERE_GAUCHE]?.temperature?.toDouble()
+            RuleSignal.TYRE_TEMP_RR -> p.roues[com.mg4.control.hardware.TyreProbe.Roue.ARRIERE_DROITE]?.temperature?.toDouble()
             RuleSignal.TYRE_ALERT -> com.mg4.control.model.TyrePressure.anyAlert(ordre.map { it?.etat })
             else -> null
         }
@@ -704,7 +708,8 @@ object CustomRules {
         RuleSignal.OUTSIDE_TEMP -> MG4Hardware.getOutsideTempCelsius()?.toDouble()
         RuleSignal.ALTITUDE -> AndroidControls.altitude(ctx)
         RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL,
-        RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_ALERT -> pneu(s)
+        RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_ALERT,
+        RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR -> pneu(s)
         RuleSignal.HVAC_ON -> clim()?.powerOn
         RuleSignal.BT_DEVICE -> BluetoothProfileManager.getConnectedMacs()
         RuleSignal.PROFILE -> ActiveProfile.id(ctx)

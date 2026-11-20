@@ -77,7 +77,15 @@ class TyrePressureTest {
         assertNull(BubbleInfo.pressure(RuleSignal.TYRE_PRESSURE_FL, null, PressureUnit.BAR, Locale.FRANCE))
         assertNull(BubbleInfo.pressure(RuleSignal.TYRE_TEMP_MAX, 16.0, PressureUnit.BAR, Locale.FRANCE))
         val choix = BubbleInfo.choices()
-        listOf(RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_ALERT)
-            .forEach { assertEquals(it.name, true, it.name in choix) }
+        // Bulles (boutons flottants) et écran conducteur : la même liste ; températures par pneu (2026-11-20).
+        val conducteur = ClusterInfo.choices()
+        listOf(RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_ALERT,
+            RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR)
+            .forEach {
+                assertEquals(it.name, true, it.name in choix)
+                assertEquals(it.name, true, it.name in conducteur)
+                // Une température reste en °C, jamais convertie comme une pression.
+                if (it.name.startsWith("TYRE_TEMP")) assertNull(BubbleInfo.pressure(it, 16.0, PressureUnit.BAR, Locale.FRANCE))
+            }
     }
 }

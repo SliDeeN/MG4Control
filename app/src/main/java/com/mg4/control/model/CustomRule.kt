@@ -133,7 +133,12 @@ enum class RuleSignal(val kind: Kind) {
     TYRE_PRESSURE_RL(Kind.NUMBER),
     TYRE_PRESSURE_RR(Kind.NUMBER),
     TYRE_TEMP_MAX(Kind.NUMBER),
-    TYRE_ALERT(Kind.BOOL);
+    TYRE_ALERT(Kind.BOOL),
+    /** Température de chaque pneu, en °C (2026-11-20). */
+    TYRE_TEMP_FL(Kind.NUMBER),
+    TYRE_TEMP_FR(Kind.NUMBER),
+    TYRE_TEMP_RL(Kind.NUMBER),
+    TYRE_TEMP_RR(Kind.NUMBER);
 
     /** Une pression de pneu, en kPa : affichée dans l'unité de pression choisie. */
     val isTyrePressure: Boolean get() = this == TYRE_PRESSURE_MIN || this == TYRE_PRESSURE_FL ||

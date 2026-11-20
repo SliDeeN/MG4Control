@@ -1728,6 +1728,10 @@
     <string name="rule_sig_tyre_rl">Tlak zadní levé pneumatiky</string>
     <string name="rule_sig_tyre_rr">Tlak zadní pravé pneumatiky</string>
     <string name="rule_sig_tyre_temp_max">Nejteplejší pneumatika</string>
+    <string name="rule_sig_tyre_temp_fl">Teplota přední levé pneumatiky</string>
+    <string name="rule_sig_tyre_temp_fr">Teplota přední pravé pneumatiky</string>
+    <string name="rule_sig_tyre_temp_rl">Teplota zadní levé pneumatiky</string>
+    <string name="rule_sig_tyre_temp_rr">Teplota zadní pravé pneumatiky</string>
     <string name="rule_sig_tyre_alert">Výstraha pneumatiky z auta</string>
     <string name="rule_sig_tsr">Rozpoznávání dopravních značek (TSR)</string>
     <string name="rule_sig_volume">Hlasitost</string>

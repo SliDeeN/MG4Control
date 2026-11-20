@@ -1830,6 +1830,10 @@
     <string name="rule_sig_tyre_rl">Ciśnienie opony tylnej lewej</string>
     <string name="rule_sig_tyre_rr">Ciśnienie opony tylnej prawej</string>
     <string name="rule_sig_tyre_temp_max">Najcieplejsza opona</string>
+    <string name="rule_sig_tyre_temp_fl">Temperatura opony przedniej lewej</string>
+    <string name="rule_sig_tyre_temp_fr">Temperatura opony przedniej prawej</string>
+    <string name="rule_sig_tyre_temp_rl">Temperatura opony tylnej lewej</string>
+    <string name="rule_sig_tyre_temp_rr">Temperatura opony tylnej prawej</string>
     <string name="rule_sig_tyre_alert">Alert opony z samochodu</string>
     <string name="rule_sig_tsr">Rozpoznawanie znaków (TSR)</string>
     <string name="rule_sig_volume">Głośność</string>

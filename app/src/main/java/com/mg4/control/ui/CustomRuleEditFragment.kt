@@ -829,7 +829,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     private fun catSignal(sig: RuleSignal): Cat = when (sig) {
         // « Nuit (feux auto) » (2026-11-18) : rangée avec la voiture, introuvable sous « Écran et son ».
         RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.NIGHT, RuleSignal.TURN_SIGNAL,
-        RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_ALERT -> Cat.CAR
+        RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_ALERT,
+        RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR -> Cat.CAR
         RuleSignal.BT_DEVICE, RuleSignal.ALTITUDE -> Cat.PLACES
         RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
         RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES, RuleSignal.PROFILE -> Cat.DRIVING
@@ -874,6 +875,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
             RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.TURN_SIGNAL,
             RuleSignal.TYRE_ALERT, RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX,
+            RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR,
             RuleSignal.PROFILE, RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON,
             RuleSignal.PROJECTION, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL, RuleSignal.BRIGHTNESS, RuleSignal.VOLUME,
             RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB, RuleSignal.FIRMWARE,
@@ -907,7 +909,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.ALTITUDE -> Borne(0, 4000, 500, 50)
         // Pneus : seuils en kPa, au pas de 5 kPa (0,05 bar), montrés dans l'unité choisie.
         RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR -> Borne(100, 400, 220, 5)
-        RuleSignal.TYRE_TEMP_MAX -> Borne(-20, 120, 60, 1)
+        RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR -> Borne(-20, 120, 60, 1)
         else -> Borne(0, 100, 0, 1)
     }
 
