@@ -174,4 +174,31 @@ class ClusterLayoutTest {
         assertEquals(BubbleInfo.UNKNOWN to null, ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_AVERAGE), vide, km, fr))
         assertNull(ClusterInfo.tripValue(ClusterBlock(RuleSignal.SOC.name), t, km, fr))
     }
+
+    /** Chaque onglet a sa disposition (2026-11-20) ; Musique suit la navigation tant qu'on n'y touche pas. */
+    @Test
+    fun `each tab has its own layout, music copies navigation until set`() {
+        val nav = ClusterLayout(slots = listOf(ClusterBlock(RuleSignal.SOC.name), null, null, null))
+        val vide = ClusterLayout(slots = listOf(null, null, null, null))
+        val c = ClusterConfig(layout = nav)
+        assertEquals(nav, ClusterLayouts.of(c, ClusterTab.NAVIGATION))
+        assertEquals(nav, ClusterLayouts.of(c, ClusterTab.MEDIA))
+        assertEquals(nav, ClusterLayouts.of(c, null))
+        val deux = c.copy(layoutMedia = vide)
+        assertEquals(nav, ClusterLayouts.of(deux, ClusterTab.NAVIGATION))
+        assertEquals(vide, ClusterLayouts.of(deux, ClusterTab.MEDIA))
+        // Sans rien d'enregistré : les deux onglets ont la disposition d'avant.
+        assertEquals(ClusterLayouts.of(ClusterConfig()), ClusterLayouts.of(ClusterConfig(), ClusterTab.MEDIA))
+    }
+
+    @Test
+    fun `the layout follows the tab whose module is shown`() {
+        val s = com.mg4.control.util.ClusterModuleSettings
+        assertEquals(ClusterTab.NAVIGATION, s.tabShown(ClusterTab.NAVIGATION.value, null))
+        assertEquals(ClusterTab.MEDIA, s.tabShown(ClusterTab.MEDIA.value, ClusterModule.TYRES))
+        // Onglet illisible : la navigation si elle a un module, sinon la musique (comme moduleToShow).
+        assertEquals(ClusterTab.NAVIGATION, s.tabShown(null, ClusterModule.TYRES))
+        assertEquals(ClusterTab.MEDIA, s.tabShown(null, null))
+        assertNull(s.tabShown(0, ClusterModule.TYRES))
+    }
 }

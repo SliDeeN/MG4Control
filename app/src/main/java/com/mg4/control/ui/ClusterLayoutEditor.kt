@@ -43,11 +43,13 @@ import com.mg4.control.util.DistanceSetting
  * s'échange avec la case où on le dépose, la jauge se pose en haut, au milieu ou en bas. À droite,
  * les réglages de l'élément choisi.
  *
- * Rien n'est enregistré avant « Enregistrer » : [surEnregistre] reçoit la disposition et le style.
+ * Chaque onglet (Navigation, Musique) a sa disposition (2026-11-20) : on choisit en haut l'onglet
+ * réglé, l'aperçu montre son vrai module (jauge ou pneus). Rien n'est enregistré avant
+ * « Enregistrer » : [surEnregistre] reçoit les deux dispositions et le style.
  *
  * @param depart     réglages de départ (ceux du premier profil sélectionné dans la carte)
  * @param profil     profil nommé dans l'aperçu
- * @param onglet     onglet montré dans l'aperçu de la carte : sa jauge, au départ
+ * @param onglet     onglet montré dans l'aperçu de la carte : réglé en premier
  */
 class ClusterLayoutEditor(
     private val ctx: Context,
@@ -55,7 +57,7 @@ class ClusterLayoutEditor(
     private val profil: DrivingProfile?,
     private val sousTitre: CharSequence,
     onglet: ClusterTab,
-    private val surEnregistre: (ClusterLayout, String?) -> Unit,
+    private val surEnregistre: (navigation: ClusterLayout, musique: ClusterLayout, style: String?) -> Unit,
 ) {
     private val racine = LayoutInflater.from(ctx).inflate(R.layout.dialog_cluster_layout, null)
     private val panneau = racine.findViewById<LinearLayout>(R.id.panel_cluster_layout)
@@ -65,16 +67,20 @@ class ClusterLayoutEditor(
     private val handler = Handler(Looper.getMainLooper())
     private var dialog: AlertDialog? = null
 
-    private var disposition: ClusterLayout = ClusterModuleSettings.layout(depart)
+    /** Onglet réglé : celui de l'aperçu de la carte, Navigation à défaut. */
+    private var ongletRegle: ClusterTab = if (onglet == ClusterTab.MEDIA) ClusterTab.MEDIA else ClusterTab.NAVIGATION
+    private val dispositions = mutableMapOf(
+        ClusterTab.NAVIGATION to ClusterModuleSettings.layout(depart, ClusterTab.NAVIGATION),
+        ClusterTab.MEDIA to ClusterModuleSettings.layout(depart, ClusterTab.MEDIA),
+    )
+    /** La disposition de l'onglet réglé. */
+    private var disposition: ClusterLayout
+        get() = dispositions.getValue(ongletRegle)
+        set(v) { dispositions[ongletRegle] = v }
     private var style: String? = depart.style
-    /**
-     * Jauge de l'aperçu : la dernière choisie dans cette fenêtre (2026-11-12 : elle revenait toujours
-     * sur celle de l'onglet, Consommation le plus souvent), à défaut celle de l'onglet montré.
-     */
-    private var module: ClusterModule = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CLE_JAUGE, null)
-        ?.let { k -> ClusterModule.entries.firstOrNull { it.key == k } }
-        ?: ClusterModuleSettings.moduleFor(depart, onglet) ?: ClusterModuleSettings.moduleFor(depart, ClusterTab.NAVIGATION)
-            ?: ClusterModule.CONSUMPTION
+    /** Module de l'onglet réglé, tel que choisi dans la carte ; « Aucun » : la consommation en aperçu. */
+    private val module: ClusterModule
+        get() = ClusterModuleSettings.moduleFor(depart, ongletRegle) ?: ClusterModule.CONSUMPTION
     /** Élément réglé à droite : une case (0 à 3) ou [ClusterGaugeView.JAUGE]. */
     private var selection: Int = ClusterGaugeView.JAUGE
 
@@ -95,8 +101,11 @@ class ClusterLayoutEditor(
         }
         racine.findViewById<View>(R.id.btn_cluster_layout_cancel).setOnClickListener { dialog?.dismiss() }
         racine.findViewById<View>(R.id.btn_cluster_layout_save).setOnClickListener {
-            AppLogger.i("MG4_SETTINGS", "Écran conducteur, personnalisation avancée enregistrée : $disposition, style $style")
-            surEnregistre(disposition, style)
+            AppLogger.i("MG4_SETTINGS", "Écran conducteur, personnalisation avancée enregistrée : navigation " +
+                "${dispositions[ClusterTab.NAVIGATION]}, musique ${dispositions[ClusterTab.MEDIA]}, style $style")
+            val nav = dispositions.getValue(ClusterTab.NAVIGATION)
+            val musique = dispositions.getValue(ClusterTab.MEDIA)
+            surEnregistre(nav, musique, style)
             dialog?.dismiss()
         }
         maj()
@@ -104,6 +113,8 @@ class ClusterLayoutEditor(
     }
 
     private fun maj() {
+        apercu.moduleForce = module
+        apercu.onglet = ongletRegle
         apercu.disposition = disposition
         apercu.reglages = depart.copy(style = style, layout = disposition)
         apercu.jauge.edition = (apercu.jauge.edition ?: ClusterGaugeView.Edition()).copy(selection = selection)
@@ -193,22 +204,31 @@ class ClusterLayoutEditor(
 
     private fun panneau() {
         panneau.removeAllViews()
+        // Onglet réglé (2026-11-20) : chacun ses cases et sa place de jauge ; son module entre parenthèses.
+        rangee(R.string.cluster_layout_tab, listOf(
+            ClusterTab.NAVIGATION to R.string.settings_cluster_row_nav,
+            ClusterTab.MEDIA to R.string.settings_cluster_row_media,
+        ).map { (t, nom) ->
+            val m = ClusterModuleSettings.moduleFor(depart, t)
+            val quoi = ctx.getString(when (m) {
+                null -> R.string.settings_cluster_none
+                ClusterModule.CONSUMPTION -> R.string.settings_cluster_consumption
+                ClusterModule.POWER -> R.string.settings_cluster_power
+                ClusterModule.TYRES -> R.string.settings_cluster_tyres
+            })
+            Option(ctx.getString(nom) + "\n" + quoi, ongletRegle == t) {
+                if (ongletRegle != t) {
+                    ongletRegle = t
+                    selection = ClusterGaugeView.JAUGE
+                    maj()
+                }
+            }
+        })
         if (selection == ClusterGaugeView.JAUGE) panneauJauge() else panneauBloc(selection)
     }
 
     private fun panneauJauge() {
         titre(ctx.getString(R.string.cluster_layout_gauge))
-        rangee(R.string.cluster_layout_gauge_preview, listOf(
-            ClusterModule.CONSUMPTION to R.string.settings_cluster_consumption,
-            ClusterModule.POWER to R.string.settings_cluster_power,
-            ClusterModule.TYRES to R.string.settings_cluster_tyres,
-        ).map { (m, t) -> Option(ctx.getString(t), module == m) {
-            module = m
-            apercu.moduleForce = m
-            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(CLE_JAUGE, m.key).apply()
-            maj()
-        } })
-        note(R.string.cluster_layout_gauge_preview_note)
         // Module « Pneus » (2026-11-20) : sa place et l'unité de pression ; les réglages de jauge
         // (style, épaisseur, couleurs, puissance) ne le concernent pas.
         if (module == ClusterModule.TYRES) {
@@ -393,7 +413,8 @@ class ClusterLayoutEditor(
         insetTop = 0; insetBottom = 0
         cornerRadius = dp(14f)
         strokeWidth = dp(1f)
-        maxLines = 1
+        // Onglet réglé : son nom et son module sur deux lignes.
+        maxLines = if ('\n' in texte) 2 else 1
     }
 
     private fun rangee(res: Int, options: List<Option>) {
@@ -403,7 +424,8 @@ class ClusterLayoutEditor(
             ligne.addView(materiel(o.texte).apply {
                 ProfileChips.peindre(this, o.choisie)
                 setOnClickListener { o.surClic() }
-            }, LinearLayout.LayoutParams(0, dp(52f), 1f).also { if (i > 0) it.marginStart = dp(8f) })
+            }, LinearLayout.LayoutParams(0, dp(if (options.any { '\n' in it.texte }) 68f else 52f), 1f)
+                .also { if (i > 0) it.marginStart = dp(8f) })
         }
         panneau.addView(ligne, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             .also { it.topMargin = dp(6f) })
@@ -442,8 +464,6 @@ class ClusterLayoutEditor(
     }
 
     private companion object {
-        const val PREFS = "mg4_settings"
-        const val CLE_JAUGE = "cluster_editor_gauge"
         const val LARGEUR_DP = 1440f
         const val APPUI_LONG_MS = 400L
     }

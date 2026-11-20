@@ -962,8 +962,6 @@
     <string name="cluster_layout_hint">Toucher : régler · Appui long : déplacer</string>
     <string name="cluster_layout_reset">Disposition par défaut</string>
     <string name="cluster_layout_gauge">Jauge</string>
-    <string name="cluster_layout_gauge_preview">Jauge montrée dans l\'aperçu</string>
-    <string name="cluster_layout_gauge_preview_note">La jauge de chaque onglet (Navigation, Musique) se choisit dans la carte.</string>
     <string name="cluster_layout_position">Position</string>
     <string name="cluster_layout_position_top">En haut</string>
     <string name="cluster_layout_position_middle">Au milieu</string>
@@ -1166,6 +1164,7 @@
     <string name="cluster_tyres_none">Pas de relevé</string>
     <string name="cluster_layout_tyre_unit">Unité de pression</string>
     <string name="cluster_layout_tyre_unit_note">La même que le pop-up Pression des pneus, les bulles et les automatisations.</string>
+    <string name="cluster_layout_tab">Onglet réglé</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Garde-voiture</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

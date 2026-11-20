@@ -100,6 +100,8 @@ object ClusterModuleSettings {
 
     /** Disposition du module (issue #229), en JSON ; absente = celle d'avant. Sans aucun profil seulement. */
     const val KEY_LAYOUT = "cluster_layout"
+    /** Disposition de l'onglet Musique, sans profil (2026-11-20). */
+    const val KEY_LAYOUT_MEDIA = "cluster_layout_media"
 
     /**
      * Durée du glissement de la jauge d'une valeur à la suivante (issue #152), en ms : 0,2 à 2 s
@@ -140,6 +142,9 @@ object ClusterModuleSettings {
     fun pill(ctx: Context?): ClusterPill = pill(ClusterProfiles.effective(ctx))
 
     fun layout(ctx: Context?): ClusterLayout = layout(ClusterProfiles.effective(ctx))
+
+    /** Disposition de l'onglet [tab] (2026-11-20). */
+    fun layout(ctx: Context?, tab: ClusterTab?): ClusterLayout = layout(ClusterProfiles.effective(ctx), tab)
 
     fun animationMs(ctx: Context?): Int = animationMs(ClusterProfiles.effective(ctx))
 
@@ -197,7 +202,10 @@ object ClusterModuleSettings {
             powerMax = if (p.contains(KEY_POWER_MAX)) p.getInt(KEY_POWER_MAX, 0) else null,
             layout = p.getString(KEY_LAYOUT, null)?.let { j ->
             runCatching { com.google.gson.Gson().fromJson(j, ClusterLayout::class.java) }.getOrNull()
-        })
+        },
+            layoutMedia = p.getString(KEY_LAYOUT_MEDIA, null)?.let { j ->
+                runCatching { com.google.gson.Gson().fromJson(j, ClusterLayout::class.java) }.getOrNull()
+            })
     }
 
     /** Sans aucun profil, la carte règle les réglages communs : ils sont réécrits en entier. */
@@ -215,6 +223,7 @@ object ClusterModuleSettings {
             c.animationMs?.let { putInt(KEY_ANIMATION, it) } ?: remove(KEY_ANIMATION)
             c.powerMax?.let { putInt(KEY_POWER_MAX, it) } ?: remove(KEY_POWER_MAX)
             c.layout?.let { putString(KEY_LAYOUT, com.google.gson.Gson().toJson(it)) } ?: remove(KEY_LAYOUT)
+            c.layoutMedia?.let { putString(KEY_LAYOUT_MEDIA, com.google.gson.Gson().toJson(it)) } ?: remove(KEY_LAYOUT_MEDIA)
         }.apply()
     }
 
@@ -243,6 +252,19 @@ object ClusterModuleSettings {
 
     /** Disposition du module (issue #229) : celle enregistrée, sinon celle d'avant. */
     fun layout(c: ClusterConfig): ClusterLayout = ClusterLayouts.of(c)
+
+    fun layout(c: ClusterConfig, tab: ClusterTab?): ClusterLayout = ClusterLayouts.of(c, tab)
+
+    /**
+     * Onglet dont on montre le module ([moduleToShow]) : sa disposition suit. Onglet illisible : la
+     * navigation si elle a un module, sinon la musique.
+     */
+    fun tabShown(tabValue: Int?, navigation: ClusterModule?): ClusterTab? = when (tabValue) {
+        null -> if (navigation != null) ClusterTab.NAVIGATION else ClusterTab.MEDIA
+        ClusterTab.NAVIGATION.value -> ClusterTab.NAVIGATION
+        ClusterTab.MEDIA.value -> ClusterTab.MEDIA
+        else -> null
+    }
 
     fun animationMs(c: ClusterConfig): Int = sanitizeAnimation(c.animationMs)
 

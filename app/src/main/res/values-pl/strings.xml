@@ -944,8 +944,6 @@
     <string name="cluster_layout_hint">Dotknij: ustaw · Przytrzymaj: przesuń</string>
     <string name="cluster_layout_reset">Układ domyślny</string>
     <string name="cluster_layout_gauge">Wskaźnik</string>
-    <string name="cluster_layout_gauge_preview">Wskaźnik pokazany w podglądzie</string>
-    <string name="cluster_layout_gauge_preview_note">Wskaźnik każdej karty (Nawigacja, Muzyka) wybiera się na karcie ustawień.</string>
     <string name="cluster_layout_position">Położenie</string>
     <string name="cluster_layout_position_top">Na górze</string>
     <string name="cluster_layout_position_middle">Pośrodku</string>
@@ -1148,6 +1146,7 @@
     <string name="cluster_tyres_none">Brak odczytu</string>
     <string name="cluster_layout_tyre_unit">Jednostka ciśnienia</string>
     <string name="cluster_layout_tyre_unit_note">Ta sama co w oknie ciśnienia w oponach, dymkach i automatyzacjach.</string>
+    <string name="cluster_layout_tab">Ustawiana karta</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Opiekun auta</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

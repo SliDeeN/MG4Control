@@ -506,14 +506,7 @@ internal object ClusterModuleOverlay {
                 dernierLentMs = 0L   // temps restant, cible et type tout de suite
                 AppLogger.i(TAG, "charge détectée : le module de charge remplace les jauges")
             }
-            // Disposition (issue #229) : le profil n'est lu que si une case le montre.
-            val disposition = ClusterModuleSettings.layout(ctx)
-            val idActif = if (ClusterBlocks.usesProfile(disposition)) ActiveProfile.id(ctx) else null
             val lent = dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS
-            if (idActif != profilId || (lent && idActif != null)) {
-                profilId = idActif
-                profil = idActif?.let { id -> runCatching { ProfileManager(ctx).getById(id) }.getOrNull() }
-            }
             if (lent) {
                 dernierLentMs = maintenant
                 dernierSocMs = maintenant
@@ -570,6 +563,14 @@ internal object ClusterModuleOverlay {
             val navigation = ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)
             val musique = ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)
             val module = ClusterModuleSettings.moduleToShow(onglet, navigation, musique)
+            // Disposition de l'onglet montré (2026-11-20 : chaque onglet a ses cases) ; le profil
+            // n'est lu que si une case le montre (issue #229).
+            val disposition = ClusterModuleSettings.layout(ctx, ClusterModuleSettings.tabShown(onglet, navigation))
+            val idActif = if (ClusterBlocks.usesProfile(disposition)) ActiveProfile.id(ctx) else null
+            if (idActif != profilId || (lent && idActif != null)) {
+                profilId = idActif
+                profil = idActif?.let { id -> runCatching { ProfileManager(ctx).getById(id) }.getOrNull() }
+            }
             if (onglet != dernierOnglet || module != dernierModule) {
                 AppLogger.i(TAG, "onglet ${onglet ?: "illisible"} (${ClusterTab.fromValue(onglet)?.name ?: "?"})" +
                     (if (lu == null && onglet != null) " [illisible, dernier lu gardé]" else "") + " → " +
@@ -641,7 +642,8 @@ internal object ClusterModuleOverlay {
         val p = com.mg4.control.hardware.TyreProbe.pneusRecents()
         val ordre = com.mg4.control.hardware.TyreProbe.Roue.values().map { p.roues[it] }
         com.mg4.control.model.TyrePressure.display(ordre.map { it?.pression }, ordre.map { it?.etat },
-            com.mg4.control.util.TyreUnitSetting.unit(ctx, p.uniteCombine), ctx.resources.configuration.locales[0])
+            com.mg4.control.util.TyreUnitSetting.unit(ctx, p.uniteCombine), ctx.resources.configuration.locales[0],
+            ordre.map { it?.temperature })
     }.getOrNull()
 
     /**

@@ -193,6 +193,10 @@ object ClusterLayouts {
     /** La disposition enregistrée, sinon celle d'avant. */
     fun of(c: ClusterConfig): ClusterLayout = c.layout ?: defaults(c)
 
+    /** Disposition de [tab] : Musique a la sienne, sinon celle de la navigation (2026-11-20). */
+    fun of(c: ClusterConfig, tab: ClusterTab?): ClusterLayout =
+        if (tab == ClusterTab.MEDIA) c.layoutMedia ?: of(c) else of(c)
+
     fun thicknessFactor(l: ClusterLayout): Float = when (l.thickness) {
         THIN -> 0.6f
         THICK -> 1.45f

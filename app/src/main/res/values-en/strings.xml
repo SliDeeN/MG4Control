@@ -944,8 +944,6 @@
     <string name="cluster_layout_hint">Tap: adjust · Long press: move</string>
     <string name="cluster_layout_reset">Default layout</string>
     <string name="cluster_layout_gauge">Gauge</string>
-    <string name="cluster_layout_gauge_preview">Gauge shown in the preview</string>
-    <string name="cluster_layout_gauge_preview_note">Each tab\'s gauge (Navigation, Music) is chosen in the card.</string>
     <string name="cluster_layout_position">Position</string>
     <string name="cluster_layout_position_top">Top</string>
     <string name="cluster_layout_position_middle">Middle</string>
@@ -1148,6 +1146,7 @@
     <string name="cluster_tyres_none">No reading</string>
     <string name="cluster_layout_tyre_unit">Pressure unit</string>
     <string name="cluster_layout_tyre_unit_note">The same as the tyre pressure pop-up, bubbles and automations.</string>
+    <string name="cluster_layout_tab">Tab being set</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Car keeper</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

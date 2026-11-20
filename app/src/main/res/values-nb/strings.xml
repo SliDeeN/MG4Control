@@ -945,8 +945,6 @@
     <string name="cluster_layout_hint">Trykk: juster · Langt trykk: flytt</string>
     <string name="cluster_layout_reset">Standardoppsett</string>
     <string name="cluster_layout_gauge">Måler</string>
-    <string name="cluster_layout_gauge_preview">Måler vist i forhåndsvisningen</string>
-    <string name="cluster_layout_gauge_preview_note">Måleren for hver fane (Navigasjon, Musikk) velges på kortet.</string>
     <string name="cluster_layout_position">Plassering</string>
     <string name="cluster_layout_position_top">Øverst</string>
     <string name="cluster_layout_position_middle">I midten</string>
@@ -1149,6 +1147,7 @@
     <string name="cluster_tyres_none">Ingen avlesning</string>
     <string name="cluster_layout_tyre_unit">Trykkenhet</string>
     <string name="cluster_layout_tyre_unit_note">Den samme som i dekktrykk-pop-up, bobler og automatiseringer.</string>
+    <string name="cluster_layout_tab">Fanen som stilles inn</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Bilholder</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

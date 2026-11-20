@@ -76,7 +76,8 @@ class ClusterLayoutDrawTest {
     @Test
     fun `the tyre module is drawn in place of the gauge`() {
         fun pneus(codes: List<Int?>, kpa: List<Int?> = listOf(252, 248, 248, 256)) =
-            com.mg4.control.model.TyrePressure.display(kpa, codes, com.mg4.control.model.TyrePressure.PressureUnit.BAR, java.util.Locale.FRANCE)
+            com.mg4.control.model.TyrePressure.display(kpa, codes, com.mg4.control.model.TyrePressure.PressureUnit.BAR, java.util.Locale.FRANCE,
+                listOf(16, 16, 18, null))
         fun c(p: com.mg4.control.model.TyrePressure.Display?, d: ClusterLayout? = disposition) =
             contenu(ClusterModule.TYRES, ClusterGaugeStyle.DYNAMIC, d ?: disposition).copy(disposition = d, pneus = p)
         val normal = dessiner("tyres_normal", c(pneus(listOf(0, 0, 0, 0))))
@@ -84,6 +85,11 @@ class ClusterLayoutDrawTest {
         val rien = dessiner("tyres_none", c(null))
         dessiner("tyres_no_layout", c(pneus(listOf(0, 0, 0, 0)), d = null))
         dessiner("tyres_top", c(pneus(listOf(6, 6, 0, 0)), disposition.copy(gauge = ClusterLayouts.GAUGE_TOP)))
+        // Sans case (2026-11-20) : le schéma prend tout le carré ; une case en haut, une en bas : comme la photo.
+        val seul = dessiner("tyres_full", c(pneus(listOf(0, 0, 0, 0)), ClusterLayout(slots = listOf(null, null, null, null))))
+        dessiner("tyres_two_rows", c(pneus(listOf(0, 0, 0, 0)), disposition.copy(slots = listOf(
+            ClusterBlock(RuleSignal.PROFILE.name, ClusterInfo.STYLE_PILL), null, ClusterBlock(ClusterInfo.TRIP_AVERAGE), null))))
+        assertFalse(normal.sameAs(seul))
         assertFalse(normal.sameAs(alerte))
         assertFalse(normal.sameAs(rien))
     }

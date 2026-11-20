@@ -944,8 +944,6 @@
     <string name="cluster_layout_hint">Dokun: ayarla · Uzun bas: taşı</string>
     <string name="cluster_layout_reset">Varsayılan yerleşim</string>
     <string name="cluster_layout_gauge">Gösterge</string>
-    <string name="cluster_layout_gauge_preview">Önizlemede gösterilen gösterge</string>
-    <string name="cluster_layout_gauge_preview_note">Her sekmenin göstergesi (Navigasyon, Müzik) kartta seçilir.</string>
     <string name="cluster_layout_position">Konum</string>
     <string name="cluster_layout_position_top">Üstte</string>
     <string name="cluster_layout_position_middle">Ortada</string>
@@ -1148,6 +1146,7 @@
     <string name="cluster_tyres_none">Okuma yok</string>
     <string name="cluster_layout_tyre_unit">Basınç birimi</string>
     <string name="cluster_layout_tyre_unit_note">Lastik basıncı penceresi, baloncuklar ve otomasyonlarla aynı.</string>
+    <string name="cluster_layout_tab">Ayarlanan sekme</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Araç bekçisi</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

@@ -944,8 +944,6 @@
     <string name="cluster_layout_hint">Tocca: regola · Pressione lunga: sposta</string>
     <string name="cluster_layout_reset">Disposizione predefinita</string>
     <string name="cluster_layout_gauge">Indicatore</string>
-    <string name="cluster_layout_gauge_preview">Indicatore mostrato nell\'anteprima</string>
-    <string name="cluster_layout_gauge_preview_note">L\'indicatore di ogni scheda (Navigazione, Musica) si sceglie nella scheda.</string>
     <string name="cluster_layout_position">Posizione</string>
     <string name="cluster_layout_position_top">In alto</string>
     <string name="cluster_layout_position_middle">Al centro</string>
@@ -1148,6 +1146,7 @@
     <string name="cluster_tyres_none">Nessuna lettura</string>
     <string name="cluster_layout_tyre_unit">Unità di pressione</string>
     <string name="cluster_layout_tyre_unit_note">La stessa del pop-up pressione pneumatici, delle bolle e delle automazioni.</string>
+    <string name="cluster_layout_tab">Scheda impostata</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Custode dell’auto</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

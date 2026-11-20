@@ -78,7 +78,7 @@ class ClusterSettingsCardTest {
         activite.setTheme(R.style.Theme_MG4Control)
         var recu: com.mg4.control.model.ClusterLayout? = null
         val editeur = ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, pill = "mode"), null,
-            "Profil", ClusterTab.NAVIGATION) { d, _ -> recu = d }
+            "Profil", ClusterTab.NAVIGATION) { d, _, _ -> recu = d }
         editeur.ouvrir()
         shadowOf(Looper.getMainLooper()).idle()
         val fenetre = org.robolectric.shadows.ShadowDialog.getLatestDialog()
@@ -92,59 +92,41 @@ class ClusterSettingsCardTest {
             com.mg4.control.model.ClusterLayouts.slots(recu!!)[0]?.info)
     }
 
+    /**
+     * Onglet réglé (2026-11-20) : l'aperçu montre le vrai module de l'onglet, avec ses options ;
+     * chaque onglet garde sa disposition à l'enregistrement.
+     */
     @Test
-    fun `gauge options follow the gauge chosen for the preview`() {
+    fun `each tab is set apart and shows its own module`() {
         val activite = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
         activite.setTheme(R.style.Theme_MG4Control)
-        ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, navigation = "consumption"), null,
-            "Profil", ClusterTab.NAVIGATION) { _, _ -> }.ouvrir()
+        var recu: Pair<com.mg4.control.model.ClusterLayout, com.mg4.control.model.ClusterLayout>? = null
+        ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, navigation = "tyres", media = "power"), null,
+            "Profil", ClusterTab.NAVIGATION) { nav, musique, _ -> recu = nav to musique }.ouvrir()
         shadowOf(Looper.getMainLooper()).idle()
         val fenetre = org.robolectric.shadows.ShadowDialog.getLatestDialog()
         fun tous(v: View, out: MutableList<View> = mutableListOf()): List<View> {
             out += v; if (v is android.view.ViewGroup) for (i in 0 until v.childCount) tous(v.getChildAt(i), out); return out
         }
         fun textes() = tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>().map { it.text.toString() }
-        val moyenne = activite.getString(R.string.cluster_layout_average_cursor)
-        val kwDessous = activite.getString(R.string.cluster_layout_consumption_kw)
-        val consoDessous = activite.getString(R.string.cluster_layout_power_consumption)
-        val unite = activite.getString(R.string.cluster_layout_power_unit)
-        // Consommation : ses options, pas celles de la puissance ; l'unité seulement avec les kW dessous.
-        assertTrue(moyenne in textes() && kwDessous in textes())
-        assertTrue(consoDessous !in textes() && unite !in textes())
-        tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<android.widget.Switch>()
-            .first { it.text.toString() == kwDessous }.performClick()
-        shadowOf(Looper.getMainLooper()).idle()
-        assertTrue(unite in textes())
-        tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>()
-            .first { it.text.toString() == activite.getString(R.string.settings_cluster_power) }.performClick()
-        shadowOf(Looper.getMainLooper()).idle()
-        assertTrue(consoDessous in textes() && unite in textes())
-        assertTrue(moyenne !in textes() && kwDessous !in textes())
-    }
-
-    @Test
-    fun `the window reopens on the gauge chosen last time`() {
-        val activite = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
-        activite.setTheme(R.style.Theme_MG4Control)
-        fun tous(v: View, out: MutableList<View> = mutableListOf()): List<View> {
-            out += v; if (v is android.view.ViewGroup) for (i in 0 until v.childCount) tous(v.getChildAt(i), out); return out
-        }
         val champ = ClusterGaugeView::class.java.getDeclaredField("contenu").also { it.isAccessible = true }
-        fun ouvrir(): android.app.Dialog {
-            ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, navigation = "consumption"), null,
-                "Profil", ClusterTab.NAVIGATION) { _, _ -> }.ouvrir()
-            shadowOf(Looper.getMainLooper()).idle()
-            return org.robolectric.shadows.ShadowDialog.getLatestDialog()
-        }
-        fun module(f: android.app.Dialog) = (champ.get(tous(f.findViewById(R.id.frame_cluster_layout_preview))
+        fun module() = (champ.get(tous(fenetre.findViewById(R.id.frame_cluster_layout_preview))
             .first { it is ClusterGaugeView }) as ClusterGaugeView.Contenu?)?.module
-        val premiere = ouvrir()
-        assertEquals(com.mg4.control.model.ClusterModule.CONSUMPTION, module(premiere))
-        tous(premiere.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>()
-            .first { it.text.toString() == activite.getString(R.string.settings_cluster_power) }.performClick()
+        val uniteTpms = activite.getString(R.string.cluster_layout_tyre_unit)
+        val consoDessous = activite.getString(R.string.cluster_layout_power_consumption)
+        // Navigation = Pneus : sa place et l'unité de pression, pas les options de jauge.
+        assertEquals(com.mg4.control.model.ClusterModule.TYRES, module())
+        assertTrue(uniteTpms in textes() && consoDessous !in textes())
+        // Musique = Puissance : ses options ; on y retire toutes les cases.
+        tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>()
+            .first { it.text.toString().startsWith(activite.getString(R.string.settings_cluster_row_media)) }.performClick()
         shadowOf(Looper.getMainLooper()).idle()
-        premiere.dismiss()
+        assertEquals(com.mg4.control.model.ClusterModule.POWER, module())
+        assertTrue(consoDessous in textes() && uniteTpms !in textes())
+        fenetre.findViewById<View>(R.id.btn_cluster_layout_save).performClick()
         shadowOf(Looper.getMainLooper()).idle()
-        assertEquals(com.mg4.control.model.ClusterModule.POWER, module(ouvrir()))
+        val (nav, musique) = recu!!
+        // Rien de changé : la musique a encore la disposition de la navigation (copie de départ).
+        assertEquals(nav, musique)
     }
 }

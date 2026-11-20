@@ -851,8 +851,6 @@
     <string name="cluster_layout_hint">Klepnutí: upravit · Dlouhý stisk: přesunout</string>
     <string name="cluster_layout_reset">Výchozí rozložení</string>
     <string name="cluster_layout_gauge">Ukazatel</string>
-    <string name="cluster_layout_gauge_preview">Ukazatel v náhledu</string>
-    <string name="cluster_layout_gauge_preview_note">Ukazatel pro každou záložku (Navigace, Hudba) se vybírá na kartě nastavení.</string>
     <string name="cluster_layout_position">Poloha</string>
     <string name="cluster_layout_position_top">Nahoře</string>
     <string name="cluster_layout_position_middle">Uprostřed</string>
@@ -1051,6 +1049,7 @@
     <string name="cluster_tyres_none">Bez měření</string>
     <string name="cluster_layout_tyre_unit">Jednotka tlaku</string>
     <string name="cluster_layout_tyre_unit_note">Stejná jako v okně tlaku v pneumatikách, v bublinách a automatizacích.</string>
+    <string name="cluster_layout_tab">Nastavovaná karta</string>
     <string name="shortcuts_action_preclim">Hlídání vozu</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="shortcuts_action_track_mode">Track mode (okruh)</string>

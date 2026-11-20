@@ -356,7 +356,9 @@ class ClusterGaugeView(context: Context) : View(context) {
         val zone = geo.gauge
         val (haut, bas) = coeur(c)
         val e = minOf(zone.h / (bas - haut), zone.w / COTE, 1f)
-        if (e > 0.2f) {
+        // Pneus (2026-11-20) : le schéma remplit toute sa zone, sans s'y réduire comme une jauge.
+        if (c.module == ClusterModule.TYRES) pneus(canvas, c, zone.x, zone.y, zone.w, zone.h)
+        else if (e > 0.2f) {
             canvas.save()
             canvas.clipRect(zone.x, zone.y, zone.x + zone.w, zone.y + zone.h)
             canvas.translate(zone.x + (zone.w - COTE * e) / 2f, zone.y + (zone.h - (bas - haut) * e) / 2f - haut * e)
@@ -375,7 +377,7 @@ class ClusterGaugeView(context: Context) : View(context) {
     }
 
     private fun jauge(canvas: Canvas, c: Contenu) = when {
-        c.module == ClusterModule.TYRES -> pneus(canvas, c)
+        c.module == ClusterModule.TYRES -> pneus(canvas, c, 0f, 0f, COTE, COTE)
         c.style == ClusterGaugeStyle.DISCREET && c.module == ClusterModule.POWER -> discretPuissance(canvas, c)
         c.style == ClusterGaugeStyle.DISCREET -> discretConsommation(canvas, c)
         c.module == ClusterModule.POWER -> puissance(canvas, c)
@@ -401,11 +403,12 @@ class ClusterGaugeView(context: Context) : View(context) {
     private val pneuChemin = android.graphics.Path()
 
     /**
-     * La voiture vue de dessus au centre (boîte 200 × 400 réduite à 0,32), les quatre pressions de
-     * part et d'autre, l'unité dessous, et une ligne d'état. Roue et chiffre en orange quand la
-     * voiture signale une alerte ; gris sans valeur.
+     * La voiture vue de dessus (boîte 200 × 400) à la hauteur de sa zone [zx]..[zh] — entre les cases
+     * ou tout le carré (2026-11-20) —, les quatre pressions de part et d'autre avec l'unité et la
+     * température dessous, et une ligne d'état. Roue et chiffre en orange quand la voiture signale
+     * une alerte ; gris sans valeur.
      */
-    private fun pneus(canvas: Canvas, c: Contenu) {
+    private fun pneus(canvas: Canvas, c: Contenu, zx: Float, zy: Float, zw: Float, zh: Float) {
         val p = c.pneus
         val alertes = p?.alerts ?: List(4) { com.mg4.control.model.TyrePressure.Alert.NO_VALUE }
         fun couleurRoue(i: Int) = when (alertes[i]) {
@@ -413,9 +416,14 @@ class ClusterGaugeView(context: Context) : View(context) {
             com.mg4.control.model.TyrePressure.Alert.NO_VALUE -> Color.rgb(0x5B, 0x65, 0x75)
             else -> Color.rgb(0x3C, 0x42, 0x50)
         }
-        val x0 = 98f; val y0 = 50f; val k = 0.32f
+        val etatTaille = (zh * 0.055f).coerceIn(11f, 14f)
+        val hauteur = zh - etatTaille - 10f
+        if (hauteur < 60f) return
+        val k = hauteur / 400f
+        val cx = zx + zw / 2f
+        val haut = zy + 2f
         canvas.save()
-        canvas.translate(x0, y0)
+        canvas.translate(cx - 100f * k, haut)
         canvas.scale(k, k)
         val roues = arrayOf(floatArrayOf(14f, 62f), floatArrayOf(156f, 62f), floatArrayOf(14f, 266f), floatArrayOf(156f, 266f))
         roues.forEachIndexed { i, (x, y) ->
@@ -437,22 +445,30 @@ class ClusterGaugeView(context: Context) : View(context) {
         canvas.drawPath(pneuChemin, pneuVitre)
         canvas.restore()
 
-        // Avant gauche, avant droite, arrière gauche, arrière droite : chiffre puis unité.
-        val places = arrayOf(floatArrayOf(86f, 92f, 0f), floatArrayOf(174f, 92f, 1f), floatArrayOf(86f, 152f, 0f), floatArrayOf(174f, 152f, 1f))
-        places.forEachIndexed { i, (x, y, droite) ->
-            pneuTexte.textAlign = if (droite == 1f) Paint.Align.LEFT else Paint.Align.RIGHT
+        // Chiffre, unité, température, centrés sur la hauteur de leur roue, de part et d'autre.
+        val chiffre = (hauteur * 0.14f).coerceIn(18f, 34f)
+        val petitT = (hauteur * 0.06f).coerceIn(10f, 14f)
+        val bloc = chiffre * 0.78f + 2f * (petitT + 4f)
+        val ecart = 86f * k + 6f
+        val centres = floatArrayOf(haut + 98f * k, haut + 302f * k)
+        for (i in 0 until 4) {
+            val droite = i % 2 == 1
+            val x = if (droite) cx + ecart else cx - ecart
+            val ligne1 = centres[i / 2] - bloc / 2f + chiffre * 0.78f
+            pneuTexte.textAlign = if (droite) Paint.Align.LEFT else Paint.Align.RIGHT
             pneuTexte.typeface = moyen
-            pneuTexte.textSize = 22f
+            pneuTexte.textSize = chiffre
             pneuTexte.color = when (alertes[i]) {
                 com.mg4.control.model.TyrePressure.Alert.ALERT -> cAlerte
                 com.mg4.control.model.TyrePressure.Alert.NO_VALUE -> cTexte2
                 else -> cTexte
             }
-            canvas.drawText(p?.values?.getOrNull(i) ?: "–", x, y, pneuTexte)
+            canvas.drawText(p?.values?.getOrNull(i) ?: "–", x, ligne1, pneuTexte)
             pneuTexte.typeface = Typeface.DEFAULT
-            pneuTexte.textSize = 11f
+            pneuTexte.textSize = petitT
             pneuTexte.color = cTexte2
-            canvas.drawText(p?.unit ?: "", x, y + 15f, pneuTexte)
+            canvas.drawText(p?.unit ?: "", x, ligne1 + petitT + 4f, pneuTexte)
+            canvas.drawText(p?.temps?.getOrNull(i) ?: "– °C", x, ligne1 + 2f * (petitT + 4f), pneuTexte)
         }
         val (etatTexte, etatCouleur) = when {
             p == null || p.noValue -> context.getString(R.string.cluster_tyres_none) to cTexte2
@@ -461,9 +477,9 @@ class ClusterGaugeView(context: Context) : View(context) {
         }
         pneuTexte.textAlign = Paint.Align.CENTER
         pneuTexte.typeface = moyen
-        pneuTexte.textSize = 12f
+        pneuTexte.textSize = etatTaille
         pneuTexte.color = etatCouleur
-        canvas.drawText(etatTexte, COTE / 2f, 194f, pneuTexte)
+        canvas.drawText(etatTexte, cx, zy + zh - 4f, pneuTexte)
     }
 
     /** L'allure réglée (issue #229), ou celle d'avant sans disposition. */

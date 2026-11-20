@@ -27,8 +27,16 @@ data class ClusterConfig(
     val animationMs: Int? = null,
     /** Puissance maxi de la jauge (issue #165) : kW de [PowerScale.CHOIX_KW], `null` = Auto. */
     val powerMax: Int? = null,
-    /** Disposition et allure du module (issue #229) ; `null` = celle d'avant ([ClusterLayouts.defaults]). */
+    /**
+     * Disposition et allure du module (issue #229) ; `null` = celle d'avant ([ClusterLayouts.defaults]).
+     * Depuis le 2026-11-20, celle de l'onglet Navigation.
+     */
     val layout: ClusterLayout? = null,
+    /**
+     * Disposition de l'onglet Musique (2026-11-20) : chaque onglet a ses cases et sa place de jauge.
+     * `null` = la même que la navigation (copie de départ : rien ne change tant qu'on n'y touche pas).
+     */
+    val layoutMedia: ClusterLayout? = null,
 )
 
 object ClusterConfigs {

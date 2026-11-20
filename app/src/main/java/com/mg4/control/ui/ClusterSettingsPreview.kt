@@ -144,7 +144,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
         vide.visibility = View.GONE
         val p = profilMontre ?: profil
         val unite = ClusterModuleSettings.consumptionUnit(reglages)
-        val d = disposition ?: ClusterModuleSettings.layout(reglages)
+        val d = disposition ?: ClusterModuleSettings.layout(reglages, onglet)
         vue.montrer(ClusterGaugeView.Contenu(
             module = module,
             kw = kwLisse,
@@ -163,7 +163,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             // Module « Pneus » : les valeurs du relevé SWI133 du 2026-11-20, dans l'unité choisie.
             pneus = if (module == ClusterModule.TYRES) com.mg4.control.model.TyrePressure.display(
                 listOf(252, 248, 248, 256), listOf(0, 0, 0, 0), com.mg4.control.util.TyreUnitSetting.unit(ctx),
-                ctx.resources.configuration.locales[0]) else null,
+                ctx.resources.configuration.locales[0], listOf(16, 16, 16, 16)) else null,
         ), if (dtMs == 0L) 0L else ClusterModuleSettings.animationMs(reglages).toLong())
     }
 

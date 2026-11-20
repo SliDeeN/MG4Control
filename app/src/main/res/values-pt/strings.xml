@@ -944,8 +944,6 @@
     <string name="cluster_layout_hint">Tocar: ajustar · Toque longo: mover</string>
     <string name="cluster_layout_reset">Disposição predefinida</string>
     <string name="cluster_layout_gauge">Indicador</string>
-    <string name="cluster_layout_gauge_preview">Indicador mostrado na pré-visualização</string>
-    <string name="cluster_layout_gauge_preview_note">O indicador de cada separador (Navegação, Música) escolhe-se no cartão.</string>
     <string name="cluster_layout_position">Posição</string>
     <string name="cluster_layout_position_top">Em cima</string>
     <string name="cluster_layout_position_middle">Ao meio</string>
@@ -1148,6 +1146,7 @@
     <string name="cluster_tyres_none">Sem leitura</string>
     <string name="cluster_layout_tyre_unit">Unidade de pressão</string>
     <string name="cluster_layout_tyre_unit_note">A mesma do pop-up de pressão dos pneus, das bolhas e das automatizações.</string>
+    <string name="cluster_layout_tab">Separador ajustado</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Guardião do carro</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>

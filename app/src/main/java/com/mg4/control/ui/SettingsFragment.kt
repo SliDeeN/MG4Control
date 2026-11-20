@@ -635,8 +635,12 @@ class SettingsFragment : Fragment() {
         // sélectionné ; « Enregistrer » les écrit pour tous les profils sélectionnés.
         view.findViewById<View>(R.id.btn_cluster_layout).setOnClickListener {
             val depart = reglagesChoisis().first()
-            ClusterLayoutEditor(requireContext(), depart, apercu.profilMontre, tvProfilsInfo.text, apercu.onglet) { disposition, style ->
-                modifier("Écran conducteur, personnalisation avancée") { it.copy(layout = disposition, style = style) }
+            ClusterLayoutEditor(requireContext(), depart, apercu.profilMontre, tvProfilsInfo.text, apercu.onglet) { nav, musique, style ->
+                // Musique n'est gardée à part que si elle diffère de la navigation, ou l'était déjà
+                // (2026-11-20) : sinon elle continue de suivre la navigation.
+                modifier("Écran conducteur, personnalisation avancée") {
+                    it.copy(layout = nav, layoutMedia = musique.takeIf { m -> m != nav || it.layoutMedia != null }, style = style)
+                }
                 if (isAdded) updateClusterCard()
             }.ouvrir()
         }

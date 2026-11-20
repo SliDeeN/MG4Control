@@ -65,17 +65,20 @@ object TyrePressure {
      * pressions mises en forme ([values], « – » sans valeur) et l'état de chacune, dans l'ordre avant
      * gauche, avant droite, arrière gauche, arrière droite.
      */
-    data class Display(val values: List<String>, val unit: String, val alerts: List<Alert>) {
+    data class Display(val values: List<String>, val unit: String, val alerts: List<Alert>,
+                       /** Températures prêtes à écrire (« 16 °C », « – °C »), même ordre. */
+                       val temps: List<String> = List(4) { "– °C" }) {
         val anyAlert: Boolean get() = alerts.any { it == Alert.ALERT }
         val noValue: Boolean get() = alerts.all { it == Alert.NO_VALUE }
     }
 
-    fun display(kpa: List<Int?>, codes: List<Int?>, unit: PressureUnit, locale: Locale): Display {
+    fun display(kpa: List<Int?>, codes: List<Int?>, unit: PressureUnit, locale: Locale, celsius: List<Int?> = List(4) { null }): Display {
         val autre = intArrayOf(1, 0, 3, 2)
         return Display(
             values = kpa.map { k -> valide(k)?.let { format(it, unit, locale) } ?: "–" },
             unit = unit.label,
             alerts = kpa.indices.map { i -> alert(codes.getOrNull(i), codes.getOrNull(autre[i]), valide(kpa[i]) != null) },
+            temps = kpa.indices.map { i -> (celsius.getOrNull(i)?.toString() ?: "–") + " °C" },
         )
     }
 

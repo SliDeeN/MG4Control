@@ -944,8 +944,6 @@
     <string name="cluster_layout_hint">Tippen: einstellen · Lang drücken: verschieben</string>
     <string name="cluster_layout_reset">Standardanordnung</string>
     <string name="cluster_layout_gauge">Anzeige</string>
-    <string name="cluster_layout_gauge_preview">In der Vorschau gezeigte Anzeige</string>
-    <string name="cluster_layout_gauge_preview_note">Die Anzeige jedes Tabs (Navigation, Musik) wird in der Karte gewählt.</string>
     <string name="cluster_layout_position">Position</string>
     <string name="cluster_layout_position_top">Oben</string>
     <string name="cluster_layout_position_middle">Mitte</string>
@@ -1148,6 +1146,7 @@
     <string name="cluster_tyres_none">Kein Messwert</string>
     <string name="cluster_layout_tyre_unit">Druckeinheit</string>
     <string name="cluster_layout_tyre_unit_note">Dieselbe wie im Reifendruck-Pop-up, in den Blasen und Automationen.</string>
+    <string name="cluster_layout_tab">Eingestellter Tab</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Fahrzeugwächter</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
