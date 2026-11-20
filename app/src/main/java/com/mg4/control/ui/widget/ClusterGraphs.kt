@@ -20,6 +20,8 @@ object ClusterGraphs {
 
     fun km(def: ClusterModuleDef?): Int = def?.graphKm?.takeIf { it in ClusterHistory.DISTANCES } ?: ClusterHistory.DEFAULT_KM
 
+    fun points(def: ClusterModuleDef?): Int = def?.graphPoints?.takeIf { it in ClusterHistory.POINTS } ?: ClusterHistory.BARS
+
     fun nom(ctx: Context, i: Info): String = ctx.getString(when (i) {
         Info.CONSUMPTION -> R.string.cluster_graph_info_consumption
         Info.REGEN -> R.string.cluster_graph_info_regen
@@ -39,7 +41,7 @@ object ClusterGraphs {
         fun conv(v: Float) = if (kwh100) v / 10f else v
         // Axe dynamique (2026-11-20) : seulement les km enregistrés, jusqu'à la distance réglée.
         val montre = ClusterHistory.shownKm(bins, total)
-        val valeurs = ClusterHistory.series(bins, i, montre, ClusterHistory.barsFor(montre)).map { it?.let(::conv) }
+        val valeurs = ClusterHistory.series(bins, i, montre, ClusterHistory.barsFor(montre, points(def))).map { it?.let(::conv) }
         val moyenne = ClusterHistory.average(bins, i, montre)?.let(::conv)
         fun texte(v: Float): String = if (kwh100) String.format(locale, "%.1f", v) else v.roundToInt().toString()
         fun km(v: Float): String = (if (v % 1f == 0f) v.roundToInt().toString() else String.format(locale, "%.1f", v)) + " km"

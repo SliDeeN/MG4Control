@@ -1196,6 +1196,8 @@
     <string name="cluster_graph_line">Courbe</string>
     <string name="cluster_graph_average">Ligne de moyenne</string>
     <string name="cluster_graph_minmax">Minimum et maximum</string>
+    <string name="cluster_graph_points">Nombre de points à afficher sur le graphique</string>
+    <string name="cluster_graph_points_note">Un point couvre au moins 200 m : moins de points, une courbe plus calme. Par défaut : 50.</string>
     <string name="cluster_graph_min_short">min %1$s</string>
     <string name="cluster_graph_max_short">max %1$s</string>
     <string name="cluster_graph_color">Couleur du graphique</string>

@@ -33,6 +33,8 @@ data class ClusterModuleDef(
     val graphMinMax: Boolean? = null,
     /** Graphique : couleur des barres hors consommation et récupération ; `null` = gris clair. */
     val graphColor: Int? = null,
+    /** Graphique : nombre de points au plus, 10 à 50 ; `null` = 50 (2026-11-20). */
+    val graphPoints: Int? = null,
 )
 
 object ClusterModuleDefs {

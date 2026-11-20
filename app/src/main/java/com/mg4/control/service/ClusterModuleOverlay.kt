@@ -551,7 +551,10 @@ internal object ClusterModuleOverlay {
                 dernierSocMs = maintenant
                 mode = runCatching { MG4Hardware.getDriveMode() }.getOrNull()
                 // Pour l'historique du graphique : altitude (GPS), température extérieure, batterie.
-                altLue = runCatching { com.mg4.control.automation.AndroidControls.altitude(ctx)?.toFloat() }.getOrNull()
+                // Altitude : celle que suivent les Statistiques en roulant (2026-11-20 : le graphique
+                // restait vide alors que le dénivelé des trajets en avait), sinon la dernière connue.
+                altLue = com.mg4.control.hardware.StatsCollector.recentAltitude()
+                    ?: runCatching { com.mg4.control.automation.AndroidControls.altitude(ctx)?.toFloat() }.getOrNull()
                 tempLue = runCatching { MG4Hardware.getOutsideTempCelsius() }.getOrNull()
                 socLu = runCatching { EnergyReader.soc() }.getOrNull()
                 if (session.active) {

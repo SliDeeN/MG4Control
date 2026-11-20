@@ -1178,6 +1178,8 @@
     <string name="cluster_graph_line">Krzywa</string>
     <string name="cluster_graph_average">Linia średniej</string>
     <string name="cluster_graph_minmax">Minimum i maksimum</string>
+    <string name="cluster_graph_points">Liczba punktów na wykresie</string>
+    <string name="cluster_graph_points_note">Punkt obejmuje co najmniej 200 m: mniej punktów, spokojniejsza krzywa. Domyślnie: 50.</string>
     <string name="cluster_graph_min_short">min %1$s</string>
     <string name="cluster_graph_max_short">maks %1$s</string>
     <string name="cluster_graph_color">Kolor wykresu</string>

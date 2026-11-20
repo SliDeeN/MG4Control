@@ -114,6 +114,7 @@ class ClusterLayoutDrawTest {
         // Saut brusque puis chute : courbe arrondie, sans pointe au-delà du max ni du min.
         val saut = List(60) { n -> val whKm = when (n) { in 20..24 -> 460f; in 25..29 -> 120f; else -> 150f }
             com.mg4.control.model.ClusterHistory.Bin(0.2f, whKm * 0.2f, 0f, 10f) }
+        dessiner("graph_line_20_points", c(base.copy(graphLine = true, graphPoints = 20)))
         dessiner("graph_line_jump", c(base.copy(graphLine = true, graphKm = 20), saut))
         assertFalse(barres.sameAs(courbe))
         assertFalse(barres.sameAs(vide))

@@ -1178,6 +1178,8 @@
     <string name="cluster_graph_line">Line</string>
     <string name="cluster_graph_average">Average line</string>
     <string name="cluster_graph_minmax">Minimum and maximum</string>
+    <string name="cluster_graph_points">Number of points shown on the graph</string>
+    <string name="cluster_graph_points_note">A point covers at least 200 m: fewer points, a calmer line. Default: 50.</string>
     <string name="cluster_graph_min_short">min %1$s</string>
     <string name="cluster_graph_max_short">max %1$s</string>
     <string name="cluster_graph_color">Graph colour</string>

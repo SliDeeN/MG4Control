@@ -236,6 +236,16 @@ object StatsCollector {
     /** Une altitude plus vieille ne décrit plus l'endroit où roule la voiture. */
     private const val ALTITUDE_MAX_AGE_MS = 25_000L
 
+    /**
+     * Altitude GPS suivie pendant le trajet (m), si elle a moins de [ALTITUDE_MAX_AGE_MS] ; `null`
+     * sinon (hors READY, pas de position). Lue par le module « Graphique » de l'écran conducteur
+     * (2026-11-20) : la même source que le dénivelé des Statistiques, qui marche en voiture.
+     */
+    fun recentAltitude(): Float? {
+        val (ms, alt) = altitude ?: return null
+        return alt.takeIf { SystemClock.elapsedRealtime() - ms <= ALTITUDE_MAX_AGE_MS }
+    }
+
     private val ecouteAltitude = object : android.location.LocationListener {
         override fun onLocationChanged(l: android.location.Location) {
             if (l.hasAltitude() && !(l.latitude == 0.0 && l.longitude == 0.0))

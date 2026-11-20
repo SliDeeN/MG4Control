@@ -316,6 +316,12 @@ class ClusterLayoutEditor(
         rangee(R.string.cluster_graph_distance, com.mg4.control.model.ClusterHistory.DISTANCES.map { d ->
             Option("$d km", km == d) { def = def.copy(graphKm = d); maj() }
         })
+        // Nombre de points (2026-11-20) : 50 par défaut ; moins de points, une courbe plus calme.
+        val points = com.mg4.control.ui.widget.ClusterGraphs.points(def)
+        rangee(R.string.cluster_graph_points, com.mg4.control.model.ClusterHistory.POINTS.map { p ->
+            Option("$p", points == p) { def = def.copy(graphPoints = p.takeIf { it != com.mg4.control.model.ClusterHistory.BARS }); maj() }
+        })
+        note(R.string.cluster_graph_points_note)
         rangee(R.string.cluster_graph_form, listOf(false to R.string.cluster_graph_bars, true to R.string.cluster_graph_line).map { (l, t) ->
             Option(ctx.getString(t), (def.graphLine == true) == l) { def = def.copy(graphLine = l.takeIf { it }); maj() }
         })

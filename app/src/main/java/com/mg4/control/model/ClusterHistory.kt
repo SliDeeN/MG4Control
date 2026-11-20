@@ -17,6 +17,8 @@ object ClusterHistory {
     const val KEEP_KM = 102f
     const val BARS = 50
     val DISTANCES = listOf(20, 50, 100)
+    /** Nombres de points proposés (option du module, 2026-11-20) ; [BARS] par défaut. */
+    val POINTS = listOf(10, 20, 30, 40, 50)
     const val DEFAULT_KM = 50
 
     /** Ce que le graphique peut montrer. */
@@ -136,8 +138,8 @@ object ClusterHistory {
         return (PAS_AXE.firstOrNull { it >= roule - 1e-3f } ?: totalKm.toFloat()).coerceAtMost(totalKm.toFloat())
     }
 
-    /** Barres pour [shownKm] : [BARS] au plus, jamais plus fines qu'une tranche de [BIN_KM]. */
-    fun barsFor(shownKm: Float): Int = (shownKm / BIN_KM).roundToInt().coerceIn(1, BARS)
+    /** Barres pour [shownKm] : [max] au plus (le choix du module), jamais plus fines qu'une tranche de [BIN_KM]. */
+    fun barsFor(shownKm: Float, max: Int = BARS): Int = (shownKm / BIN_KM).roundToInt().coerceIn(1, max.coerceIn(1, BARS))
 
     /** Distance couverte par l'historique (km), plafonnée à [totalKm]. */
     fun coveredKm(bins: List<Bin>, totalKm: Int): Float = bins.sumOf { it.km.toDouble() }.toFloat().coerceAtMost(totalKm.toFloat())

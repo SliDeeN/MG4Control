@@ -1178,6 +1178,8 @@
     <string name="cluster_graph_line">Curva</string>
     <string name="cluster_graph_average">Linea della media</string>
     <string name="cluster_graph_minmax">Minimo e massimo</string>
+    <string name="cluster_graph_points">Numero di punti nel grafico</string>
+    <string name="cluster_graph_points_note">Un punto copre almeno 200 m: meno punti, una curva più calma. Predefinito: 50.</string>
     <string name="cluster_graph_min_short">min %1$s</string>
     <string name="cluster_graph_max_short">max %1$s</string>
     <string name="cluster_graph_color">Colore del grafico</string>

@@ -72,6 +72,10 @@ class ClusterHistoryTest {
         assertEquals(50f, ClusterHistory.shownKm(bins(300), 50), 0.001f)
         assertEquals(20f, ClusterHistory.shownKm(bins(300), 20), 0.001f)
         assertEquals(50, ClusterHistory.barsFor(100f))
+        // Nombre de points choisi : au plus ce nombre, toujours au moins 200 m par point.
+        assertEquals(10, ClusterHistory.barsFor(50f, 10))
+        assertEquals(15, ClusterHistory.barsFor(3f, 20))
+        assertEquals(50, ClusterHistory.barsFor(100f, 90))
         // Les barres de l'axe court sont toutes pleines.
         val s = ClusterHistory.series(bins(12), Info.CONSUMPTION, 3f, 15)
         assertTrue(s.count { it != null } >= 12)

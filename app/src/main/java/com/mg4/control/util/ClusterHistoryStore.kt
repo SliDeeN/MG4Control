@@ -31,7 +31,13 @@ object ClusterHistoryStore {
     @Synchronized
     fun add(ctx: Context, b: ClusterHistory.Bin) {
         bins = ClusterHistory.append(bins(ctx), b)
-        if (++nonEnregistrees >= ENREGISTRER_TOUTES) enregistrer(ctx)
+        if (++nonEnregistrees >= ENREGISTRER_TOUTES) {
+            // Au diagnostic : ce que les dernières tranches ont reçu (altitude, température, batterie).
+            val dernieres = bins.orEmpty().takeLast(nonEnregistrees)
+            AppLogger.i(TAG, "historique du graphique : ${dernieres.size} tranches, altitude ${dernieres.count { it.alt != null }}, " +
+                "température ${dernieres.count { it.temp != null }}, batterie ${dernieres.count { it.soc != null }}")
+            enregistrer(ctx)
+        }
     }
 
     /** Fin de trajet : ce qui n'est pas encore écrit. */
