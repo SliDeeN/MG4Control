@@ -10,6 +10,9 @@ import java.io.File
  * de l'application. Écrit par le combiné ([com.mg4.control.service.ClusterModuleOverlay]) à chaque
  * tranche de route, lu à chaque relevé pour le module « Graphique ». Enregistré toutes les
  * [ENREGISTRER_TOUTES] tranches (1 km) : une coupure brutale perd au plus un kilomètre.
+ *
+ * Écriture atomique ([android.util.AtomicFile], 2026-11-20) : une coupure pendant l'écriture laisse
+ * l'ancien fichier intact, au lieu d'un fichier abîmé qui ferait repartir l'historique de zéro.
  */
 object ClusterHistoryStore {
 
@@ -39,15 +42,26 @@ object ClusterHistoryStore {
 
     private fun enregistrer(ctx: Context) {
         val liste = bins ?: return
-        runCatching { File(ctx.filesDir, FICHIER).writeText(com.google.gson.Gson().toJson(liste)) }
-            .onFailure { AppLogger.w(TAG, "historique du graphique non enregistré : ${it.message}") }
+        val f = fichier(ctx)
+        var flux: java.io.FileOutputStream? = null
+        runCatching {
+            flux = f.startWrite()
+            flux!!.write(com.google.gson.Gson().toJson(liste).toByteArray(Charsets.UTF_8))
+            f.finishWrite(flux)
+        }.onFailure {
+            flux?.let { o -> f.failWrite(o) }
+            AppLogger.w(TAG, "historique du graphique non enregistré : ${it.message}")
+        }
         nonEnregistrees = 0
     }
 
+    private fun fichier(ctx: Context) = android.util.AtomicFile(File(ctx.filesDir, FICHIER))
+
     private fun charger(ctx: Context): List<ClusterHistory.Bin> = runCatching {
-        val f = File(ctx.filesDir, FICHIER)
-        if (!f.exists()) emptyList()
-        else com.google.gson.Gson().fromJson(f.readText(), Array<ClusterHistory.Bin>::class.java).toList()
-            .filter { it.km > 0f && it.s >= 0f }
+        val f = fichier(ctx)
+        // AtomicFile relit la copie de secours si une écriture a été interrompue.
+        if (!f.baseFile.exists() && !File(f.baseFile.path + ".bak").exists()) emptyList()
+        else com.google.gson.Gson().fromJson(String(f.readFully(), Charsets.UTF_8), Array<ClusterHistory.Bin>::class.java)
+            .orEmpty().toList().filter { it.km > 0f && it.s >= 0f }
     }.getOrElse { AppLogger.w(TAG, "historique du graphique illisible : ${it.message}"); emptyList() }
 }
