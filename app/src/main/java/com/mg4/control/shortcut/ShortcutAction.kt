@@ -115,7 +115,10 @@ enum class ShortcutAction(val id: Int) {
     QUICK_SETTINGS(53),
     // Track mode (issue #202, 2026-11-19) : l'écran « circuit » de l'XPower, caché dans l'appli
     // d'entretien SAIC (voir TrackMode) ; proposé seulement là où il existe. N'écrit rien.
-    TRACK_MODE(54);
+    TRACK_MODE(54),
+    // Pop-up Pression des pneus (2026-11-20) : pression, température et état des quatre pneus, unité
+    // au choix (voir TyrePopupOverlay). Un second appui le referme. N'écrit rien.
+    TYRE_POPUP(55);
 
     companion object {
         /**

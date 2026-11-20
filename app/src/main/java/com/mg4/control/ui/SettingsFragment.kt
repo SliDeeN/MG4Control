@@ -433,14 +433,16 @@ class SettingsFragment : Fragment() {
         // Le nombre est écrit dans la langue de l'application (0,5 s / 0.5 s), jamais Locale.ROOT.
         val langue = requireContext().resources.configuration.locales[0]
         fun texteActualisation(ms: Int) = String.format(langue, "%.1f s", ms / 1000f)
-        // Pour chaque onglet : « Aucun » (null), Consommation, Puissance.
+        // Pour chaque onglet : « Aucun » (null), Consommation, Puissance, Pneus (2026-11-20).
         val clusterBtns: List<Triple<ClusterTab, ClusterModule?, MaterialButton>> = listOf(
             Triple(ClusterTab.NAVIGATION, null, view.findViewById(R.id.btn_cluster_nav_none)),
             Triple(ClusterTab.NAVIGATION, ClusterModule.CONSUMPTION, view.findViewById(R.id.btn_cluster_nav_consumption)),
             Triple(ClusterTab.NAVIGATION, ClusterModule.POWER, view.findViewById(R.id.btn_cluster_nav_power)),
+            Triple(ClusterTab.NAVIGATION, ClusterModule.TYRES, view.findViewById(R.id.btn_cluster_nav_tyres)),
             Triple(ClusterTab.MEDIA, null, view.findViewById(R.id.btn_cluster_media_none)),
             Triple(ClusterTab.MEDIA, ClusterModule.CONSUMPTION, view.findViewById(R.id.btn_cluster_media_consumption)),
             Triple(ClusterTab.MEDIA, ClusterModule.POWER, view.findViewById(R.id.btn_cluster_media_power)),
+            Triple(ClusterTab.MEDIA, ClusterModule.TYRES, view.findViewById(R.id.btn_cluster_media_tyres)),
         )
         // Unité de la consommation : Wh/km ou kWh/100 km (2026-10-15).
         val unitBtns: List<Pair<ConsumptionUnit, MaterialButton>> = listOf(

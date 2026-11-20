@@ -29,7 +29,9 @@ enum class ClusterModule(val key: String) {
     /** A : anneau des Wh/km, kW à l'arrêt et en récupération. */
     CONSUMPTION("consumption"),
     /** B : arc de la puissance, récupération à gauche, consommation à droite. */
-    POWER("power");
+    POWER("power"),
+    /** Schéma des pneus à la place de la jauge (variante A, 2026-11-20) : pressions et alerte. */
+    TYRES("tyres");
 
     companion object {
         fun fromKey(key: String?): ClusterModule = entries.firstOrNull { it.key == key } ?: CONSUMPTION

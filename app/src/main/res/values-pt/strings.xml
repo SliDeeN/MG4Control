@@ -1131,6 +1131,23 @@
     <string name="tyre_debug_state">Estado: %1$s</string>
     <string name="tyre_debug_unit">Unidade do painel de instrumentos: %1$s</string>
     <string name="tyre_debug_hint">Valores em bruto, sem unidade: compara-os com o painel de instrumentos, com os pneus frios e depois de uma viagem. A abertura acrescenta uma leitura completa ao Diagnóstico, e cada alteração fica registada no seu registo.</string>
+    <string name="shortcuts_action_tyre_popup">Pop-up de pressão dos pneus</string>
+    <string name="tyre_popup_title">Pressão dos pneus</string>
+    <string name="tyre_popup_hint">A pressão sobe em andamento: compare com os pneus frios.</string>
+    <string name="tyre_state_normal">Normal</string>
+    <string name="tyre_state_alert">Alerta (código %1$d)</string>
+    <string name="tyre_state_code">Código %1$d</string>
+    <string name="tyre_state_none">Sem valor</string>
+    <string name="tyre_why_alert">Alerta enviado pelo carro: verifique este pneu.</string>
+    <string name="tyre_why_lone_six">Indicado sozinho: o carro não o conta como alerta.</string>
+    <string name="tyre_why_axle">Indicado nos dois pneus do eixo: verifique a pressão.</string>
+    <string name="tyre_why_none">O carro não envia nada para este pneu.</string>
+    <string name="settings_cluster_tyres">Pneus</string>
+    <string name="cluster_tyres_ok">Pneus normais</string>
+    <string name="cluster_tyres_alert">Alerta de pneu</string>
+    <string name="cluster_tyres_none">Sem leitura</string>
+    <string name="cluster_layout_tyre_unit">Unidade de pressão</string>
+    <string name="cluster_layout_tyre_unit_note">A mesma do pop-up de pressão dos pneus, das bolhas e das automatizações.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Guardião do carro</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
@@ -1766,6 +1783,13 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Sol nascido</string>
     <string name="rule_sig_altitude">Altitude</string>
+    <string name="rule_sig_tyre_min">Pneu com menos pressão</string>
+    <string name="rule_sig_tyre_fl">Pressão pneu dianteiro esquerdo</string>
+    <string name="rule_sig_tyre_fr">Pressão pneu dianteiro direito</string>
+    <string name="rule_sig_tyre_rl">Pressão pneu traseiro esquerdo</string>
+    <string name="rule_sig_tyre_rr">Pressão pneu traseiro direito</string>
+    <string name="rule_sig_tyre_temp_max">Pneu mais quente</string>
+    <string name="rule_sig_tyre_alert">Alerta de pneu do carro</string>
     <string name="rule_sig_tsr">Sinais (TSR)</string>
     <string name="rule_sig_volume">Volume</string>
     <string name="rule_sig_wifi_on">Wi-Fi ligado</string>

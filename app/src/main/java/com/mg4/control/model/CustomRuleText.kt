@@ -10,6 +10,11 @@ interface RuleWords {
     fun signal(s: RuleSignal): String
     /** Unité collée après un nombre, espace comprise (« °C » → " °C"), ou "". */
     fun unit(s: RuleSignal): String
+    /**
+     * Un nombre déjà mis en forme avec son unité quand [unit] ne suffit pas (pression des pneus :
+     * stockée en kPa, montrée en bar, PSI ou kPa) ; null = nombre + [unit].
+     */
+    fun number(s: RuleSignal, n: Double): String? = null
     /** Valeur d'un signal texte : « P », nom d'un profil, d'un téléphone, d'un mode de conduite. */
     fun value(s: RuleSignal, text: String): String
     fun yes(label: String): String
@@ -88,7 +93,7 @@ class RuleText(private val w: RuleWords) {
                 null -> null
                 is Boolean -> if (v) w.on else w.off
                 is Number -> v.toDouble().let { n ->
-                    (if (n % 1.0 == 0.0) n.toLong().toString() else String.format(Locale.US, "%.1f", n)) + w.unit(sig)
+                    w.number(sig, n) ?: ((if (n % 1.0 == 0.0) n.toLong().toString() else String.format(Locale.US, "%.1f", n)) + w.unit(sig))
                 }
                 is Collection<*> -> v.joinToString(", ") { w.value(sig, it.toString()) }
                 else -> w.value(sig, v.toString())
@@ -192,6 +197,7 @@ class RuleText(private val w: RuleWords) {
         val nom = w.signal(s)
         fun nombre(): String {
             val n = c.number ?: return "?"
+            w.number(s, n)?.let { return it }
             val texte = if (n % 1.0 == 0.0) n.toLong().toString() else String.format(Locale.US, "%.1f", n)
             return texte + w.unit(s)
         }

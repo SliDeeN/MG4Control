@@ -1149,6 +1149,23 @@
     <string name="tyre_debug_state">État : %1$s</string>
     <string name="tyre_debug_unit">Unité du combiné : %1$s</string>
     <string name="tyre_debug_hint">Valeurs brutes, sans unité : compare-les avec le combiné, pneus froids puis après un trajet. L’ouverture ajoute un relevé complet au Diagnostic, et chaque changement est noté dans son journal.</string>
+    <string name="shortcuts_action_tyre_popup">Pop-up Pression des pneus</string>
+    <string name="tyre_popup_title">Pression des pneus</string>
+    <string name="tyre_popup_hint">La pression monte en roulant : comparez pneus froids.</string>
+    <string name="tyre_state_normal">Normal</string>
+    <string name="tyre_state_alert">Alerte (code %1$d)</string>
+    <string name="tyre_state_code">Code %1$d</string>
+    <string name="tyre_state_none">Pas de valeur</string>
+    <string name="tyre_why_alert">Alerte envoyée par la voiture : vérifiez ce pneu.</string>
+    <string name="tyre_why_lone_six">Signalé seul : la voiture ne le compte pas comme une alerte.</string>
+    <string name="tyre_why_axle">Signalé sur les deux pneus de l’essieu : vérifiez la pression.</string>
+    <string name="tyre_why_none">La voiture n’envoie rien pour ce pneu.</string>
+    <string name="settings_cluster_tyres">Pneus</string>
+    <string name="cluster_tyres_ok">Pneus normaux</string>
+    <string name="cluster_tyres_alert">Alerte pneu</string>
+    <string name="cluster_tyres_none">Pas de relevé</string>
+    <string name="cluster_layout_tyre_unit">Unité de pression</string>
+    <string name="cluster_layout_tyre_unit_note">La même que le pop-up Pression des pneus, les bulles et les automatisations.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Garde-voiture</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
@@ -1789,6 +1806,13 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Soleil levé</string>
     <string name="rule_sig_altitude">Altitude</string>
+    <string name="rule_sig_tyre_min">Pneu le moins gonflé</string>
+    <string name="rule_sig_tyre_fl">Pression pneu avant gauche</string>
+    <string name="rule_sig_tyre_fr">Pression pneu avant droit</string>
+    <string name="rule_sig_tyre_rl">Pression pneu arrière gauche</string>
+    <string name="rule_sig_tyre_rr">Pression pneu arrière droit</string>
+    <string name="rule_sig_tyre_temp_max">Pneu le plus chaud</string>
+    <string name="rule_sig_tyre_alert">Alerte pneu de la voiture</string>
     <string name="rule_sig_tsr">Panneaux (TSR)</string>
     <string name="rule_sig_volume">Volume</string>
     <string name="rule_sig_wifi_on">Wi-Fi allumé</string>

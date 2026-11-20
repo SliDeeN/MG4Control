@@ -43,10 +43,13 @@ class ClusterGaugeViewDrawTest {
         return image
     }
 
+    /** Les jauges ; le schéma des pneus (2026-11-20) n'a ni unité ni moyenne : ClusterLayoutDrawTest. */
+    private val jauges = ClusterModule.entries - ClusterModule.TYRES
+
     @Test
     fun `chaque style, chaque module, chaque situation se dessine`() {
         var dessins = 0
-        for (style in ClusterGaugeStyle.entries) for (module in ClusterModule.entries) for (moyenne in AverageUnit.entries) {
+        for (style in ClusterGaugeStyle.entries) for (module in jauges) for (moyenne in AverageUnit.entries) {
             for ((kw, kmh) in listOf(35f to 82f, -18f to 60f, 1.2f to 0f, null to null)) {
                 dessiner(ClusterGaugeView.Contenu(
                     module = module, kw = kw, kmh = kmh,
@@ -62,7 +65,7 @@ class ClusterGaugeViewDrawTest {
 
     @Test
     fun `changer d unite change le dessin, pour la jauge comme pour la moyenne`() {
-        for (style in ClusterGaugeStyle.entries) for (module in ClusterModule.entries) {
+        for (style in ClusterGaugeStyle.entries) for (module in jauges) {
             fun avec(unite: ConsumptionUnit, moyenne: AverageUnit) = dessiner(ClusterGaugeView.Contenu(
                 module = module, kw = 20f, kmh = 90f, pastille = null, moyenneWhKm = 168f, recupWh = 50f,
                 unite = unite, uniteMoyenne = moyenne, style = style,

@@ -201,6 +201,7 @@ class ClusterLayoutEditor(
         rangee(R.string.cluster_layout_gauge_preview, listOf(
             ClusterModule.CONSUMPTION to R.string.settings_cluster_consumption,
             ClusterModule.POWER to R.string.settings_cluster_power,
+            ClusterModule.TYRES to R.string.settings_cluster_tyres,
         ).map { (m, t) -> Option(ctx.getString(t), module == m) {
             module = m
             apercu.moduleForce = m
@@ -208,16 +209,22 @@ class ClusterLayoutEditor(
             maj()
         } })
         note(R.string.cluster_layout_gauge_preview_note)
+        // Module « Pneus » (2026-11-20) : sa place et l'unité de pression ; les réglages de jauge
+        // (style, épaisseur, couleurs, puissance) ne le concernent pas.
+        if (module == ClusterModule.TYRES) {
+            positionJauge()
+            val u = com.mg4.control.util.TyreUnitSetting.unit(ctx)
+            rangee(R.string.cluster_layout_tyre_unit, com.mg4.control.model.TyrePressure.PressureUnit.entries.map { pu ->
+                Option(pu.label, u == pu) { com.mg4.control.util.TyreUnitSetting.set(ctx, pu); maj() }
+            })
+            note(R.string.cluster_layout_tyre_unit_note)
+            return
+        }
         rangee(R.string.settings_cluster_row_style, listOf(
             ClusterGaugeStyle.DYNAMIC to R.string.settings_cluster_style_dynamic,
             ClusterGaugeStyle.DISCREET to R.string.settings_cluster_style_discreet,
         ).map { (st, t) -> Option(ctx.getString(t), ClusterGaugeStyle.fromKey(style) == st) { style = st.key; maj() } })
-        val pos = ClusterLayouts.gaugePosition(disposition)
-        rangee(R.string.cluster_layout_position, listOf(
-            ClusterLayouts.GAUGE_TOP to R.string.cluster_layout_position_top,
-            ClusterLayouts.GAUGE_MIDDLE to R.string.cluster_layout_position_middle,
-            ClusterLayouts.GAUGE_BOTTOM to R.string.cluster_layout_position_bottom,
-        ).map { (p, t) -> Option(ctx.getString(t), pos == p) { disposition = disposition.copy(gauge = p); maj() } })
+        positionJauge()
         val ep = disposition.thickness ?: ClusterLayouts.NORMAL
         rangee(R.string.cluster_layout_thickness, listOf(
             ClusterLayouts.THIN to R.string.cluster_layout_thickness_thin,
@@ -249,6 +256,16 @@ class ClusterLayoutEditor(
                 disposition = disposition.copy(powerConsumption = it.takeIf { v -> !v })
             }
         }
+    }
+
+    /** Place de la jauge (ou du schéma des pneus) : en haut, au milieu, en bas. */
+    private fun positionJauge() {
+        val pos = ClusterLayouts.gaugePosition(disposition)
+        rangee(R.string.cluster_layout_position, listOf(
+            ClusterLayouts.GAUGE_TOP to R.string.cluster_layout_position_top,
+            ClusterLayouts.GAUGE_MIDDLE to R.string.cluster_layout_position_middle,
+            ClusterLayouts.GAUGE_BOTTOM to R.string.cluster_layout_position_bottom,
+        ).map { (p, t) -> Option(ctx.getString(t), pos == p) { disposition = disposition.copy(gauge = p); maj() } })
     }
 
     /** kW ou chevaux : un seul réglage pour les deux jauges (arc de puissance, kW sous la consommation). */

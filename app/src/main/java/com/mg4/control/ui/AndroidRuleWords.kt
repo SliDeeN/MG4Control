@@ -47,7 +47,15 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
         RuleSignal.RANGE -> " km"
         RuleSignal.OUTSIDE_TEMP -> " °C"
         RuleSignal.ALTITUDE -> " m"
+        RuleSignal.TYRE_TEMP_MAX -> " °C"
         else -> ""
+    }
+
+    /** Pression des pneus : stockée en kPa, montrée dans l'unité choisie (« 2,2 bar »). */
+    override fun number(s: RuleSignal, n: Double): String? {
+        if (!s.isTyrePressure) return null
+        val u = com.mg4.control.util.TyreUnitSetting.unit(ctx)
+        return com.mg4.control.model.TyrePressure.format(Math.round(n).toInt(), u, ctx.resources.configuration.locales[0]) + " " + u.label
     }
 
     override fun value(s: RuleSignal, text: String): String = when (s) {
@@ -301,6 +309,13 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleSignal.IN_CALL -> R.string.rule_sig_in_call
             RuleSignal.SUN_UP -> R.string.rule_sig_sun_up
             RuleSignal.ALTITUDE -> R.string.rule_sig_altitude
+            RuleSignal.TYRE_PRESSURE_MIN -> R.string.rule_sig_tyre_min
+            RuleSignal.TYRE_PRESSURE_FL -> R.string.rule_sig_tyre_fl
+            RuleSignal.TYRE_PRESSURE_FR -> R.string.rule_sig_tyre_fr
+            RuleSignal.TYRE_PRESSURE_RL -> R.string.rule_sig_tyre_rl
+            RuleSignal.TYRE_PRESSURE_RR -> R.string.rule_sig_tyre_rr
+            RuleSignal.TYRE_TEMP_MAX -> R.string.rule_sig_tyre_temp_max
+            RuleSignal.TYRE_ALERT -> R.string.rule_sig_tyre_alert
         }
 
         fun eventRes(e: RuleEvent): Int = when (e) {

@@ -1131,6 +1131,23 @@
     <string name="tyre_debug_state">Durum: %1$s</string>
     <string name="tyre_debug_unit">Gösterge paneli birimi: %1$s</string>
     <string name="tyre_debug_hint">Birimsiz ham değerler: lastikler soğukken ve bir sürüşten sonra gösterge paneliyle karşılaştır. Açılış Tanılama’ya tam bir ölçüm ekler ve her değişiklik günlüğüne yazılır.</string>
+    <string name="shortcuts_action_tyre_popup">Lastik basıncı açılır penceresi</string>
+    <string name="tyre_popup_title">Lastik basıncı</string>
+    <string name="tyre_popup_hint">Basınç sürüşte yükselir: soğuk lastiklerle karşılaştırın.</string>
+    <string name="tyre_state_normal">Normal</string>
+    <string name="tyre_state_alert">Uyarı (kod %1$d)</string>
+    <string name="tyre_state_code">Kod %1$d</string>
+    <string name="tyre_state_none">Değer yok</string>
+    <string name="tyre_why_alert">Araç uyarı gönderdi: bu lastiği kontrol edin.</string>
+    <string name="tyre_why_lone_six">Tek başına bildirildi: araç bunu uyarı saymaz.</string>
+    <string name="tyre_why_axle">Aksın iki lastiğinde bildirildi: basıncı kontrol edin.</string>
+    <string name="tyre_why_none">Araç bu lastik için bir şey göndermiyor.</string>
+    <string name="settings_cluster_tyres">Lastikler</string>
+    <string name="cluster_tyres_ok">Lastikler normal</string>
+    <string name="cluster_tyres_alert">Lastik uyarısı</string>
+    <string name="cluster_tyres_none">Okuma yok</string>
+    <string name="cluster_layout_tyre_unit">Basınç birimi</string>
+    <string name="cluster_layout_tyre_unit_note">Lastik basıncı penceresi, baloncuklar ve otomasyonlarla aynı.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Araç bekçisi</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
@@ -1759,6 +1776,13 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Güneş doğmuş</string>
     <string name="rule_sig_altitude">Rakım</string>
+    <string name="rule_sig_tyre_min">En düşük lastik basıncı</string>
+    <string name="rule_sig_tyre_fl">Sol ön lastik basıncı</string>
+    <string name="rule_sig_tyre_fr">Sağ ön lastik basıncı</string>
+    <string name="rule_sig_tyre_rl">Sol arka lastik basıncı</string>
+    <string name="rule_sig_tyre_rr">Sağ arka lastik basıncı</string>
+    <string name="rule_sig_tyre_temp_max">En sıcak lastik</string>
+    <string name="rule_sig_tyre_alert">Aracın lastik uyarısı</string>
     <string name="rule_sig_tsr">Trafik işaretleri (TSR)</string>
     <string name="rule_sig_volume">Ses</string>
     <string name="rule_sig_wifi_on">Wi-Fi açık</string>

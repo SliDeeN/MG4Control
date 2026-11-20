@@ -1131,6 +1131,23 @@
     <string name="tyre_debug_state">State: %1$s</string>
     <string name="tyre_debug_unit">Instrument cluster unit: %1$s</string>
     <string name="tyre_debug_hint">Raw values, without units: compare them with the instrument cluster, with cold tyres and then after a drive. Opening adds a full reading to the Diagnostic, and each change is written to its log.</string>
+    <string name="shortcuts_action_tyre_popup">Tyre pressure pop-up</string>
+    <string name="tyre_popup_title">Tyre pressure</string>
+    <string name="tyre_popup_hint">Pressure rises while driving: compare with cold tyres.</string>
+    <string name="tyre_state_normal">Normal</string>
+    <string name="tyre_state_alert">Alert (code %1$d)</string>
+    <string name="tyre_state_code">Code %1$d</string>
+    <string name="tyre_state_none">No value</string>
+    <string name="tyre_why_alert">Alert sent by the car: check this tyre.</string>
+    <string name="tyre_why_lone_six">Reported alone: the car does not count it as an alert.</string>
+    <string name="tyre_why_axle">Reported on both tyres of the axle: check the pressure.</string>
+    <string name="tyre_why_none">The car sends nothing for this tyre.</string>
+    <string name="settings_cluster_tyres">Tyres</string>
+    <string name="cluster_tyres_ok">Tyres normal</string>
+    <string name="cluster_tyres_alert">Tyre alert</string>
+    <string name="cluster_tyres_none">No reading</string>
+    <string name="cluster_layout_tyre_unit">Pressure unit</string>
+    <string name="cluster_layout_tyre_unit_note">The same as the tyre pressure pop-up, bubbles and automations.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Car keeper</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
@@ -1759,6 +1776,13 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Sun up</string>
     <string name="rule_sig_altitude">Altitude</string>
+    <string name="rule_sig_tyre_min">Lowest tyre pressure</string>
+    <string name="rule_sig_tyre_fl">Front left tyre pressure</string>
+    <string name="rule_sig_tyre_fr">Front right tyre pressure</string>
+    <string name="rule_sig_tyre_rl">Rear left tyre pressure</string>
+    <string name="rule_sig_tyre_rr">Rear right tyre pressure</string>
+    <string name="rule_sig_tyre_temp_max">Hottest tyre</string>
+    <string name="rule_sig_tyre_alert">Car tyre alert</string>
     <string name="rule_sig_tsr">Sign recognition (TSR)</string>
     <string name="rule_sig_volume">Volume</string>
     <string name="rule_sig_wifi_on">Wi-Fi on</string>

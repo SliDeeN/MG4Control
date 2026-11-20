@@ -72,6 +72,22 @@ class ClusterLayoutDrawTest {
             }
     }
 
+    /** Module « Pneus » (variante A, 2026-11-20) : valeurs, alerte en orange, sans relevé ; cases gardées. */
+    @Test
+    fun `the tyre module is drawn in place of the gauge`() {
+        fun pneus(codes: List<Int?>, kpa: List<Int?> = listOf(252, 248, 248, 256)) =
+            com.mg4.control.model.TyrePressure.display(kpa, codes, com.mg4.control.model.TyrePressure.PressureUnit.BAR, java.util.Locale.FRANCE)
+        fun c(p: com.mg4.control.model.TyrePressure.Display?, d: ClusterLayout? = disposition) =
+            contenu(ClusterModule.TYRES, ClusterGaugeStyle.DYNAMIC, d ?: disposition).copy(disposition = d, pneus = p)
+        val normal = dessiner("tyres_normal", c(pneus(listOf(0, 0, 0, 0))))
+        val alerte = dessiner("tyres_alert", c(pneus(listOf(0, 0, 3, 0), listOf(252, 248, 198, 256))))
+        val rien = dessiner("tyres_none", c(null))
+        dessiner("tyres_no_layout", c(pneus(listOf(0, 0, 0, 0)), d = null))
+        dessiner("tyres_top", c(pneus(listOf(6, 6, 0, 0)), disposition.copy(gauge = ClusterLayouts.GAUGE_TOP)))
+        assertFalse(normal.sameAs(alerte))
+        assertFalse(normal.sameAs(rien))
+    }
+
     @Test
     fun `look settings change the drawing`() {
         val base = dessiner("base", contenu(ClusterModule.CONSUMPTION, ClusterGaugeStyle.DYNAMIC, disposition))

@@ -1021,6 +1021,12 @@ class MG4ControlService : Service() {
             return
         }
 
+        // TYRE_POPUP : même famille — un second appui referme la fenêtre.
+        if (action == ShortcutAction.TYRE_POPUP) {
+            TyrePopupOverlay.toggle(this@MG4ControlService)
+            return
+        }
+
         // QUICK_SETTINGS (issue #197) : même famille — un second appui referme la fenêtre.
         if (action == ShortcutAction.QUICK_SETTINGS) {
             QuickSettingsOverlay.toggle(this@MG4ControlService)

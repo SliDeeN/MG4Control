@@ -37,6 +37,8 @@ object InfoIcons {
             RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> R.drawable.ic_cat_wifi
             RuleSignal.PROFILE -> R.drawable.ic_cat_star
             RuleSignal.ALTITUDE -> R.drawable.ic_info_mountain
+            RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX,
+            RuleSignal.TYRE_ALERT -> R.drawable.ic_sym_tire_repair
             else -> R.drawable.ic_cat_car
         }
     }

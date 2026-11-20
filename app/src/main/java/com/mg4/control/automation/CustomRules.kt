@@ -676,6 +676,24 @@ object CustomRules {
      */
     fun readSignal(ctx: Context, s: RuleSignal): Any? = runCatching { lireUn(ctx, s) }.getOrNull()
 
+    /** Informations pneus, d'un relevé partagé de moins de 2 s (13 lectures pour les sept). */
+    private fun pneu(s: RuleSignal): Any? {
+        val p = com.mg4.control.hardware.TyreProbe.pneusRecents()
+        val ordre = com.mg4.control.hardware.TyreProbe.Roue.values().map { p.roues[it] }
+        fun pression(r: com.mg4.control.hardware.TyreProbe.Roue) =
+            com.mg4.control.model.TyrePressure.valide(p.roues[r]?.pression)?.toDouble()
+        return when (s) {
+            RuleSignal.TYRE_PRESSURE_MIN -> com.mg4.control.model.TyrePressure.lowest(ordre.map { it?.pression })?.toDouble()
+            RuleSignal.TYRE_PRESSURE_FL -> pression(com.mg4.control.hardware.TyreProbe.Roue.AVANT_GAUCHE)
+            RuleSignal.TYRE_PRESSURE_FR -> pression(com.mg4.control.hardware.TyreProbe.Roue.AVANT_DROITE)
+            RuleSignal.TYRE_PRESSURE_RL -> pression(com.mg4.control.hardware.TyreProbe.Roue.ARRIERE_GAUCHE)
+            RuleSignal.TYRE_PRESSURE_RR -> pression(com.mg4.control.hardware.TyreProbe.Roue.ARRIERE_DROITE)
+            RuleSignal.TYRE_TEMP_MAX -> com.mg4.control.model.TyrePressure.hottest(ordre.map { it?.temperature })?.toDouble()
+            RuleSignal.TYRE_ALERT -> com.mg4.control.model.TyrePressure.anyAlert(ordre.map { it?.etat })
+            else -> null
+        }
+    }
+
     private fun lireUn(ctx: Context, s: RuleSignal): Any? = when (s) {
         RuleSignal.READY -> ReadyWatcher.ready
         RuleSignal.GEAR -> RuleSignal.gearText(MG4Hardware.readGearRaw())
@@ -685,6 +703,8 @@ object CustomRules {
         RuleSignal.CHARGING -> EnergyReader.charging()
         RuleSignal.OUTSIDE_TEMP -> MG4Hardware.getOutsideTempCelsius()?.toDouble()
         RuleSignal.ALTITUDE -> AndroidControls.altitude(ctx)
+        RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL,
+        RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_ALERT -> pneu(s)
         RuleSignal.HVAC_ON -> clim()?.powerOn
         RuleSignal.BT_DEVICE -> BluetoothProfileManager.getConnectedMacs()
         RuleSignal.PROFILE -> ActiveProfile.id(ctx)

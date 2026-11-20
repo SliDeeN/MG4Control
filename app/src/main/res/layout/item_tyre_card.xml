@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Un pneu de la fenêtre Pression des pneus (maquette du 2026-11-20) : nom, pression dans l'unité
+     choisie, température et pastille d'état, puis une phrase quand l'état n'est pas normal.
+     Rempli par TyrePopupOverlay ; colonne de droite alignée à droite par le code. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_hvac_panel"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp">
+
+    <TextView
+        android:id="@+id/tyre_card_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_secondary"
+        android:textSize="17sp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <LinearLayout
+        android:id="@+id/tyre_card_value_row"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:baselineAligned="true">
+
+        <TextView
+            android:id="@+id/tyre_card_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="42sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/tyre_card_unit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="20sp"
+            android:maxLines="1" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tyre_card_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tyre_card_temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="18sp"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/tyre_card_state"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:gravity="center"
+            android:paddingStart="10dp"
+            android:paddingEnd="14dp"
+            android:drawablePadding="6dp"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tyre_card_why"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:visibility="gone" />
+
+</LinearLayout>

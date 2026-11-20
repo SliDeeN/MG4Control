@@ -1132,6 +1132,23 @@
     <string name="tyre_debug_state">Status: %1$s</string>
     <string name="tyre_debug_unit">Enhet i instrumentgruppen: %1$s</string>
     <string name="tyre_debug_hint">Råverdier uten enhet: sammenlign dem med instrumentgruppen, med kalde dekk og så etter en tur. Åpningen legger en fullstendig avlesning til Diagnostikk, og hver endring skrives i loggen.</string>
+    <string name="shortcuts_action_tyre_popup">Dekktrykk pop-up</string>
+    <string name="tyre_popup_title">Dekktrykk</string>
+    <string name="tyre_popup_hint">Trykket stiger under kjøring: sammenlign med kalde dekk.</string>
+    <string name="tyre_state_normal">Normal</string>
+    <string name="tyre_state_alert">Varsel (kode %1$d)</string>
+    <string name="tyre_state_code">Kode %1$d</string>
+    <string name="tyre_state_none">Ingen verdi</string>
+    <string name="tyre_why_alert">Varsel sendt av bilen: sjekk dette dekket.</string>
+    <string name="tyre_why_lone_six">Meldt alene: bilen regner det ikke som et varsel.</string>
+    <string name="tyre_why_axle">Meldt på begge dekkene på akselen: sjekk trykket.</string>
+    <string name="tyre_why_none">Bilen sender ingenting for dette dekket.</string>
+    <string name="settings_cluster_tyres">Dekk</string>
+    <string name="cluster_tyres_ok">Dekk normale</string>
+    <string name="cluster_tyres_alert">Dekkvarsel</string>
+    <string name="cluster_tyres_none">Ingen avlesning</string>
+    <string name="cluster_layout_tyre_unit">Trykkenhet</string>
+    <string name="cluster_layout_tyre_unit_note">Den samme som i dekktrykk-pop-up, bobler og automatiseringer.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Bilholder</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
@@ -1760,6 +1777,13 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Solen er oppe</string>
     <string name="rule_sig_altitude">Høyde</string>
+    <string name="rule_sig_tyre_min">Laveste dekktrykk</string>
+    <string name="rule_sig_tyre_fl">Dekktrykk foran venstre</string>
+    <string name="rule_sig_tyre_fr">Dekktrykk foran høyre</string>
+    <string name="rule_sig_tyre_rl">Dekktrykk bak venstre</string>
+    <string name="rule_sig_tyre_rr">Dekktrykk bak høyre</string>
+    <string name="rule_sig_tyre_temp_max">Varmeste dekk</string>
+    <string name="rule_sig_tyre_alert">Dekkvarsel fra bilen</string>
     <string name="rule_sig_tsr">Skiltgjenkjenning (TSR)</string>
     <string name="rule_sig_volume">Volum</string>
     <string name="rule_sig_wifi_on">Wi-Fi på</string>

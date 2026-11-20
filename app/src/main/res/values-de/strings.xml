@@ -1131,6 +1131,23 @@
     <string name="tyre_debug_state">Zustand: %1$s</string>
     <string name="tyre_debug_unit">Einheit im Kombiinstrument: %1$s</string>
     <string name="tyre_debug_hint">Rohwerte ohne Einheit: Vergleiche sie mit dem Kombiinstrument, bei kalten Reifen und dann nach einer Fahrt. Das Öffnen fügt der Diagnose eine vollständige Messung hinzu, und jede Änderung wird in ihrem Protokoll vermerkt.</string>
+    <string name="shortcuts_action_tyre_popup">Reifendruck-Pop-up</string>
+    <string name="tyre_popup_title">Reifendruck</string>
+    <string name="tyre_popup_hint">Der Druck steigt während der Fahrt: mit kalten Reifen vergleichen.</string>
+    <string name="tyre_state_normal">Normal</string>
+    <string name="tyre_state_alert">Warnung (Code %1$d)</string>
+    <string name="tyre_state_code">Code %1$d</string>
+    <string name="tyre_state_none">Kein Wert</string>
+    <string name="tyre_why_alert">Warnung vom Auto: diesen Reifen prüfen.</string>
+    <string name="tyre_why_lone_six">Allein gemeldet: Das Auto zählt es nicht als Warnung.</string>
+    <string name="tyre_why_axle">An beiden Reifen der Achse gemeldet: Druck prüfen.</string>
+    <string name="tyre_why_none">Das Auto sendet für diesen Reifen nichts.</string>
+    <string name="settings_cluster_tyres">Reifen</string>
+    <string name="cluster_tyres_ok">Reifen normal</string>
+    <string name="cluster_tyres_alert">Reifenwarnung</string>
+    <string name="cluster_tyres_none">Kein Messwert</string>
+    <string name="cluster_layout_tyre_unit">Druckeinheit</string>
+    <string name="cluster_layout_tyre_unit_note">Dieselbe wie im Reifendruck-Pop-up, in den Blasen und Automationen.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Fahrzeugwächter</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
@@ -1759,6 +1776,13 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Sonne aufgegangen</string>
     <string name="rule_sig_altitude">Höhe</string>
+    <string name="rule_sig_tyre_min">Niedrigster Reifendruck</string>
+    <string name="rule_sig_tyre_fl">Reifendruck vorne links</string>
+    <string name="rule_sig_tyre_fr">Reifendruck vorne rechts</string>
+    <string name="rule_sig_tyre_rl">Reifendruck hinten links</string>
+    <string name="rule_sig_tyre_rr">Reifendruck hinten rechts</string>
+    <string name="rule_sig_tyre_temp_max">Wärmster Reifen</string>
+    <string name="rule_sig_tyre_alert">Reifenwarnung des Autos</string>
     <string name="rule_sig_tsr">Verkehrszeichen (TSR)</string>
     <string name="rule_sig_volume">Lautstärke</string>
     <string name="rule_sig_wifi_on">WLAN an</string>

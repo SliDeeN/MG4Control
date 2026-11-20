@@ -618,6 +618,8 @@ internal object ClusterModuleOverlay {
                     charge = if (session.active) vueCharge(maintenant) else null,
                     disposition = disposition,
                     blocs = blocs,
+                    // Module « Pneus » : relevé partagé de moins de 2 s (ce fil, binder).
+                    pneus = if (it == ClusterModule.TYRES) pneus(ctx) else null,
                 )
             }
             main.post {
@@ -633,6 +635,14 @@ internal object ClusterModuleOverlay {
             lecteur.postDelayed(this, intervalle)
         }
     }
+
+    /** Les quatre pressions dans l'unité choisie, et leur état, pour le module « Pneus ». */
+    private fun pneus(ctx: Context): com.mg4.control.model.TyrePressure.Display? = runCatching {
+        val p = com.mg4.control.hardware.TyreProbe.pneusRecents()
+        val ordre = com.mg4.control.hardware.TyreProbe.Roue.values().map { p.roues[it] }
+        com.mg4.control.model.TyrePressure.display(ordre.map { it?.pression }, ordre.map { it?.etat },
+            com.mg4.control.util.TyreUnitSetting.unit(ctx, p.uniteCombine), ctx.resources.configuration.locales[0])
+    }.getOrNull()
 
     /**
      * Fin d'un trajet (sortie de READY) : sa pointe rejoint celles des derniers trajets, et le

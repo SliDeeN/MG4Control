@@ -165,6 +165,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val disposition: ClusterLayout? = null,
         /** Ce qu'affichent les quatre cases, prêt à dessiner (Info 1 à 4, `null` = case libre). */
         val blocs: List<Bloc?> = emptyList(),
+        /** Module « Pneus » (2026-11-20) : les quatre pressions et leur état ; `null` = rien lu. */
+        val pneus: com.mg4.control.model.TyrePressure.Display? = null,
     )
 
     /**
@@ -373,6 +375,7 @@ class ClusterGaugeView(context: Context) : View(context) {
     }
 
     private fun jauge(canvas: Canvas, c: Contenu) = when {
+        c.module == ClusterModule.TYRES -> pneus(canvas, c)
         c.style == ClusterGaugeStyle.DISCREET && c.module == ClusterModule.POWER -> discretPuissance(canvas, c)
         c.style == ClusterGaugeStyle.DISCREET -> discretConsommation(canvas, c)
         c.module == ClusterModule.POWER -> puissance(canvas, c)
@@ -381,9 +384,86 @@ class ClusterGaugeView(context: Context) : View(context) {
 
     /** Hauteurs occupées par la jauge seule dans le carré de 260 : ce qu'on met à l'échelle de sa zone. */
     private fun coeur(c: Contenu): Pair<Float, Float> = when {
+        c.module == ClusterModule.TYRES -> 36f to 200f
         c.style == ClusterGaugeStyle.DISCREET -> 54f to 174f
         c.module == ClusterModule.POWER -> 6f to 194f
         else -> 4f to 200f
+    }
+
+    // ── Module « Pneus » (variante A, 2026-11-20) ────────────────────────────
+
+    private val pneuCorps = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x2A, 0x2A, 0x2E) }
+    private val pneuVitre = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x16, 0x16, 0x1A) }
+    private val pneuToit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x3A, 0x3A, 0x40) }
+    private val pneuRoue = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val pneuTexte = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val pneuRect = RectF()
+    private val pneuChemin = android.graphics.Path()
+
+    /**
+     * La voiture vue de dessus au centre (boîte 200 × 400 réduite à 0,32), les quatre pressions de
+     * part et d'autre, l'unité dessous, et une ligne d'état. Roue et chiffre en orange quand la
+     * voiture signale une alerte ; gris sans valeur.
+     */
+    private fun pneus(canvas: Canvas, c: Contenu) {
+        val p = c.pneus
+        val alertes = p?.alerts ?: List(4) { com.mg4.control.model.TyrePressure.Alert.NO_VALUE }
+        fun couleurRoue(i: Int) = when (alertes[i]) {
+            com.mg4.control.model.TyrePressure.Alert.ALERT -> cAlerte
+            com.mg4.control.model.TyrePressure.Alert.NO_VALUE -> Color.rgb(0x5B, 0x65, 0x75)
+            else -> Color.rgb(0x3C, 0x42, 0x50)
+        }
+        val x0 = 98f; val y0 = 50f; val k = 0.32f
+        canvas.save()
+        canvas.translate(x0, y0)
+        canvas.scale(k, k)
+        val roues = arrayOf(floatArrayOf(14f, 62f), floatArrayOf(156f, 62f), floatArrayOf(14f, 266f), floatArrayOf(156f, 266f))
+        roues.forEachIndexed { i, (x, y) ->
+            pneuRoue.color = couleurRoue(i)
+            pneuRect.set(x, y, x + 30f, y + 72f)
+            canvas.drawRoundRect(pneuRect, 10f, 10f, pneuRoue)
+        }
+        pneuRect.set(32f, 14f, 168f, 386f)
+        canvas.drawRoundRect(pneuRect, 58f, 58f, pneuCorps)
+        pneuChemin.reset()
+        pneuChemin.moveTo(50f, 118f); pneuChemin.quadTo(100f, 92f, 150f, 118f); pneuChemin.lineTo(142f, 168f)
+        pneuChemin.quadTo(100f, 156f, 58f, 168f); pneuChemin.close()
+        canvas.drawPath(pneuChemin, pneuVitre)
+        pneuRect.set(58f, 176f, 142f, 296f)
+        canvas.drawRoundRect(pneuRect, 14f, 14f, pneuToit)
+        pneuChemin.reset()
+        pneuChemin.moveTo(60f, 304f); pneuChemin.quadTo(100f, 312f, 140f, 304f); pneuChemin.lineTo(148f, 340f)
+        pneuChemin.quadTo(100f, 356f, 52f, 340f); pneuChemin.close()
+        canvas.drawPath(pneuChemin, pneuVitre)
+        canvas.restore()
+
+        // Avant gauche, avant droite, arrière gauche, arrière droite : chiffre puis unité.
+        val places = arrayOf(floatArrayOf(86f, 92f, 0f), floatArrayOf(174f, 92f, 1f), floatArrayOf(86f, 152f, 0f), floatArrayOf(174f, 152f, 1f))
+        places.forEachIndexed { i, (x, y, droite) ->
+            pneuTexte.textAlign = if (droite == 1f) Paint.Align.LEFT else Paint.Align.RIGHT
+            pneuTexte.typeface = moyen
+            pneuTexte.textSize = 22f
+            pneuTexte.color = when (alertes[i]) {
+                com.mg4.control.model.TyrePressure.Alert.ALERT -> cAlerte
+                com.mg4.control.model.TyrePressure.Alert.NO_VALUE -> cTexte2
+                else -> cTexte
+            }
+            canvas.drawText(p?.values?.getOrNull(i) ?: "–", x, y, pneuTexte)
+            pneuTexte.typeface = Typeface.DEFAULT
+            pneuTexte.textSize = 11f
+            pneuTexte.color = cTexte2
+            canvas.drawText(p?.unit ?: "", x, y + 15f, pneuTexte)
+        }
+        val (etatTexte, etatCouleur) = when {
+            p == null || p.noValue -> context.getString(R.string.cluster_tyres_none) to cTexte2
+            p.anyAlert -> context.getString(R.string.cluster_tyres_alert) to cAlerte
+            else -> context.getString(R.string.cluster_tyres_ok) to cVert
+        }
+        pneuTexte.textAlign = Paint.Align.CENTER
+        pneuTexte.typeface = moyen
+        pneuTexte.textSize = 12f
+        pneuTexte.color = etatCouleur
+        canvas.drawText(etatTexte, COTE / 2f, 194f, pneuTexte)
     }
 
     /** L'allure réglée (issue #229), ou celle d'avant sans disposition. */

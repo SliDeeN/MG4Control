@@ -120,7 +120,24 @@ enum class RuleSignal(val kind: Kind) {
      * Altitude en mètres (2026-11-16), d'après la dernière position connue qui en porte une : le GPS
      * de la voiture la fournit (bande Dénivelé du graphique de trajet, vue en voiture).
      */
-    ALTITUDE(Kind.NUMBER);
+    ALTITUDE(Kind.NUMBER),
+    /**
+     * Pneus (2026-11-20, relevé SWI133 : pression en kPa, 252 = 2,5 bar au combiné). Pressions en kPa,
+     * affichées dans l'unité choisie ([com.mg4.control.util.TyreUnitSetting]) ; la plus basse des
+     * quatre pour un seuil « un pneu sous X » ; température la plus haute en °C ; alerte de la voiture
+     * d'après les codes d'état ([com.mg4.control.model.TyrePressure.anyAlert]).
+     */
+    TYRE_PRESSURE_MIN(Kind.NUMBER),
+    TYRE_PRESSURE_FL(Kind.NUMBER),
+    TYRE_PRESSURE_FR(Kind.NUMBER),
+    TYRE_PRESSURE_RL(Kind.NUMBER),
+    TYRE_PRESSURE_RR(Kind.NUMBER),
+    TYRE_TEMP_MAX(Kind.NUMBER),
+    TYRE_ALERT(Kind.BOOL);
+
+    /** Une pression de pneu, en kPa : affichée dans l'unité de pression choisie. */
+    val isTyrePressure: Boolean get() = this == TYRE_PRESSURE_MIN || this == TYRE_PRESSURE_FL ||
+        this == TYRE_PRESSURE_FR || this == TYRE_PRESSURE_RL || this == TYRE_PRESSURE_RR
 
     enum class Kind { BOOL, NUMBER, TEXT, TEXT_SET }
 

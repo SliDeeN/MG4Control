@@ -98,6 +98,16 @@ object BubbleInfo {
     }
 
     /**
+     * Pression d'un pneu (2026-11-20) : lue en kPa, montrée dans l'unité choisie — le texte et
+     * l'unité ; `null` pour les autres informations, ou sans valeur lisible.
+     */
+    fun pressure(s: RuleSignal, value: Any?, unit: TyrePressure.PressureUnit, locale: Locale): Pair<String, String>? {
+        if (!s.isTyrePressure) return null
+        val kpa = (value as? Number)?.toDouble()?.takeUnless { it.isNaN() }?.let { Math.round(it).toInt() } ?: return null
+        return TyrePressure.format(kpa, unit, locale) to unit.label
+    }
+
+    /**
      * Vitesse, autonomie et altitude dans l'unité de distance générale (2026-11-10) : la valeur (en miles,
      * arrondie à l'entier) et son unité ; `null` pour les autres informations. En km, rien ne change.
      */

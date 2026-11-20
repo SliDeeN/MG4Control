@@ -1131,6 +1131,23 @@
     <string name="tyre_debug_state">Estado: %1$s</string>
     <string name="tyre_debug_unit">Unidad del cuadro de instrumentos: %1$s</string>
     <string name="tyre_debug_hint">Valores en bruto, sin unidad: compáralos con el cuadro de instrumentos, con los neumáticos fríos y después de un trayecto. Al abrir se añade una lectura completa al Diagnóstico, y cada cambio se anota en su registro.</string>
+    <string name="shortcuts_action_tyre_popup">Pop-up de presión de neumáticos</string>
+    <string name="tyre_popup_title">Presión de neumáticos</string>
+    <string name="tyre_popup_hint">La presión sube al circular: compara con los neumáticos fríos.</string>
+    <string name="tyre_state_normal">Normal</string>
+    <string name="tyre_state_alert">Alerta (código %1$d)</string>
+    <string name="tyre_state_code">Código %1$d</string>
+    <string name="tyre_state_none">Sin valor</string>
+    <string name="tyre_why_alert">Alerta enviada por el coche: revisa este neumático.</string>
+    <string name="tyre_why_lone_six">Indicado solo: el coche no lo cuenta como alerta.</string>
+    <string name="tyre_why_axle">Indicado en los dos neumáticos del eje: revisa la presión.</string>
+    <string name="tyre_why_none">El coche no envía nada para este neumático.</string>
+    <string name="settings_cluster_tyres">Neumáticos</string>
+    <string name="cluster_tyres_ok">Neumáticos normales</string>
+    <string name="cluster_tyres_alert">Alerta neumático</string>
+    <string name="cluster_tyres_none">Sin lectura</string>
+    <string name="cluster_layout_tyre_unit">Unidad de presión</string>
+    <string name="cluster_layout_tyre_unit_note">La misma que el pop-up de presión, las burbujas y las automatizaciones.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Guardián del coche</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
@@ -1766,6 +1783,13 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Sol salido</string>
     <string name="rule_sig_altitude">Altitud</string>
+    <string name="rule_sig_tyre_min">Neumático con menos presión</string>
+    <string name="rule_sig_tyre_fl">Presión neumático delantero izquierdo</string>
+    <string name="rule_sig_tyre_fr">Presión neumático delantero derecho</string>
+    <string name="rule_sig_tyre_rl">Presión neumático trasero izquierdo</string>
+    <string name="rule_sig_tyre_rr">Presión neumático trasero derecho</string>
+    <string name="rule_sig_tyre_temp_max">Neumático más caliente</string>
+    <string name="rule_sig_tyre_alert">Alerta de neumático del coche</string>
     <string name="rule_sig_tsr">Señales (TSR)</string>
     <string name="rule_sig_volume">Volumen</string>
     <string name="rule_sig_wifi_on">Wi-Fi activado</string>

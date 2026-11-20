@@ -1131,6 +1131,23 @@
     <string name="tyre_debug_state">Stan: %1$s</string>
     <string name="tyre_debug_unit">Jednostka zestawu wskaźników: %1$s</string>
     <string name="tyre_debug_hint">Surowe wartości bez jednostek: porównaj je z zestawem wskaźników, przy zimnych oponach, a potem po jeździe. Otwarcie dodaje pełny odczyt do Diagnostyki, a każda zmiana trafia do jej dziennika.</string>
+    <string name="shortcuts_action_tyre_popup">Okno ciśnienia w oponach</string>
+    <string name="tyre_popup_title">Ciśnienie w oponach</string>
+    <string name="tyre_popup_hint">Ciśnienie rośnie podczas jazdy: porównuj na zimnych oponach.</string>
+    <string name="tyre_state_normal">Normalne</string>
+    <string name="tyre_state_alert">Alert (kod %1$d)</string>
+    <string name="tyre_state_code">Kod %1$d</string>
+    <string name="tyre_state_none">Brak wartości</string>
+    <string name="tyre_why_alert">Alert wysłany przez samochód: sprawdź tę oponę.</string>
+    <string name="tyre_why_lone_six">Zgłoszone samodzielnie: samochód nie liczy tego jako alertu.</string>
+    <string name="tyre_why_axle">Zgłoszone na obu oponach osi: sprawdź ciśnienie.</string>
+    <string name="tyre_why_none">Samochód nic nie wysyła dla tej opony.</string>
+    <string name="settings_cluster_tyres">Opony</string>
+    <string name="cluster_tyres_ok">Opony w normie</string>
+    <string name="cluster_tyres_alert">Alert opony</string>
+    <string name="cluster_tyres_none">Brak odczytu</string>
+    <string name="cluster_layout_tyre_unit">Jednostka ciśnienia</string>
+    <string name="cluster_layout_tyre_unit_note">Ta sama co w oknie ciśnienia w oponach, dymkach i automatyzacjach.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Opiekun auta</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
@@ -1773,6 +1790,13 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Słońce nad horyzontem</string>
     <string name="rule_sig_altitude">Wysokość</string>
+    <string name="rule_sig_tyre_min">Najniższe ciśnienie w oponie</string>
+    <string name="rule_sig_tyre_fl">Ciśnienie opony przedniej lewej</string>
+    <string name="rule_sig_tyre_fr">Ciśnienie opony przedniej prawej</string>
+    <string name="rule_sig_tyre_rl">Ciśnienie opony tylnej lewej</string>
+    <string name="rule_sig_tyre_rr">Ciśnienie opony tylnej prawej</string>
+    <string name="rule_sig_tyre_temp_max">Najcieplejsza opona</string>
+    <string name="rule_sig_tyre_alert">Alert opony z samochodu</string>
     <string name="rule_sig_tsr">Rozpoznawanie znaków (TSR)</string>
     <string name="rule_sig_volume">Głośność</string>
     <string name="rule_sig_wifi_on">Wi-Fi włączone</string>

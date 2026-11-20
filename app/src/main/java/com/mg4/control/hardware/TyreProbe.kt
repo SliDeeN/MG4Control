@@ -98,6 +98,40 @@ object TyreProbe {
         return Releve(roues, voies(PROP_UNITE))
     }
 
+    /** Une roue pour la fenêtre Pression des pneus : pression (kPa), température (°C), code d'état. */
+    data class Pneu(val pression: Int?, val temperature: Int?, val etat: Int?)
+
+    /** Les quatre pneus et l'unité du combiné, lus par la seule voie confirmée. */
+    data class Pneus(val roues: Map<Roue, Pneu>, val uniteCombine: Int?)
+
+    /**
+     * Lecture légère pour la fenêtre Pression des pneus : CarPropertyManager en zone globale, la
+     * voie qui répond (relevé SWI133 du 2026-11-20 : les trois voies rendent la même chose).
+     */
+    fun lirePneus(): Pneus = Pneus(
+        roues = Roue.values().associateWith { r ->
+            Pneu(lireCpm(r.pression, AREA_GLOBAL).nombre?.toInt(),
+                lireCpm(r.temperature, AREA_GLOBAL).nombre?.toInt(),
+                lireCpm(r.etat, AREA_GLOBAL).nombre?.toInt())
+        },
+        uniteCombine = lireCpm(PROP_UNITE, AREA_GLOBAL).nombre?.toInt(),
+    )
+
+    /** Durée pendant laquelle un relevé sert à tous (bulles, écran conducteur, automatisations). */
+    private const val CACHE_MS = 2_000L
+    private var cache: Pair<Long, Pneus>? = null
+
+    /** Relevé de moins de [CACHE_MS] partagé, sinon un nouveau. Fil de l'appelant (binder). */
+    @Synchronized
+    fun pneusRecents(): Pneus {
+        val maintenant = android.os.SystemClock.elapsedRealtime()
+        cache?.let { (quand, p) -> if (maintenant - quand < CACHE_MS) return p }
+        return lirePneus().also { cache = maintenant to it }
+    }
+
+    /** Dernier relevé connu, sans lire la voiture (unité du combiné pour l'affichage). */
+    val dernierConnu: Pneus? @Synchronized get() = cache?.second
+
     /** Journalise et garde pour le Diagnostic un relevé (pris ici par défaut). Renvoie son texte. */
     fun run(origin: String, r: Releve = lire()): String {
         val texte = texte(r, origin)
