@@ -1154,12 +1154,6 @@
     <string name="immersive_by_mg4dash">MG4Dash la mette già a schermo intero</string>
     <string name="immersive_mg4dash_outdated">MG4Dash va aggiornato per condividere lo schermo intero con MG4Control. Fino ad allora l’opzione resta in pausa.</string>
     <string name="immersive_confirm_msg">Questa funzione modifica un’impostazione di Android condivisa da tutte le app. Può entrare in conflitto con un launcher personalizzato o un’altra app che gestisce anch’essa lo schermo intero: barre che ricompaiono, o un’app che resta a schermo intero. In caso di problemi, disattivala qui.</string>
-    <string name="immersive_tip_label">Suggerimento</string>
-    <string name="immersive_tip_left">scorri dal bordo sinistro dello schermo verso destra per far tornare la barra laterale (dall’alto verso il basso per la barra superiore). Si nasconde di nuovo dopo qualche secondo.</string>
-    <string name="immersive_tip_right">scorri dal bordo destro dello schermo verso sinistra per far tornare la barra laterale (dall’alto verso il basso per la barra superiore). Si nasconde di nuovo dopo qualche secondo.</string>
-    <string name="immersive_reminder_left">Scorri dal bordo sinistro per far tornare la barra laterale per qualche secondo.</string>
-    <string name="immersive_reminder_right">Scorri dal bordo destro per far tornare la barra laterale per qualche secondo.</string>
-    <string name="immersive_gestures_pending">Scorrimenti attivati: funzioneranno dopo il prossimo riavvio dello schermo centrale. Fino ad allora le barre nascoste non ricompaiono.</string>
     <string name="immersive_confirm_ok">Attiva</string>
     <string name="immersive_empty">Nessuna app trovata</string>
     <string name="shortcuts_cat_preclim">Custode dell’auto</string>

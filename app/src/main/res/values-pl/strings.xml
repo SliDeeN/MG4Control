@@ -1154,12 +1154,6 @@
     <string name="immersive_by_mg4dash">MG4Dash już wyświetla ją na pełnym ekranie</string>
     <string name="immersive_mg4dash_outdated">Zaktualizuj MG4Dash, aby współdzielić pełny ekran z MG4Control. Do tego czasu opcja jest wstrzymana.</string>
     <string name="immersive_confirm_msg">Ta funkcja zmienia ustawienie Androida wspólne dla wszystkich aplikacji. Może kolidować z własnym launcherem lub inną aplikacją, która też zarządza pełnym ekranem: paski wracają albo aplikacja zostaje na pełnym ekranie. W razie problemów wyłącz ją tutaj.</string>
-    <string name="immersive_tip_label">Wskazówka</string>
-    <string name="immersive_tip_left">przesuń palcem od lewej krawędzi ekranu w prawo, aby przywrócić pasek boczny (z góry w dół dla górnego paska). Po kilku sekundach znów się ukryje.</string>
-    <string name="immersive_tip_right">przesuń palcem od prawej krawędzi ekranu w lewo, aby przywrócić pasek boczny (z góry w dół dla górnego paska). Po kilku sekundach znów się ukryje.</string>
-    <string name="immersive_reminder_left">Przesuń od lewej krawędzi, aby przywrócić pasek boczny na kilka sekund.</string>
-    <string name="immersive_reminder_right">Przesuń od prawej krawędzi, aby przywrócić pasek boczny na kilka sekund.</string>
-    <string name="immersive_gestures_pending">Przesunięcia włączone: zadziałają po następnym ponownym uruchomieniu ekranu centralnego. Do tego czasu ukryte paski nie wracają.</string>
     <string name="immersive_confirm_ok">Włącz</string>
     <string name="immersive_empty">Nie znaleziono aplikacji</string>
     <string name="shortcuts_cat_preclim">Opiekun auta</string>

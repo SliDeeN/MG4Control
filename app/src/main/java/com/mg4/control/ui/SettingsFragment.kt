@@ -1149,57 +1149,26 @@ class SettingsFragment : Fragment() {
             bouton.text = getString(R.string.immersive_choose, choix.size)
         }
         maj()
-        // Le côté de la barre de la voiture suit le volant ; illisible, elle est à gauche.
-        val droite = NavSide.detected(ctx) == com.mg4.control.hardware.DriverSide.Side.RIGHT
-        val astuce = view.findViewById<TextView>(R.id.tv_immersive_tip).apply {
-            setText(if (droite) R.string.immersive_reminder_right else R.string.immersive_reminder_left)
-        }
-        // Glissements depuis le bord : la voiture ne lit leur verrou qu'au démarrage de l'écran
-        // (2026-11-20). La propriété est écrite sur le fil d'ImmersiveApps : relue un peu après.
-        val gestes = view.findViewById<TextView>(R.id.tv_immersive_gestures).also {
-            com.mg4.control.service.OverlayKit.fond(it, ctx.getColor(R.color.dash_warn_dim),
-                trait = ctx.getColor(R.color.dash_warn), epaisseur = 1, rayon = 14f * resources.displayMetrics.density)
-        }
-        fun majGestes(on: Boolean) {
-            gestes.visibility = if (on && com.mg4.control.service.ImmersiveApps.gesturesPending(ctx)) View.VISIBLE else View.GONE
-        }
-        fun majAstuce(on: Boolean) {
-            astuce.visibility = if (on) View.VISIBLE else View.GONE
-            majGestes(on)
-            gestes.postDelayed({ if (isAdded) majGestes(com.mg4.control.service.ImmersiveApps.isOn(ctx)) }, 1_000)
-        }
         val inter = view.findViewById<Switch>(R.id.switch_immersive)
         inter.isChecked = com.mg4.control.service.ImmersiveApps.isOn(ctx)
-        majAstuce(inter.isChecked)
-        // À chaque activation : avertissement (conflits possibles) et astuce du glissement. Refus
-        // ou fenêtre fermée : l'interrupteur revient sur OFF sans rien écrire.
+        // À chaque activation : avertissement (conflits possibles). Refus ou fenêtre fermée :
+        // l'interrupteur revient sur OFF sans rien écrire. L'astuce du glissement depuis le bord
+        // est retirée (2026-11-20) : SAIC verrouille ce glissement, il ne fait rien.
         var silence = false
         inter.setOnCheckedChangeListener { _, checked ->
             if (silence) return@setOnCheckedChangeListener
             if (!checked) {
                 com.mg4.control.service.ImmersiveApps.setOn(ctx, false)
-                majAstuce(false)
                 return@setOnCheckedChangeListener
             }
-            val label = getString(R.string.immersive_tip_label)
-            val texte = android.text.SpannableStringBuilder(getString(R.string.immersive_confirm_msg))
-                .append("\n\n")
-            val debut = texte.length
-            texte.append(label)
-            texte.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), debut, texte.length,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            texte.append(" — ").append(getString(if (droite) R.string.immersive_tip_right else R.string.immersive_tip_left))
             AppDialog.confirmer(
                 ctx,
                 titre = getString(R.string.immersive_title),
-                message = texte,
+                message = getString(R.string.immersive_confirm_msg),
                 ton = AppDialog.Ton.ALERTE,
                 oui = getString(R.string.immersive_confirm_ok),
                 non = getString(R.string.profile_cancel),
-                onOui = {
-                    com.mg4.control.service.ImmersiveApps.setOn(ctx, true)
-                    if (isAdded) majAstuce(true)
-                },
+                onOui = { com.mg4.control.service.ImmersiveApps.setOn(ctx, true) },
                 onNon = {
                     if (isAdded) { silence = true; inter.isChecked = false; silence = false }
                 },

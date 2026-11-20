@@ -1155,12 +1155,6 @@
     <string name="immersive_by_mg4dash">MG4Dash viser den allerede i fullskjerm</string>
     <string name="immersive_mg4dash_outdated">MG4Dash må oppdateres for å dele fullskjerm med MG4Control. Til da står valget på pause.</string>
     <string name="immersive_confirm_msg">Denne funksjonen endrer en Android-innstilling som deles av alle apper. Den kan komme i konflikt med en egendefinert launcher eller en annen app som også styrer fullskjerm: linjer som kommer tilbake, eller en app som blir værende i fullskjerm. Ved problemer kan du slå den av her.</string>
-    <string name="immersive_tip_label">Tips</string>
-    <string name="immersive_tip_left">sveip fra venstre kant av skjermen mot høyre for å hente tilbake sidelinjen (ovenfra og ned for den øvre linjen). Den skjules igjen etter noen sekunder.</string>
-    <string name="immersive_tip_right">sveip fra høyre kant av skjermen mot venstre for å hente tilbake sidelinjen (ovenfra og ned for den øvre linjen). Den skjules igjen etter noen sekunder.</string>
-    <string name="immersive_reminder_left">Sveip fra venstre kant for å hente tilbake sidelinjen i noen sekunder.</string>
-    <string name="immersive_reminder_right">Sveip fra høyre kant for å hente tilbake sidelinjen i noen sekunder.</string>
-    <string name="immersive_gestures_pending">Sveipebevegelser slått på: de virker etter neste omstart av midtskjermen. Til da kommer ikke skjulte linjer tilbake.</string>
     <string name="immersive_confirm_ok">Slå på</string>
     <string name="immersive_empty">Fant ingen apper</string>
     <string name="shortcuts_cat_preclim">Bilholder</string>

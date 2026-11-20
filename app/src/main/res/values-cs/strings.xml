@@ -1056,12 +1056,6 @@
     <string name="immersive_by_mg4dash">MG4Dash již tuto aplikaci zobrazuje na celé obrazovce</string>
     <string name="immersive_mg4dash_outdated">Pro společnou správu režimu celé obrazovky s MG4Control je nutné aktualizovat MG4Dash. Do té doby je tato volba pozastavena.</string>
     <string name="immersive_confirm_msg">Tato funkce mění nastavení Androidu sdílené všemi aplikacemi. Může kolidovat s jiným launcherem nebo aplikací, která také spravuje režim celé obrazovky: lišty se mohou znovu objevovat nebo aplikace může zůstat na celé obrazovce. Pokud dojde k potížím, vypněte tuto funkci zde.</string>
-    <string name="immersive_tip_label">Tip</string>
-    <string name="immersive_tip_left">přejeďte od levého okraje obrazovky doprava a vrátíte boční lištu (shora dolů pro horní lištu). Po několika sekundách se znovu skryje.</string>
-    <string name="immersive_tip_right">přejeďte od pravého okraje obrazovky doleva a vrátíte boční lištu (shora dolů pro horní lištu). Po několika sekundách se znovu skryje.</string>
-    <string name="immersive_reminder_left">Přejetím od levého okraje vrátíte boční lištu na několik sekund.</string>
-    <string name="immersive_reminder_right">Přejetím od pravého okraje vrátíte boční lištu na několik sekund.</string>
-    <string name="immersive_gestures_pending">Přejetí zapnuta: začnou fungovat po příštím restartu centrální obrazovky. Do té doby se skryté lišty nevrátí.</string>
     <string name="immersive_confirm_ok">Zapnout</string>
     <string name="immersive_empty">Nenalezena žádná aplikace</string>
     <string name="shortcuts_cat_preclim">Hlídání vozu</string>

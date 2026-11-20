@@ -2556,34 +2556,6 @@
 
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tv_immersive_tip"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:paddingBottom="8dp"
-                    android:textColor="@color/dash_text_lo"
-                    android:textSize="18sp"
-                    android:visibility="gone" />
-
-                <!-- Glissements depuis le bord : propriété écrite, actifs seulement après le prochain
-                     démarrage de l'écran central (verrou SAIC, 2026-11-20). Fond posé par le code. -->
-                <TextView
-                    android:id="@+id/tv_immersive_gestures"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="10dp"
-                    android:padding="12dp"
-                    android:drawableStart="@drawable/ic_sym_refresh"
-                    android:drawablePadding="10dp"
-                    android:drawableTint="@color/dash_warn"
-                    android:text="@string/immersive_gestures_pending"
-                    android:textColor="@color/dash_warn"
-                    android:textSize="18sp"
-                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/tv_immersive_outdated"

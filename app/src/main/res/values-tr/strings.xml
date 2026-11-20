@@ -1154,12 +1154,6 @@
     <string name="immersive_by_mg4dash">MG4Dash onu zaten tam ekran yapıyor</string>
     <string name="immersive_mg4dash_outdated">Tam ekranı MG4Control ile paylaşmak için MG4Dash güncellenmeli. O zamana kadar seçenek duraklatıldı.</string>
     <string name="immersive_confirm_msg">Bu özellik, tüm uygulamaların paylaştığı bir Android ayarını değiştirir. Özel bir başlatıcı veya tam ekranı yöneten başka bir uygulamayla çakışabilir: çubuklar geri gelebilir ya da bir uygulama tam ekranda kalabilir. Sorun olursa buradan kapatın.</string>
-    <string name="immersive_tip_label">İpucu</string>
-    <string name="immersive_tip_left">yan çubuğu geri getirmek için ekranın sol kenarından sağa doğru kaydırın (üst çubuk için yukarıdan aşağıya). Birkaç saniye sonra yeniden gizlenir.</string>
-    <string name="immersive_tip_right">yan çubuğu geri getirmek için ekranın sağ kenarından sola doğru kaydırın (üst çubuk için yukarıdan aşağıya). Birkaç saniye sonra yeniden gizlenir.</string>
-    <string name="immersive_reminder_left">Yan çubuğu birkaç saniyeliğine geri getirmek için sol kenardan kaydırın.</string>
-    <string name="immersive_reminder_right">Yan çubuğu birkaç saniyeliğine geri getirmek için sağ kenardan kaydırın.</string>
-    <string name="immersive_gestures_pending">Kaydırma hareketleri etkin: orta ekran bir sonraki yeniden başlatmadan sonra çalışacak. O zamana kadar gizlenen çubuklar geri gelmez.</string>
     <string name="immersive_confirm_ok">Etkinleştir</string>
     <string name="immersive_empty">Uygulama bulunamadı</string>
     <string name="shortcuts_cat_preclim">Araç bekçisi</string>

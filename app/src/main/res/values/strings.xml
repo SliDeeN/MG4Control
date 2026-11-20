@@ -1172,12 +1172,6 @@
     <string name="immersive_by_mg4dash">MG4Dash la met déjà entièrement en plein écran</string>
     <string name="immersive_mg4dash_outdated">MG4Dash doit être mis à jour pour partager le plein écran avec MG4Control. L’option reste en pause d’ici là.</string>
     <string name="immersive_confirm_msg">Cette fonction modifie un réglage d’Android partagé par toutes les applications. Elle peut entrer en conflit avec un lanceur personnalisé ou une autre application qui gère aussi le plein écran : barres qui réapparaissent, ou application qui reste en plein écran. En cas de souci, désactivez-la ici.</string>
-    <string name="immersive_tip_label">Astuce</string>
-    <string name="immersive_tip_left">glissez le doigt depuis le bord gauche de l’écran vers la droite pour faire revenir la barre (depuis le haut vers le bas pour le bandeau). Elle se cache de nouveau après quelques secondes.</string>
-    <string name="immersive_tip_right">glissez le doigt depuis le bord droit de l’écran vers la gauche pour faire revenir la barre (depuis le haut vers le bas pour le bandeau). Elle se cache de nouveau après quelques secondes.</string>
-    <string name="immersive_reminder_left">Glissez depuis le bord gauche pour faire revenir la barre quelques secondes.</string>
-    <string name="immersive_reminder_right">Glissez depuis le bord droit pour faire revenir la barre quelques secondes.</string>
-    <string name="immersive_gestures_pending">Glissements activés : ils marcheront après le prochain redémarrage de l’écran central. Jusque-là, les barres cachées ne reviennent pas.</string>
     <string name="immersive_confirm_ok">Activer</string>
     <string name="immersive_empty">Aucune application trouvée</string>
     <string name="shortcuts_cat_preclim">Garde-voiture</string>

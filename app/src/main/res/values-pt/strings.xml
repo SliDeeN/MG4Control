@@ -1154,12 +1154,6 @@
     <string name="immersive_by_mg4dash">O MG4Dash já a põe em ecrã inteiro</string>
     <string name="immersive_mg4dash_outdated">É preciso atualizar o MG4Dash para partilhar o ecrã inteiro com o MG4Control. Até lá, a opção fica em pausa.</string>
     <string name="immersive_confirm_msg">Esta função altera uma definição do Android partilhada por todas as apps. Pode entrar em conflito com um launcher personalizado ou outra app que também gira o ecrã inteiro: barras que voltam a aparecer, ou uma app que fica em ecrã inteiro. Em caso de problema, desative-a aqui.</string>
-    <string name="immersive_tip_label">Dica</string>
-    <string name="immersive_tip_left">deslize o dedo a partir da margem esquerda do ecrã para a direita para fazer voltar a barra lateral (de cima para baixo para a barra superior). Volta a esconder-se após alguns segundos.</string>
-    <string name="immersive_tip_right">deslize o dedo a partir da margem direita do ecrã para a esquerda para fazer voltar a barra lateral (de cima para baixo para a barra superior). Volta a esconder-se após alguns segundos.</string>
-    <string name="immersive_reminder_left">Deslize a partir da margem esquerda para fazer voltar a barra lateral durante alguns segundos.</string>
-    <string name="immersive_reminder_right">Deslize a partir da margem direita para fazer voltar a barra lateral durante alguns segundos.</string>
-    <string name="immersive_gestures_pending">Deslizes ativados: vão funcionar após o próximo reinício do ecrã central. Até lá, as barras escondidas não voltam.</string>
     <string name="immersive_confirm_ok">Ativar</string>
     <string name="immersive_empty">Nenhuma app encontrada</string>
     <string name="shortcuts_cat_preclim">Guardião do carro</string>

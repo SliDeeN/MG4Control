@@ -1154,12 +1154,6 @@
     <string name="immersive_by_mg4dash">MG4Dash ya la pone en pantalla completa</string>
     <string name="immersive_mg4dash_outdated">Hay que actualizar MG4Dash para compartir la pantalla completa con MG4Control. Hasta entonces, la opción queda en pausa.</string>
     <string name="immersive_confirm_msg">Esta función cambia un ajuste de Android compartido por todas las apps. Puede entrar en conflicto con un launcher personalizado u otra app que también gestione la pantalla completa: barras que vuelven a aparecer o una app que se queda en pantalla completa. Si hay algún problema, desactívala aquí.</string>
-    <string name="immersive_tip_label">Consejo</string>
-    <string name="immersive_tip_left">desliza el dedo desde el borde izquierdo de la pantalla hacia la derecha para que vuelva la barra lateral (desde arriba hacia abajo para la barra superior). Se oculta de nuevo tras unos segundos.</string>
-    <string name="immersive_tip_right">desliza el dedo desde el borde derecho de la pantalla hacia la izquierda para que vuelva la barra lateral (desde arriba hacia abajo para la barra superior). Se oculta de nuevo tras unos segundos.</string>
-    <string name="immersive_reminder_left">Desliza desde el borde izquierdo para que vuelva la barra lateral unos segundos.</string>
-    <string name="immersive_reminder_right">Desliza desde el borde derecho para que vuelva la barra lateral unos segundos.</string>
-    <string name="immersive_gestures_pending">Deslizamientos activados: funcionarán tras el próximo reinicio de la pantalla central. Hasta entonces, las barras ocultas no vuelven.</string>
     <string name="immersive_confirm_ok">Activar</string>
     <string name="immersive_empty">No se encontró ninguna app</string>
     <string name="shortcuts_cat_preclim">Guardián del coche</string>
