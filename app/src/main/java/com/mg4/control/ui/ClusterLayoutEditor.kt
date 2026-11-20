@@ -228,7 +228,13 @@ class ClusterLayoutEditor(
 
     private fun panneau() {
         panneau.removeAllViews()
-        // Module (2026-11-20) : ce que réglait la carte d'avant, toujours en tête.
+        // Le bloc Module (nom, centre, style, unité) va avec la zone du milieu : une case choisie
+        // ne montre que ses propres réglages (retour du 2026-11-20).
+        if (selection == ClusterGaugeView.JAUGE) { panneauModule(); panneauJauge() } else panneauBloc(selection)
+    }
+
+    /** Ce que réglait la carte d'avant (2026-11-20) : nom, centre de l'écran, style, unité de consommation. */
+    private fun panneauModule() {
         titre(ctx.getString(R.string.cluster_module_section))
         etiquette(R.string.cluster_module_name)
         panneau.addView(android.widget.EditText(ctx).apply {
@@ -237,6 +243,16 @@ class ClusterLayoutEditor(
             filters = arrayOf(android.text.InputFilter.LengthFilter(28))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             setTextColor(ctx.getColor(R.color.text_primary))
+            // « OK » au lieu de « Suivant » (retour du 2026-11-20) : ferme le clavier, le champ lâche le focus.
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE or android.view.inputmethod.EditorInfo.IME_FLAG_NO_FULLSCREEN
+            setOnEditorActionListener { champ, action, _ ->
+                if (action != android.view.inputmethod.EditorInfo.IME_ACTION_DONE) return@setOnEditorActionListener false
+                (ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)
+                    ?.hideSoftInputFromWindow(champ.windowToken, 0)
+                champ.clearFocus()
+                true
+            }
             // Un même id regonflé en boucle se recopie à la restauration : pas de sauvegarde d'état.
             isSaveEnabled = false
             addTextChangedListener(object : android.text.TextWatcher {
@@ -275,7 +291,6 @@ class ClusterLayoutEditor(
                 }
             })
         }
-        if (selection == ClusterGaugeView.JAUGE) panneauJauge() else panneauBloc(selection)
     }
 
     private fun panneauJauge() {

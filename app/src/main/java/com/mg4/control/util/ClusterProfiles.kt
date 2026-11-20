@@ -77,6 +77,14 @@ object ClusterProfiles {
      * module coupé, c'est à l'utilisateur de le régler (sa décision).
      */
     fun migrateIfNeeded(ctx: Context) {
+        migrerParProfil(ctx)
+        // Toujours, même quand la reprise par profil est déjà faite : avant le 2026-11-20 (soir), un
+        // `return` dans le runCatching de celle-ci quittait toute la fonction, et la bibliothèque
+        // n'était jamais reprise — les modules réglés disparaissaient à la mise à jour.
+        migrateLibraryIfNeeded(ctx)
+    }
+
+    private fun migrerParProfil(ctx: Context) {
         runCatching {
             val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             if (prefs.getBoolean(KEY_MIGRATED, false)) return
@@ -86,7 +94,6 @@ object ClusterProfiles {
             if (repris) AppLogger.i(TAG, "écran conducteur par profil : réglages communs repris par les profils " +
                 "existants (module ${if (communs.enabled == true) "activé" else "coupé"})")
         }.onFailure { AppLogger.w(TAG, "écran conducteur par profil : reprise des réglages communs — ${it.message}") }
-        migrateLibraryIfNeeded(ctx)
     }
 
     /**
