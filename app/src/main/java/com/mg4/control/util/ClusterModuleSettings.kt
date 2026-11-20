@@ -7,6 +7,9 @@ import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterLayout
 import com.mg4.control.model.ClusterLayouts
 import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ClusterModuleDef
+import com.mg4.control.model.ClusterModuleDefs
+import com.mg4.control.model.ClusterRotation
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ConsumptionUnit
@@ -102,6 +105,9 @@ object ClusterModuleSettings {
     const val KEY_LAYOUT = "cluster_layout"
     /** Disposition de l'onglet Musique, sans profil (2026-11-20). */
     const val KEY_LAYOUT_MEDIA = "cluster_layout_media"
+    /** Modules de chaque onglet, sans profil (2026-11-20) : identifiants séparés par des virgules. */
+    const val KEY_NAV_MODULES = "cluster_nav_modules"
+    const val KEY_MEDIA_MODULES = "cluster_media_modules"
 
     /**
      * Durée du glissement de la jauge d'une valeur à la suivante (issue #152), en ms : 0,2 à 2 s
@@ -121,23 +127,102 @@ object ClusterModuleSettings {
 
     fun isEnabled(ctx: Context?): Boolean = isEnabled(ClusterProfiles.effective(ctx))
 
-    /** Module de [tab], ou `null` pour « Aucun » et pour un onglet dessiné par le combiné. */
-    fun moduleFor(ctx: Context?, tab: ClusterTab): ClusterModule? = moduleFor(ClusterProfiles.effective(ctx), tab)
+    /**
+     * Type du module montré sur [tab] (2026-11-20 : celui de la liste du profil, au rang du raccourci),
+     * ou `null` sans module et pour un onglet dessiné par le combiné.
+     */
+    fun moduleFor(ctx: Context?, tab: ClusterTab): ClusterModule? = shownDef(ctx, tab)?.let(ClusterModuleDefs::module)
 
-    fun consumptionUnit(ctx: Context?): ConsumptionUnit = consumptionUnit(ClusterProfiles.effective(ctx))
+    /** Module montré sur [tab] pour le profil que suit le combiné. */
+    fun shownDef(ctx: Context?, tab: ClusterTab): ClusterModuleDef? {
+        val c = ctx ?: return null
+        val liste = modulesFor(c, tab)
+        if (liste.isEmpty()) return null
+        val i = synchronized(rotation) { rotation.index(ClusterProfiles.shownProfileId(c), tab, liste.size) }
+        return liste[i]
+    }
 
-    fun refreshMs(ctx: Context?): Int = refreshMs(ClusterProfiles.effective(ctx))
+    /** Modules de [tab] pour le profil que suit le combiné, dans l'ordre. */
+    fun modulesFor(ctx: Context, tab: ClusterTab): List<ClusterModuleDef> =
+        ClusterModuleDefs.listFor(ClusterProfiles.effective(ctx), tab, library(ctx))
 
-    fun style(ctx: Context?): ClusterGaugeStyle = style(ClusterProfiles.effective(ctx))
+    /** Rang du module montré, par profil et par onglet ; perdu au redémarrage de l'écran. */
+    val rotation = ClusterRotation()
+
+    /** Raccourci « Module suivant » : passe au module suivant de [tab] ; le nouveau module, ou `null`. */
+    fun nextModule(ctx: Context, tab: ClusterTab): ClusterModuleDef? {
+        val liste = modulesFor(ctx, tab)
+        if (liste.isEmpty()) return null
+        val i = synchronized(rotation) { rotation.next(ClusterProfiles.shownProfileId(ctx), tab, liste.size) }
+        return liste[i]
+    }
+
+    /** Unité de consommation du module montré sur [tab]. */
+    fun consumptionUnit(ctx: Context?, tab: ClusterTab): ConsumptionUnit =
+        ConsumptionUnit.fromKey(shownDef(ctx, tab)?.unit)
+
+    fun style(ctx: Context?, tab: ClusterTab): ClusterGaugeStyle = ClusterGaugeStyle.fromKey(shownDef(ctx, tab)?.style)
+
+    /** Unité de la moyenne par défaut : celle du module montré. */
+    fun averageUnit(ctx: Context?, tab: ClusterTab): AverageUnit = AverageUnit.of(consumptionUnit(ctx, tab))
+
+    // ── Bibliothèque des modules (2026-11-20), commune à tous les profils ────
+
+    const val KEY_LIBRARY = "cluster_module_library"
+    @Volatile private var biblioBrute: String? = null
+    @Volatile private var biblio: List<ClusterModuleDef> = emptyList()
+
+    /** Les modules créés, dans l'ordre ; décodés une fois tant que rien ne change (relu à chaque relevé). */
+    fun library(ctx: Context): List<ClusterModuleDef> {
+        val brut = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LIBRARY, null)
+        if (brut == biblioBrute) return biblio
+        val liste = brut?.let { j ->
+            runCatching { com.google.gson.Gson().fromJson(j, Array<ClusterModuleDef>::class.java).toList() }.getOrNull()
+        }.orEmpty().filter { it.id.isNotBlank() }
+        biblio = liste
+        biblioBrute = brut
+        return liste
+    }
+
+    fun saveLibrary(ctx: Context, liste: List<ClusterModuleDef>) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_LIBRARY, com.google.gson.Gson().toJson(liste)).apply()
+    }
+
+    fun hasLibrary(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(KEY_LIBRARY)
+
+    // ── Réglages communs (2026-11-20) : la voiture, pas un module ni un profil ──
+
+    const val KEY_COMMON_REFRESH = "cluster_common_refresh_ms"
+    const val KEY_COMMON_ANIMATION = "cluster_common_animation_ms"
+    /** Puissance maxi choisie (kW) ; absente = Auto. */
+    const val KEY_COMMON_POWER_MAX = "cluster_common_power_max"
+
+    fun refreshMs(ctx: Context?): Int = sanitizeRefresh(
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.takeIf { it.contains(KEY_COMMON_REFRESH) }?.getInt(KEY_COMMON_REFRESH, DEFAULT_REFRESH_MS)
+            ?: ClusterProfiles.effective(ctx).refreshMs)
+
+    fun animationMs(ctx: Context?): Int = sanitizeAnimation(
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.takeIf { it.contains(KEY_COMMON_ANIMATION) }?.getInt(KEY_COMMON_ANIMATION, DEFAULT_ANIMATION_MS)
+            ?: ClusterProfiles.effective(ctx).animationMs)
+
+    /** Puissance maxi choisie, ou `null` pour Auto. */
+    fun powerMaxChoice(ctx: Context?): Int? {
+        val p = ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE) ?: return null
+        val v = if (p.contains(KEY_COMMON_POWER_MAX)) p.getInt(KEY_COMMON_POWER_MAX, 0) else ClusterProfiles.effective(ctx).powerMax
+        return v?.takeIf { it in PowerScale.CHOIX_KW }
+    }
+
+    fun setRefreshMs(ctx: Context, ms: Int) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_COMMON_REFRESH, sanitizeRefresh(ms)).apply()
+    fun setAnimationMs(ctx: Context, ms: Int) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_COMMON_ANIMATION, sanitizeAnimation(ms)).apply()
+    fun setPowerMax(ctx: Context, kw: Int?) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        .apply { if (kw == null) putInt(KEY_COMMON_POWER_MAX, 0) else putInt(KEY_COMMON_POWER_MAX, kw) }.apply()
 
     /**
      * Unité de distance : le réglage général de l'appli depuis le 2026-11-10 ([DistanceSetting]),
      * qui a repris le choix fait ici. En Auto, relit la voiture (binder, au plus une fois par minute).
      */
     fun distanceUnit(ctx: Context?): DistanceUnit = DistanceSetting.unitReading(ctx)
-
-    /** Sans choix, l'unité de la jauge. */
-    fun averageUnit(ctx: Context?): AverageUnit = averageUnit(ClusterProfiles.effective(ctx))
 
     fun pill(ctx: Context?): ClusterPill = pill(ClusterProfiles.effective(ctx))
 
@@ -146,8 +231,6 @@ object ClusterModuleSettings {
     /** Disposition de l'onglet [tab] (2026-11-20). */
     fun layout(ctx: Context?, tab: ClusterTab?): ClusterLayout = layout(ClusterProfiles.effective(ctx), tab)
 
-    fun animationMs(ctx: Context?): Int = animationMs(ClusterProfiles.effective(ctx))
-
     // ── Fin de l'échelle de puissance (issue #165) ───────────────────────────
     // Le CHOIX appartient au profil comme le reste de la carte ; le plafond APPRIS est celui de la
     // voiture, commun à tous les profils.
@@ -155,8 +238,8 @@ object ClusterModuleSettings {
     const val KEY_POWER_LEARNED = "cluster_power_learned"
     const val KEY_POWER_PEAKS = "cluster_power_peaks"
 
-    /** Fin de l'échelle pour le profil que suit le combiné. */
-    fun fullScaleKw(ctx: Context?): Float = fullScaleKw(ClusterProfiles.effective(ctx), learnedPowerKw(ctx))
+    /** Fin de l'échelle : la puissance maxi commune, ou Auto (apprise). */
+    fun fullScaleKw(ctx: Context?): Float = PowerScale.pleineEchelle(powerMaxChoice(ctx), learnedPowerKw(ctx))
 
     fun fullScaleKw(c: ClusterConfig, appris: Int): Float = PowerScale.pleineEchelle(powerMaxChoice(c), appris)
 
@@ -205,7 +288,9 @@ object ClusterModuleSettings {
         },
             layoutMedia = p.getString(KEY_LAYOUT_MEDIA, null)?.let { j ->
                 runCatching { com.google.gson.Gson().fromJson(j, ClusterLayout::class.java) }.getOrNull()
-            })
+            },
+            navModules = p.getString(KEY_NAV_MODULES, null)?.split(',')?.filter { it.isNotBlank() },
+            mediaModules = p.getString(KEY_MEDIA_MODULES, null)?.split(',')?.filter { it.isNotBlank() })
     }
 
     /** Sans aucun profil, la carte règle les réglages communs : ils sont réécrits en entier. */
@@ -224,6 +309,8 @@ object ClusterModuleSettings {
             c.powerMax?.let { putInt(KEY_POWER_MAX, it) } ?: remove(KEY_POWER_MAX)
             c.layout?.let { putString(KEY_LAYOUT, com.google.gson.Gson().toJson(it)) } ?: remove(KEY_LAYOUT)
             c.layoutMedia?.let { putString(KEY_LAYOUT_MEDIA, com.google.gson.Gson().toJson(it)) } ?: remove(KEY_LAYOUT_MEDIA)
+            c.navModules?.let { putString(KEY_NAV_MODULES, it.joinToString(",")) } ?: remove(KEY_NAV_MODULES)
+            c.mediaModules?.let { putString(KEY_MEDIA_MODULES, it.joinToString(",")) } ?: remove(KEY_MEDIA_MODULES)
         }.apply()
     }
 

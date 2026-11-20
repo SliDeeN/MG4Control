@@ -144,6 +144,11 @@ internal object ClusterModuleOverlay {
     private var ongletLuMs = 0L
     private var lectureEchouee = false
     private var dernierModule: ClusterModule? = null
+    /** Onglet dont le module était montré au dernier relevé (style du lissage, raccourci). */
+    @Volatile private var ongletMontre: ClusterTab = ClusterTab.NAVIGATION
+    /** Nom du module affiché ~1 s après le raccourci « Module suivant », et jusqu'à quand (elapsedRealtime). */
+    @Volatile private var bandeau: Pair<String, Long>? = null
+    private var dernierDefId: String? = null
     private var dernierPreClim = false
     private var mode: DriveMode? = null
     /** Cases d'information (issue #229) : signaux relus toutes les [SIGNAUX_MS], mots de la langue choisie. */
@@ -300,6 +305,28 @@ internal object ClusterModuleOverlay {
             lecteur.post(tic)
         }
     }
+
+    /**
+     * Raccourci « Module suivant » (2026-11-20) : le module suivant de la liste de l'onglet affiché
+     * pour le profil en cours, son nom ~1 s sur le combiné. Un seul module ou aucun : un mot au journal.
+     */
+    fun nextModule(ctx: Context) {
+        val app = ctx.applicationContext
+        lecteur.post {
+            val tab = ongletMontre
+            val liste = ClusterModuleSettings.modulesFor(app, tab)
+            if (liste.size < 2) {
+                AppLogger.i(TAG, "module suivant : ${liste.size} module(s) sur l'onglet ${tab.name}, rien à faire")
+                return@post
+            }
+            val m = ClusterModuleSettings.nextModule(app, tab) ?: return@post
+            AppLogger.i(TAG, "module suivant (onglet ${tab.name}) → « ${m.name} »")
+            bandeau = m.name to SystemClock.elapsedRealtime() + BANDEAU_MS
+            if (enMarche) { lecteur.removeCallbacks(tic); lecteur.post(tic) }
+        }
+    }
+
+    private const val BANDEAU_MS = 1_200L
 
     /** Arrêt du service. */
     fun stop() {
@@ -476,7 +503,7 @@ internal object ClusterModuleOverlay {
             // Lissage par relevé : plus la cadence est rapide, plus la jauge suit vite. C'est ce
             // qu'on demande au curseur — le chiffre bouge aussi davantage. Style discret (issue
             // #153) : lissage dans le temps, deux secondes quelle que soit la cadence.
-            val style = ClusterModuleSettings.style(ctx)
+            val style = ClusterModuleSettings.style(ctx, ongletMontre)
             if (kw != null) {
                 kwLisse = if (style == ClusterGaugeStyle.DISCREET)
                     ClusterGauge.smoothTime(kwLisse, kw, maintenant - dernierKwMs)
@@ -565,7 +592,16 @@ internal object ClusterModuleOverlay {
             val module = ClusterModuleSettings.moduleToShow(onglet, navigation, musique)
             // Disposition de l'onglet montré (2026-11-20 : chaque onglet a ses cases) ; le profil
             // n'est lu que si une case le montre (issue #229).
-            val disposition = ClusterModuleSettings.layout(ctx, ClusterModuleSettings.tabShown(onglet, navigation))
+            val montre = ClusterModuleSettings.tabShown(onglet, navigation)
+            if (montre != null) ongletMontre = montre
+            // Module de la bibliothèque (2026-11-20) : sa disposition, son style, son unité.
+            val def = montre?.let { ClusterModuleSettings.shownDef(ctx, it) }
+            if (def?.id != dernierDefId) {
+                dernierDefId = def?.id
+                if (def != null) AppLogger.i(TAG, "module montré : « ${def.name} » (${def.type})")
+            }
+            val disposition = def?.let(com.mg4.control.model.ClusterModuleDefs::layout)
+                ?: ClusterModuleSettings.layout(ctx, montre)
             val idActif = if (ClusterBlocks.usesProfile(disposition)) ActiveProfile.id(ctx) else null
             if (idActif != profilId || (lent && idActif != null)) {
                 profilId = idActif
@@ -609,11 +645,11 @@ internal object ClusterModuleOverlay {
                     pastille = null,
                     moyenneWhKm = trajet.averageWhPerKm(),
                     recupWh = trajet.regenWh(),
-                    unite = ClusterModuleSettings.consumptionUnit(ctx),
-                    uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
+                    unite = com.mg4.control.model.ConsumptionUnit.fromKey(def?.unit),
+                    uniteMoyenne = com.mg4.control.model.AverageUnit.of(com.mg4.control.model.ConsumptionUnit.fromKey(def?.unit)),
                     // Réglage général ; Auto : l'unité de la voiture, relue au plus une fois par minute (binder, ce fil).
                     distance = ClusterModuleSettings.distanceUnit(ctx),
-                    style = style,
+                    style = com.mg4.control.model.ClusterGaugeStyle.fromKey(def?.style),
                     pleineEchelleKw = ClusterModuleSettings.fullScaleKw(ctx),
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,
@@ -621,6 +657,7 @@ internal object ClusterModuleOverlay {
                     blocs = blocs,
                     // Module « Pneus » : relevé partagé de moins de 2 s (ce fil, binder).
                     pneus = if (it == ClusterModule.TYRES) pneus(ctx) else null,
+                    bandeau = bandeau?.takeIf { b -> maintenant < b.second }?.first,
                 )
             }
             main.post {

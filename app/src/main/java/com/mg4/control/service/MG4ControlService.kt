@@ -1021,6 +1021,12 @@ class MG4ControlService : Service() {
             return
         }
 
+        // CLUSTER_NEXT_MODULE : module suivant sur l'onglet affiché de l'écran conducteur.
+        if (action == ShortcutAction.CLUSTER_NEXT_MODULE) {
+            ClusterModuleOverlay.nextModule(this@MG4ControlService)
+            return
+        }
+
         // TYRE_POPUP : même famille — un second appui referme la fenêtre.
         if (action == ShortcutAction.TYRE_POPUP) {
             TyrePopupOverlay.toggle(this@MG4ControlService)

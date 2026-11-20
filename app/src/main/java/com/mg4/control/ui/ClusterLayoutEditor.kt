@@ -27,6 +27,8 @@ import com.mg4.control.model.ClusterInfo
 import com.mg4.control.model.ClusterLayout
 import com.mg4.control.model.ClusterLayouts
 import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ClusterModuleDef
+import com.mg4.control.model.ClusterModuleDefs
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.DistanceUnit
 import com.mg4.control.model.DrivingProfile
@@ -43,21 +45,26 @@ import com.mg4.control.util.DistanceSetting
  * s'échange avec la case où on le dépose, la jauge se pose en haut, au milieu ou en bas. À droite,
  * les réglages de l'élément choisi.
  *
- * Chaque onglet (Navigation, Musique) a sa disposition (2026-11-20) : on choisit en haut l'onglet
- * réglé, l'aperçu montre son vrai module (jauge ou pneus). Rien n'est enregistré avant
- * « Enregistrer » : [surEnregistre] reçoit les deux dispositions et le style.
+ * Depuis le 2026-11-20 (prototype validé), elle règle UN module de la bibliothèque : en tête du
+ * panneau, ce que réglait l'ancienne carte — nom, centre de l'écran (consommation, puissance,
+ * pneus), style, unité de consommation ; Dupliquer et Supprimer dans l'en-tête. Rien n'est
+ * enregistré avant « Enregistrer » : [surEnregistre] reçoit le module.
  *
- * @param depart     réglages de départ (ceux du premier profil sélectionné dans la carte)
- * @param profil     profil nommé dans l'aperçu
- * @param onglet     onglet montré dans l'aperçu de la carte : réglé en premier
+ * @param depart        le module réglé (un brouillon pour un nouveau)
+ * @param nouveau       module pas encore dans la bibliothèque : ni Dupliquer ni Supprimer
+ * @param utilisations  où il est utilisé (« Paul · Navigation 1 »…), pour le sous-titre
+ * @param commun        réglages communs (puissance maxi…) pour l'aperçu
  */
 class ClusterLayoutEditor(
     private val ctx: Context,
-    private val depart: ClusterConfig,
+    depart: ClusterModuleDef,
+    private val nouveau: Boolean,
+    private val utilisations: String,
     private val profil: DrivingProfile?,
-    private val sousTitre: CharSequence,
-    onglet: ClusterTab,
-    private val surEnregistre: (navigation: ClusterLayout, musique: ClusterLayout, style: String?) -> Unit,
+    private val commun: ClusterConfig,
+    private val surEnregistre: (ClusterModuleDef) -> Unit,
+    private val surDupliquer: (ClusterModuleDef) -> Unit = {},
+    private val surSupprimer: () -> Unit = {},
 ) {
     private val racine = LayoutInflater.from(ctx).inflate(R.layout.dialog_cluster_layout, null)
     private val panneau = racine.findViewById<LinearLayout>(R.id.panel_cluster_layout)
@@ -67,56 +74,73 @@ class ClusterLayoutEditor(
     private val handler = Handler(Looper.getMainLooper())
     private var dialog: AlertDialog? = null
 
-    /** Onglet réglé : celui de l'aperçu de la carte, Navigation à défaut. */
-    private var ongletRegle: ClusterTab = if (onglet == ClusterTab.MEDIA) ClusterTab.MEDIA else ClusterTab.NAVIGATION
-    private val dispositions = mutableMapOf(
-        ClusterTab.NAVIGATION to ClusterModuleSettings.layout(depart, ClusterTab.NAVIGATION),
-        ClusterTab.MEDIA to ClusterModuleSettings.layout(depart, ClusterTab.MEDIA),
-    )
-    /** La disposition de l'onglet réglé. */
+    /** Le module en cours de réglage. */
+    private var def: ClusterModuleDef = depart.copy(layout = ClusterModuleDefs.layout(depart))
     private var disposition: ClusterLayout
-        get() = dispositions.getValue(ongletRegle)
-        set(v) { dispositions[ongletRegle] = v }
-    private var style: String? = depart.style
-    /** Module de l'onglet réglé, tel que choisi dans la carte ; « Aucun » : la consommation en aperçu. */
-    private val module: ClusterModule
-        get() = ClusterModuleSettings.moduleFor(depart, ongletRegle) ?: ClusterModule.CONSUMPTION
+        get() = def.layout ?: ClusterModuleDefs.layout(def)
+        set(v) { def = def.copy(layout = v) }
+    private val style: String? get() = def.style
+    private val module: ClusterModule get() = ClusterModuleDefs.module(def)
     /** Élément réglé à droite : une case (0 à 3) ou [ClusterGaugeView.JAUGE]. */
     private var selection: Int = ClusterGaugeView.JAUGE
 
     private fun dp(v: Float) = OverlayKit.dp(ctx, v)
 
     fun ouvrir() {
-        racine.findViewById<TextView>(R.id.tv_cluster_layout_subtitle).text = sousTitre
-        apercu.reglages = depart
+        majSousTitre()
         apercu.profilMontre = profil
-        apercu.moduleForce = module
-        apercu.disposition = disposition
-        apercu.demarrer()
         brancherToucher()
         racine.findViewById<View>(R.id.btn_cluster_layout_reset).setOnClickListener {
-            disposition = ClusterLayouts.defaults(depart.copy(layout = null))
+            disposition = ClusterModuleDefs.defaultLayout(module, def.style, def.unit)
             selection = ClusterGaugeView.JAUGE
             maj()
         }
         racine.findViewById<View>(R.id.btn_cluster_layout_cancel).setOnClickListener { dialog?.dismiss() }
         racine.findViewById<View>(R.id.btn_cluster_layout_save).setOnClickListener {
-            AppLogger.i("MG4_SETTINGS", "Écran conducteur, personnalisation avancée enregistrée : navigation " +
-                "${dispositions[ClusterTab.NAVIGATION]}, musique ${dispositions[ClusterTab.MEDIA]}, style $style")
-            val nav = dispositions.getValue(ClusterTab.NAVIGATION)
-            val musique = dispositions.getValue(ClusterTab.MEDIA)
-            surEnregistre(nav, musique, style)
+            val nom = def.name.trim().ifEmpty { nomType(module) }
+            val fini = def.copy(name = nom)
+            AppLogger.i("MG4_SETTINGS", "Écran conducteur : module « $nom » enregistré${if (nouveau) " (nouveau)" else ""} — $fini")
+            surEnregistre(fini)
             dialog?.dismiss()
         }
+        racine.findViewById<View>(R.id.btn_cluster_module_duplicate).apply {
+            visibility = if (nouveau) View.GONE else View.VISIBLE
+            setOnClickListener { dialog?.dismiss(); surDupliquer(def) }
+        }
+        racine.findViewById<View>(R.id.btn_cluster_module_delete).apply {
+            visibility = if (nouveau) View.GONE else View.VISIBLE
+            setOnClickListener {
+                AppDialog.confirmer(ctx,
+                    titre = ctx.getString(R.string.cluster_module_delete_title),
+                    message = ctx.getString(R.string.cluster_module_delete_msg, def.name),
+                    ton = AppDialog.Ton.ALERTE,
+                    oui = ctx.getString(R.string.cluster_module_delete),
+                    non = ctx.getString(R.string.profile_cancel),
+                    onOui = { dialog?.dismiss(); surSupprimer() },
+                    onNon = {})
+            }
+        }
         maj()
+        apercu.demarrer()
         dialog = AppDialog.afficher(ctx, racine, LARGEUR_DP).also { it.setOnDismissListener { apercu.arreter() } }
     }
 
+    private fun majSousTitre() {
+        racine.findViewById<TextView>(R.id.tv_cluster_layout_subtitle).text =
+            ctx.getString(R.string.cluster_module_subtitle, def.name.ifBlank { nomType(module) }) +
+                (if (utilisations.isNotEmpty()) " · $utilisations" else "")
+    }
+
+    private fun nomType(m: ClusterModule): String = ctx.getString(when (m) {
+        ClusterModule.CONSUMPTION -> R.string.settings_cluster_consumption
+        ClusterModule.POWER -> R.string.settings_cluster_power
+        ClusterModule.TYRES -> R.string.settings_cluster_tyres
+    })
+
     private fun maj() {
         apercu.moduleForce = module
-        apercu.onglet = ongletRegle
         apercu.disposition = disposition
-        apercu.reglages = depart.copy(style = style, layout = disposition)
+        apercu.reglages = ClusterModuleDefs.asConfig(def, commun)
         apercu.jauge.edition = (apercu.jauge.edition ?: ClusterGaugeView.Edition()).copy(selection = selection)
         panneau()
     }
@@ -204,26 +228,53 @@ class ClusterLayoutEditor(
 
     private fun panneau() {
         panneau.removeAllViews()
-        // Onglet réglé (2026-11-20) : chacun ses cases et sa place de jauge ; son module entre parenthèses.
-        rangee(R.string.cluster_layout_tab, listOf(
-            ClusterTab.NAVIGATION to R.string.settings_cluster_row_nav,
-            ClusterTab.MEDIA to R.string.settings_cluster_row_media,
-        ).map { (t, nom) ->
-            val m = ClusterModuleSettings.moduleFor(depart, t)
-            val quoi = ctx.getString(when (m) {
-                null -> R.string.settings_cluster_none
-                ClusterModule.CONSUMPTION -> R.string.settings_cluster_consumption
-                ClusterModule.POWER -> R.string.settings_cluster_power
-                ClusterModule.TYRES -> R.string.settings_cluster_tyres
+        // Module (2026-11-20) : ce que réglait la carte d'avant, toujours en tête.
+        titre(ctx.getString(R.string.cluster_module_section))
+        etiquette(R.string.cluster_module_name)
+        panneau.addView(android.widget.EditText(ctx).apply {
+            setText(def.name)
+            isSingleLine = true
+            filters = arrayOf(android.text.InputFilter.LengthFilter(28))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setTextColor(ctx.getColor(R.color.text_primary))
+            // Un même id regonflé en boucle se recopie à la restauration : pas de sauvegarde d'état.
+            isSaveEnabled = false
+            addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun onTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun afterTextChanged(e: android.text.Editable?) {
+                    def = def.copy(name = e?.toString().orEmpty())
+                    majSousTitre()
+                }
             })
-            Option(ctx.getString(nom) + "\n" + quoi, ongletRegle == t) {
-                if (ongletRegle != t) {
-                    ongletRegle = t
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        rangee(R.string.cluster_module_center, listOf(ClusterModule.CONSUMPTION, ClusterModule.POWER, ClusterModule.TYRES).map { m ->
+            Option(nomType(m), module == m) {
+                if (module != m) {
+                    // Vers les pneus : la disposition reste (cases comprises). D'une disposition sans
+                    // case vers une jauge : celle par défaut de la jauge.
+                    val vide = disposition.slots.orEmpty().all { it == null }
+                    def = def.copy(type = m.key, layout = if (m == ClusterModule.TYRES || !vide) disposition
+                        else ClusterModuleDefs.defaultLayout(m, def.style, def.unit))
                     selection = ClusterGaugeView.JAUGE
                     maj()
                 }
             }
         })
+        if (module != ClusterModule.TYRES) {
+            rangee(R.string.settings_cluster_row_style, listOf(
+                ClusterGaugeStyle.DYNAMIC to R.string.settings_cluster_style_dynamic,
+                ClusterGaugeStyle.DISCREET to R.string.settings_cluster_style_discreet,
+            ).map { (st, t) -> Option(ctx.getString(t), ClusterGaugeStyle.fromKey(style) == st) {
+                def = def.copy(style = st.key.takeIf { st != ClusterGaugeStyle.DYNAMIC }); maj()
+            } })
+            val distance = DistanceSetting.unit(ctx)
+            rangee(R.string.cluster_module_unit, com.mg4.control.model.ConsumptionUnit.entries.map { u ->
+                Option(u.labelFor(distance), com.mg4.control.model.ConsumptionUnit.fromKey(def.unit) == u) {
+                    def = def.copy(unit = u.key); maj()
+                }
+            })
+        }
         if (selection == ClusterGaugeView.JAUGE) panneauJauge() else panneauBloc(selection)
     }
 
@@ -240,10 +291,6 @@ class ClusterLayoutEditor(
             note(R.string.cluster_layout_tyre_unit_note)
             return
         }
-        rangee(R.string.settings_cluster_row_style, listOf(
-            ClusterGaugeStyle.DYNAMIC to R.string.settings_cluster_style_dynamic,
-            ClusterGaugeStyle.DISCREET to R.string.settings_cluster_style_discreet,
-        ).map { (st, t) -> Option(ctx.getString(t), ClusterGaugeStyle.fromKey(style) == st) { style = st.key; maj() } })
         positionJauge()
         val ep = disposition.thickness ?: ClusterLayouts.NORMAL
         rangee(R.string.cluster_layout_thickness, listOf(
@@ -459,7 +506,7 @@ class ClusterLayoutEditor(
             surChoix(c)
             // Pas de maj() : le panneau se referait sous le doigt pendant la saisie du code.
             apercu.disposition = disposition
-            apercu.reglages = depart.copy(style = style, layout = disposition)
+            apercu.reglages = ClusterModuleDefs.asConfig(def, commun)
         }.peindre(actuelle)
     }
 

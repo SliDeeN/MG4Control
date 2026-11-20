@@ -118,7 +118,10 @@ enum class ShortcutAction(val id: Int) {
     TRACK_MODE(54),
     // Pop-up Pression des pneus (2026-11-20) : pression, température et état des quatre pneus, unité
     // au choix (voir TyrePopupOverlay). Un second appui le referme. N'écrit rien.
-    TYRE_POPUP(55);
+    TYRE_POPUP(55),
+    // Module suivant de l'écran conducteur (2026-11-20) : le module suivant de la liste de l'onglet
+    // affiché, pour le profil en cours (voir ClusterModuleOverlay.nextModule). N'écrit rien.
+    CLUSTER_NEXT_MODULE(56);
 
     companion object {
         /**

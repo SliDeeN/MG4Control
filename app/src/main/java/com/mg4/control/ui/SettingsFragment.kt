@@ -21,6 +21,7 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.view.LayoutInflater
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -71,6 +72,8 @@ import com.mg4.control.model.ClusterConfigs
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ClusterModuleDefs
+import com.mg4.control.model.ClusterModuleDef
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ConsumptionUnit
@@ -101,6 +104,8 @@ class SettingsFragment : Fragment() {
 
     /** Aperçu du combiné (carte Écran conducteur) : animé seulement quand l'écran est au premier plan. */
     private var apercuCombine: ClusterSettingsPreview? = null
+    /** dp → px, pour les listes et cartes de l'écran conducteur posées par le code. */
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
     /** Panneau « Avancé » de la carte Écran conducteur : replié à l'ouverture des Réglages. */
     private var avanceOuvert = false
     /** Profils réglés par la carte Écran conducteur (« Réglage de : »), par identifiant. */
@@ -389,28 +394,19 @@ class SettingsFragment : Fragment() {
             }
         }
 
-        // ── Module sur le combiné : interrupteur et un module par onglet ──────
-        // Désactivé par défaut ; activer déplie le choix. Le service relit l'interrupteur aussitôt
-        // (ClusterModuleOverlay.refresh), et les modules à chaque relevé : rien à redémarrer.
-        // Réservé aux firmwares où le combiné montre l'écran central : SWI133, SWI68, SWI165.
-        //
-        // Par profil depuis le 2026-10-24 : tout ce que règle la carte appartient aux profils
-        // choisis dans « Réglage de : », un ou plusieurs à la fois. À l'ouverture, celui que suit le
-        // combiné. Profils sélectionnés en désaccord : aucun bouton allumé et l'étiquette le dit ;
-        // un choix les aligne tous. Sans aucun profil, la carte règle les réglages communs d'avant.
+        // ── Écran conducteur (refonte du 2026-11-20, prototype validé) ──────────
+        // Une bibliothèque de modules commune à tous les profils (« Mes modules ») ; pour les profils
+        // choisis dans « Réglage de : », l'interrupteur et une liste ordonnée de modules par onglet
+        // (le n° 1 s'affiche, le raccourci « Module suivant » passe au suivant). Puissance maxi,
+        // actualisation et animation sont communes (repliées). Plus d'aperçu sur la carte : il
+        // n'existe que dans la personnalisation d'un module. Réservé aux firmwares où le combiné
+        // montre l'écran central : SWI133, SWI68, SWI165.
         view.findViewById<View>(R.id.card_cluster_module).visibility =
             if (ClusterModuleSettings.isSupported()) View.VISIBLE else View.GONE
         val switchCluster = view.findViewById<Switch>(R.id.switch_cluster_module)
         val rowClusterChoice = view.findViewById<View>(R.id.row_cluster_choice)
         val rowClusterRefresh = view.findViewById<View>(R.id.row_cluster_refresh)
-        // Refonte A (2026-10-17) : aperçu animé à gauche, « Avancé » replié (actualisation, animation).
-        val apercu = ClusterSettingsPreview(view.findViewById(R.id.frame_cluster_preview),
-            view.findViewById(R.id.tv_cluster_preview_none))
-        apercuCombine = apercu
-        val ongletsApercu: List<Pair<ClusterTab, MaterialButton>> = listOf(
-            ClusterTab.NAVIGATION to view.findViewById(R.id.btn_cluster_preview_nav),
-            ClusterTab.MEDIA to view.findViewById(R.id.btn_cluster_preview_media),
-        )
+        apercuCombine = null
         val tvAvance = view.findViewById<TextView>(R.id.tv_cluster_advanced)
         val tvChevron = view.findViewById<TextView>(R.id.tv_cluster_advanced_chevron)
         val tvClusterRefresh = view.findViewById<TextView>(R.id.tv_cluster_refresh)
@@ -427,35 +423,15 @@ class SettingsFragment : Fragment() {
         val grilleProfils = view.findViewById<LinearLayout>(R.id.grid_cluster_profiles)
         val tvProfilsInfo = view.findViewById<TextView>(R.id.tv_cluster_profiles_info)
         val tvModuleMixte = view.findViewById<TextView>(R.id.tv_cluster_module_mixed)
+        val conteneurOnglets = view.findViewById<LinearLayout>(R.id.cluster_tabs)
+        val conteneurBiblio = view.findViewById<LinearLayout>(R.id.cluster_library)
+        val rangeeTpms = view.findViewById<LinearLayout>(R.id.cluster_tyre_unit_row)
+        val tvOngletsTitre = view.findViewById<TextView>(R.id.tv_cluster_tabs_title)
         val mixte = getString(R.string.settings_cluster_mixed)
-        val mixteCourt = getString(R.string.settings_cluster_mixed_short)
         val couleurMixte = requireContext().getColor(R.color.dash_warn)
         // Le nombre est écrit dans la langue de l'application (0,5 s / 0.5 s), jamais Locale.ROOT.
         val langue = requireContext().resources.configuration.locales[0]
         fun texteActualisation(ms: Int) = String.format(langue, "%.1f s", ms / 1000f)
-        // Pour chaque onglet : « Aucun » (null), Consommation, Puissance, Pneus (2026-11-20).
-        val clusterBtns: List<Triple<ClusterTab, ClusterModule?, MaterialButton>> = listOf(
-            Triple(ClusterTab.NAVIGATION, null, view.findViewById(R.id.btn_cluster_nav_none)),
-            Triple(ClusterTab.NAVIGATION, ClusterModule.CONSUMPTION, view.findViewById(R.id.btn_cluster_nav_consumption)),
-            Triple(ClusterTab.NAVIGATION, ClusterModule.POWER, view.findViewById(R.id.btn_cluster_nav_power)),
-            Triple(ClusterTab.NAVIGATION, ClusterModule.TYRES, view.findViewById(R.id.btn_cluster_nav_tyres)),
-            Triple(ClusterTab.MEDIA, null, view.findViewById(R.id.btn_cluster_media_none)),
-            Triple(ClusterTab.MEDIA, ClusterModule.CONSUMPTION, view.findViewById(R.id.btn_cluster_media_consumption)),
-            Triple(ClusterTab.MEDIA, ClusterModule.POWER, view.findViewById(R.id.btn_cluster_media_power)),
-            Triple(ClusterTab.MEDIA, ClusterModule.TYRES, view.findViewById(R.id.btn_cluster_media_tyres)),
-        )
-        // Unité de la consommation : Wh/km ou kWh/100 km (2026-10-15).
-        val unitBtns: List<Pair<ConsumptionUnit, MaterialButton>> = listOf(
-            ConsumptionUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_unit_wh),
-            ConsumptionUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_unit_kwh),
-        )
-        // Style des modules (issue #153) : dynamique ou discret.
-        val styleBtns: List<Pair<ClusterGaugeStyle, MaterialButton>> = listOf(
-            ClusterGaugeStyle.DYNAMIC to view.findViewById(R.id.btn_cluster_style_dynamic),
-            ClusterGaugeStyle.DISCREET to view.findViewById(R.id.btn_cluster_style_discreet),
-        )
-        // La pastille et l'unité de la moyenne du trajet se règlent sur leur case, dans la
-        // personnalisation avancée (issue #229) : leurs lignes ont quitté la carte.
         // Puissance maxi de la jauge (issue #165) : Auto (`null`, apprise) ou une puissance choisie.
         val powerBtns: List<Pair<Int?, MaterialButton>> = listOf(
             null to view.findViewById(R.id.btn_cluster_power_auto),
@@ -465,13 +441,6 @@ class SettingsFragment : Fragment() {
             320 to view.findViewById(R.id.btn_cluster_power_320),
         )
         val tvPowerDesc = view.findViewById<TextView>(R.id.tv_cluster_power_desc)
-        // Étiquette de chaque ligne et son texte, pour y écrire « différent selon les profils ».
-        fun etiquette(id: Int, texte: Int) = view.findViewById<TextView>(id) to getString(texte)
-        val etiqNav = etiquette(R.id.tv_cluster_label_nav, R.string.settings_cluster_row_nav)
-        val etiqMedia = etiquette(R.id.tv_cluster_label_media, R.string.settings_cluster_row_media)
-        val etiqStyle = etiquette(R.id.tv_cluster_label_style, R.string.settings_cluster_row_style)
-        val etiqPower = etiquette(R.id.tv_cluster_label_power, R.string.settings_cluster_row_power)
-        val etiqGauge = etiquette(R.id.tv_cluster_label_gauge, R.string.settings_cluster_row_gauge)
 
         selectionCombine = emptySet()
         var profils: List<DrivingProfile> = emptyList()
@@ -494,24 +463,266 @@ class SettingsFragment : Fragment() {
                 AppLogger.i(ClusterModuleOverlay.TAG, "$quoi (${nomsChoisis()})")
             }
         }
-        /** Boutons d'une ligne : allumé celui de la valeur commune ; en désaccord, aucun, et l'étiquette le dit. */
-        fun <T> ligne(etiq: Pair<TextView, String>, valeurs: List<T>, boutons: List<Pair<T, MaterialButton>>) {
-            val v = valeurs.distinct()
-            boutons.forEach { (x, btn) -> peindre(btn, v.size == 1 && x == v[0]) }
-            val (tv, texte) = etiq
-            tv.text = if (v.size == 1) texte else SpannableString("$texte\n$mixte").apply {
-                setSpan(ForegroundColorSpan(couleurMixte), texte.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                setSpan(RelativeSizeSpan(0.8f), texte.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        /** Réglages communs, pour l'aperçu de la personnalisation. */
+        fun commun(): ClusterConfig = ClusterConfig(
+            refreshMs = ClusterModuleSettings.refreshMs(requireContext()),
+            animationMs = ClusterModuleSettings.animationMs(requireContext()),
+            powerMax = ClusterModuleSettings.powerMaxChoice(requireContext()),
+        )
+        fun nomType(m: ClusterModule): String = getString(when (m) {
+            ClusterModule.CONSUMPTION -> R.string.settings_cluster_consumption
+            ClusterModule.POWER -> R.string.settings_cluster_power
+            ClusterModule.TYRES -> R.string.settings_cluster_tyres
+        })
+        fun nomOnglet(t: ClusterTab) = getString(if (t == ClusterTab.MEDIA) R.string.settings_cluster_row_media else R.string.settings_cluster_row_nav)
+        /** Où un module est utilisé : « Paul · Navigation 1 »… pour tous les profils (ou les réglages communs). */
+        fun utilisations(id: String): List<String> {
+            val ctx = requireContext()
+            val sources: List<Pair<String?, ClusterConfig>> = if (profils.isEmpty()) listOf(null to ClusterModuleSettings.legacy(ctx))
+                else profils.map { it.name to ClusterConfigs.of(it) }
+            return sources.flatMap { (nom, c) ->
+                listOf(ClusterTab.NAVIGATION, ClusterTab.MEDIA).mapNotNull { t ->
+                    val i = ClusterModuleDefs.ids(c, t).indexOf(id)
+                    if (i < 0) null else listOfNotNull(nom, "${nomOnglet(t)} ${i + 1}").joinToString(" · ")
+                }
             }
         }
-        fun texteAvance(valeurs: List<Int>): String =
-            valeurs.distinct().singleOrNull()?.let { texteActualisation(it) } ?: mixteCourt
-        fun updateClusterCard() {
+        lateinit var updateClusterCard: () -> Unit
+        fun ouvrirModule(def: ClusterModuleDef, nouveau: Boolean) {
+            val ctx = requireContext()
+            ClusterLayoutEditor(ctx, def, nouveau, utilisations(def.id).joinToString(" · "), null, commun(),
+                surEnregistre = { fini ->
+                    val biblio = ClusterModuleSettings.library(ctx)
+                    ClusterModuleSettings.saveLibrary(ctx,
+                        if (biblio.any { it.id == fini.id }) biblio.map { if (it.id == fini.id) fini else it } else biblio + fini)
+                    ClusterModuleOverlay.relire()
+                    if (isAdded) updateClusterCard()
+                },
+                surDupliquer = { source ->
+                    val copie = source.copy(id = java.util.UUID.randomUUID().toString().take(12),
+                        name = getString(R.string.cluster_module_copy, source.name).take(28))
+                    val biblio = ClusterModuleSettings.library(ctx)
+                    val i = biblio.indexOfFirst { it.id == source.id }
+                    ClusterModuleSettings.saveLibrary(ctx, biblio.toMutableList().apply { add(if (i < 0) size else i + 1, copie) })
+                    AppLogger.i(ClusterModuleOverlay.TAG, "module « ${source.name} » dupliqué")
+                    if (isAdded) { updateClusterCard(); ouvrirModule(copie, false) }
+                },
+                surSupprimer = {
+                    ClusterModuleSettings.saveLibrary(ctx, ClusterModuleSettings.library(ctx).filter { it.id != def.id })
+                    // Retiré des onglets de TOUS les profils (et des réglages communs).
+                    ClusterProfiles.update(ctx, profils.map { it.id }) { ClusterModuleDefs.without(it, def.id) }
+                    AppLogger.i(ClusterModuleOverlay.TAG, "module « ${def.name} » supprimé")
+                    ClusterModuleOverlay.relire()
+                    if (isAdded) updateClusterCard()
+                },
+            ).ouvrir()
+        }
+        /** Les deux onglets : la liste des profils choisis (celle du premier ; « différent selon les profils » sinon). */
+        fun construireOnglets(choisis: List<ClusterConfig>) {
+            val ctx = requireContext()
+            conteneurOnglets.removeAllViews()
+            val biblio = ClusterModuleSettings.library(ctx)
+            listOf(ClusterTab.NAVIGATION, ClusterTab.MEDIA).forEachIndexed { rang, t ->
+                val listes = choisis.map { ClusterModuleDefs.ids(it, t) }
+                val ids = listes.first().filter { id -> biblio.any { it.id == id } }
+                val colonne = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setBackgroundResource(R.drawable.bg_dialog_tile)
+                    setPadding(dp(14), dp(10), dp(14), dp(12))
+                }
+                colonne.addView(TextView(ctx).apply {
+                    text = if (listes.distinct().size > 1) SpannableString("${nomOnglet(t)} — $mixte").apply {
+                        setSpan(ForegroundColorSpan(couleurMixte), nomOnglet(t).length, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    } else nomOnglet(t)
+                    setTextColor(requireContext().getColor(R.color.text_primary))
+                    textSize = 20f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                })
+                val rangee = FlowRow(ctx)
+                fun ecrire(nouvelle: List<String>, quoi: String) {
+                    modifier("Écran conducteur, onglet ${t.name} : $quoi") { ClusterModuleDefs.withIds(it, t, nouvelle) }
+                    ClusterModuleOverlay.relire()
+                    updateClusterCard()
+                }
+                ids.forEachIndexed { i, id ->
+                    val m = biblio.first { it.id == id }
+                    val puce = LinearLayout(ctx).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setBackgroundResource(R.drawable.bg_dialog_tile)
+                        setPadding(dp(6), dp(4), dp(2), dp(4))
+                    }
+                    puce.addView(TextView(ctx).apply {
+                        text = "${i + 1}"
+                        gravity = Gravity.CENTER
+                        setTextColor(requireContext().getColor(R.color.dash_on_accent))
+                        textSize = 15f
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                        background = android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(accentColor)
+                        }
+                    }, LinearLayout.LayoutParams(dp(30), dp(30)))
+                    puce.addView(TextView(ctx).apply {
+                        text = m.name
+                        setTextColor(requireContext().getColor(R.color.text_primary))
+                        textSize = 18f
+                        setPadding(dp(10), 0, dp(4), 0)
+                    })
+                    fun petit(texte: String, desc: Int, action: () -> Unit) = TextView(ctx).apply {
+                        text = texte
+                        contentDescription = getString(desc)
+                        gravity = Gravity.CENTER
+                        setTextColor(requireContext().getColor(R.color.text_secondary))
+                        textSize = 20f
+                        minWidth = dp(44); minHeight = dp(44)
+                        isClickable = true
+                        setOnClickListener { action() }
+                    }
+                    if (i > 0) puce.addView(petit("‹", R.string.cluster_tab_move_up) { ecrire(ClusterModuleDefs.move(ids, i, -1), "« ${m.name} » avancé") })
+                    if (i < ids.size - 1) puce.addView(petit("›", R.string.cluster_tab_move_down) { ecrire(ClusterModuleDefs.move(ids, i, 1), "« ${m.name} » reculé") })
+                    puce.addView(petit("✕", R.string.cluster_tab_remove) { ecrire(ids.filterIndexed { j, _ -> j != i }, "« ${m.name} » retiré") })
+                    rangee.addView(puce)
+                }
+                rangee.addView(MaterialButton(ctx).apply {
+                    text = getString(R.string.cluster_tab_add)
+                    isAllCaps = false
+                    textSize = 18f
+                    setTextColor(accentColor)
+                    backgroundTintList = ColorStateList.valueOf(inactiveColor)
+                    strokeColor = ColorStateList.valueOf(requireContext().getColor(R.color.dash_border))
+                    strokeWidth = dp(1)
+                    cornerRadius = dp(14)
+                    insetTop = 0; insetBottom = 0
+                    setOnClickListener {
+                        val dispo = biblio.filter { it.id !in ids }
+                        if (dispo.isEmpty()) {
+                            android.widget.Toast.makeText(ctx, R.string.cluster_tab_pick_empty, android.widget.Toast.LENGTH_LONG).show()
+                            return@setOnClickListener
+                        }
+                        AppDialog.choisir(ctx, titre = getString(R.string.cluster_tab_pick_title),
+                            choix = dispo.map { AppDialog.Choix("${it.name} · ${nomType(ClusterModuleDefs.module(it))}") },
+                            annuler = getString(R.string.profile_cancel), choisi = -1) { r ->
+                            dispo.getOrNull(r)?.let { ecrire(ids + it.id, "« ${it.name} » ajouté") }
+                        }
+                    }
+                })
+                colonne.addView(rangee, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .also { it.topMargin = dp(8) })
+                colonne.addView(TextView(ctx).apply {
+                    text = getString(when {
+                        ids.size > 1 -> R.string.cluster_tab_note_many
+                        ids.size == 1 -> R.string.cluster_tab_note_one
+                        else -> R.string.cluster_tab_note_none
+                    })
+                    setTextColor(requireContext().getColor(R.color.dash_text_lo))
+                    textSize = 16f
+                    setPadding(0, dp(6), 0, 0)
+                })
+                conteneurOnglets.addView(colonne, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    .also { if (rang > 0) it.marginStart = dp(12) })
+            }
+        }
+        /** « Mes modules » : une carte par module (nom, type, cases, utilisations) et « Nouveau module ». */
+        fun construireBiblio() {
+            val ctx = requireContext()
+            conteneurBiblio.removeAllViews()
+            val rangee = FlowRow(ctx, 12f)
+            ClusterModuleSettings.library(ctx).forEach { m ->
+                val type = ClusterModuleDefs.module(m)
+                val carte = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setBackgroundResource(R.drawable.bg_dialog_tile)
+                    setPadding(dp(14), dp(10), dp(14), dp(12))
+                    minimumWidth = dp(260)
+                    isClickable = true
+                    setOnClickListener { ouvrirModule(m, false) }
+                }
+                carte.addView(TextView(ctx).apply {
+                    text = m.name
+                    setTextColor(requireContext().getColor(R.color.text_primary))
+                    textSize = 19f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    maxWidth = dp(320); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                })
+                val cases = ClusterModuleDefs.layout(m).slots.orEmpty().count { it != null }
+                carte.addView(TextView(ctx).apply {
+                    text = listOfNotNull(nomType(type),
+                        getString(if (ClusterGaugeStyle.fromKey(m.style) == ClusterGaugeStyle.DISCREET) R.string.settings_cluster_style_discreet
+                            else R.string.settings_cluster_style_dynamic).takeIf { type != ClusterModule.TYRES },
+                        getString(R.string.cluster_library_slots, cases)).joinToString(" · ")
+                    setTextColor(requireContext().getColor(R.color.text_secondary))
+                    textSize = 16f
+                })
+                val ou = utilisations(m.id)
+                carte.addView(TextView(ctx).apply {
+                    text = if (ou.isEmpty()) getString(R.string.cluster_library_unused) else ou.joinToString("\n")
+                    setTextColor(if (ou.isEmpty()) requireContext().getColor(R.color.dash_text_lo) else accentColor)
+                    textSize = 15f
+                    setPadding(0, dp(4), 0, 0)
+                })
+                rangee.addView(carte)
+            }
+            rangee.addView(MaterialButton(ctx).apply {
+                text = getString(R.string.cluster_library_new)
+                isAllCaps = false
+                textSize = 18f
+                setTextColor(accentColor)
+                backgroundTintList = ColorStateList.valueOf(inactiveColor)
+                strokeColor = ColorStateList.valueOf(requireContext().getColor(R.color.dash_border))
+                strokeWidth = dp(1)
+                cornerRadius = dp(16)
+                minHeight = dp(96); minimumHeight = dp(96)
+                insetTop = 0; insetBottom = 0
+                setOnClickListener {
+                    // Directement dans la personnalisation : le centre s'y choisit (retour du 2026-11-20).
+                    val n = ClusterModuleSettings.library(ctx).size + 1
+                    ouvrirModule(ClusterModuleDef(java.util.UUID.randomUUID().toString().take(12),
+                        getString(R.string.cluster_new_module_name, n)), true)
+                }
+            })
+            conteneurBiblio.addView(rangee, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        /** Unité de pression des pneus, dans les réglages communs (la même partout). */
+        fun construireTpms() {
+            val ctx = requireContext()
+            rangeeTpms.removeAllViews()
+            rangeeTpms.addView(TextView(ctx).apply {
+                text = getString(R.string.cluster_layout_tyre_unit)
+                setTextColor(requireContext().getColor(R.color.text_secondary))
+                textSize = 19f
+            })
+            val ligne = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            val u = com.mg4.control.util.TyreUnitSetting.unit(ctx)
+            com.mg4.control.model.TyrePressure.PressureUnit.entries.forEachIndexed { i, pu ->
+                ligne.addView(MaterialButton(ctx).apply {
+                    text = pu.label
+                    isAllCaps = false
+                    textSize = 19f
+                    insetTop = 0; insetBottom = 0
+                    cornerRadius = dp(14)
+                    strokeWidth = dp(1)
+                    peindre(this, pu == u)
+                    setOnClickListener {
+                        com.mg4.control.util.TyreUnitSetting.set(ctx, pu)
+                        AppLogger.i(ClusterModuleOverlay.TAG, "unité de pression → ${pu.label}")
+                        construireTpms()
+                    }
+                }, LinearLayout.LayoutParams(0, dp(52), 1f).also { if (i > 0) it.marginStart = dp(8) })
+            }
+            rangeeTpms.addView(ligne, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .also { it.topMargin = dp(6) })
+            rangeeTpms.addView(TextView(ctx).apply {
+                text = getString(R.string.cluster_layout_tyre_unit_note)
+                setTextColor(requireContext().getColor(R.color.dash_text_lo))
+                textSize = 16f
+            })
+        }
+        updateClusterCard = {
             val ctx = requireContext()
             // Le combiné suit tout de suite, sans attendre son relevé suivant.
             ClusterModuleOverlay.relire()
             val choisis = reglagesChoisis()
-            val premier = choisis.first()
             val etats = choisis.map { ClusterModuleSettings.isEnabled(it) }.distinct()
             // Déplié dès qu'un des profils sélectionnés a le module : il y a quelque chose à régler.
             val actif = true in etats
@@ -521,43 +732,30 @@ class SettingsFragment : Fragment() {
             majInterrupteur = false
             tvModuleMixte.visibility = if (etats.size > 1) View.VISIBLE else View.GONE
             rowClusterChoice.visibility = if (actif) View.VISIBLE else View.GONE
-            rowClusterRefresh.visibility = if (actif && avanceOuvert) View.VISIBLE else View.GONE
+            rowClusterRefresh.visibility = if (avanceOuvert) View.VISIBLE else View.GONE
 
             // « Réglage de : »
             puces.forEach { (id, btn) -> ProfileChips.peindre(btn, id in selectionCombine) }
             val noms = profils.filter { it.id in selectionCombine }
             tvProfilsInfo.text = if (noms.size == 1) getString(R.string.settings_cluster_profiles_one, noms[0].name)
                 else getString(R.string.settings_cluster_profiles_many, noms.size)
+            tvOngletsTitre.text = getString(R.string.cluster_tabs_title)
 
-            // L'aperçu montre le premier profil sélectionné.
-            apercu.reglages = premier
-            apercu.profilMontre = noms.firstOrNull()
-            if (actif && isResumed && pageInterfaceVisible()) apercu.demarrer() else if (!actif) apercu.arreter()
-            apercu.rafraichir()
+            if (actif) construireOnglets(choisis)
+            construireBiblio()
+            construireTpms()
 
-            val refresh = choisis.map { ClusterModuleSettings.refreshMs(it) }
-            val animation = choisis.map { ClusterModuleSettings.animationMs(it) }
-            tvAvance.text = getString(R.string.settings_cluster_advanced, texteAvance(refresh), texteAvance(animation))
+            val refresh = ClusterModuleSettings.refreshMs(ctx)
+            val animation = ClusterModuleSettings.animationMs(ctx)
+            val puissance = ClusterModuleSettings.powerMaxChoice(ctx)
+            tvAvance.text = getString(R.string.cluster_common_summary, texteActualisation(refresh), texteActualisation(animation))
             tvChevron.text = if (avanceOuvert) "▴" else "▾"
-            // Les curseurs partent du premier profil ; leur valeur dit « variable » en désaccord.
-            sliderRefresh.value = ClusterModuleSettings.refreshToSlider(refresh.first())
-            tvClusterRefresh.text = texteAvance(refresh)
-            sliderAnimation.value = ClusterModuleSettings.animationToSlider(animation.first())
-            tvClusterAnimation.text = texteAvance(animation)
-
-            ligne(etiqNav, choisis.map { ClusterModuleSettings.moduleFor(it, ClusterTab.NAVIGATION) },
-                clusterBtns.filter { it.first == ClusterTab.NAVIGATION }.map { it.second to it.third })
-            ligne(etiqMedia, choisis.map { ClusterModuleSettings.moduleFor(it, ClusterTab.MEDIA) },
-                clusterBtns.filter { it.first == ClusterTab.MEDIA }.map { it.second to it.third })
-            // Distance : le réglage général (Réglages › Interface) depuis le 2026-11-10.
-            val distance = DistanceSetting.unit(requireContext())
-            // Les unités se lisent dans la distance choisie : « Wh/mi », « mi/kWh »…
-            unitBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
-            ligne(etiqGauge, choisis.map { ClusterModuleSettings.consumptionUnit(it) }, unitBtns)
-            ligne(etiqPower, choisis.map { ClusterModuleSettings.powerMaxChoice(it) }, powerBtns)
+            sliderRefresh.value = ClusterModuleSettings.refreshToSlider(refresh)
+            tvClusterRefresh.text = texteActualisation(refresh)
+            sliderAnimation.value = ClusterModuleSettings.animationToSlider(animation)
+            tvClusterAnimation.text = texteActualisation(animation)
+            powerBtns.forEach { (kw, btn) -> peindre(btn, kw == puissance) }
             tvPowerDesc.text = getString(R.string.settings_cluster_power_desc, ClusterModuleSettings.learnedPowerKw(ctx))
-            ligne(etiqStyle, choisis.map { ClusterModuleSettings.style(it) }, styleBtns)
-            ongletsApercu.forEach { (o, btn) -> peindre(btn, o == apercu.onglet) }
         }
         /** Rangées de cinq puces, refaites à chaque retour sur l'écran : un profil a pu changer. */
         fun construirePuces() {
@@ -592,12 +790,6 @@ class SettingsFragment : Fragment() {
         construirePuces()
         updateClusterCard()
 
-        ongletsApercu.forEach { (o, btn) ->
-            btn.setOnClickListener {
-                apercu.onglet = o
-                updateClusterCard()
-            }
-        }
         view.findViewById<View>(R.id.row_cluster_advanced_toggle).setOnClickListener {
             avanceOuvert = !avanceOuvert
             updateClusterCard()
@@ -608,51 +800,17 @@ class SettingsFragment : Fragment() {
             ClusterModuleOverlay.refresh(requireContext())
             updateClusterCard()
         }
-        clusterBtns.forEach { (onglet, module, btn) ->
-            btn.setOnClickListener {
-                modifier("Module du combiné, onglet ${onglet.name} → ${module?.key ?: "aucun"}") {
-                    ClusterModuleSettings.withModule(it, onglet, module)
-                }
-                // L'aperçu montre l'onglet qu'on vient de régler.
-                apercu.onglet = onglet
-                updateClusterCard()
-            }
-        }
         rafraichirCombine = { updateClusterCard() }
-        unitBtns.forEach { (u, btn) ->
-            btn.setOnClickListener {
-                modifier("Unité de consommation du combiné → ${u.label}") { it.copy(unit = u.key) }
-                updateClusterCard()
-            }
-        }
-        styleBtns.forEach { (st, btn) ->
-            btn.setOnClickListener {
-                modifier("Style des modules du combiné → ${st.key}") { it.copy(style = st.key) }
-                updateClusterCard()
-            }
-        }
-        // Personnalisation avancée (issue #229) : un popup, sur les réglages du premier profil
-        // sélectionné ; « Enregistrer » les écrit pour tous les profils sélectionnés.
-        view.findViewById<View>(R.id.btn_cluster_layout).setOnClickListener {
-            val depart = reglagesChoisis().first()
-            ClusterLayoutEditor(requireContext(), depart, apercu.profilMontre, tvProfilsInfo.text, apercu.onglet) { nav, musique, style ->
-                // Musique n'est gardée à part que si elle diffère de la navigation, ou l'était déjà
-                // (2026-11-20) : sinon elle continue de suivre la navigation.
-                modifier("Écran conducteur, personnalisation avancée") {
-                    it.copy(layout = nav, layoutMedia = musique.takeIf { m -> m != nav || it.layoutMedia != null }, style = style)
-                }
-                if (isAdded) updateClusterCard()
-            }.ouvrir()
-        }
         powerBtns.forEach { (kw, btn) ->
             btn.setOnClickListener {
-                modifier("Puissance maxi de la jauge → ${kw?.let { "$it kW" } ?: "Auto"}") { it.copy(powerMax = kw) }
+                ClusterModuleSettings.setPowerMax(requireContext(), kw)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Puissance maxi de la jauge → ${kw?.let { "$it kW" } ?: "Auto"} (commune)")
                 updateClusterCard()
             }
         }
         // Actualisation de la jauge, 0,1 à 1 s, et durée de l'animation, 0,2 à 2 s (issue #152) :
-        // relues à chaque relevé, rien à redémarrer. Le chiffre suit le doigt ; l'enregistrement,
-        // pour tous les profils sélectionnés, se fait au relâchement.
+        // communes depuis le 2026-11-20, relues à chaque relevé. Le chiffre suit le doigt ;
+        // l'enregistrement se fait au relâchement.
         sliderRefresh.addOnChangeListener { _, v, fromUser ->
             if (fromUser) tvClusterRefresh.text = texteActualisation(ClusterModuleSettings.refreshFromSlider(v))
         }
@@ -660,7 +818,8 @@ class SettingsFragment : Fragment() {
             override fun onStartTrackingTouch(slider: Slider) {}
             override fun onStopTrackingTouch(slider: Slider) {
                 val ms = ClusterModuleSettings.refreshFromSlider(slider.value)
-                modifier("Actualisation de la jauge → $ms ms") { it.copy(refreshMs = ms) }
+                ClusterModuleSettings.setRefreshMs(requireContext(), ms)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Actualisation de la jauge → $ms ms (commune)")
                 updateClusterCard()
             }
         })
@@ -671,7 +830,8 @@ class SettingsFragment : Fragment() {
             override fun onStartTrackingTouch(slider: Slider) {}
             override fun onStopTrackingTouch(slider: Slider) {
                 val ms = ClusterModuleSettings.animationFromSlider(slider.value)
-                modifier("Animation de la jauge → $ms ms") { it.copy(animationMs = ms) }
+                ClusterModuleSettings.setAnimationMs(requireContext(), ms)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Animation de la jauge → $ms ms (commune)")
                 updateClusterCard()
             }
         })

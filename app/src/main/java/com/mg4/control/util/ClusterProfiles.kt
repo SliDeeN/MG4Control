@@ -21,6 +21,7 @@ object ClusterProfiles {
     /** Même fichier que les autres réglages. */
     private const val PREFS = "mg4_settings"
     private const val KEY_MIGRATED = "cluster_per_profile_migrated"
+    private const val KEY_LIBRARY_MIGRATED = "cluster_library_migrated"
 
     private class Lecture(
         val brut: String?, val actif: String?, val defaut: String?,
@@ -85,5 +86,50 @@ object ClusterProfiles {
             if (repris) AppLogger.i(TAG, "écran conducteur par profil : réglages communs repris par les profils " +
                 "existants (module ${if (communs.enabled == true) "activé" else "coupé"})")
         }.onFailure { AppLogger.w(TAG, "écran conducteur par profil : reprise des réglages communs — ${it.message}") }
+        migrateLibraryIfNeeded(ctx)
+    }
+
+    /**
+     * Une fois (2026-11-20) : chaque réglage d'avant devient un module de la bibliothèque, et chaque
+     * profil reçoit ses listes par onglet ([ClusterModuleDefs.migrate]) ; puissance maxi,
+     * actualisation et animation du profil montré deviennent les réglages communs. Rien ne change à
+     * l'écran.
+     */
+    fun migrateLibraryIfNeeded(ctx: Context) {
+        runCatching {
+            val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            if (prefs.getBoolean(KEY_LIBRARY_MIGRATED, false)) return
+            val loc = LocaleHelper.applyLocale(ctx)
+            val nom: (com.mg4.control.model.ClusterModule) -> String = { m ->
+                loc.getString(when (m) {
+                    com.mg4.control.model.ClusterModule.CONSUMPTION -> com.mg4.control.R.string.settings_cluster_consumption
+                    com.mg4.control.model.ClusterModule.POWER -> com.mg4.control.R.string.settings_cluster_power
+                    com.mg4.control.model.ClusterModule.TYRES -> com.mg4.control.R.string.settings_cluster_tyres
+                })
+            }
+            val nouvelId = { java.util.UUID.randomUUID().toString().take(12) }
+            val montre = effective(ctx)
+            val pm = ProfileManager(ctx)
+            val profils = pm.getAll()
+            val existante = ClusterModuleSettings.library(ctx)
+            if (profils.isEmpty()) {
+                val (biblio, repris) = com.mg4.control.model.ClusterModuleDefs.migrate(listOf(ClusterModuleSettings.legacy(ctx)), nouvelId, nom)
+                ClusterModuleSettings.saveLibrary(ctx, existante + biblio)
+                ClusterModuleSettings.saveLegacy(ctx, repris.first())
+            } else {
+                val (biblio, repris) = com.mg4.control.model.ClusterModuleDefs.migrate(profils.map(ClusterConfigs::of), nouvelId, nom)
+                ClusterModuleSettings.saveLibrary(ctx, existante + biblio)
+                val parId = profils.map { it.id }.zip(repris).toMap()
+                pm.updateAll { p -> parId[p.id]?.let { p.copy(cluster = it) } ?: p }
+            }
+            prefs.edit().apply {
+                if (!prefs.contains(ClusterModuleSettings.KEY_COMMON_REFRESH)) montre.refreshMs?.let { putInt(ClusterModuleSettings.KEY_COMMON_REFRESH, it) }
+                if (!prefs.contains(ClusterModuleSettings.KEY_COMMON_ANIMATION)) montre.animationMs?.let { putInt(ClusterModuleSettings.KEY_COMMON_ANIMATION, it) }
+                if (!prefs.contains(ClusterModuleSettings.KEY_COMMON_POWER_MAX)) montre.powerMax?.let { putInt(ClusterModuleSettings.KEY_COMMON_POWER_MAX, it) }
+                putBoolean(KEY_LIBRARY_MIGRATED, true)
+            }.apply()
+            derniere = null
+            AppLogger.i(TAG, "écran conducteur : réglages d'avant repris en ${ClusterModuleSettings.library(ctx).size} module(s) de la bibliothèque")
+        }.onFailure { AppLogger.w(TAG, "écran conducteur : reprise en bibliothèque — ${it.message}") }
     }
 }

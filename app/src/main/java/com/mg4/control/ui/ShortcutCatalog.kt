@@ -110,6 +110,9 @@ object ShortcutCatalog {
             // Pression des pneus : mêmes propriétés sur tous les firmwares extraits ; sans valeur,
             // le pop-up le dit pneu par pneu.
             add(Item(ctx.getString(R.string.shortcuts_action_tyre_popup),    ShortcutAction.TYRE_POPUP))
+            // Module suivant de l'écran conducteur : là où le combiné montre nos modules.
+            if (com.mg4.control.util.ClusterModuleSettings.isSupported())
+                add(Item(ctx.getString(R.string.shortcuts_action_cluster_next), ShortcutAction.CLUSTER_NEXT_MODULE))
             // Réglages rapides (issue #197) : ses tuiles sont filtrées par firmware.
             if (isKnown) add(Item(ctx.getString(R.string.shortcuts_action_quick_settings), ShortcutAction.QUICK_SETTINGS))
             // Pré-climatisation (issue #130) : verrouillage, clim et extinction existent sur tout

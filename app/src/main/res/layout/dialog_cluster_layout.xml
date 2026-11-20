@@ -39,6 +39,39 @@
             android:textColor="@color/text_secondary"
             android:textSize="16sp" />
 
+        <!-- Module de la bibliothèque (2026-11-20) : le copier ou le supprimer ; cachés pour un nouveau. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cluster_module_duplicate"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginStart="12dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/cluster_module_duplicate"
+            android:textAllCaps="false"
+            android:textColor="@color/dash_accent"
+            android:textSize="16sp"
+            app:backgroundTint="@color/dash_btn"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/dash_border"
+            app:cornerRadius="14dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cluster_module_delete"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/cluster_module_delete"
+            android:textAllCaps="false"
+            android:textColor="@color/dash_danger"
+            android:textSize="16sp"
+            app:backgroundTint="@color/dash_btn"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/dash_border"
+            app:cornerRadius="14dp" />
+
     </LinearLayout>
 
     <LinearLayout

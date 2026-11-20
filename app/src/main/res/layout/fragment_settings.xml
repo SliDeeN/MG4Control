@@ -1364,122 +1364,23 @@
                         android:textSize="18sp"
                         android:visibility="gone" />
 
-                    <!-- Refonte A (2026-10-17) : à gauche l'aperçu du combiné, animé sur un trajet
-                         simulé et fidèle aux réglages ; à droite les réglages groupés (Modules,
-                         Apparence, Unités), l'actualisation et l'animation repliées dans « Avancé ».
-                         Déplié avec l'interrupteur, comme avant. -->
+                    <!-- Refonte du 2026-11-20 (prototype validé) : onglets du combiné (listes de modules
+                         par profil), bibliothèque « Mes modules », réglages communs repliés. Plus aucun
+                         aperçu ici : il n'existe que dans la personnalisation d'un module. Déplié avec
+                         l'interrupteur, comme avant. Listes et cartes posées par le code. -->
                     <LinearLayout
                         android:id="@+id/row_cluster_choice"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:orientation="horizontal"
-                        android:baselineAligned="false"
+                        android:orientation="vertical"
                         android:visibility="gone">
 
-                    <!-- ── Aperçu ── -->
-                    <LinearLayout
-                        android:layout_width="280dp"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
                         <TextView
+                            android:id="@+id/tv_cluster_tabs_title"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="@string/settings_cluster_preview"
-                            android:textColor="@color/dash_text_lo"
-                            android:textSize="18sp" />
-
-                        <!-- La jauge est posée ici par le code (ClusterSettingsPreview). -->
-                        <FrameLayout
-                            android:id="@+id/frame_cluster_preview"
-                            android:layout_width="280dp"
-                            android:layout_height="280dp"
-                            android:layout_marginTop="6dp">
-
-                            <TextView
-                                android:id="@+id/tv_cluster_preview_none"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:gravity="center"
-                                android:padding="16dp"
-                                android:background="@drawable/bg_card_rounded"
-                                android:text="@string/settings_cluster_preview_none"
-                                android:textColor="@color/dash_text_lo"
-                                android:textSize="18sp"
-                                android:visibility="gone" />
-
-                        </FrameLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="horizontal">
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btn_cluster_preview_nav"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:minHeight="52dp"
-                                android:layout_weight="1"
-                                android:layout_marginEnd="4dp"
-                                android:text="@string/settings_cluster_row_nav"
-                                android:textAllCaps="false"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp"
-                                android:maxLines="1"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                app:autoSizeTextType="uniform"
-                                app:autoSizeMinTextSize="13sp"
-                                app:autoSizeMaxTextSize="19sp"
-                                app:autoSizeStepGranularity="1sp"
-                                app:backgroundTint="@color/dash_btn"
-                                app:strokeWidth="1dp"
-                                app:strokeColor="@color/dash_border"
-                                app:cornerRadius="14dp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btn_cluster_preview_media"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:minHeight="52dp"
-                                android:layout_weight="1"
-                                android:layout_marginStart="4dp"
-                                android:text="@string/settings_cluster_row_media"
-                                android:textAllCaps="false"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp"
-                                android:maxLines="1"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                app:autoSizeTextType="uniform"
-                                app:autoSizeMinTextSize="13sp"
-                                app:autoSizeMaxTextSize="19sp"
-                                app:autoSizeStepGranularity="1sp"
-                                app:backgroundTint="@color/dash_btn"
-                                app:strokeWidth="1dp"
-                                app:strokeColor="@color/dash_border"
-                                app:cornerRadius="14dp" />
-
-                        </LinearLayout>
-
-                    </LinearLayout>
-
-                    <!-- ── Réglages ── -->
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="20dp"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="0dp"
-                            android:text="@string/settings_cluster_sec_modules"
+                            android:text="@string/cluster_tabs_title"
                             android:textColor="@color/dash_text_lo"
                             android:textSize="18sp"
                             android:textStyle="bold"
@@ -1487,287 +1388,85 @@
                             android:textAllCaps="true" />
 
                         <LinearLayout
+                            android:id="@+id/cluster_tabs"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
+                            android:layout_marginTop="8dp"
                             android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:id="@+id/tv_cluster_label_nav"
-                                android:layout_width="150dp"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_cluster_row_nav"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="horizontal">
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_nav_none"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginEnd="4dp"
-                                    android:text="@string/settings_cluster_none"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_nav_consumption"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginHorizontal="4dp"
-                                    android:text="@string/settings_cluster_consumption"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_nav_power"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginHorizontal="4dp"
-                                    android:text="@string/settings_cluster_power"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_nav_tyres"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:text="@string/settings_cluster_tyres"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:id="@+id/tv_cluster_label_media"
-                                android:layout_width="150dp"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_cluster_row_media"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="horizontal">
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_media_none"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginEnd="4dp"
-                                    android:text="@string/settings_cluster_none"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_media_consumption"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginHorizontal="4dp"
-                                    android:text="@string/settings_cluster_consumption"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_media_power"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginHorizontal="4dp"
-                                    android:text="@string/settings_cluster_power"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_media_tyres"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:text="@string/settings_cluster_tyres"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
+                            android:baselineAligned="false" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:layout_marginStart="150dp"
+                            android:layout_marginTop="6dp"
                             android:text="@string/settings_cluster_tabs_note"
                             android:textColor="@color/dash_text_lo"
                             android:textSize="18sp" />
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="14dp"
-                            android:text="@string/settings_cluster_sec_appearance"
-                            android:textColor="@color/dash_text_lo"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.12"
-                            android:textAllCaps="true" />
+                    </LinearLayout>
 
+                    <!-- Bibliothèque : visible même module coupé (les modules restent). -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/cluster_library_title"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.12"
+                        android:textAllCaps="true" />
+
+                    <LinearLayout
+                        android:id="@+id/cluster_library"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical" />
+
+                        <!-- « Avancé » : un résumé ; un appui déplie l'actualisation et l'animation. -->
                         <LinearLayout
+                            android:id="@+id/row_cluster_advanced_toggle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
+                            android:minHeight="52dp"
+                            android:layout_marginTop="14dp"
                             android:orientation="horizontal"
-                            android:gravity="center_vertical">
+                            android:gravity="center_vertical"
+                            android:background="@drawable/bg_dialog_tile"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:clickable="true"
+                            android:focusable="true">
 
                             <TextView
-                                android:id="@+id/tv_cluster_label_style"
-                                android:layout_width="150dp"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_cluster_row_style"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp" />
-
-                            <LinearLayout
+                                android:id="@+id/tv_cluster_advanced"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:orientation="horizontal">
+                                android:textColor="@color/text_secondary"
+                                android:textSize="18sp" />
 
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_style_dynamic"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginEnd="4dp"
-                                    android:text="@string/settings_cluster_style_dynamic"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_style_discreet"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:text="@string/settings_cluster_style_discreet"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                            </LinearLayout>
+                            <TextView
+                                android:id="@+id/tv_cluster_advanced_chevron"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="21sp" />
 
                         </LinearLayout>
 
-                        <!-- Personnalisation avancée (issue #229) : jauge, couleurs et jusqu'à quatre informations,
-                             dans un popup avec aperçu. Remplace la ligne « Pastille », devenue une information. -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_cluster_layout"
+                        <!-- Actualisation de la jauge, 0,1 à 1 s : déplié avec le choix du module.
+                             Le curseur compte en dixièmes de seconde (1 à 10). -->
+                        <LinearLayout
+                            android:id="@+id/row_cluster_refresh"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:minHeight="56dp"
-                            android:layout_marginTop="10dp"
-                            android:text="@string/cluster_layout_open"
-                            android:textAllCaps="false"
-                            android:textColor="@color/dash_accent"
-                            android:textSize="19sp"
-                            app:icon="@drawable/ic_cat_adjust"
-                            app:iconTint="@color/dash_accent"
-                            app:iconGravity="textStart"
-                            app:backgroundTint="@color/dash_accent_dim"
-                            app:strokeWidth="1dp"
-                            app:strokeColor="@color/dash_accent"
-                            app:cornerRadius="14dp" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@string/cluster_layout_open_desc"
-                            android:textColor="@color/dash_text_lo"
-                            android:textSize="18sp" />
+                            android:layout_marginTop="6dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/bg_dialog_tile"
+                            android:padding="12dp"
+                            android:visibility="gone">
 
                         <!-- Puissance maxi de la jauge Puissance (issue #165) : Auto (apprise) ou choisie. -->
                         <LinearLayout
@@ -1889,117 +1588,13 @@
                             android:textColor="@color/dash_text_lo"
                             android:textSize="18sp" />
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="14dp"
-                            android:text="@string/settings_cluster_sec_units"
-                            android:textColor="@color/dash_text_lo"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.12"
-                            android:textAllCaps="true" />
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:id="@+id/tv_cluster_label_gauge"
-                                android:layout_width="150dp"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_cluster_row_gauge"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp" />
-
+                            <!-- Unité de pression des pneus (2026-11-20) : rangée posée par le code. -->
                             <LinearLayout
-                                android:layout_width="0dp"
+                                android:id="@+id/cluster_tyre_unit_row"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="horizontal">
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_unit_wh"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginEnd="4dp"
-                                    android:text="@string/cluster_unit_wh_km"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_unit_kwh"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:text="@string/cluster_unit_kwh_100km"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
-
-                        <!-- « Avancé » : un résumé ; un appui déplie l'actualisation et l'animation. -->
-                        <LinearLayout
-                            android:id="@+id/row_cluster_advanced_toggle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:minHeight="52dp"
-                            android:layout_marginTop="14dp"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:background="@drawable/bg_dialog_tile"
-                            android:paddingStart="14dp"
-                            android:paddingEnd="14dp"
-                            android:clickable="true"
-                            android:focusable="true">
-
-                            <TextView
-                                android:id="@+id/tv_cluster_advanced"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="18sp" />
-
-                            <TextView
-                                android:id="@+id/tv_cluster_advanced_chevron"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="21sp" />
-
-                        </LinearLayout>
-
-                        <!-- Actualisation de la jauge, 0,1 à 1 s : déplié avec le choix du module.
-                             Le curseur compte en dixièmes de seconde (1 à 10). -->
-                        <LinearLayout
-                            android:id="@+id/row_cluster_refresh"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:orientation="vertical"
-                            android:background="@drawable/bg_dialog_tile"
-                            android:padding="12dp"
-                            android:visibility="gone">
+                                android:layout_marginTop="10dp"
+                                android:orientation="vertical" />
 
                             <TextView
                                 android:layout_width="match_parent"
@@ -2108,9 +1703,6 @@
 
                         </LinearLayout>
 
-                    </LinearLayout>
-
-                    </LinearLayout>
 
                 </LinearLayout>
 

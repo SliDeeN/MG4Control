@@ -37,6 +37,14 @@ data class ClusterConfig(
      * `null` = la même que la navigation (copie de départ : rien ne change tant qu'on n'y touche pas).
      */
     val layoutMedia: ClusterLayout? = null,
+    /**
+     * Modules de l'onglet Navigation (2026-11-20) : identifiants de la bibliothèque, dans l'ordre —
+     * le premier s'affiche, le raccourci « Module suivant » passe au suivant. `null` = pas encore
+     * repris des réglages d'avant ([ClusterModuleDefs.migrate]) ; vide = aucun module.
+     */
+    val navModules: List<String>? = null,
+    /** Modules de l'onglet Musique, même codage. */
+    val mediaModules: List<String>? = null,
 )
 
 object ClusterConfigs {
