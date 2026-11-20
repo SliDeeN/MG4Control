@@ -1159,6 +1159,7 @@
     <string name="immersive_tip_right">scorri dal bordo destro dello schermo verso sinistra per far tornare la barra laterale (dall’alto verso il basso per la barra superiore). Si nasconde di nuovo dopo qualche secondo.</string>
     <string name="immersive_reminder_left">Scorri dal bordo sinistro per far tornare la barra laterale per qualche secondo.</string>
     <string name="immersive_reminder_right">Scorri dal bordo destro per far tornare la barra laterale per qualche secondo.</string>
+    <string name="immersive_gestures_pending">Scorrimenti attivati: funzioneranno dopo il prossimo riavvio dello schermo centrale. Fino ad allora le barre nascoste non ricompaiono.</string>
     <string name="immersive_confirm_ok">Attiva</string>
     <string name="immersive_empty">Nessuna app trovata</string>
     <string name="shortcuts_cat_preclim">Custode dell’auto</string>

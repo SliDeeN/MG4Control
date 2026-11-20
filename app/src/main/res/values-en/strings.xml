@@ -1159,6 +1159,7 @@
     <string name="immersive_tip_right">swipe from the right edge of the screen to the left to bring the side bar back (from the top down for the top bar). It hides again after a few seconds.</string>
     <string name="immersive_reminder_left">Swipe from the left edge to bring the side bar back for a few seconds.</string>
     <string name="immersive_reminder_right">Swipe from the right edge to bring the side bar back for a few seconds.</string>
+    <string name="immersive_gestures_pending">Swipes enabled: they will work after the next restart of the central screen. Until then, hidden bars do not come back.</string>
     <string name="immersive_confirm_ok">Turn on</string>
     <string name="immersive_empty">No app found</string>
     <string name="shortcuts_cat_preclim">Car keeper</string>

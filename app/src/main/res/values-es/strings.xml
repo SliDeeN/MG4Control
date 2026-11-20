@@ -1159,6 +1159,7 @@
     <string name="immersive_tip_right">desliza el dedo desde el borde derecho de la pantalla hacia la izquierda para que vuelva la barra lateral (desde arriba hacia abajo para la barra superior). Se oculta de nuevo tras unos segundos.</string>
     <string name="immersive_reminder_left">Desliza desde el borde izquierdo para que vuelva la barra lateral unos segundos.</string>
     <string name="immersive_reminder_right">Desliza desde el borde derecho para que vuelva la barra lateral unos segundos.</string>
+    <string name="immersive_gestures_pending">Deslizamientos activados: funcionarán tras el próximo reinicio de la pantalla central. Hasta entonces, las barras ocultas no vuelven.</string>
     <string name="immersive_confirm_ok">Activar</string>
     <string name="immersive_empty">No se encontró ninguna app</string>
     <string name="shortcuts_cat_preclim">Guardián del coche</string>

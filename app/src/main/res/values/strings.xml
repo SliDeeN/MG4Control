@@ -1177,6 +1177,7 @@
     <string name="immersive_tip_right">glissez le doigt depuis le bord droit de l’écran vers la gauche pour faire revenir la barre (depuis le haut vers le bas pour le bandeau). Elle se cache de nouveau après quelques secondes.</string>
     <string name="immersive_reminder_left">Glissez depuis le bord gauche pour faire revenir la barre quelques secondes.</string>
     <string name="immersive_reminder_right">Glissez depuis le bord droit pour faire revenir la barre quelques secondes.</string>
+    <string name="immersive_gestures_pending">Glissements activés : ils marcheront après le prochain redémarrage de l’écran central. Jusque-là, les barres cachées ne reviennent pas.</string>
     <string name="immersive_confirm_ok">Activer</string>
     <string name="immersive_empty">Aucune application trouvée</string>
     <string name="shortcuts_cat_preclim">Garde-voiture</string>

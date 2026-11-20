@@ -1159,6 +1159,7 @@
     <string name="immersive_tip_right">vom rechten Bildschirmrand nach links wischen, um die Seitenleiste zurückzuholen (von oben nach unten für die obere Leiste). Sie verschwindet nach einigen Sekunden wieder.</string>
     <string name="immersive_reminder_left">Vom linken Rand wischen, um die Seitenleiste einige Sekunden zurückzuholen.</string>
     <string name="immersive_reminder_right">Vom rechten Rand wischen, um die Seitenleiste einige Sekunden zurückzuholen.</string>
+    <string name="immersive_gestures_pending">Wischgesten aktiviert: Sie funktionieren nach dem nächsten Neustart des zentralen Bildschirms. Bis dahin kommen ausgeblendete Leisten nicht zurück.</string>
     <string name="immersive_confirm_ok">Aktivieren</string>
     <string name="immersive_empty">Keine App gefunden</string>
     <string name="shortcuts_cat_preclim">Fahrzeugwächter</string>

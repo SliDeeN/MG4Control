@@ -1154,7 +1154,20 @@ class SettingsFragment : Fragment() {
         val astuce = view.findViewById<TextView>(R.id.tv_immersive_tip).apply {
             setText(if (droite) R.string.immersive_reminder_right else R.string.immersive_reminder_left)
         }
-        fun majAstuce(on: Boolean) { astuce.visibility = if (on) View.VISIBLE else View.GONE }
+        // Glissements depuis le bord : la voiture ne lit leur verrou qu'au démarrage de l'écran
+        // (2026-11-20). La propriété est écrite sur le fil d'ImmersiveApps : relue un peu après.
+        val gestes = view.findViewById<TextView>(R.id.tv_immersive_gestures).also {
+            com.mg4.control.service.OverlayKit.fond(it, ctx.getColor(R.color.dash_warn_dim),
+                trait = ctx.getColor(R.color.dash_warn), epaisseur = 1, rayon = 14f * resources.displayMetrics.density)
+        }
+        fun majGestes(on: Boolean) {
+            gestes.visibility = if (on && com.mg4.control.service.ImmersiveApps.gesturesPending(ctx)) View.VISIBLE else View.GONE
+        }
+        fun majAstuce(on: Boolean) {
+            astuce.visibility = if (on) View.VISIBLE else View.GONE
+            majGestes(on)
+            gestes.postDelayed({ if (isAdded) majGestes(com.mg4.control.service.ImmersiveApps.isOn(ctx)) }, 1_000)
+        }
         val inter = view.findViewById<Switch>(R.id.switch_immersive)
         inter.isChecked = com.mg4.control.service.ImmersiveApps.isOn(ctx)
         majAstuce(inter.isChecked)

@@ -1159,6 +1159,7 @@
     <string name="immersive_tip_right">przesuń palcem od prawej krawędzi ekranu w lewo, aby przywrócić pasek boczny (z góry w dół dla górnego paska). Po kilku sekundach znów się ukryje.</string>
     <string name="immersive_reminder_left">Przesuń od lewej krawędzi, aby przywrócić pasek boczny na kilka sekund.</string>
     <string name="immersive_reminder_right">Przesuń od prawej krawędzi, aby przywrócić pasek boczny na kilka sekund.</string>
+    <string name="immersive_gestures_pending">Przesunięcia włączone: zadziałają po następnym ponownym uruchomieniu ekranu centralnego. Do tego czasu ukryte paski nie wracają.</string>
     <string name="immersive_confirm_ok">Włącz</string>
     <string name="immersive_empty">Nie znaleziono aplikacji</string>
     <string name="shortcuts_cat_preclim">Opiekun auta</string>

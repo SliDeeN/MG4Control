@@ -1159,6 +1159,7 @@
     <string name="immersive_tip_right">yan çubuğu geri getirmek için ekranın sağ kenarından sola doğru kaydırın (üst çubuk için yukarıdan aşağıya). Birkaç saniye sonra yeniden gizlenir.</string>
     <string name="immersive_reminder_left">Yan çubuğu birkaç saniyeliğine geri getirmek için sol kenardan kaydırın.</string>
     <string name="immersive_reminder_right">Yan çubuğu birkaç saniyeliğine geri getirmek için sağ kenardan kaydırın.</string>
+    <string name="immersive_gestures_pending">Kaydırma hareketleri etkin: orta ekran bir sonraki yeniden başlatmadan sonra çalışacak. O zamana kadar gizlenen çubuklar geri gelmez.</string>
     <string name="immersive_confirm_ok">Etkinleştir</string>
     <string name="immersive_empty">Uygulama bulunamadı</string>
     <string name="shortcuts_cat_preclim">Araç bekçisi</string>

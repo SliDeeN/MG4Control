@@ -3966,6 +3966,8 @@ object MG4Hardware {
         sb.appendLine("Katman5 prêt : ${if (sVcmCallbackRegistered) "✓ ($katman5Path)" else "✗ ($katman5Path)"}")
         val ignition = lastVcmIgnition?.state ?: -1
         sb.appendLine("Katman5 ign  : ${carIgnitionName(ignition)} ($ignition)")
+        // Verrou SAIC des glissements depuis le bord (plein écran par application, 2026-11-20).
+        sAppContext?.let { sb.appendLine("Glissements  : ${com.mg4.control.service.ImmersiveApps.gesturesDiag(it)}") }
         sb.appendLine()
 
         // Sonde énergie : TOUS les relevés gardés, pas seulement le dernier — c'est leur

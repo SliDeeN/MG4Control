@@ -1160,6 +1160,7 @@
     <string name="immersive_tip_right">sveip fra høyre kant av skjermen mot venstre for å hente tilbake sidelinjen (ovenfra og ned for den øvre linjen). Den skjules igjen etter noen sekunder.</string>
     <string name="immersive_reminder_left">Sveip fra venstre kant for å hente tilbake sidelinjen i noen sekunder.</string>
     <string name="immersive_reminder_right">Sveip fra høyre kant for å hente tilbake sidelinjen i noen sekunder.</string>
+    <string name="immersive_gestures_pending">Sveipebevegelser slått på: de virker etter neste omstart av midtskjermen. Til da kommer ikke skjulte linjer tilbake.</string>
     <string name="immersive_confirm_ok">Slå på</string>
     <string name="immersive_empty">Fant ingen apper</string>
     <string name="shortcuts_cat_preclim">Bilholder</string>

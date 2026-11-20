@@ -12,6 +12,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ImmersiveCleanup
 import com.mg4.control.model.ImmersiveMode
 import com.mg4.control.model.ImmersivePolicy
+import com.mg4.control.model.SystemGestures
 
 /**
  * Applis en plein écran (issue #248, Réglages › Interface, désactivé par défaut) : le bandeau du
@@ -140,7 +141,74 @@ object ImmersiveApps {
         fil.post { passage(app, raison, relire = true) }
     }
 
+    // ── Glissements depuis le bord (verrou SAIC, 2026-11-20) ────────────────────────────────
+
+    /** C'est MG4Control qui a mis la propriété à vrai : lui seul la remettra à faux. */
+    private const val KEY_GESTES_PAR_NOUS = "immersive_gestures_by_us"
+    /** Numéro de démarrage d'Android au moment de l'écriture : la voiture ne la lit qu'au suivant. */
+    private const val KEY_GESTES_DEMARRAGE = "immersive_gestures_boot"
+
+    /**
+     * La propriété est écrite, mais l'écran central n'a pas encore redémarré : les glissements ne
+     * marchent pas encore ([SystemGestures]).
+     */
+    fun gesturesPending(ctx: Context): Boolean {
+        val p = prefs(ctx)
+        val ecrit = if (p.contains(KEY_GESTES_DEMARRAGE)) p.getInt(KEY_GESTES_DEMARRAGE, -1) else null
+        return SystemGestures.enAttente(lireGestes(), ecrit, demarrage(ctx))
+    }
+
+    /** Ligne du Diagnostic : la propriété, qui l'a écrite, et si le redémarrage manque encore. */
+    fun gesturesDiag(ctx: Context): String {
+        val p = prefs(ctx)
+        val ecrit = if (p.contains(KEY_GESTES_DEMARRAGE)) p.getInt(KEY_GESTES_DEMARRAGE, -1).toString() else "–"
+        return "${SystemGestures.PROP}=${lireGestes()} · par MG4Control=${p.getBoolean(KEY_GESTES_PAR_NOUS, false)} · " +
+            "écrite au démarrage $ecrit, actuel ${demarrage(ctx) ?: "?"} · en attente=${gesturesPending(ctx)} · option=${isOn(ctx)}"
+    }
+
+    /** Active les glissements avec l'option, les rend à leur état d'usine quand on l'arrête. */
+    private fun gestes(app: Context, raison: String) {
+        val p = prefs(app)
+        val lu = lireGestes()
+        val parNous = p.getBoolean(KEY_GESTES_PAR_NOUS, false)
+        when (SystemGestures.action(isOn(app), lu, parNous)) {
+            SystemGestures.Action.RIEN -> Unit
+            SystemGestures.Action.ACTIVER -> {
+                val ok = ecrireGestes("true") && lireGestes() == true
+                if (ok) p.edit().putBoolean(KEY_GESTES_PAR_NOUS, true)
+                    .apply { demarrage(app)?.let { putInt(KEY_GESTES_DEMARRAGE, it) } ?: remove(KEY_GESTES_DEMARRAGE) }
+                    .apply()
+                AppLogger.i(TAG, "$raison : glissements depuis le bord ${if (ok) "activés (actifs au prochain démarrage de l'écran)" else "NON activés : écriture refusée"} — ${SystemGestures.PROP} était $lu")
+            }
+            SystemGestures.Action.RESTAURER -> {
+                val ok = ecrireGestes("false") && lireGestes() == false
+                if (ok) p.edit().remove(KEY_GESTES_PAR_NOUS).remove(KEY_GESTES_DEMARRAGE).apply()
+                AppLogger.i(TAG, "$raison : glissements depuis le bord ${if (ok) "rendus à l'état d'usine" else "NON rendus : écriture refusée"}")
+            }
+        }
+    }
+
+    @android.annotation.SuppressLint("PrivateApi")   // SystemProperties : API cachée, l'app tourne en uid système (voulu).
+    private fun lireGestes(): Boolean? = runCatching {
+        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
+            .invoke(null, SystemGestures.PROP) as? String
+    }.getOrNull().let { SystemGestures.lire(it) }
+
+    @android.annotation.SuppressLint("PrivateApi")
+    private fun ecrireGestes(valeur: String): Boolean = runCatching {
+        Class.forName("android.os.SystemProperties").getMethod("set", String::class.java, String::class.java)
+            .invoke(null, SystemGestures.PROP, valeur)
+    }.onFailure { AppLogger.w(TAG, "écriture de ${SystemGestures.PROP} : ${(it.cause ?: it).javaClass.simpleName} ${(it.cause ?: it).message}") }
+        .isSuccess
+
+    /** Compteur de démarrages d'Android (`Settings.Global.BOOT_COUNT`) ; null si illisible. */
+    private fun demarrage(ctx: Context): Int? =
+        runCatching { Settings.Global.getInt(ctx.contentResolver, Settings.Global.BOOT_COUNT) }.getOrNull()
+
     private fun passage(app: Context, raison: String, relire: Boolean) {
+        // Indépendant de policy_control : avant les sorties « rien à faire » plus bas.
+        runCatching { gestes(app, raison) }
+            .onFailure { AppLogger.w(TAG, "$raison : glissements ${it.javaClass.simpleName} ${it.message}") }
         runCatching {
             val self = app.packageName
             val maCle = ImmersivePolicy.OWNER_KEYS[self] ?: run {

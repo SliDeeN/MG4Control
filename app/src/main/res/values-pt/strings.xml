@@ -1159,6 +1159,7 @@
     <string name="immersive_tip_right">deslize o dedo a partir da margem direita do ecrã para a esquerda para fazer voltar a barra lateral (de cima para baixo para a barra superior). Volta a esconder-se após alguns segundos.</string>
     <string name="immersive_reminder_left">Deslize a partir da margem esquerda para fazer voltar a barra lateral durante alguns segundos.</string>
     <string name="immersive_reminder_right">Deslize a partir da margem direita para fazer voltar a barra lateral durante alguns segundos.</string>
+    <string name="immersive_gestures_pending">Deslizes ativados: vão funcionar após o próximo reinício do ecrã central. Até lá, as barras escondidas não voltam.</string>
     <string name="immersive_confirm_ok">Ativar</string>
     <string name="immersive_empty">Nenhuma app encontrada</string>
     <string name="shortcuts_cat_preclim">Guardião do carro</string>

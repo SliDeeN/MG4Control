@@ -1061,6 +1061,7 @@
     <string name="immersive_tip_right">přejeďte od pravého okraje obrazovky doleva a vrátíte boční lištu (shora dolů pro horní lištu). Po několika sekundách se znovu skryje.</string>
     <string name="immersive_reminder_left">Přejetím od levého okraje vrátíte boční lištu na několik sekund.</string>
     <string name="immersive_reminder_right">Přejetím od pravého okraje vrátíte boční lištu na několik sekund.</string>
+    <string name="immersive_gestures_pending">Přejetí zapnuta: začnou fungovat po příštím restartu centrální obrazovky. Do té doby se skryté lišty nevrátí.</string>
     <string name="immersive_confirm_ok">Zapnout</string>
     <string name="immersive_empty">Nenalezena žádná aplikace</string>
     <string name="shortcuts_cat_preclim">Hlídání vozu</string>
