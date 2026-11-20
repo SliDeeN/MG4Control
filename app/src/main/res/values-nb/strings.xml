@@ -563,7 +563,7 @@
     <string name="adv_sc_record">Registrer en knapp</string>
     <string name="adv_sc_recording">Trykk på en knapp på rattet...</string>
     <string name="adv_sc_none">ingen</string>
-    <string name="shortcuts_cat_classic">Snarveier</string>
+    <string name="shortcuts_cat_classic">Fysiske knapper</string>
     <string name="wheel_press_double">Dobbelt</string>
     <string name="wheel_key_star_left">★ Venstre knapp</string>
     <string name="wheel_key_star_right">★ Høyre knapp</string>
@@ -1072,7 +1072,7 @@
     <string name="charge_popup_price_title">Pris per kWh</string>
     <string name="charge_popup_price_note">Endre kun denne belastningen.</string>
     <string name="charge_popup_price_ok">Bekreft</string>
-    <string name="charge_popup_none">Ingen belastning pågår</string>
+    <string name="charge_popup_none">Ingen lading pågår</string>
     <string name="charge_popup_disabled">Slå på &quot;Lading pop-up&quot; i Innstillinger › Grensesnitt</string>
     <string name="settings_charge_popup">Lading pop-up</string>
     <string name="settings_charge_popup_switch">Vis popup-vinduet mens du lader</string>

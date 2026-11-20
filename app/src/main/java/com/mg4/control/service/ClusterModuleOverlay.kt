@@ -662,6 +662,10 @@ internal object ClusterModuleOverlay {
         if (lus.any { it.name !in signaux } || maintenant - dernierSignauxMs >= SIGNAUX_MS) {
             dernierSignauxMs = maintenant
             lus.forEach { s -> signaux[s.name] = com.mg4.control.automation.CustomRules.readSignal(ctx, s) }
+        } else if (com.mg4.control.model.RuleSignal.DRIVE_MINUTES in lus) {
+            // Temps depuis READY, en chronomètre : relu à chaque relevé (horloge interne, pas de binder).
+            signaux[com.mg4.control.model.RuleSignal.DRIVE_MINUTES.name] =
+                com.mg4.control.automation.CustomRules.readSignal(ctx, com.mg4.control.model.RuleSignal.DRIVE_MINUTES)
         }
         val code = LocaleHelper.getLanguage(ctx)
         val lieu = LocaleHelper.applyLocale(ctx)

@@ -713,6 +713,8 @@ object FloatingButtonsOverlay {
         }
         val s = BubbleInfo.signal(cle) ?: return BubbleInfo.UNKNOWN to null
         val lu = com.mg4.control.automation.CustomRules.readSignal(ctx, s)
+        // Temps depuis READY : en chronomètre, sans unité.
+        BubbleInfo.chrono(s, lu)?.let { return it to null }
         // Vitesse et autonomie dans l'unité générale ; en Auto, relue dans la voiture (ce fil, binder).
         val converti = BubbleInfo.inDistanceUnit(s, lu, com.mg4.control.util.DistanceSetting.unitReading(ctx))
         val v = converti?.first ?: lu

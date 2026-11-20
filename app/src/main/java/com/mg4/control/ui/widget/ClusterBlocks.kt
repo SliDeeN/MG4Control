@@ -105,6 +105,8 @@ object ClusterBlocks {
             else -> {
                 val s = BubbleInfo.signal(b.info) ?: return fait(BubbleInfo.UNKNOWN to null)
                 val brut = if (s == RuleSignal.SPEED) lu.vitesseKmh?.toDouble() else lu.signaux[s.name]
+                // Temps depuis READY : en chronomètre, sans unité.
+                BubbleInfo.chrono(s, brut)?.let { return fait(it to null) }
                 val converti = BubbleInfo.inDistanceUnit(s, brut, ClusterInfo.distance(b, general))
                 val v = converti?.first ?: brut
                 val u = (converti?.second ?: mots.unit(s).ifEmpty { BubbleInfo.extraUnit(s) }).trim()

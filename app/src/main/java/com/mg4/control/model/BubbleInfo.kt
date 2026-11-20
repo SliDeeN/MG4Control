@@ -21,7 +21,9 @@ object BubbleInfo {
     /** Relecture : toutes les secondes pour ce qui bouge vite, toutes les [SLOW_EVERY] secondes sinon. */
     const val TICK_MS = 1_000L
     const val SLOW_EVERY = 5
-    private val RAPIDES = setOf(TIME, RuleSignal.SPEED.name)
+    // Temps depuis READY : un chronomètre (2026-11-20), ses secondes doivent défiler. Lu sur
+    // l'horloge interne, sans binder : rien ne coûte à le relire chaque seconde.
+    private val RAPIDES = setOf(TIME, RuleSignal.SPEED.name, RuleSignal.DRIVE_MINUTES.name)
 
     /** Ce qu'affiche une valeur illisible : jamais un chiffre inventé. */
     const val UNKNOWN = "—"
@@ -52,6 +54,23 @@ object BubbleInfo {
     /** Au toucher, l'action (vrai pour toute bulle d'avant la fonction). */
     fun tapRuns(b: FloatingButton): Boolean = b.tapAction != false
     fun fast(key: String?): Boolean = key in RAPIDES
+
+    /**
+     * Temps depuis READY affiché en chronomètre (variante A, 2026-11-20, à la demande d'un
+     * utilisateur qui s'en sert comme minuteur de trajet) : « 12:34 », puis « 1:02:03 » passé
+     * une heure. La valeur reste en minutes pour les automatisations ; seul l'affichage change.
+     * `null` pour les autres informations ou une valeur illisible.
+     */
+    fun chrono(s: RuleSignal, value: Any?): String? {
+        if (s != RuleSignal.DRIVE_MINUTES) return null
+        val minutes = (value as? Number)?.toDouble()?.takeUnless { it.isNaN() } ?: return null
+        val total = (minutes * 60.0).toLong().coerceAtLeast(0L)
+        val h = total / 3600
+        val m = (total % 3600) / 60
+        val sec = total % 60
+        return if (h > 0) String.format(Locale.US, "%d:%02d:%02d", h, m, sec)
+        else String.format(Locale.US, "%d:%02d", m, sec)
+    }
 
     /** Unités que la liste des automatisations n'écrit pas, mais qu'une bulle doit montrer. */
     fun extraUnit(s: RuleSignal): String = when (s) {

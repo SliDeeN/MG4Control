@@ -38,6 +38,23 @@ class BubbleInfoTest {
     }
 
     @Test
+    fun `time since READY is shown as a stopwatch, refreshed every second`() {
+        val s = RuleSignal.DRIVE_MINUTES
+        assertEquals("0:00", BubbleInfo.chrono(s, 0.0))
+        assertEquals("0:45", BubbleInfo.chrono(s, 0.75))
+        assertEquals("12:34", BubbleInfo.chrono(s, 12 + 34 / 60.0 + 0.001))
+        assertEquals("59:59", BubbleInfo.chrono(s, 59 + 59.9 / 60.0))
+        assertEquals("1:00:00", BubbleInfo.chrono(s, 60.0))
+        assertEquals("1:02:03", BubbleInfo.chrono(s, 62 + 3.2 / 60.0))
+        assertEquals("10:00:00", BubbleInfo.chrono(s, 600.0))
+        assertNull(BubbleInfo.chrono(s, null))
+        assertNull(BubbleInfo.chrono(s, Double.NaN))
+        // Les autres informations gardent leur format.
+        assertNull(BubbleInfo.chrono(RuleSignal.SOC, 64.0))
+        assertTrue(BubbleInfo.fast(s.name))
+    }
+
+    @Test
     fun `a yes-no value colours the bubble, other values do not`() {
         assertEquals(true, BubbleInfo.toggleState(true))
         assertEquals(false, BubbleInfo.toggleState(false))
