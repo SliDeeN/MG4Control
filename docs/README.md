@@ -122,16 +122,16 @@ langue mène à un dossier et non à sa page.
 
 ## Version documentée
 
-Le site et le simulateur décrivent la **2.7.0** (code de la branche `beta` au 12/11/2026 : nouveau look
-— menu principal en colonne, sous-onglets en pastilles, palette DiAuto —, Boutons physiques, Réglages rapides, cycle
-des modes, Mes automatisations — une tuile par option, puis son mode —, statistiques par profil, graphique par trajet, export CSV,
-écran conducteur V2 avec ses cases d'information, bulles d'information et apparence par bulle, unité de distance générale,
-norvégien). Ils sont prévus pour être publiés en
-même temps que la release 2.7.0 : le bouton « Télécharger la dernière version » pointe vers
+Le site et le simulateur décrivent la **2.7.1** (code de la branche `beta` au 20/11/2026 : écran conducteur à
+modules — bibliothèque commune, listes par onglet, raccourci « Module suivant », modules Pneus et Graphique —,
+pop-up Pression des pneus et informations des pneus, courant de charge AC, marche / arrêt de la charge et verrou de la
+prise, Track mode, bulles masquées par application, chronomètre depuis READY, clignotant dans les automatisations,
+fenêtre clim d'origine remplacée). Ils sont prévus pour être publiés en
+même temps que la release 2.7.1 : le bouton « Télécharger la dernière version » pointe vers
 `releases/latest`, et publier plus tôt annoncerait des fonctions que la version stable n'a pas.
 
-Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.7.0 ») et leur carte la
-classe `is-new` (l'aperçu d'une nouveauté aussi, pour rester visible avec le filtre) ; le filtre « ★ 2.7.0 », le lien « Nouveautés » de l'en-tête et l'encadré de
+Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.7.1 ») et leur carte la
+classe `is-new` (l'aperçu d'une nouveauté aussi, pour rester visible avec le filtre) ; le filtre « ★ 2.7.1 », le lien « Nouveautés » de l'en-tête et l'encadré de
 l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces classes (cartes et
 tableau de compatibilité), réécrire l'encadré des nouveautés et changer la pastille `vX.Y.Z` de
 l'accueil, la puce « ★ » et les deux liens « Nouveautés X.Y.Z » de l'en-tête.
