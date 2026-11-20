@@ -177,7 +177,6 @@ class ClusterGaugeView(context: Context) : View(context) {
     data class Graphe(
         val info: com.mg4.control.model.ClusterHistory.Info,
         val titre: String,
-        val actuelle: String,
         /** Les barres, de la plus ancienne à la plus récente ; `null` = pas de donnée. */
         val valeurs: List<Float?>,
         val moyenne: Float?,
@@ -446,12 +445,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         pneuTexte.textSize = 11f
         pneuTexte.color = cTexte2
         pneuTexte.textAlign = Paint.Align.LEFT
+        // Rien en haut à droite (2026-11-20) : le titre seul.
         canvas.drawText(g.titre, x0, zy + 14f, pneuTexte)
-        pneuTexte.typeface = moyen
-        pneuTexte.textSize = 14f
-        pneuTexte.color = cTexte
-        pneuTexte.textAlign = Paint.Align.RIGHT
-        canvas.drawText(g.actuelle, x1, zy + 15f, pneuTexte)
         val haut = zy + 24f
         val bas = zy + zh - 18f
         pneuTexte.typeface = Typeface.DEFAULT
@@ -472,19 +467,22 @@ class ClusterGaugeView(context: Context) : View(context) {
         }
         val lues = g.valeurs.filterNotNull()
         if (lues.isEmpty() || bas - haut < 20f) return
-        val parZero = g.info == com.mg4.control.model.ClusterHistory.Info.CONSUMPTION ||
-            g.info == com.mg4.control.model.ClusterHistory.Info.REGEN || g.info == com.mg4.control.model.ClusterHistory.Info.POWER ||
-            g.info == com.mg4.control.model.ClusterHistory.Info.SPEED
+        // Échelle du minimum au maximum, avec 6 % de marge (maquette du 2026-11-20) : le max presque
+        // en haut, le min presque en bas, au lieu d'un axe parti de zéro qui tassait tout. Les barres
+        // partent du bas, ou de la ligne zéro quand les valeurs passent sous zéro.
         var mn = lues.minOrNull()!!
         var mx = lues.maxOrNull()!!
-        if (parZero) { mn = minOf(0f, mn); mx = maxOf(mx, 0f) * 1.05f } else { val m = (mx - mn).coerceAtLeast(1f) * 0.08f; mn -= m; mx += m }
-        if (mx - mn < 1e-3f) mx = mn + 1f
+        val marge = maxOf(mx - mn, kotlin.math.abs(mx) * 0.1f, 0.5f) * 0.06f
+        mn -= marge; mx += marge
         fun y(v: Float) = bas - (v - mn) / (mx - mn) * (bas - haut)
-        val zero = if (parZero) y(0f) else bas
-        grTrait.strokeWidth = 1f
-        grTrait.color = cPiste
-        grTrait.pathEffect = null
-        canvas.drawLine(x0, zero, x1, zero, grTrait)
+        val traverseZero = mn < 0f && mx > 0f
+        val zero = if (traverseZero) y(0f) else bas
+        if (traverseZero) {
+            grTrait.strokeWidth = 1f
+            grTrait.color = cPiste
+            grTrait.pathEffect = null
+            canvas.drawLine(x0, zero, x1, zero, grTrait)
+        }
         val n = g.valeurs.size
         val w = (x1 - x0) / n
         fun couleur(v: Float) = when (g.info) {
@@ -492,18 +490,30 @@ class ClusterGaugeView(context: Context) : View(context) {
             com.mg4.control.model.ClusterHistory.Info.REGEN -> cRecup
             else -> g.couleur ?: C_CLAIR
         }
-        if (g.courbe) {
+        fun donnees() = if (g.courbe) {
+            // Courbe arrondie (2026-11-20) : chaque suite de barres lues, lissée sans dépasser ses
+            // points ([SmoothCurve]) ; un trou de données coupe la courbe.
             grChemin.reset()
-            var debut = true
+            val suites = mutableListOf<MutableList<Pair<Float, Float>>>()
+            var suite: MutableList<Pair<Float, Float>>? = null
             g.valeurs.forEachIndexed { i, v ->
-                if (v == null) { debut = true; return@forEachIndexed }
-                val x = x0 + w * (i + 0.5f)
-                if (debut) grChemin.moveTo(x, y(v)) else grChemin.lineTo(x, y(v))
-                debut = false
+                if (v == null) { suite = null; return@forEachIndexed }
+                val s = suite ?: mutableListOf<Pair<Float, Float>>().also { suite = it; suites += it }
+                s += (x0 + w * (i + 0.5f)) to y(v)
+            }
+            suites.forEach { pts ->
+                grChemin.moveTo(pts[0].first, pts[0].second)
+                com.mg4.control.model.SmoothCurve.controls(pts.map { it.first }, pts.map { it.second }).forEachIndexed { k, c ->
+                    grChemin.cubicTo(c[0], c[1], c[2], c[3], pts[k + 1].first, pts[k + 1].second)
+                }
             }
             grTrait.strokeWidth = 2f
+            grTrait.strokeJoin = Paint.Join.ROUND
+            grTrait.strokeCap = Paint.Cap.ROUND
             grTrait.color = couleur(lues.average().toFloat())
             canvas.drawPath(grChemin, grTrait)
+            grTrait.strokeJoin = Paint.Join.MITER
+            grTrait.strokeCap = Paint.Cap.BUTT
         } else {
             g.valeurs.forEachIndexed { i, v ->
                 if (v == null) return@forEachIndexed
@@ -516,8 +526,9 @@ class ClusterGaugeView(context: Context) : View(context) {
         }
         // Pointillés : min et max en gris, valeur à droite ; moyenne en blanc, valeur à gauche
         // (maquette du 2026-11-20) — les étiquettes ne se chevauchent pas.
-        fun ligne(v: Float, texte: String?, couleur: Int, aDroite: Boolean) {
+        fun ligne(v: Float, texte: String?, couleur: Int, aDroite: Boolean, fond: Boolean, ecrit: Boolean) {
             val yl = y(v)
+            if (fond) {
             grTrait.strokeWidth = 1f
             grTrait.color = couleur
             grTrait.pathEffect = android.graphics.DashPathEffect(floatArrayOf(4f, 3f), 0f)
@@ -528,6 +539,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             grChemin.lineTo(x1, yl)
             canvas.drawPath(grChemin, grTrait)
             grTrait.pathEffect = null
+            }
             texte ?: return
             pneuTexte.typeface = moyen
             pneuTexte.textSize = 10f
@@ -537,20 +549,35 @@ class ClusterGaugeView(context: Context) : View(context) {
             val l = pneuTexte.measureText(texte)
             val tx = if (aDroite) x1 - l - 3f else x0 + 3f
             val ty = (yl - 4f).coerceAtLeast(haut + 10f)
-            pneuRect.set(tx - 3f, ty - 10f, tx + l + 3f, ty + 3f)
-            pneuRoue.color = Color.argb(215, Color.red(FOND), Color.green(FOND), Color.blue(FOND))
-            canvas.drawRoundRect(pneuRect, 3f, 3f, pneuRoue)
-            canvas.drawText(texte, tx, ty, pneuTexte)
+            if (fond) {
+                pneuRect.set(tx - 3f, ty - 10f, tx + l + 3f, ty + 3f)
+                pneuRoue.color = Color.argb(215, Color.red(FOND), Color.green(FOND), Color.blue(FOND))
+                canvas.drawRoundRect(pneuRect, 3f, 3f, pneuRoue)
+            }
+            if (ecrit) canvas.drawText(texte, tx, ty, pneuTexte)
         }
-        if (g.avecMinMax) {
-            val mxv = g.max
-            val mnv = g.min
-            if (mxv != null) ligne(mxv, g.maxTexte, C_GRADUATION, true)
-            // Une seule barre lue (ou toutes égales) : une seule ligne.
-            if (mnv != null && mnv != mxv) ligne(mnv, g.minTexte, C_GRADUATION, true)
+        fun lignes(fond: Boolean, ecrit: Boolean) {
+            if (g.avecMinMax) {
+                val mxv = g.max
+                val mnv = g.min
+                if (mxv != null) ligne(mxv, g.maxTexte, C_GRADUATION, true, fond, ecrit)
+                // Une seule barre lue (ou toutes égales) : une seule ligne.
+                if (mnv != null && mnv != mxv) ligne(mnv, g.minTexte, C_GRADUATION, true, fond, ecrit)
+            }
+            val moy = g.moyenne
+            if (g.avecMoyenne && moy != null) ligne(moy, g.moyenneTexte, cTexte, false, fond, ecrit)
         }
-        val moy = g.moyenne
-        if (g.avecMoyenne && moy != null) ligne(moy, g.moyenneTexte, cTexte, false)
+        if (g.courbe) {
+            // Courbe (2026-11-20) : tracée par-dessus les pastilles, sous leur texte — une pastille
+            // ne cache plus la fin de la courbe quand elle passe près du min ou du max.
+            lignes(fond = true, ecrit = false)
+            donnees()
+            lignes(fond = false, ecrit = true)
+        } else {
+            // Barres : les pastilles par-dessus, pour que le texte reste lisible sur les barres.
+            donnees()
+            lignes(fond = true, ecrit = true)
+        }
     }
 
     /** Nom du module en pastille en haut du carré, par-dessus tout (raccourci « Module suivant »). */

@@ -723,7 +723,7 @@ object FloatingButtonsOverlay {
         val v = converti?.first ?: lu
         val unite = converti?.second ?: m.unit(s).ifEmpty { BubbleInfo.extraUnit(s) }
         return BubbleInfo.format(v, unite, ctx.getString(R.string.common_on), ctx.getString(R.string.common_off),
-            { m.value(s, it) }) to BubbleInfo.toggleState(v)
+            { m.value(s, it) }, decimal = BubbleInfo.oneDecimal(s)) to BubbleInfo.toggleState(v)
     }
 
     /** Tour de relecture des informations ; 0 = aucune. */

@@ -108,6 +108,13 @@ class ClusterLayoutDrawTest {
         val vide = dessiner("graph_empty", c(base, emptyList()))
         dessiner("graph_full_altitude", c(base.copy(graphInfo = "altitude"), d = ClusterLayout(slots = listOf(null, null, null, null))))
         dessiner("graph_regen_20", c(base.copy(graphInfo = "regen", graphKm = 20)))
+        // Historique court (2,4 km) : l'axe s'arrête à 3 km, la courbe prend toute la largeur.
+        dessiner("graph_short_line", c(base.copy(graphLine = true), sim.takeLast(12)))
+        dessiner("graph_short_bars", c(base, sim.takeLast(12)))
+        // Saut brusque puis chute : courbe arrondie, sans pointe au-delà du max ni du min.
+        val saut = List(60) { n -> val whKm = when (n) { in 20..24 -> 460f; in 25..29 -> 120f; else -> 150f }
+            com.mg4.control.model.ClusterHistory.Bin(0.2f, whKm * 0.2f, 0f, 10f) }
+        dessiner("graph_line_jump", c(base.copy(graphLine = true, graphKm = 20), saut))
         assertFalse(barres.sameAs(courbe))
         assertFalse(barres.sameAs(vide))
         // Min et max (pointillés), et couleur du graphique hors consommation (2026-11-20).

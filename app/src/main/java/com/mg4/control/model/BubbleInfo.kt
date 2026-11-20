@@ -85,13 +85,13 @@ object BubbleInfo {
      * [unit], texte passé par [name] (mode de conduite, profil…), [UNKNOWN] si illisible.
      */
     fun format(value: Any?, unit: String, on: String, off: String, name: (String) -> String = { it },
-               locale: Locale = Locale.getDefault()): String = when (value) {
+               locale: Locale = Locale.getDefault(), decimal: Boolean = false): String = when (value) {
         null -> UNKNOWN
         is Boolean -> if (value) on else off
         // Décimale dans la langue de l'écran (« 21,5 °C ») : c'est un affichage, pas une donnée machine.
         is Number -> value.toDouble().let { n ->
             if (n.isNaN()) UNKNOWN
-            else (if (n % 1.0 == 0.0) n.toLong().toString() else String.format(locale, "%.1f", n)) + unit
+            else (if (n % 1.0 == 0.0 && !decimal) n.toLong().toString() else String.format(locale, "%.1f", n)) + unit
         }
         is Collection<*> -> value.joinToString(", ") { name(it.toString()) }.ifEmpty { UNKNOWN }
         else -> value.toString().takeIf { it.isNotBlank() }?.let(name) ?: UNKNOWN
@@ -124,6 +124,9 @@ object BubbleInfo {
             else -> null
         }
     }
+
+    /** Toujours une décimale (2026-11-20) : la température extérieure s'affiche « 9,0 °C », pas « 9 °C ». */
+    fun oneDecimal(s: RuleSignal): Boolean = s == RuleSignal.OUTSIDE_TEMP
 
     /** Une valeur oui / non colore la bulle comme une bascule (choix du 2026-11-10) ; sinon rien. */
     fun toggleState(value: Any?): Boolean? = value as? Boolean

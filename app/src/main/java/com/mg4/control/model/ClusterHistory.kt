@@ -1,5 +1,7 @@
 package com.mg4.control.model
 
+import kotlin.math.roundToInt
+
 /**
  * Historique des derniers kilomètres pour le module « Graphique » de l'écran conducteur (issue #217,
  * maquette validée le 2026-11-20). Kotlin pur.
@@ -79,8 +81,10 @@ object ClusterHistory {
      * récente ; `null` pour une barre sans donnée (historique plus court, information illisible).
      * Consommation et récupération en Wh/km, vitesse en km/h, puissance en kW, le reste tel quel.
      */
-    fun series(bins: List<Bin>, info: Info, totalKm: Int, bars: Int = BARS): List<Float?> {
-        val pas = totalKm.toFloat() / bars
+    fun series(bins: List<Bin>, info: Info, totalKm: Int, bars: Int = BARS): List<Float?> = series(bins, info, totalKm.toFloat(), bars)
+
+    fun series(bins: List<Bin>, info: Info, totalKm: Float, bars: Int = BARS): List<Float?> {
+        val pas = totalKm / bars
         val groupes = List(bars) { mutableListOf<Bin>() }
         var recul = 0f
         for (b in bins.asReversed()) {
@@ -115,10 +119,25 @@ object ClusterHistory {
     }
 
     /** Moyenne du graphique : pondérée par la distance pour les rapports au km, simple sinon. */
-    fun average(bins: List<Bin>, info: Info, totalKm: Int): Float? {
-        val vals = series(bins, info, totalKm, 1)
-        return vals.firstOrNull()
+    fun average(bins: List<Bin>, info: Info, totalKm: Int): Float? = average(bins, info, totalKm.toFloat())
+
+    fun average(bins: List<Bin>, info: Info, totalKm: Float): Float? = series(bins, info, totalKm, 1).firstOrNull()
+
+    /** Pas simples de l'axe tant que l'historique est plus court que la distance réglée. */
+    private val PAS_AXE = listOf(1f, 2f, 3f, 4f, 5f, 6f, 8f, 10f, 12f, 15f, 20f, 25f, 30f, 40f, 50f, 60f, 80f, 100f)
+
+    /**
+     * Distance couverte par l'axe (maquette du 2026-11-20) : l'historique enregistré, arrondi au pas
+     * simple suivant, qui s'allonge en roulant jusqu'à la distance réglée [totalKm].
+     */
+    fun shownKm(bins: List<Bin>, totalKm: Int): Float {
+        val roule = coveredKm(bins, totalKm)
+        if (roule >= totalKm) return totalKm.toFloat()
+        return (PAS_AXE.firstOrNull { it >= roule - 1e-3f } ?: totalKm.toFloat()).coerceAtMost(totalKm.toFloat())
     }
+
+    /** Barres pour [shownKm] : [BARS] au plus, jamais plus fines qu'une tranche de [BIN_KM]. */
+    fun barsFor(shownKm: Float): Int = (shownKm / BIN_KM).roundToInt().coerceIn(1, BARS)
 
     /** Distance couverte par l'historique (km), plafonnée à [totalKm]. */
     fun coveredKm(bins: List<Bin>, totalKm: Int): Float = bins.sumOf { it.km.toDouble() }.toFloat().coerceAtMost(totalKm.toFloat())

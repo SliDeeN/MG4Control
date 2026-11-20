@@ -29,6 +29,10 @@ class BubbleInfoTest {
         assertEquals("64 %", BubbleInfo.format(64.0, " %", "ON", "OFF", locale = fr))
         assertEquals("21,5 °C", BubbleInfo.format(21.5, " °C", "ON", "OFF", locale = fr))
         assertEquals("21.5 °C", BubbleInfo.format(21.5, " °C", "ON", "OFF", locale = Locale.UK))
+        // Température extérieure : toujours une décimale (2026-11-20).
+        assertEquals("9,0 °C", BubbleInfo.format(9.0, " °C", "ON", "OFF", locale = fr, decimal = BubbleInfo.oneDecimal(RuleSignal.OUTSIDE_TEMP)))
+        assertEquals("9.0 °C", BubbleInfo.format(9.0, " °C", "ON", "OFF", locale = Locale.UK, decimal = true))
+        assertEquals(false, BubbleInfo.oneDecimal(RuleSignal.SOC))
         assertEquals("ON", BubbleInfo.format(true, "", "ON", "OFF"))
         assertEquals("OFF", BubbleInfo.format(false, "", "ON", "OFF"))
         assertEquals("Éco", BubbleInfo.format("ECO", "", "ON", "OFF", { if (it == "ECO") "Éco" else it }))

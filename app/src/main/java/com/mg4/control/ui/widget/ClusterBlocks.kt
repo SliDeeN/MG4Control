@@ -113,7 +113,7 @@ object ClusterBlocks {
                 val v = converti?.first ?: brut
                 val u = (converti?.second ?: mots.unit(s).ifEmpty { BubbleInfo.extraUnit(s) }).trim()
                 val texte = BubbleInfo.format(v, "", ctx.getString(R.string.common_on), ctx.getString(R.string.common_off),
-                    { mots.value(s, it) }, locale)
+                    { mots.value(s, it) }, locale, BubbleInfo.oneDecimal(s))
                 fait(texte to u.takeIf { it.isNotEmpty() && texte != BubbleInfo.UNKNOWN && v !is Boolean })
             }
         }

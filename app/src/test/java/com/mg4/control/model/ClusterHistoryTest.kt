@@ -62,6 +62,22 @@ class ClusterHistoryTest {
     }
 
     @Test
+    fun `the axis only covers the recorded km until the chosen distance`() {
+        // 2,4 km enregistrés sur 50 : l'axe fait 3 km, en 15 barres de 200 m.
+        assertEquals(3f, ClusterHistory.shownKm(bins(12), 50), 0.001f)
+        assertEquals(15, ClusterHistory.barsFor(3f))
+        // Pile un pas simple : il est gardé.
+        assertEquals(10f, ClusterHistory.shownKm(bins(50), 50), 0.001f)
+        // Plus que la distance réglée : la distance réglée, en 50 barres.
+        assertEquals(50f, ClusterHistory.shownKm(bins(300), 50), 0.001f)
+        assertEquals(20f, ClusterHistory.shownKm(bins(300), 20), 0.001f)
+        assertEquals(50, ClusterHistory.barsFor(100f))
+        // Les barres de l'axe court sont toutes pleines.
+        val s = ClusterHistory.series(bins(12), Info.CONSUMPTION, 3f, 15)
+        assertTrue(s.count { it != null } >= 12)
+    }
+
+    @Test
     fun `each information is computed its own way`() {
         val h = bins(250, kmh = 90f)
         assertEquals(90f, ClusterHistory.series(h, Info.SPEED, 50).last()!!, 0.1f)

@@ -6,7 +6,6 @@ import com.mg4.control.model.ClusterHistory
 import com.mg4.control.model.ClusterHistory.Info
 import com.mg4.control.model.ClusterModuleDef
 import com.mg4.control.model.ConsumptionUnit
-import com.mg4.control.model.DistanceUnit
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -38,19 +37,12 @@ object ClusterGraphs {
         // Consommation : Wh/km, ou kWh/100 km au dixième (÷ 10).
         val kwh100 = i == Info.CONSUMPTION && unite == ConsumptionUnit.KWH_PER_100KM
         fun conv(v: Float) = if (kwh100) v / 10f else v
-        val valeurs = ClusterHistory.series(bins, i, total).map { it?.let(::conv) }
-        val moyenne = ClusterHistory.average(bins, i, total)?.let(::conv)
+        // Axe dynamique (2026-11-20) : seulement les km enregistrés, jusqu'à la distance réglée.
+        val montre = ClusterHistory.shownKm(bins, total)
+        val valeurs = ClusterHistory.series(bins, i, montre, ClusterHistory.barsFor(montre)).map { it?.let(::conv) }
+        val moyenne = ClusterHistory.average(bins, i, montre)?.let(::conv)
         fun texte(v: Float): String = if (kwh100) String.format(locale, "%.1f", v) else v.roundToInt().toString()
-        val uniteTexte = when (i) {
-            Info.CONSUMPTION -> unite.labelFor(DistanceUnit.KM)
-            Info.REGEN -> "Wh/km"
-            Info.SPEED -> "km/h"
-            Info.ALTITUDE -> "m"
-            Info.OUTSIDE_TEMP -> "°C"
-            Info.SOC -> "%"
-            Info.POWER -> "kW"
-        }
-        val actuelle = valeurs.lastOrNull { it != null }
+        fun km(v: Float): String = (if (v % 1f == 0f) v.roundToInt().toString() else String.format(locale, "%.1f", v)) + " km"
         val lues = valeurs.filterNotNull()
         val min = lues.minOrNull()
         val max = lues.maxOrNull()
@@ -58,7 +50,6 @@ object ClusterGraphs {
         return ClusterGaugeView.Graphe(
             info = i,
             titre = "${nom(ctx, i)} · $total km",
-            actuelle = actuelle?.let { texte(it) + " " + uniteTexte.substringBefore(' ') } ?: "–",
             valeurs = valeurs,
             moyenne = moyenne,
             moyenneTexte = moyenne?.let { ctx.getString(R.string.cluster_graph_avg_short, texte(it)) },
@@ -70,8 +61,8 @@ object ClusterGraphs {
             maxTexte = max?.let { ctx.getString(R.string.cluster_graph_max_short, texte(it)) },
             avecMinMax = def?.graphMinMax != false,
             couleur = def?.graphColor,
-            axeDebut = "$total km",
-            axeMilieu = "${total / 2} km",
+            axeDebut = km(montre),
+            axeMilieu = km(montre / 2f),
             axeFin = ctx.getString(R.string.cluster_graph_now),
             vide = if (vide) ctx.getString(R.string.cluster_graph_empty) else null,
         )
