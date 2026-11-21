@@ -140,6 +140,26 @@ object FloatingButtons {
         (barW / 2f - zoneW / 2f)..(barW / 2f + zoneW / 2f)
 
     /**
+     * Bord gauche (px) d'un bouton déjà placé, hors glissé (2026-11-21, discussion #252) : sa place
+     * enregistrée [want], seulement ramenée dans la barre de [barW] px. Pas d'évitement des voisins :
+     * la place a été choisie sans chevauchement pendant le glissé, et pousser ici faisait dépendre la
+     * place de l'ordre de pose — la bulle se décalait de quelques px, puis cette place était gardée.
+     */
+    fun topBarExact(want: Float, w: Float, barW: Float): Float = want.coerceIn(0f, (barW - w).coerceAtLeast(0f))
+
+    /**
+     * Origine de la fenêtre de la barre du haut, confirmée avant d'être suivie (2026-11-21) : une
+     * mesure prise pendant qu'un déplacement de fenêtre n'est pas encore appliqué est fausse. Une
+     * valeur [measured] différente de [current] n'est retenue que si la mesure précédente
+     * ([candidate]) disait déjà la même chose. Rend (origine retenue, nouveau candidat).
+     */
+    fun confirmTopOffset(current: Int?, candidate: Int?, measured: Int): Pair<Int?, Int?> = when (measured) {
+        current -> current to null
+        candidate -> measured to null
+        else -> current to measured
+    }
+
+    /**
      * Bord gauche (px) d'un bouton de [w] px dans une barre de [barW] px : au plus près de [want],
      * sans toucher [bloques] (la languette, les boutons voisins) ni les bords, à [gap] près. Pendant
      * le glissé, le bouton saute ainsi par-dessus ce qu'il ne doit pas recouvrir. Plus aucune place

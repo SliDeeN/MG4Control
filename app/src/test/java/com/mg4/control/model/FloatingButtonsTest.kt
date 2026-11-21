@@ -90,4 +90,24 @@ class FloatingButtonsTest {
         assertEquals(22, FloatingButtons.textFor(b.copy(topBar = true)))
         assertEquals(false, FloatingButtons.inTopBar(b))
     }
+
+    @Test fun `a placed top bar bubble keeps its own place, neighbours ignored`() {
+        assertEquals(1700f, FloatingButtons.topBarExact(1700f, 120f, 1920f), 0f)
+        assertEquals(1800f, FloatingButtons.topBarExact(1850f, 120f, 1920f), 0f)
+        assertEquals(0f, FloatingButtons.topBarExact(-20f, 120f, 1920f), 0f)
+    }
+
+    @Test fun `the top bar origin moves only once measured twice`() {
+        // Même mesure : rien ne change, le candidat est oublié.
+        assertEquals(124 to null, FloatingButtons.confirmTopOffset(124, 0, 124))
+        // Première mesure différente : seulement notée.
+        assertEquals(124 to 0, FloatingButtons.confirmTopOffset(124, null, 0))
+        // Confirmée au passage suivant : retenue.
+        assertEquals(0 to null, FloatingButtons.confirmTopOffset(124, 0, 0))
+        // Mesure isolée (fenêtre en cours de déplacement) puis retour : jamais retenue.
+        assertEquals(124 to 37, FloatingButtons.confirmTopOffset(124, null, 37))
+        assertEquals(124 to null, FloatingButtons.confirmTopOffset(124, 37, 124))
+        // Origine encore inconnue : la première mesure attend aussi sa confirmation.
+        assertEquals(null to 124, FloatingButtons.confirmTopOffset(null, null, 124))
+    }
 }

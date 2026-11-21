@@ -70,6 +70,12 @@ import kotlin.math.roundToInt
  * mode à l'autre. Tout se compte donc en px de l'écran réel ; l'origine de la fenêtre
  * ([Bulle.decalage]) est mesurée sur la vue posée, et relue toutes les [RECALAGE_MS] pour recaler
  * la bulle quand le rail apparaît ou disparaît.
+ *
+ * Décalages de quelques px (2026-11-21, discussion #252) : hors glissé, une bulle de la barre va
+ * exactement à sa place enregistrée ([FloatingButtons.topBarExact]) — plus d'évitement des voisines
+ * à la pose ni au recalage, qui faisait dépendre la place de l'ordre de pose et était enregistré.
+ * L'origine de la fenêtre est commune à toutes les bulles de la barre ([decalageBarre]) et n'est
+ * suivie qu'une fois mesurée deux fois de suite ([FloatingButtons.confirmTopOffset]).
  */
 object FloatingButtonsOverlay {
 
@@ -134,12 +140,18 @@ object FloatingButtonsOverlay {
     private const val RECALAGE_MS = 500L
     private val recalage = object : Runnable {
         override fun run() {
-            val enHaut = bulles.values.filter { dansLaBarre(it) }
-            if (enHaut.isEmpty()) return
-            enHaut.forEach { recaler(it) }
+            if (bulles.values.none { dansLaBarre(it) }) return
+            recalerBarre()
             main.postDelayed(this, RECALAGE_MS)
         }
     }
+
+    /**
+     * Origine commune des fenêtres de la barre du haut (px de l'écran réel), `null` tant qu'aucune
+     * bulle n'y a été posée ; [candidatBarre] : mesure différente en attente de confirmation.
+     */
+    private var decalageBarre: Int? = null
+    private var candidatBarre: Int? = null
 
     /** Au démarrage du service et à chaque changement de réglage. */
     fun refresh(context: Context) {
@@ -366,24 +378,36 @@ object FloatingButtonsOverlay {
             FloatingButtons.TOP_GAP_DP * ctx.resources.displayMetrics.density) - decalage).roundToInt()
 
     /**
-     * Mesure où la fenêtre d'un bouton de la barre commence vraiment ; si le rail est apparu ou a
-     * disparu depuis, le bouton est remis à sa place sur l'écran réel. Rien pendant un appui.
+     * Mesure où les fenêtres de la barre commencent vraiment, sur une bulle au repos ; une origine
+     * confirmée ([FloatingButtons.confirmTopOffset]) qui a changé (rail apparu ou disparu) remet
+     * toutes les bulles de la barre à leur place enregistrée sur l'écran réel. Rien pendant un appui.
      */
-    private fun recaler(bulle: Bulle) {
+    private fun recalerBarre() {
         val wm = fenetres ?: return
-        val ctx = app ?: return
-        if (!bulle.vue.isAttachedToWindow || bulle.enDeplacement || bulle.vue.scaleX != 1f) return
-        val loc = IntArray(2).also { bulle.vue.getLocationOnScreen(it) }
-        val decalage = loc[0] - bulle.params.x
-        if (decalage == bulle.decalage) return
-        bulle.decalage = decalage
+        val enHaut = bulles.values.filter { dansLaBarre(it) }
+        if (enHaut.any { it.enDeplacement }) return
+        val temoin = enHaut.firstOrNull { it.vue.isAttachedToWindow && it.vue.scaleX == 1f && it.vue.width > 0 } ?: return
+        val loc = IntArray(2).also { temoin.vue.getLocationOnScreen(it) }
+        val mesure = loc[0] - temoin.params.x
+        val (retenu, candidat) = FloatingButtons.confirmTopOffset(decalageBarre, candidatBarre, mesure)
+        candidatBarre = candidat
+        if (retenu == null || retenu == decalageBarre && enHaut.all { it.decalage == retenu }) return
+        decalageBarre = retenu
         val largeurEcran = ecranReel(wm).x
-        val voulu = bulle.bouton.x * largeurEcran - bulle.vue.width / 2f
-        bulle.params.x = placeHaut(ctx, voulu, bulle.vue.width, largeurEcran, decalage, bulle.bouton.id)
-        runCatching { wm.updateViewLayout(bulle.vue, bulle.params) }
-        AppLogger.i(TAG, "« ${bulle.vue.text} » recalé dans la barre : fenêtre à $decalage px du bord de l'écran " +
-            "(rail ${if (decalage > 0) "affiché" else "caché"})")
+        enHaut.forEach { bulle ->
+            bulle.decalage = retenu
+            val x = placeExacte(bulle.bouton.x, bulle.vue.width, largeurEcran, retenu)
+            if (x == bulle.params.x) return@forEach
+            bulle.params.x = x
+            runCatching { wm.updateViewLayout(bulle.vue, bulle.params) }
+        }
+        AppLogger.i(TAG, "barre du haut recalée : fenêtres à $retenu px du bord de l'écran " +
+            "(rail ${if (retenu > 0) "affiché" else "caché"}), ${enHaut.size} bulle(s) remise(s) à leur place")
     }
+
+    /** `params.x` d'une bulle de la barre de [largeur] px dont le centre enregistré est [cx] (proportion). */
+    private fun placeExacte(cx: Float, largeur: Int, largeurEcran: Int, decalage: Int): Int =
+        (FloatingButtons.topBarExact(cx * largeurEcran - largeur / 2f, largeur.toFloat(), largeurEcran.toFloat()) - decalage).roundToInt()
 
     @SuppressLint("ClickableViewAccessibility")
     private fun poser(ctx: Context, wm: WindowManager, b: FloatingButton) {
@@ -427,11 +451,14 @@ object FloatingButtonsOverlay {
         val barre = ProjectionHvacZone.barreSysteme(ctx)
         val largeur = vue.measuredWidth
         val largeurEcran = ecranReel(wm).x
-        // Origine de la fenêtre supposée : après le rail (launcher). Mesurée une fois posée ([recaler]).
-        val decalage = (largeurEcran - ecran(wm).x).coerceAtLeast(0)
+        // Origine de la fenêtre : la dernière confirmée, sinon supposée après le rail (launcher).
+        // Mesurée une fois posée ([recalerBarre]).
+        val decalage = decalageBarre ?: (largeurEcran - ecran(wm).x).coerceAtLeast(0).also { decalageBarre = it }
         val auto = b.x < 0f
         val voulu = if (auto) 0f else b.x * largeurEcran - largeur / 2f
-        val x = placeHaut(ctx, voulu, largeur, largeurEcran, decalage, b.id)
+        // Place enregistrée telle quelle ; seule une bulle neuve cherche la première place libre.
+        val x = if (auto) placeHaut(ctx, voulu, largeur, largeurEcran, decalage, b.id)
+            else placeExacte(b.x, largeur, largeurEcran, decalage)
         val y = ((barre - vue.measuredHeight) / 2).coerceAtLeast(0)
         for (type in TYPES_BARRE) {
             val params = WindowManager.LayoutParams(
@@ -454,13 +481,18 @@ object FloatingButtonsOverlay {
             if (!ok) continue
             bulles[b.id] = bulle
             reveiller(bulle)
-            if (auto || x + decalage != voulu.roundToInt()) {
+            // Seule une bulle neuve enregistre sa place à la pose (avant le 2026-11-21, toute place
+            // poussée par une voisine remplaçait celle choisie : les décalages s'accumulaient).
+            if (auto) {
                 bulle.bouton = b.copy(x = ((x + decalage + largeur / 2f) / largeurEcran.coerceAtLeast(1)).coerceIn(0f, 1f))
                 FloatingButtonSettings.update(ctx, bulle.bouton)
             }
-            // L'origine supposée vérifiée sur la vue posée.
-            vue.post { recaler(bulle) }
-            AppLogger.i(TAG, "« ${vue.text} » posé dans la barre du haut (type $type, x=$x px, barre ${barre} px, ${(barre / d).roundToInt()} dp)")
+            // L'origine supposée est vérifiée par la relecture ([recalage], toutes les 500 ms) : deux
+            // mesures prises dans le même passage ne vaudraient pas confirmation.
+            val ecart = if (auto) 0 else x + decalage - voulu.roundToInt()
+            AppLogger.i(TAG, "« ${vue.text} » posé dans la barre du haut (type $type, x=$x px, fenêtre à $decalage px, " +
+                "barre ${barre} px, ${(barre / d).roundToInt()} dp)" +
+                if (ecart != 0) " — ${ecart} px de sa place enregistrée (ramenée dans l'écran)" else "")
             return true
         }
         return false
