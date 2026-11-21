@@ -2374,6 +2374,11 @@ object MG4Hardware {
             AppLogger.w(TAG, "  SWI132 overspeed: tous les paths ont échoué")
             return false
         }
+        // SWI133 : l'écran Réglages d'origine écrit cette alerte en « Recovery » (valeur mémorisée et
+        // renvoyée par la voiture) ; une écriture simple laissait la valeur mémorisée à ON, que la
+        // voiture remettait ensuite (2026-11-21 : survitesse relue ON après le profil).
+        if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133)
+            return setIntPropertyVpmRecovery(PROP_OVERSPEED_ALARM, if (on) 1 else 0)
         return setIntPropertyVpm(PROP_OVERSPEED_ALARM, if (on) 1 else 0)
     }
 
@@ -2404,6 +2409,9 @@ object MG4Hardware {
             AppLogger.w(TAG, "  SWI132 speedLimit: tous les paths ont échoué")
             return false
         }
+        // SWI133 : même écriture « Recovery » que l'écran d'origine (voir setOverspeedAlarm).
+        if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133)
+            return setIntPropertyVpmRecovery(PROP_SPEED_LIMIT_TONE, if (on) 1 else 0)
         return setIntPropertyVpm(PROP_SPEED_LIMIT_TONE, if (on) 1 else 0)
     }
 

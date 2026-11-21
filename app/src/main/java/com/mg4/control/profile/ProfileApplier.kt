@@ -238,15 +238,18 @@ object ProfileApplier {
                 // sur SWI133 et SWI68/165 ils passent par les services (VPM / VSM) que ce bloc attend.
                 applyAutoHighBeam(profile)
 
-                // ── Passe de vérification ADAS (auto-démarrage uniquement) ────────────
-                // Au démarrage à froid, le firmware peut ré-asserter certains réglages APRÈS
-                // notre écriture (alertes survitesse/ton ~400ms après le SLIF/TSR ; ELK remis à
-                // sa valeur par défaut). On relit après stabilisation et on réécrit en cas d'écart.
-                // Concerne SWI132/SWI133 (2 alertes distinctes + ELK). Sans objet si le profil
-                // n'applique pas la Sécurité : il n'a rien écrit qu'il faille défendre.
-                if (securite && autoStart && (gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI132)) {
-                    verifyAdasWithRetry(profile)
+                // ── Passe de vérification ADAS ────────────────────────────────────────
+                // Le firmware peut ré-asserter certains réglages APRÈS notre écriture (alertes
+                // survitesse/ton ~400ms après le SLIF/TSR ; ELK remis à sa valeur par défaut). On
+                // relit après stabilisation et on réécrit en cas d'écart. Concerne SWI132/SWI133
+                // (2 alertes distinctes + ELK). Aussi au choix manuel depuis le 2026-11-21 : un
+                // profil choisi au sélecteur juste après le READY laissait la survitesse rallumée.
+                // Sans objet si le profil n'applique pas la Sécurité : rien à défendre.
+                if (securite && (gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI132)) {
+                    verifyAdasWithRetry(profile, autoStart)
                 }
+                // Relevé : quand la voiture change-t-elle ces alertes d'elle-même ?
+                if (gen == FirmwareInfo.Gen.SWI133) SpeedAlertWatch.start("profil '${profile.name}'")
             }
             if (gen == FirmwareInfo.Gen.SWI133) {
                 MG4Hardware.awaitKatman4Ready()
@@ -383,13 +386,13 @@ object ProfileApplier {
     }
 
     /**
-     * Passe de vérification post-application (auto-démarrage, SWI132/SWI133). Attend la fin de
+     * Passe de vérification post-application (automatique ou manuelle, SWI132/SWI133). Attend la fin de
      * la fenêtre de ré-assertion firmware puis relit/réécrit en cas d'écart :
      *   - alertes sonores survitesse + ton
      *   - ELK (assistant de sortie de voie) — le firmware le remet à sa valeur par défaut au boot
      */
-    private fun verifyAdasWithRetry(profile: DrivingProfile) {
-        AppLogger.i(TAG, "  [VERIFY] Vérification ADAS (auto-démarrage) — stabilisation 500ms")
+    private fun verifyAdasWithRetry(profile: DrivingProfile, autoStart: Boolean) {
+        AppLogger.i(TAG, "  [VERIFY] Vérification ADAS (${if (autoStart) "auto-démarrage" else "choix manuel"}) — stabilisation 500ms")
         try { Thread.sleep(500) } catch (_: InterruptedException) {}
         verifyOneAlert("OverspeedAlarm", profile.overspeedAlarm,
             { MG4Hardware.isOverspeedAlarmOn() }, { MG4Hardware.setOverspeedAlarm(it) })
