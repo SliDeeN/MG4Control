@@ -79,21 +79,22 @@ class WheelButtonsPage(private val host: Host) {
     private fun serviceActif() = KeyCaptureService.isEnabled(ctx)
     private fun captureActive() = AdvancedShortcuts.isEnabled(ctx) && serviceActif()
 
-    private fun slotClassique(code: Int, press: PressType): String? = when (code) {
-        STAR_LEFT -> "btn1_${press.key}"
-        STAR_RIGHT -> "btn2_${press.key}"
-        else -> null
-    }?.takeIf { press != PressType.DOUBLE }
+    private fun slotClassique(code: Int, press: PressType): String? = AdvancedShortcuts.classicSlot(code, press)
 
-    private fun estEtoile(code: Int) = code == STAR_LEFT || code == STAR_RIGHT
+    private fun estEtoile(code: Int) = AdvancedShortcuts.isStar(code)
 
-    /** Une touche ★ suit le stockage avancé dès qu'elle y porte un raccourci, capture active. */
-    private fun enAvance(code: Int): Boolean =
-        !estEtoile(code) || (captureActive() && AdvancedShortcuts.all(ctx).any { it.keyCode == code })
+    /**
+     * Capture active, une ★ passe toujours par la capture avancée (2026-11-21) : sur le chemin
+     * classique, la voiture exécutait aussi la fonction réglée pour l'étoile dans ses propres
+     * réglages. Capture coupée, elle garde le chemin classique (seul possible sans accessibilité).
+     */
+    private fun enAvance(code: Int): Boolean = !estEtoile(code) || captureActive()
 
     fun refresh() {
         val root = racine ?: return
         if (!captureActive()) portee = null
+        // Réglages classiques des étoiles repris une fois par activation (sans effet ensuite).
+        else AdvancedShortcuts.migrateStars(ctx)
         // Profil supprimé entre-temps : retour à « tous les profils ».
         if (portee != null && ProfileManager(ctx).getById(portee!!) == null) portee = null
         bandeau(root.findViewById(R.id.wheel_status))
@@ -348,9 +349,6 @@ class WheelButtonsPage(private val host: Host) {
     }
 
     private fun attribuer(code: Int, press: PressType, action: ShortcutAction) {
-        // Un ★ passe à l'avancé pour un double appui ou un réglage propre à un profil.
-        val versAvance = estEtoile(code) && !enAvance(code) && (press == PressType.DOUBLE || portee != null)
-        if (versAvance) migrer(code)
         if (!enAvance(code)) {
             val slot = slotClassique(code, press) ?: return
             val ecrire = {
@@ -360,38 +358,22 @@ class WheelButtonsPage(private val host: Host) {
             if (action == ShortcutAction.NONE) ecrire() else host.choisirCible(slot, action, ecrire)
             return
         }
+        // Le réglage « tous les profils » d'une ★ est recopié sur le chemin classique, pour le
+        // jour où la capture est coupée.
+        val miroir = { if (estEtoile(code) && portee == null) AdvancedShortcuts.mirrorStarToClassic(ctx, code, press) }
         if (action == ShortcutAction.NONE) {
             AdvancedShortcuts.remove(ctx, code, press, portee)
+            miroir()
             fini()
             return
         }
         val slot = AdvancedShortcuts.slotKey(code, press, portee)
         host.choisirCible(slot, action) {
             AdvancedShortcuts.set(ctx, code, press, action, portee)
+            miroir()
             AppLogger.i("MG4_KEYCAP", "volant : touche=$code ${press.key} → ${action.name} (profil ${portee ?: "tous"})")
             fini()
         }
-    }
-
-    /**
-     * Recopie les appuis simple et long classiques d'un ★ dans le stockage avancé (tous les
-     * profils), cibles comprises : la touche y passe, son broadcast ne livrerait plus l'appui long.
-     */
-    private fun migrer(code: Int) {
-        val p = classique
-        val e = p.edit()
-        for (press in listOf(PressType.SINGLE, PressType.LONG)) {
-            val slot = slotClassique(code, press) ?: continue
-            val action = ShortcutAction.fromId(p.getInt("shortcut_$slot", 0))
-            if (action == ShortcutAction.NONE || AdvancedShortcuts.actionFor(ctx, code, press, null) != null) continue
-            AdvancedShortcuts.set(ctx, code, press, action, null)
-            val vers = AdvancedShortcuts.slotKey(code, press, null)
-            for (champ in listOf("custom_app", "profile_id", "custom_id", "rule_id")) {
-                p.getString("shortcut_${slot}_$champ", null)?.let { e.putString("shortcut_${vers}_$champ", it) }
-            }
-        }
-        e.apply()
-        AppLogger.i("MG4_KEYCAP", "volant : ★ $code passe à la capture avancée, réglages classiques recopiés")
     }
 
     private fun fini() {

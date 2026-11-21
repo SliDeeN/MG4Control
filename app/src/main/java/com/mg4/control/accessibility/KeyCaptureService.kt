@@ -56,6 +56,8 @@ class KeyCaptureService : AccessibilityService() {
         serviceInfo = serviceInfo?.apply {
             flags = flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
         }
+        // Capture active : les étoiles réglées sur le chemin classique passent à la capture.
+        if (AdvancedShortcuts.isEnabled(this)) AdvancedShortcuts.migrateStars(this)
         AppLogger.i(TAG, "service connecté — filtrage actif ; " +
             "${AdvancedShortcuts.all(this).size} raccourci(s) avancé(s) enregistré(s), " +
             "interrupteur=${AdvancedShortcuts.isEnabled(this)}")
@@ -150,7 +152,9 @@ class KeyCaptureService : AccessibilityService() {
         // sort de la touche. On ne laisse jamais une erreur avaler une commande du volant.
         try {
             event ?: return false
-            val code = event.keyCode
+            // L'étoile droite arrive en 286 ou en 18 selon le firmware : un seul code pour tout
+            // le reste (réglages, appuis en cours, renvois — le renvoi garde le code d'origine).
+            val code = AdvancedShortcuts.canonical(event.keyCode)
 
             // Notre propre renvoi : il appartient au système, on n'y touche pas.
             if (rejeux[event.downTime] == code) return false
@@ -160,7 +164,7 @@ class KeyCaptureService : AccessibilityService() {
             secours(event)
 
             if (event.action == KeyEvent.ACTION_DOWN) {
-                AppLogger.i(TAG, "TOUCHE keycode=$code (${KeyEvent.keyCodeToString(code)}) " +
+                AppLogger.i(TAG, "TOUCHE keycode=${event.keyCode} (${KeyEvent.keyCodeToString(event.keyCode)}) " +
                     "source=${event.source} repeat=${event.repeatCount}")
             }
 
@@ -438,7 +442,7 @@ class KeyCaptureService : AccessibilityService() {
         handler.postDelayed({ rejeux.remove(t) }, 2_000L)
 
         fun evenement(action: Int) = KeyEvent(
-            t, SystemClock.uptimeMillis(), action, code, 0,
+            t, SystemClock.uptimeMillis(), action, modele.keyCode, 0,
             modele.metaState, modele.deviceId, modele.scanCode, modele.flags, modele.source
         )
         injecteur.execute {

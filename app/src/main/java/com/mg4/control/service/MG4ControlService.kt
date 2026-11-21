@@ -576,6 +576,15 @@ class MG4ControlService : Service() {
             KEYCODE_BTN2, KEYCODE_BTN2_ALT -> "btn2"
             else -> return
         }
+        // Étoile prise par la capture avancée (2026-11-21) : c'est elle qui exécute l'action. Son
+        // réglage classique, gardé en miroir pour le jour où la capture est coupée, ne doit pas
+        // la jouer une seconde fois si ce signal arrive quand même.
+        val avancees = com.mg4.control.accessibility.AdvancedShortcuts
+        if (avancees.isEnabled(this) && com.mg4.control.accessibility.KeyCaptureService.connecte &&
+            avancees.isClaimedNow(this, avancees.canonical(keycode))) {
+            if (isDown) AppLogger.i(TAG, "HARDKEY $keycode laissé à la capture avancée")
+            return
+        }
 
         when {
             isDown && isLong -> {

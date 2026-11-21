@@ -1,6 +1,7 @@
 package com.mg4.control.accessibility
 
 import android.content.Context
+import com.mg4.control.debug.AppLogger
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.shortcut.PressType
 import com.mg4.control.shortcut.ShortcutAction
@@ -94,8 +95,98 @@ object AdvancedShortcuts {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ENABLED, false)
 
     fun setEnabled(context: Context, on: Boolean) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putBoolean(KEY_ENABLED, on).apply()
+        val e = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, on)
+        // Capture coupée : les étoiles retournent au chemin classique ; à la prochaine activation,
+        // leurs réglages classiques (peut-être changés entre-temps) sont repris.
+        if (!on) e.remove(KEY_STARS_MIGRATED)
+        e.apply()
+        if (on) migrateStars(context)
+    }
+
+    // ── Étoiles du volant (2026-11-21) ───────────────────────────────────────────
+    //
+    // Une étoile réglée sur le chemin CLASSIQUE n'est vue qu'après coup (broadcast `hardkey.report`)
+    // : la voiture exécute d'abord la fonction de l'étoile réglée dans SES réglages (mode de
+    // conduite…), puis MG4Control son raccourci — un appui, deux actions. Capture active, les
+    // étoiles passent donc toujours par la capture avancée, qui prend la touche avant la voiture.
+
+    const val STAR_LEFT = 17
+    const val STAR_RIGHT = 286
+    /** Autre code de l'étoile droite sur certains firmwares. */
+    const val STAR_RIGHT_ALT = 18
+    private const val KEY_STARS_MIGRATED = "adv_stars_migrated"
+    /** Champs de cible d'un emplacement (fichier [PREFS_CIBLES]), recopiés avec l'action. */
+    val TARGET_FIELDS = listOf("custom_app", "profile_id", "custom_id", "rule_id")
+
+    /** Code d'une touche tel que les raccourcis avancés le rangent : l'étoile droite a deux codes. */
+    fun canonical(keyCode: Int): Int = if (keyCode == STAR_RIGHT_ALT) STAR_RIGHT else keyCode
+
+    fun isStar(keyCode: Int): Boolean = keyCode == STAR_LEFT || keyCode == STAR_RIGHT
+
+    /** Emplacement classique (`btn1_single`…) d'une étoile pour un appui simple ou long, sinon null. */
+    fun classicSlot(keyCode: Int, press: PressType): String? = when (canonical(keyCode)) {
+        STAR_LEFT -> "btn1_${press.key}"
+        STAR_RIGHT -> "btn2_${press.key}"
+        else -> null
+    }?.takeIf { press != PressType.DOUBLE }
+
+    /**
+     * Recopie, une fois par activation de la capture, les appuis simple et long classiques des
+     * étoiles en raccourcis avancés « tous les profils », cibles comprises. Un appui qui a déjà un
+     * raccourci avancé n'est pas touché. Rend le nombre d'appuis recopiés.
+     */
+    fun migrateStars(context: Context): Int {
+        val reglages = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (reglages.getBoolean(KEY_STARS_MIGRATED, false)) return 0
+        val classique = context.getSharedPreferences(PREFS_CIBLES, Context.MODE_PRIVATE)
+        val e = classique.edit()
+        var n = 0
+        for (code in listOf(STAR_LEFT, STAR_RIGHT)) for (press in listOf(PressType.SINGLE, PressType.LONG)) {
+            val slot = classicSlot(code, press) ?: continue
+            val action = ShortcutAction.fromId(classique.getInt("shortcut_$slot", 0))
+            if (action == ShortcutAction.NONE || actionFor(context, code, press, null) != null) continue
+            set(context, code, press, action, null)
+            val vers = slotKey(code, press, null)
+            for (champ in TARGET_FIELDS) {
+                classique.getString("shortcut_${slot}_$champ", null)?.let { e.putString("shortcut_${vers}_$champ", it) }
+            }
+            n++
+        }
+        // Raccourcis enregistrés sous le code 18 (capture d'une étoile droite qui l'envoie) :
+        // rangés sous 286, le seul code que la capture consulte désormais.
+        for (m in all(context).filter { it.keyCode == STAR_RIGHT_ALT }) {
+            if (actionFor(context, STAR_RIGHT, m.press, m.profileId) == null) {
+                set(context, STAR_RIGHT, m.press, m.action, m.profileId)
+                val de = slotKey(STAR_RIGHT_ALT, m.press, m.profileId)
+                val vers = slotKey(STAR_RIGHT, m.press, m.profileId)
+                for (champ in TARGET_FIELDS) {
+                    classique.getString("shortcut_${de}_$champ", null)?.let { e.putString("shortcut_${vers}_$champ", it) }
+                }
+                n++
+            }
+            reglages.edit().remove(cle(STAR_RIGHT_ALT, m.press, m.profileId)).apply()
+        }
+        e.apply()
+        reglages.edit().putBoolean(KEY_STARS_MIGRATED, true).apply()
+        if (n > 0) AppLogger.i("MG4_KEYCAP", "étoiles : $n réglage(s) classique(s) repris par la capture avancée")
+        return n
+    }
+
+    /**
+     * Garde le réglage classique d'une étoile identique à son raccourci avancé « tous les profils »
+     * (appui simple ou long), cibles comprises : capture coupée, l'étoile retrouve le même réglage,
+     * et une réactivation ne ressuscite pas une action retirée entre-temps.
+     */
+    fun mirrorStarToClassic(context: Context, keyCode: Int, press: PressType) {
+        val slot = classicSlot(keyCode, press) ?: return
+        val classique = context.getSharedPreferences(PREFS_CIBLES, Context.MODE_PRIVATE)
+        val de = slotKey(keyCode, press, null)
+        val e = classique.edit().putInt("shortcut_$slot", (actionFor(context, keyCode, press, null) ?: ShortcutAction.NONE).id)
+        for (champ in TARGET_FIELDS) {
+            val v = classique.getString("shortcut_${de}_$champ", null)
+            if (v == null) e.remove("shortcut_${slot}_$champ") else e.putString("shortcut_${slot}_$champ", v)
+        }
+        e.apply()
     }
 
     data class Mapping(
