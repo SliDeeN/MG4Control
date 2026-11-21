@@ -93,6 +93,16 @@ class TyrePopupLayoutTest {
     }
 
     @Test
+    fun `everything faces the car`() {
+        val (_, v) = prepare(localise("fr"))
+        val gauche = v.cartes.getValue(Roue.AVANT_GAUCHE)
+        val droite = v.cartes.getValue(Roue.AVANT_DROITE)
+        assertEquals(0, gauche.rangee.indexOfChild(gauche.temp))
+        assertEquals(droite.rangee.childCount - 1, droite.rangee.indexOfChild(droite.temp))
+        assertEquals(android.view.Gravity.END, gauche.nom.gravity and android.view.Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK)
+    }
+
+    @Test
     fun `the shortcut keeps its identifier`() {
         assertEquals(55, ShortcutAction.TYRE_POPUP.id)
         assertEquals(ShortcutAction.TYRE_POPUP, ShortcutAction.fromId(55))
@@ -101,7 +111,7 @@ class TyrePopupLayoutTest {
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `the cards fit in long languages and larger text`() {
-        for (echelle in listOf(1f, 1.125f, 1.25f)) for (langue in listOf("fr", "de", "tr", "pt", "cs", "pl")) {
+        for (echelle in listOf(1f, 1.125f, 1.25f)) for (langue in listOf("fr", "de", "tr", "pt", "es", "it", "cs", "pl", "nb")) {
             val loc = localise(langue, echelle)
             val (vue, v) = prepare(loc)
             TyrePopupOverlay.peindre(v, releve(TyreProbe.Pneu(null, null, null)), PressureUnit.KPA)
@@ -116,9 +126,28 @@ class TyrePopupLayoutTest {
                 val bas = carte.height - carte.paddingBottom
                 assertTrue("$langue ×$echelle $r : finit à ${dernier.bottom} px pour $bas", dernier.bottom <= bas)
                 assertEquals("$langue ×$echelle $r", 0, (c.etat as TextView).layout?.getEllipsisCount(0) ?: 0)
-                assertTrue("$langue ×$echelle $r : pastille + température débordent",
-                    c.temp.width + c.etat.width <= c.rangee.width)
+                val large = carte.width - carte.paddingStart - carte.paddingEnd
+                assertTrue("$langue ×$echelle $r : pression + température débordent (${c.rangee.width} px pour $large)",
+                    c.rangee.width <= large && c.temp.right <= c.rangee.width)
+                assertTrue("$langue ×$echelle $r : pastille trop large", c.etat.width <= large)
             }
+        }
+    }
+    /** Capture pour comparer à la maquette : `CAPTURE_DIR=… gradlew test…`. */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `capture when asked`() {
+        val dossier = System.getenv("CAPTURE_DIR") ?: return
+        for ((langue, unite) in listOf("fr" to PressureUnit.BAR, "it" to PressureUnit.KPA)) {
+            val loc = localise(langue)
+            val (vue, v) = prepare(loc)
+            TyrePopupOverlay.peindre(v, releve(), unite)
+            vue.measure(View.MeasureSpec.makeMeasureSpec(820, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(500, View.MeasureSpec.EXACTLY))
+            vue.layout(0, 0, vue.measuredWidth, vue.measuredHeight)
+            val b = android.graphics.Bitmap.createBitmap(vue.measuredWidth, vue.measuredHeight, android.graphics.Bitmap.Config.ARGB_8888)
+            vue.draw(android.graphics.Canvas(b))
+            java.io.File(dossier, "tyre_popup_$langue.png").outputStream().use { b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         }
     }
 }

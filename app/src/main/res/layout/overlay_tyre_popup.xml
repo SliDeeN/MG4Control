@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pression des pneus (maquette du 2026-11-20) : les quatre pneus autour de la voiture vue de
-     dessus, l'unité au choix dans l'en-tête (bar, PSI, kPa). Carte de base 1140 × 470 dp, agrandie
+     dessus, l'unité au choix dans l'en-tête (bar, PSI, kPa). Carte de base 760 × 470 dp (1140 avant
+     le 2026-11-21 : cartes des pneus à moitié vides), agrandie
      comme les autres pop-ups (OverlayKit.contextes). Rempli par TyrePopupOverlay. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/tyre_backdrop"
@@ -12,7 +13,7 @@
 
     <LinearLayout
         android:id="@+id/tyre_card"
-        android:layout_width="1140dp"
+        android:layout_width="760dp"
         android:layout_height="470dp"
         android:layout_gravity="center"
         android:orientation="vertical"

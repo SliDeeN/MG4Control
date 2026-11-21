@@ -38,7 +38,7 @@ object TyrePopupOverlay {
 
     private const val TAG = TyreProbe.TAG
     /** Carte de base de overlay_tyre_popup.xml, agrandie comme les autres pop-ups. */
-    private const val LARGEUR_DP = 1140f
+    private const val LARGEUR_DP = 760f
     private const val HAUTEUR_DP = 470f
     private const val MARGE_FENETRE_DP = 12f
     private const val RELEVE_MS = 2_000L
@@ -160,7 +160,7 @@ object TyrePopupOverlay {
         val temp: TextView = racine.findViewById(R.id.tyre_card_temp)
         val etat: TextView = racine.findViewById(R.id.tyre_card_state)
         val pourquoi: TextView = racine.findViewById(R.id.tyre_card_why)
-        val rangee: LinearLayout = racine.findViewById(R.id.tyre_card_row)
+        val rangee: LinearLayout = racine.findViewById(R.id.tyre_card_value_row)
     }
 
     internal class Vues(val racine: View, val loc: Context) {
@@ -208,12 +208,18 @@ object TyrePopupOverlay {
         )
         v.cartes.forEach { (r, c) ->
             c.nom.text = localized.getString(noms.getValue(r))
-            if (c.droite) {
+            // Tout tourné vers la voiture (2026-11-21) : la colonne de gauche s'aligne à droite et
+            // sa température passe devant la pression, pour que la pression touche la voiture.
+            if (!c.droite) {
                 (c.racine as LinearLayout).gravity = Gravity.END or Gravity.CENTER_VERTICAL
                 c.nom.gravity = Gravity.END
                 c.pourquoi.gravity = Gravity.END
-                c.rangee.gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                c.rangee.layoutDirection = View.LAYOUT_DIRECTION_RTL
+                c.rangee.removeView(c.temp)
+                c.rangee.addView(c.temp, 0)
+                (c.temp.layoutParams as LinearLayout.LayoutParams).apply {
+                    marginEnd = marginStart
+                    marginStart = 0
+                }
             }
         }
         peindre(v, null, TyrePressure.PressureUnit.BAR)
