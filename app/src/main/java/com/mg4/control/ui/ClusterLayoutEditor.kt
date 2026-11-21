@@ -351,15 +351,11 @@ class ClusterLayoutEditor(
     private fun panneauJauge() {
         if (module == ClusterModule.GRAPH) { panneauGraphe(); return }
         titre(ctx.getString(R.string.cluster_layout_gauge))
-        // Module « Pneus » (2026-11-20) : sa place et l'unité de pression ; les réglages de jauge
-        // (style, épaisseur, couleurs, puissance) ne le concernent pas.
+        // Module « Pneus » (2026-11-20) : sa place seulement ; les réglages de jauge (style, épaisseur,
+        // couleurs, puissance) ne le concernent pas. L'unité de pression est commune et ne se règle
+        // que dans le pop-up Pression des pneus et dans Réglages › Interface (2026-11-21).
         if (module == ClusterModule.TYRES) {
             positionJauge()
-            val u = com.mg4.control.util.TyreUnitSetting.unit(ctx)
-            rangee(R.string.cluster_layout_tyre_unit, com.mg4.control.model.TyrePressure.PressureUnit.entries.map { pu ->
-                Option(pu.label, u == pu) { com.mg4.control.util.TyreUnitSetting.set(ctx, pu); maj() }
-            })
-            note(R.string.cluster_layout_tyre_unit_note)
             return
         }
         positionJauge()
@@ -444,6 +440,14 @@ class ClusterLayoutEditor(
             rangee(R.string.cluster_layout_unit, unites.map { k ->
                 Option(nomUnite(k, ClusterInfo.distance(b, general)), u == k) { change(b.copy(unit = k)) }
             })
+        }
+        if (b.info == ClusterInfo.TRIP_ENERGY) {
+            val nette = b.net == true
+            rangee(R.string.cluster_layout_energy_calc, listOf(
+                Option(ctx.getString(R.string.cluster_layout_energy_gross), !nette) { change(b.copy(net = null)) },
+                Option(ctx.getString(R.string.cluster_layout_energy_net), nette) { change(b.copy(net = true)) },
+            ))
+            note(R.string.cluster_layout_energy_note)
         }
         if (ClusterInfo.hasDistance(b.info)) {
             val d = DistanceUnit.entries.firstOrNull { it.key == b.distance }

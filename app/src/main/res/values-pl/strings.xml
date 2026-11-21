@@ -334,6 +334,7 @@
     <string name="settings_nav_side_detected_unknown">nie odczytano z samochodu, menu po lewej</string>
     <string name="settings_distance_unit">Jednostka odległości</string>
     <string name="settings_distance_unit_desc">Statystyki, ekran kierowcy i dymki informacyjne. Auto wybiera jednostkę ustawioną w samochodzie. Eksport CSV pozostaje w km.</string>
+    <string name="settings_tyre_unit_desc">Okno ciśnienia w oponach, ekran kierowcy, dymki informacyjne i automatyzacje. Domyślnie ta z zestawu wskaźników.</string>
     <string name="settings_text_size">Rozmiar tekstu</string>
     <string name="settings_popup_delay">Czas automatycznego zamknięcia okien</string>
     <string name="settings_popup_delay_desc">Wybór profilu, potwierdzenie automatyzacji i okno HVAC. Każda czynność odlicza czas od nowa.</string>
@@ -960,6 +961,10 @@
     <string name="cluster_layout_unit">Jednostka</string>
     <string name="cluster_layout_distance_auto">Auto (ustawienie ogólne)</string>
     <string name="cluster_layout_wide">Cała szerokość</string>
+    <string name="cluster_layout_energy_calc">Obliczanie</string>
+    <string name="cluster_layout_energy_gross">Brutto</string>
+    <string name="cluster_layout_energy_net">Netto</string>
+    <string name="cluster_layout_energy_note">Brutto: cała energia pobrana z akumulatora od READY. Netto: odzysk jest odejmowany, jak w średniej z trasy.</string>
     <string name="cluster_layout_wide_busy">Cała szerokość: najpierw zwolnij sąsiednie pole (Info %1$d).</string>
     <string name="cluster_layout_clear">Wyczyść pole</string>
     <string name="cluster_distance_km">km</string>
@@ -1132,7 +1137,6 @@
     <string name="cluster_tyres_alert">Alert opony</string>
     <string name="cluster_tyres_none">Brak odczytu</string>
     <string name="cluster_layout_tyre_unit">Jednostka ciśnienia</string>
-    <string name="cluster_layout_tyre_unit_note">Ta sama co w oknie ciśnienia w oponach, dymkach i automatyzacjach.</string>
     <string name="cluster_tabs_title">Karty zestawu wskaźników</string>
     <string name="cluster_tab_note_many">Wyświetlany jest nr 1; skrót „Następny moduł” przechodzi do kolejnego, a potem wraca do pierwszego.</string>
     <string name="cluster_tab_note_one">Dodaj 2. moduł, aby przełączać je skrótem.</string>
@@ -1148,7 +1152,7 @@
     <string name="cluster_library_unused">Nieużywany</string>
     <string name="cluster_library_slots">Pola: %1$d</string>
     <string name="cluster_new_module_name">Nowy moduł %1$d</string>
-    <string name="cluster_common_summary">Wspólne ustawienia · maks. moc · odświeżanie %1$s · animacja %2$s · ciśnienie</string>
+    <string name="cluster_common_summary">Wspólne ustawienia · maks. moc · odświeżanie %1$s · animacja %2$s</string>
     <string name="cluster_module_section">Moduł</string>
     <string name="cluster_module_name">Nazwa</string>
     <string name="cluster_module_center">Środek ekranu</string>

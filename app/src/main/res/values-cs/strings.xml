@@ -288,6 +288,7 @@
     <string name="settings_nav_side_detected_unknown">nezjištěno z vozu, nabídka vlevo</string>
     <string name="settings_distance_unit">Jednotka vzdálenosti</string>
     <string name="settings_distance_unit_desc">Statistiky, přístrojový displej a informační bubliny. Automatická volba používá jednotku nastavenou ve voze. Export CSV zůstává v km.</string>
+    <string name="settings_tyre_unit_desc">Okno tlaku v pneumatikách, obrazovka řidiče, informační bubliny a automatizace. Ve výchozím stavu ta z přístrojové desky.</string>
     <string name="settings_text_size">Velikost textu</string>
     <string name="settings_popup_delay">Doba do automatického zavření oken</string>
     <string name="settings_popup_delay_desc">Výběr profilu, potvrzení automatizace a okno klimatizace. Každá akce spustí odpočet znovu.</string>
@@ -867,6 +868,10 @@
     <string name="cluster_layout_unit">Jednotka</string>
     <string name="cluster_layout_distance_auto">Automaticky (obecné nastavení)</string>
     <string name="cluster_layout_wide">Celá šířka</string>
+    <string name="cluster_layout_energy_calc">Výpočet</string>
+    <string name="cluster_layout_energy_gross">Hrubá</string>
+    <string name="cluster_layout_energy_net">Čistá</string>
+    <string name="cluster_layout_energy_note">Hrubá: veškerá energie odebraná z baterie od READY. Čistá: rekuperace se odečítá, jako u průměru jízdy.</string>
     <string name="cluster_layout_wide_busy">Celá šířka: nejprve uvolněte sousední pole (Info %1$d).</string>
     <string name="cluster_layout_clear">Vyprázdnit pole</string>
     <string name="cluster_distance_km">km</string>
@@ -1035,7 +1040,6 @@
     <string name="cluster_tyres_alert">Výstraha pneumatiky</string>
     <string name="cluster_tyres_none">Bez měření</string>
     <string name="cluster_layout_tyre_unit">Jednotka tlaku</string>
-    <string name="cluster_layout_tyre_unit_note">Stejná jako v okně tlaku v pneumatikách, v bublinách a automatizacích.</string>
     <string name="cluster_tabs_title">Karty přístrojového displeje</string>
     <string name="cluster_tab_note_many">Zobrazí se č. 1; zkratka „Další modul“ přejde na další a pak zpět na první.</string>
     <string name="cluster_tab_note_one">Přidejte 2. modul, abyste mezi nimi mohli přepínat zkratkou.</string>
@@ -1051,7 +1055,7 @@
     <string name="cluster_library_unused">Nepoužito</string>
     <string name="cluster_library_slots">Pole: %1$d</string>
     <string name="cluster_new_module_name">Nový modul %1$d</string>
-    <string name="cluster_common_summary">Společná nastavení · max. výkon · obnovení %1$s · animace %2$s · tlak</string>
+    <string name="cluster_common_summary">Společná nastavení · max. výkon · obnovení %1$s · animace %2$s</string>
     <string name="cluster_module_section">Modul</string>
     <string name="cluster_module_name">Název</string>
     <string name="cluster_module_center">Střed obrazovky</string>

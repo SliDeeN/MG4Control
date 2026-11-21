@@ -3211,6 +3211,11 @@
         '<div class="a-sec" data-hl="s-distance"><div class="a-h">' + esc(S('settings_distance_unit')) + '</div><div class="a-grid g3">' +
           [['auto', S('cluster_distance_auto_value', S(car().distUnit === 'mi' ? 'cluster_distance_miles' : 'cluster_distance_km'))], ['km', S('cluster_distance_km')], ['mi', S('cluster_distance_miles')]]
             .map(([v, lab]) => '<button class="b' + ((s.distUnit || 'auto') === v ? ' on' : '') + '" data-a="distUnit" data-v="' + v + '">' + esc(lab) + '</button>').join('') + '</div>' + desc('settings_distance_unit_desc') + '</div>' +
+        // Unité de pression (2026-11-21) : sa propre carte, hors de l'écran conducteur où elle restait
+        // cachée tant que le module n'était pas activé (firmware non compatible).
+        '<div class="a-sec" data-hl="s-tyre-unit"><div class="a-h">' + esc(S('cluster_layout_tyre_unit')) + '</div><div class="a-grid g3">' +
+          Object.entries(TYRE_UNITS).map(([v, lab]) => '<button class="b' + (tyreUnit() === v ? ' on' : '') + '" style="text-transform:none" data-a="tyUnit" data-v="' + v + '">' + esc(lab) + '</button>').join('') + '</div>' +
+          desc('settings_tyre_unit_desc') + '</div>' +
         '</div>' + cl;
     }
     /**
@@ -3288,8 +3293,6 @@
           // Puissance maxi (issue #165) : Auto apprend les pointes ; sinon une fin d'échelle fixe.
           line(S('settings_cluster_row_power'), seg('clusterPowerMax', power, [['auto', 'settings_cluster_power_auto'], ['125', null, '125'], ['150', null, '150'], ['180', null, '180'], ['320', null, '320']]), 's-cluster-power') +
           '<div class="a-desc">' + esc(S('settings_cluster_power_desc', state.clLearned)) + '</div>' +
-          line(S('cluster_layout_tyre_unit'), seg('tyUnit', tyreUnit(), Object.entries(TYRE_UNITS).map(([k2, lab]) => [k2, null, lab])), 's-tyre-unit') +
-          '<div class="a-desc">' + esc(S('cluster_layout_tyre_unit_note')) + '</div>' +
           '<div class="a-sub">' + esc(S('settings_cluster_refresh')) + '</div>' +
           '<div class="a-row set-level">' + range('clusterRefresh', 1, 10, ref) + '<span class="a-val" data-out="clusterRefresh">' + esc(fmtS(cfg.clusterRefresh) + ' s') + '</span></div>' +
           '<div class="a-desc">' + esc(S('settings_cluster_refresh_desc')) + '</div>' +
@@ -5111,8 +5114,7 @@
                 opt('clModUnit', c.unit || 'wh', [['wh', clMiles() ? 'Wh/mi' : 'Wh/km'], ['kwh', clMiles() ? 'kWh/100 mi' : 'kWh/100 km']]) : '');
             const pos = cap('cluster_layout_position') + opt('clLayPos', L.gauge || 'middle', [['top', S('cluster_layout_position_top')], ['middle', S('cluster_layout_position_middle')], ['bottom', S('cluster_layout_position_bottom')]]);
             if (c.type === 'tyres') {
-              panel = top + '<div class="mw-t">' + esc(clTypeName('tyres')) + '</div>' + pos + cap('cluster_layout_tyre_unit') +
-                opt('tyUnit', tyreUnit(), Object.entries(TYRE_UNITS)) + '<div class="mw-hint">' + esc(S('cluster_layout_tyre_unit_note')) + '</div>';
+              panel = top + '<div class="mw-t">' + esc(clTypeName('tyres')) + '</div>' + pos;
             } else if (c.type === 'graph') {
               panel = top + '<div class="mw-t">' + esc(S('settings_cluster_graph')) + '</div>' + pos + cap('cluster_graph_info') +
                 opt('clgInfo', gi, CLG_INFOS.map((i) => [i, clgName(i)])) + cap('cluster_graph_distance') + opt('clgKm', c.gKm || 50, [20, 50, 100].map((k) => [k, k + ' km'])) +

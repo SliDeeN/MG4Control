@@ -334,6 +334,7 @@
     <string name="settings_nav_side_detected_unknown">not read from the car, menu on the left</string>
     <string name="settings_distance_unit">Distance unit</string>
     <string name="settings_distance_unit_desc">Statistics, driver screen and information bubbles. Auto follows the unit set in the car. The CSV export stays in km.</string>
+    <string name="settings_tyre_unit_desc">Tyre pressure pop-up, driver screen, information bubbles and automations. By default, the one set on the instrument cluster.</string>
     <string name="settings_text_size">Text size</string>
     <string name="settings_popup_delay">Pop-up auto-close delay</string>
     <string name="settings_popup_delay_desc">Profile picker, automation confirmation and HVAC pop-up. Each action restarts the delay.</string>
@@ -960,6 +961,10 @@
     <string name="cluster_layout_unit">Unit</string>
     <string name="cluster_layout_distance_auto">Auto (general setting)</string>
     <string name="cluster_layout_wide">Full width</string>
+    <string name="cluster_layout_energy_calc">Calculation</string>
+    <string name="cluster_layout_energy_gross">Gross</string>
+    <string name="cluster_layout_energy_net">Net</string>
+    <string name="cluster_layout_energy_note">Gross: all the energy drawn from the battery since READY. Net: regeneration is subtracted, like the trip average.</string>
     <string name="cluster_layout_wide_busy">Full width: first free the neighbouring slot (Info %1$d).</string>
     <string name="cluster_layout_clear">Clear the slot</string>
     <string name="cluster_distance_km">km</string>
@@ -1132,7 +1137,6 @@
     <string name="cluster_tyres_alert">Tyre alert</string>
     <string name="cluster_tyres_none">No reading</string>
     <string name="cluster_layout_tyre_unit">Pressure unit</string>
-    <string name="cluster_layout_tyre_unit_note">The same as the tyre pressure pop-up, bubbles and automations.</string>
     <string name="cluster_tabs_title">Instrument cluster tabs</string>
     <string name="cluster_tab_note_many">No. 1 is shown; the “Next module” shortcut moves to the next one, then back to the first.</string>
     <string name="cluster_tab_note_one">Add a 2nd module to switch between them with the shortcut.</string>
@@ -1148,7 +1152,7 @@
     <string name="cluster_library_unused">Not used</string>
     <string name="cluster_library_slots">Slots: %1$d</string>
     <string name="cluster_new_module_name">New module %1$d</string>
-    <string name="cluster_common_summary">Common settings · max power · refresh %1$s · animation %2$s · pressure</string>
+    <string name="cluster_common_summary">Common settings · max power · refresh %1$s · animation %2$s</string>
     <string name="cluster_module_section">Module</string>
     <string name="cluster_module_name">Name</string>
     <string name="cluster_module_center">Centre of the screen</string>

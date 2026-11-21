@@ -160,6 +160,14 @@ class ClusterLayoutTest {
         assertEquals("26,3" to "mi", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_DISTANCE, distance = "mi"), t, km, fr))
         assertEquals("6,94" to "kWh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_ENERGY), t, km, fr))
         assertEquals("+1210" to "Wh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_REGEN, unit = "wh"), t, km, fr))
+        // Énergie nette (2026-11-21) : la récupération déduite ; négative après une descente, sans « -0 ».
+        assertEquals("5,73" to "kWh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_ENERGY, net = true), t, km, fr))
+        assertEquals("5730" to "Wh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_ENERGY, unit = "wh", net = true), t, km, fr))
+        val descente = t.copy(consumedKwh = 0.4f, regenWh = 520f)
+        assertEquals("-0,12" to "kWh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_ENERGY, net = true), descente, km, fr))
+        val egal = t.copy(consumedKwh = 0.5f, regenWh = 500.2f)
+        assertEquals("0" to "Wh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_ENERGY, unit = "wh", net = true), egal, km, fr))
+        assertEquals("0,00" to "kWh", ClusterInfo.tripValue(ClusterBlock(ClusterInfo.TRIP_ENERGY, net = true), egal, km, fr))
         assertEquals("68" to ClusterInfo.UNIT_HP, ClusterInfo.tripValue(ClusterBlock(ClusterInfo.POWER, unit = "hp"), t, km, fr))
         // Récupération : la puissance est négative, comme sur la jauge (retour du 2026-11-19).
         val regen = t.copy(powerKw = -0.8f)

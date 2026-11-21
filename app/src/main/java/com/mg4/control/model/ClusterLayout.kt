@@ -15,6 +15,7 @@ import kotlin.math.roundToInt
  * @param unit     unité propre à l'information (voir [ClusterInfo.units])
  * @param distance km, miles ou « auto » (le réglage général) pour ce qui se compte en distance
  * @param wide     toute la largeur de sa rangée (case de gauche seulement, voisine libre)
+ * @param net      « Énergie consommée » nette, récupération déduite ; `null` = brute, comme avant (2026-11-21)
  */
 data class ClusterBlock(
     val info: String? = null,
@@ -23,6 +24,7 @@ data class ClusterBlock(
     val unit: String? = null,
     val distance: String? = null,
     val wide: Boolean? = null,
+    val net: Boolean? = null,
 )
 
 /**
@@ -321,7 +323,7 @@ object ClusterInfo {
                     ?: (BubbleInfo.UNKNOWN to null)
             }
             TRIP_DISTANCE -> t.distanceKm?.let { decimal(d.fromKm(it), locale) to d.short } ?: (BubbleInfo.UNKNOWN to null)
-            TRIP_ENERGY -> energy(t.consumedKwh, unit(b), locale, "")
+            TRIP_ENERGY -> energy(energyKwh(b, t), unit(b), locale, "")
             TRIP_REGEN -> energy(t.regenWh?.div(1000f), unit(b), locale, "+")
             POWER -> t.powerKw?.let { kw ->
                 // Signée (2026-11-19, retour d'un utilisateur) : négative en récupération, comme la
@@ -337,10 +339,22 @@ object ClusterInfo {
         }
     }
 
+    /**
+     * « Énergie consommée » du bloc : brute (tout ce qui est sorti de la batterie) ou nette, la
+     * récupération déduite comme dans la moyenne du trajet. Nette, elle peut être négative après
+     * une longue descente.
+     */
+    fun energyKwh(b: ClusterBlock, t: Trip): Float? {
+        val brute = t.consumedKwh ?: return null
+        return if (b.net == true) brute - (t.regenWh ?: 0f) / 1000f else brute
+    }
+
     private fun energy(kwh: Float?, unit: String?, locale: Locale, signe: String): Pair<String, String?> {
         kwh ?: return BubbleInfo.UNKNOWN to null
-        return if (unit == UNIT_WH) signe + kwh.times(1000f).roundToInt() to "Wh"
-        else signe + String.format(locale, "%.2f", kwh) to "kWh"
+        val texte = if (unit == UNIT_WH) kwh.times(1000f).roundToInt().toString() else String.format(locale, "%.2f", kwh)
+        // Pas de « -0 » ni de « -0,00 » : un zéro arrondi n'a pas de signe.
+        val propre = if (texte.startsWith("-") && texte.none { it in '1'..'9' }) texte.substring(1) else texte
+        return signe + propre to (if (unit == UNIT_WH) "Wh" else "kWh")
     }
 
     /** Une décimale sous 100, l'entier au-delà : la place est comptée sur le combiné. */

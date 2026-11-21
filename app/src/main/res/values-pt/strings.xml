@@ -334,6 +334,7 @@
     <string name="settings_nav_side_detected_unknown">não lido do carro, menu à esquerda</string>
     <string name="settings_distance_unit">Unidade de distância</string>
     <string name="settings_distance_unit_desc">Estatísticas, ecrã do condutor e bolhas de informação. Auto segue a unidade definida no carro. A exportação CSV fica em km.</string>
+    <string name="settings_tyre_unit_desc">Pop-up de pressão dos pneus, ecrã do condutor, bolhas de informação e automatizações. Por predefinição, a do painel de instrumentos.</string>
     <string name="settings_text_size">Tamanho do texto</string>
     <string name="settings_popup_delay">Tempo até fechar os pop-ups</string>
     <string name="settings_popup_delay_desc">Seletor de perfil, confirmação de automação e pop-up HVAC. Cada ação reinicia o tempo.</string>
@@ -960,6 +961,10 @@
     <string name="cluster_layout_unit">Unidade</string>
     <string name="cluster_layout_distance_auto">Auto (definição geral)</string>
     <string name="cluster_layout_wide">Largura total</string>
+    <string name="cluster_layout_energy_calc">Cálculo</string>
+    <string name="cluster_layout_energy_gross">Bruta</string>
+    <string name="cluster_layout_energy_net">Líquida</string>
+    <string name="cluster_layout_energy_note">Bruta: toda a energia retirada da bateria desde READY. Líquida: a regeneração é descontada, como na média da viagem.</string>
     <string name="cluster_layout_wide_busy">Largura total: liberte primeiro a casa vizinha (Info %1$d).</string>
     <string name="cluster_layout_clear">Esvaziar a casa</string>
     <string name="cluster_distance_km">km</string>
@@ -1132,7 +1137,6 @@
     <string name="cluster_tyres_alert">Alerta de pneu</string>
     <string name="cluster_tyres_none">Sem leitura</string>
     <string name="cluster_layout_tyre_unit">Unidade de pressão</string>
-    <string name="cluster_layout_tyre_unit_note">A mesma do pop-up de pressão dos pneus, das bolhas e das automatizações.</string>
     <string name="cluster_tabs_title">Separadores do painel de instrumentos</string>
     <string name="cluster_tab_note_many">O n.º 1 é mostrado; o atalho «Módulo seguinte» passa ao seguinte e depois volta ao primeiro.</string>
     <string name="cluster_tab_note_one">Adicione um 2.º módulo para alternar entre eles com o atalho.</string>
@@ -1148,7 +1152,7 @@
     <string name="cluster_library_unused">Não usado</string>
     <string name="cluster_library_slots">Casas: %1$d</string>
     <string name="cluster_new_module_name">Novo módulo %1$d</string>
-    <string name="cluster_common_summary">Definições comuns · potência máx. · atualização %1$s · animação %2$s · pressão</string>
+    <string name="cluster_common_summary">Definições comuns · potência máx. · atualização %1$s · animação %2$s</string>
     <string name="cluster_module_section">Módulo</string>
     <string name="cluster_module_name">Nome</string>
     <string name="cluster_module_center">Centro do ecrã</string>

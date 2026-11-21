@@ -334,6 +334,7 @@
     <string name="settings_nav_side_detected_unknown">araçtan okunamadı, menü solda</string>
     <string name="settings_distance_unit">Mesafe birimi</string>
     <string name="settings_distance_unit_desc">İstatistikler, sürücü ekranı ve bilgi baloncukları. Otomatik, araçta ayarlı birimi izler. CSV dışa aktarımı km olarak kalır.</string>
+    <string name="settings_tyre_unit_desc">Lastik basıncı penceresi, sürücü ekranı, bilgi baloncukları ve otomasyonlar. Varsayılan olarak gösterge panelindeki birim.</string>
     <string name="settings_text_size">Yazı boyutu</string>
     <string name="settings_popup_delay">Açılır pencerelerin kapanma süresi</string>
     <string name="settings_popup_delay_desc">Profil seçici, otomasyon onayı ve HVAC açılır penceresi. Her işlem süreyi yeniden başlatır.</string>
@@ -960,6 +961,10 @@
     <string name="cluster_layout_unit">Birim</string>
     <string name="cluster_layout_distance_auto">Otomatik (genel ayar)</string>
     <string name="cluster_layout_wide">Tam genişlik</string>
+    <string name="cluster_layout_energy_calc">Hesaplama</string>
+    <string name="cluster_layout_energy_gross">Brüt</string>
+    <string name="cluster_layout_energy_net">Net</string>
+    <string name="cluster_layout_energy_note">Brüt: READY’den bu yana bataryadan çekilen tüm enerji. Net: rejenerasyon düşülür, yolculuk ortalamasında olduğu gibi.</string>
     <string name="cluster_layout_wide_busy">Tam genişlik: önce yandaki kutuyu boşaltın (Bilgi %1$d).</string>
     <string name="cluster_layout_clear">Kutuyu boşalt</string>
     <string name="cluster_distance_km">km</string>
@@ -1132,7 +1137,6 @@
     <string name="cluster_tyres_alert">Lastik uyarısı</string>
     <string name="cluster_tyres_none">Okuma yok</string>
     <string name="cluster_layout_tyre_unit">Basınç birimi</string>
-    <string name="cluster_layout_tyre_unit_note">Lastik basıncı penceresi, baloncuklar ve otomasyonlarla aynı.</string>
     <string name="cluster_tabs_title">Gösterge paneli sekmeleri</string>
     <string name="cluster_tab_note_many">1 numara gösterilir; «Sonraki modül» kısayolu bir sonrakine geçer, sonra ilkine döner.</string>
     <string name="cluster_tab_note_one">Kısayolla geçiş yapmak için 2. bir modül ekleyin.</string>
@@ -1148,7 +1152,7 @@
     <string name="cluster_library_unused">Kullanılmıyor</string>
     <string name="cluster_library_slots">Kutu: %1$d</string>
     <string name="cluster_new_module_name">Yeni modül %1$d</string>
-    <string name="cluster_common_summary">Ortak ayarlar · maks. güç · yenileme %1$s · animasyon %2$s · basınç</string>
+    <string name="cluster_common_summary">Ortak ayarlar · maks. güç · yenileme %1$s · animasyon %2$s</string>
     <string name="cluster_module_section">Modül</string>
     <string name="cluster_module_name">Ad</string>
     <string name="cluster_module_center">Ekranın ortası</string>

@@ -334,6 +334,7 @@
     <string name="settings_nav_side_detected_unknown">nicht aus dem Auto gelesen, Menü links</string>
     <string name="settings_distance_unit">Entfernungseinheit</string>
     <string name="settings_distance_unit_desc">Statistik, Fahrerdisplay und Infoblasen. Auto folgt der im Fahrzeug eingestellten Einheit. Der CSV-Export bleibt in km.</string>
+    <string name="settings_tyre_unit_desc">Reifendruck-Pop-up, Fahrerdisplay, Info-Blasen und Automatisierungen. Standardmäßig die des Kombiinstruments.</string>
     <string name="settings_text_size">Textgröße</string>
     <string name="settings_popup_delay">Zeit bis zum Schließen der Pop-ups</string>
     <string name="settings_popup_delay_desc">Profilauswahl, Automatisierungsabfrage und HVAC-Pop-up. Jede Aktion startet die Zeit neu.</string>
@@ -960,6 +961,10 @@
     <string name="cluster_layout_unit">Einheit</string>
     <string name="cluster_layout_distance_auto">Auto (allgemeine Einstellung)</string>
     <string name="cluster_layout_wide">Ganze Breite</string>
+    <string name="cluster_layout_energy_calc">Berechnung</string>
+    <string name="cluster_layout_energy_gross">Brutto</string>
+    <string name="cluster_layout_energy_net">Netto</string>
+    <string name="cluster_layout_energy_note">Brutto: die gesamte seit READY aus der Batterie entnommene Energie. Netto: die Rekuperation wird abgezogen, wie beim Fahrtdurchschnitt.</string>
     <string name="cluster_layout_wide_busy">Ganze Breite: zuerst das Nachbarfeld freigeben (Info %1$d).</string>
     <string name="cluster_layout_clear">Feld leeren</string>
     <string name="cluster_distance_km">km</string>
@@ -1132,7 +1137,6 @@
     <string name="cluster_tyres_alert">Reifenwarnung</string>
     <string name="cluster_tyres_none">Kein Messwert</string>
     <string name="cluster_layout_tyre_unit">Druckeinheit</string>
-    <string name="cluster_layout_tyre_unit_note">Dieselbe wie im Reifendruck-Pop-up, in den Blasen und Automationen.</string>
     <string name="cluster_tabs_title">Tabs des Kombiinstruments</string>
     <string name="cluster_tab_note_many">Nr. 1 wird angezeigt; die Verknüpfung „Nächstes Modul“ wechselt zum nächsten und dann zurück zum ersten.</string>
     <string name="cluster_tab_note_one">Füge ein 2. Modul hinzu, um mit der Verknüpfung zu wechseln.</string>
@@ -1148,7 +1152,7 @@
     <string name="cluster_library_unused">Nicht verwendet</string>
     <string name="cluster_library_slots">Felder: %1$d</string>
     <string name="cluster_new_module_name">Neues Modul %1$d</string>
-    <string name="cluster_common_summary">Gemeinsame Einstellungen · max. Leistung · Aktualisierung %1$s · Animation %2$s · Druck</string>
+    <string name="cluster_common_summary">Gemeinsame Einstellungen · max. Leistung · Aktualisierung %1$s · Animation %2$s</string>
     <string name="cluster_module_section">Modul</string>
     <string name="cluster_module_name">Name</string>
     <string name="cluster_module_center">Bildschirmmitte</string>

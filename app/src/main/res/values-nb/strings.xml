@@ -336,6 +336,7 @@
     <string name="settings_nav_side_detected_unknown">ikke lest fra bilen, menyen til venstre</string>
     <string name="settings_distance_unit">Avstandsenhet</string>
     <string name="settings_distance_unit_desc">Statistikk, førerskjerm og infobobler. Auto følger enheten som er valgt i bilen. CSV-eksporten forblir i km.</string>
+    <string name="settings_tyre_unit_desc">Dekktrykk-vinduet, førerskjermen, infobobler og automatiseringer. Som standard den som er valgt i instrumentpanelet.</string>
     <string name="settings_text_size">Tekststørrelse</string>
     <string name="settings_popup_delay">Forsinkelse for automatisk lukking av pop-up</string>
     <string name="settings_popup_delay_desc">Profilvelger, automasjonsbekreftelse og HVAC pop-up. Hver handling starter forsinkelsen på nytt.</string>
@@ -961,6 +962,10 @@
     <string name="cluster_layout_unit">Enhet</string>
     <string name="cluster_layout_distance_auto">Auto (generell innstilling)</string>
     <string name="cluster_layout_wide">Full bredde</string>
+    <string name="cluster_layout_energy_calc">Beregning</string>
+    <string name="cluster_layout_energy_gross">Brutto</string>
+    <string name="cluster_layout_energy_net">Netto</string>
+    <string name="cluster_layout_energy_note">Brutto: all energi hentet fra batteriet siden READY. Netto: regenerering trekkes fra, som i turens gjennomsnitt.</string>
     <string name="cluster_layout_wide_busy">Full bredde: frigjør først nabofeltet (Info %1$d).</string>
     <string name="cluster_layout_clear">Tøm feltet</string>
     <string name="cluster_distance_km">km</string>
@@ -1133,7 +1138,6 @@
     <string name="cluster_tyres_alert">Dekkvarsel</string>
     <string name="cluster_tyres_none">Ingen avlesning</string>
     <string name="cluster_layout_tyre_unit">Trykkenhet</string>
-    <string name="cluster_layout_tyre_unit_note">Den samme som i dekktrykk-pop-up, bobler og automatiseringer.</string>
     <string name="cluster_tabs_title">Faner i instrumentgruppen</string>
     <string name="cluster_tab_note_many">Nr. 1 vises; snarveien «Neste modul» går til neste og så tilbake til den første.</string>
     <string name="cluster_tab_note_one">Legg til en 2. modul for å bytte mellom dem med snarveien.</string>
@@ -1149,7 +1153,7 @@
     <string name="cluster_library_unused">Ikke brukt</string>
     <string name="cluster_library_slots">Felt: %1$d</string>
     <string name="cluster_new_module_name">Ny modul %1$d</string>
-    <string name="cluster_common_summary">Felles innstillinger · maks effekt · oppdatering %1$s · animasjon %2$s · trykk</string>
+    <string name="cluster_common_summary">Felles innstillinger · maks effekt · oppdatering %1$s · animasjon %2$s</string>
     <string name="cluster_module_section">Modul</string>
     <string name="cluster_module_name">Navn</string>
     <string name="cluster_module_center">Midten av skjermen</string>

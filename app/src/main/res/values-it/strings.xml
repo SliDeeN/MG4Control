@@ -334,6 +334,7 @@
     <string name="settings_nav_side_detected_unknown">non letto dall’auto, menu a sinistra</string>
     <string name="settings_distance_unit">Unità di distanza</string>
     <string name="settings_distance_unit_desc">Statistiche, schermo del conducente e bolle informative. Auto segue l\'unità impostata nell\'auto. L\'esportazione CSV resta in km.</string>
+    <string name="settings_tyre_unit_desc">Pop-up pressione pneumatici, schermo del conducente, bolle informative e automazioni. Per impostazione predefinita, quella del quadro strumenti.</string>
     <string name="settings_text_size">Dimensione del testo</string>
     <string name="settings_popup_delay">Tempo prima della chiusura dei pop-up</string>
     <string name="settings_popup_delay_desc">Selettore profilo, conferma di automazione e pop-up HVAC. Ogni azione fa ripartire il tempo.</string>
@@ -960,6 +961,10 @@
     <string name="cluster_layout_unit">Unità</string>
     <string name="cluster_layout_distance_auto">Auto (impostazione generale)</string>
     <string name="cluster_layout_wide">Tutta la larghezza</string>
+    <string name="cluster_layout_energy_calc">Calcolo</string>
+    <string name="cluster_layout_energy_gross">Lorda</string>
+    <string name="cluster_layout_energy_net">Netta</string>
+    <string name="cluster_layout_energy_note">Lorda: tutta l’energia prelevata dalla batteria da READY. Netta: il recupero viene sottratto, come nella media del viaggio.</string>
     <string name="cluster_layout_wide_busy">Tutta la larghezza: libera prima la casella accanto (Info %1$d).</string>
     <string name="cluster_layout_clear">Svuota la casella</string>
     <string name="cluster_distance_km">km</string>
@@ -1132,7 +1137,6 @@
     <string name="cluster_tyres_alert">Avviso pneumatico</string>
     <string name="cluster_tyres_none">Nessuna lettura</string>
     <string name="cluster_layout_tyre_unit">Unità di pressione</string>
-    <string name="cluster_layout_tyre_unit_note">La stessa del pop-up pressione pneumatici, delle bolle e delle automazioni.</string>
     <string name="cluster_tabs_title">Schede del quadro strumenti</string>
     <string name="cluster_tab_note_many">Viene mostrato il n. 1; la scorciatoia «Modulo successivo» passa al seguente, poi torna al primo.</string>
     <string name="cluster_tab_note_one">Aggiungi un 2º modulo per passare dall’uno all’altro con la scorciatoia.</string>
@@ -1148,7 +1152,7 @@
     <string name="cluster_library_unused">Non usato</string>
     <string name="cluster_library_slots">Caselle: %1$d</string>
     <string name="cluster_new_module_name">Nuovo modulo %1$d</string>
-    <string name="cluster_common_summary">Impostazioni comuni · potenza max · aggiornamento %1$s · animazione %2$s · pressione</string>
+    <string name="cluster_common_summary">Impostazioni comuni · potenza max · aggiornamento %1$s · animazione %2$s</string>
     <string name="cluster_module_section">Modulo</string>
     <string name="cluster_module_name">Nome</string>
     <string name="cluster_module_center">Centro dello schermo</string>

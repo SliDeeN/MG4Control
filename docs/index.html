@@ -635,7 +635,7 @@
     </div>
     <div class="pt is-new" id="f-tyres" data-hl-key="tyre-popup" data-demo="tyres">
       <h3><span data-l="fr">Pop-up Pression des pneus</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
-      <p data-l="fr">Un raccourci, ou une bulle, ouvre les quatre pneus autour de la voiture : pression, température et état envoyés par la voiture, avec l'unité au choix (bar, PSI, kPa).</p>
+      <p data-l="fr">Un raccourci, ou une bulle, ouvre les quatre pneus autour de la voiture : pression, température et état envoyés par la voiture, avec l'unité au choix (bar, PSI, kPa), dans le pop-up ou dans Réglages › Interface, à côté de l'unité de distance : réglable même sans le module de l'écran conducteur.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">Pas de minuterie : il reste ouvert jusqu'à ce que vous le fermiez. Chaque pneu dit « Normal », « Alerte (code n) » en orange, ou « Pas de valeur », avec une ligne d'explication. Les codes suivent la logique de la voix de la voiture : le code 6 n'est une alerte que s'il touche les deux pneus d'un même essieu ; seul, il est signalé sans alerte. La pression monte en roulant : comparez des pneus froids. Valeurs relevées sur SWI133 : 252 kPa pour 2,5 bar au combiné. Dans le véhicule virtuel, « Pneu AR gauche bas » déclenche une alerte.</p>
       </details>
@@ -1262,7 +1262,7 @@
       <h3><span data-l="fr">Vos propres modules</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
       <p data-l="fr">Créez autant de modules que vous voulez, chacun avec son nom, son centre (consommation, puissance, pneus ou graphique), son style, son unité et ses 4 cases, puis rangez-les sur les onglets Navigation et Musique.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Réglages › Interface › Écran conducteur. « Onglets du combiné » : pour chaque onglet, les modules dans l'ordre, à avancer, reculer ou retirer, et « + Ajouter ». « Mes modules — communs à tous les profils » : une carte par module, avec ses onglets et profils d'utilisation ; la toucher ouvre son réglage, avec un aperçu animé. La zone du milieu règle le module (nom, centre de l'écran, style, unité) et son centre ; une case ne montre que ses propres réglages. « Dupliquer » crée « … Copie », « Supprimer » le retire aussi des onglets de tous les profils. Les listes d'onglets se règlent par profil, les modules sont communs. La mise à jour reprend les réglages d'avant en modules, sans rien changer à l'écran. Puissance maxi, actualisation, animation et unité de pression sont regroupées dans « Réglages communs ».</p>
+        <p data-l="fr">Réglages › Interface › Écran conducteur. « Onglets du combiné » : pour chaque onglet, les modules dans l'ordre, à avancer, reculer ou retirer, et « + Ajouter ». « Mes modules — communs à tous les profils » : une carte par module, avec ses onglets et profils d'utilisation ; la toucher ouvre son réglage, avec un aperçu animé. La zone du milieu règle le module (nom, centre de l'écran, style, unité) et son centre ; une case ne montre que ses propres réglages. « Dupliquer » crée « … Copie », « Supprimer » le retire aussi des onglets de tous les profils. Les listes d'onglets se règlent par profil, les modules sont communs. La mise à jour reprend les réglages d'avant en modules, sans rien changer à l'écran. Puissance maxi, actualisation et animation sont regroupées dans « Réglages communs ».</p>
       </details>
     </div>
     <div class="pt is-new" id="f-cluster-next" data-hl-key="s-cluster-tabs" data-demo="clusterNext">
@@ -1290,7 +1290,7 @@
       <h3><span data-l="fr">Les onglets et les réglages communs</span></h3>
       <p data-l="fr">Le module suit l'onglet affiché au volant, Navigation ou Musique ; un onglet sans module garde sa page d'origine.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Les onglets du combiné se choisissent au volant, et le module suit l'onglet affiché. Ordinateur de bord, pression des pneus d'origine et réglages sont dessinés par le combiné lui-même : aucun module ne peut s'y afficher. Le style (dynamique ou discret) et l'unité de la jauge (Wh/km ou kWh/100 km) se règlent dans chaque module — la moyenne du trajet a la sienne dans sa case, km/kWh compris. « Réglages communs » déplie la puissance maxi, l'unité de pression, l'actualisation, de 0,1 à 1 s (1 s par défaut : plus court, plus réactif, mais le chiffre bouge davantage), et la durée de l'animation, de 0,2 à 2 s (0,8 s par défaut), le temps que met la jauge pour glisser d'une valeur à la suivante. Le mode de conduite et le profil sont relus toutes les 10 secondes.</p>
+        <p data-l="fr">Les onglets du combiné se choisissent au volant, et le module suit l'onglet affiché. Ordinateur de bord, pression des pneus d'origine et réglages sont dessinés par le combiné lui-même : aucun module ne peut s'y afficher. Le style (dynamique ou discret) et l'unité de la jauge (Wh/km ou kWh/100 km) se règlent dans chaque module — la moyenne du trajet a la sienne dans sa case, km/kWh compris. « Réglages communs » déplie la puissance maxi, l'actualisation, de 0,1 à 1 s (1 s par défaut : plus court, plus réactif, mais le chiffre bouge davantage), et la durée de l'animation, de 0,2 à 2 s (0,8 s par défaut), le temps que met la jauge pour glisser d'une valeur à la suivante. Le mode de conduite et le profil sont relus toutes les 10 secondes.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-discreet" data-hl-key="s-cluster-style" data-demo="clusterDiscreet">
@@ -1801,8 +1801,8 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=f7b4321b"></script>
-<script src="assets/js/sim.js?v=b59d7c37"></script>
+<script src="assets/js/strings.js?v=ee532380"></script>
+<script src="assets/js/sim.js?v=edfc6049"></script>
 <script src="assets/js/site.js?v=a3c1886a"></script>
 <script src="assets/js/explorer.js?v=16d44a4f"></script>
 </body>

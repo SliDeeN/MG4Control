@@ -1203,11 +1203,111 @@
 
                 </LinearLayout>
 
-                <!-- Moitié droite libre : la carte garde la largeur des autres. -->
-                <View
+                <!-- ── Section UNITÉ DE PRESSION (2026-11-21) ─────────────────────────
+                     Sortie des réglages communs de l'écran conducteur : là, elle restait cachée
+                     tant que le module n'était pas activé (firmware non compatible). Une seule
+                     unité pour le pop-up, l'écran conducteur, les bulles et les automatisations. -->
+                <LinearLayout
                     android:layout_weight="1"
                     android:layout_width="0dp"
-                    android:layout_height="0dp" />
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_card_rounded"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/cluster_layout_tyre_unit"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.12"
+                        android:textAllCaps="true"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="7dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/dash_border" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_tyre_unit_bar"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="bar"
+                            android:textAllCaps="false"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_tyre_unit_psi"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="PSI"
+                            android:textAllCaps="false"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_tyre_unit_kpa"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="kPa"
+                            android:textAllCaps="false"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:text="@string/settings_tyre_unit_desc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="18sp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -1587,14 +1687,6 @@
                             android:layout_marginStart="150dp"
                             android:textColor="@color/dash_text_lo"
                             android:textSize="18sp" />
-
-                            <!-- Unité de pression des pneus (2026-11-20) : rangée posée par le code. -->
-                            <LinearLayout
-                                android:id="@+id/cluster_tyre_unit_row"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
-                                android:orientation="vertical" />
 
                             <TextView
                                 android:layout_width="match_parent"

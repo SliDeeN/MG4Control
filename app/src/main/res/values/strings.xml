@@ -337,6 +337,7 @@
     <!-- Unité de distance générale (2026-11-10). -->
     <string name="settings_distance_unit">Unité de distance</string>
     <string name="settings_distance_unit_desc">Statistiques, écran conducteur et bulles d\'information. Auto suit l\'unité réglée dans la voiture. L\'export CSV reste en km.</string>
+    <string name="settings_tyre_unit_desc">Pop-up Pression des pneus, écran conducteur, bulles d’information et automatisations. Par défaut, celle du combiné.</string>
     <string name="settings_text_size">Taille du texte</string>
     <string name="settings_popup_delay">Délai avant fermeture des pop-ups</string>
     <string name="settings_popup_delay_desc">Sélecteur de profils, confirmation d\'automatisation et pop-up HVAC. Chaque action relance le délai.</string>
@@ -978,6 +979,10 @@
     <string name="cluster_layout_unit">Unité</string>
     <string name="cluster_layout_distance_auto">Auto (réglage général)</string>
     <string name="cluster_layout_wide">Toute la largeur</string>
+    <string name="cluster_layout_energy_calc">Calcul</string>
+    <string name="cluster_layout_energy_gross">Brute</string>
+    <string name="cluster_layout_energy_net">Nette</string>
+    <string name="cluster_layout_energy_note">Brute : toute l’énergie sortie de la batterie depuis READY. Nette : la récupération est déduite, comme la moyenne du trajet.</string>
     <string name="cluster_layout_wide_busy">Toute la largeur : libérez d\'abord la case voisine (Info %1$d).</string>
     <string name="cluster_layout_clear">Vider la case</string>
     <string name="cluster_distance_km">km</string>
@@ -1150,7 +1155,6 @@
     <string name="cluster_tyres_alert">Alerte pneu</string>
     <string name="cluster_tyres_none">Pas de relevé</string>
     <string name="cluster_layout_tyre_unit">Unité de pression</string>
-    <string name="cluster_layout_tyre_unit_note">La même que le pop-up Pression des pneus, les bulles et les automatisations.</string>
     <string name="cluster_tabs_title">Onglets du combiné</string>
     <string name="cluster_tab_note_many">Le n° 1 s’affiche ; le raccourci « Module suivant » passe au suivant, puis revient au premier.</string>
     <string name="cluster_tab_note_one">Ajoutez un 2e module pour passer de l’un à l’autre avec le raccourci.</string>
@@ -1166,7 +1170,7 @@
     <string name="cluster_library_unused">Non utilisé</string>
     <string name="cluster_library_slots">Cases : %1$d</string>
     <string name="cluster_new_module_name">Nouveau module %1$d</string>
-    <string name="cluster_common_summary">Réglages communs · puissance maxi · actualisation %1$s · animation %2$s · pression</string>
+    <string name="cluster_common_summary">Réglages communs · puissance maxi · actualisation %1$s · animation %2$s</string>
     <string name="cluster_module_section">Module</string>
     <string name="cluster_module_name">Nom</string>
     <string name="cluster_module_center">Centre de l’écran</string>

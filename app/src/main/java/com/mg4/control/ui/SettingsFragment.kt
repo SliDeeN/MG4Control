@@ -296,6 +296,31 @@ class SettingsFragment : Fragment() {
             } ?: getString(R.string.cluster_distance_auto)
         }
         peindreDistance()
+        // Unité de pression des pneus (2026-11-21) : sa propre carte, à côté de l'unité de distance —
+        // dans les réglages communs de l'écran conducteur, elle restait cachée sans le module.
+        val tyreBtns = listOf(
+            com.mg4.control.model.TyrePressure.PressureUnit.BAR to view.findViewById<MaterialButton>(R.id.btn_tyre_unit_bar),
+            com.mg4.control.model.TyrePressure.PressureUnit.PSI to view.findViewById(R.id.btn_tyre_unit_psi),
+            com.mg4.control.model.TyrePressure.PressureUnit.KPA to view.findViewById(R.id.btn_tyre_unit_kpa),
+        )
+        fun peindrePression() {
+            val ctx = context ?: return
+            val choix = com.mg4.control.util.TyreUnitSetting.unit(ctx)
+            tyreBtns.forEach { (u, btn) ->
+                val active = u == choix
+                btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
+                btn.setTextColor(if (active) textActive else textInactive)
+                btn.strokeColor = ColorStateList.valueOf(if (active) accentColor else ctx.getColor(R.color.dash_border))
+            }
+        }
+        peindrePression()
+        tyreBtns.forEach { (u, btn) ->
+            btn.setOnClickListener {
+                com.mg4.control.util.TyreUnitSetting.set(requireContext(), u)
+                AppLogger.i(ClusterModuleOverlay.TAG, "unité de pression → ${u.label}")
+                peindrePression()
+            }
+        }
         distBtns.forEach { (d, btn) ->
             btn.setOnClickListener {
                 DistanceSetting.set(requireContext(), d)
@@ -425,7 +450,6 @@ class SettingsFragment : Fragment() {
         val tvModuleMixte = view.findViewById<TextView>(R.id.tv_cluster_module_mixed)
         val conteneurOnglets = view.findViewById<LinearLayout>(R.id.cluster_tabs)
         val conteneurBiblio = view.findViewById<LinearLayout>(R.id.cluster_library)
-        val rangeeTpms = view.findViewById<LinearLayout>(R.id.cluster_tyre_unit_row)
         val tvOngletsTitre = view.findViewById<TextView>(R.id.tv_cluster_tabs_title)
         val mixte = getString(R.string.settings_cluster_mixed)
         val couleurMixte = requireContext().getColor(R.color.dash_warn)
@@ -684,41 +708,6 @@ class SettingsFragment : Fragment() {
             })
             conteneurBiblio.addView(rangee, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        /** Unité de pression des pneus, dans les réglages communs (la même partout). */
-        fun construireTpms() {
-            val ctx = requireContext()
-            rangeeTpms.removeAllViews()
-            rangeeTpms.addView(TextView(ctx).apply {
-                text = getString(R.string.cluster_layout_tyre_unit)
-                setTextColor(requireContext().getColor(R.color.text_secondary))
-                textSize = 19f
-            })
-            val ligne = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            val u = com.mg4.control.util.TyreUnitSetting.unit(ctx)
-            com.mg4.control.model.TyrePressure.PressureUnit.entries.forEachIndexed { i, pu ->
-                ligne.addView(MaterialButton(ctx).apply {
-                    text = pu.label
-                    isAllCaps = false
-                    textSize = 19f
-                    insetTop = 0; insetBottom = 0
-                    cornerRadius = dp(14)
-                    strokeWidth = dp(1)
-                    peindre(this, pu == u)
-                    setOnClickListener {
-                        com.mg4.control.util.TyreUnitSetting.set(ctx, pu)
-                        AppLogger.i(ClusterModuleOverlay.TAG, "unité de pression → ${pu.label}")
-                        construireTpms()
-                    }
-                }, LinearLayout.LayoutParams(0, dp(52), 1f).also { if (i > 0) it.marginStart = dp(8) })
-            }
-            rangeeTpms.addView(ligne, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                .also { it.topMargin = dp(6) })
-            rangeeTpms.addView(TextView(ctx).apply {
-                text = getString(R.string.cluster_layout_tyre_unit_note)
-                setTextColor(requireContext().getColor(R.color.dash_text_lo))
-                textSize = 16f
-            })
-        }
         updateClusterCard = {
             val ctx = requireContext()
             // Le combiné suit tout de suite, sans attendre son relevé suivant.
@@ -744,7 +733,6 @@ class SettingsFragment : Fragment() {
 
             if (actif) construireOnglets(choisis)
             construireBiblio()
-            construireTpms()
 
             val refresh = ClusterModuleSettings.refreshMs(ctx)
             val animation = ClusterModuleSettings.animationMs(ctx)

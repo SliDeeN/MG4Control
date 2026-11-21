@@ -334,6 +334,7 @@
     <string name="settings_nav_side_detected_unknown">no leído del coche, menú a la izquierda</string>
     <string name="settings_distance_unit">Unidad de distancia</string>
     <string name="settings_distance_unit_desc">Estadísticas, pantalla del conductor y burbujas de información. Auto sigue la unidad configurada en el coche. La exportación CSV sigue en km.</string>
+    <string name="settings_tyre_unit_desc">Ventana de presión de neumáticos, pantalla del conductor, burbujas de información y automatizaciones. Por defecto, la del cuadro de instrumentos.</string>
     <string name="settings_text_size">Tamaño del texto</string>
     <string name="settings_popup_delay">Tiempo antes de cerrar los pop-ups</string>
     <string name="settings_popup_delay_desc">Selector de perfil, confirmación de automatización y pop-up HVAC. Cada acción reinicia el tiempo.</string>
@@ -960,6 +961,10 @@
     <string name="cluster_layout_unit">Unidad</string>
     <string name="cluster_layout_distance_auto">Auto (ajuste general)</string>
     <string name="cluster_layout_wide">Todo el ancho</string>
+    <string name="cluster_layout_energy_calc">Cálculo</string>
+    <string name="cluster_layout_energy_gross">Bruta</string>
+    <string name="cluster_layout_energy_net">Neta</string>
+    <string name="cluster_layout_energy_note">Bruta: toda la energía extraída de la batería desde READY. Neta: se resta la regeneración, como en la media del trayecto.</string>
     <string name="cluster_layout_wide_busy">Todo el ancho: libera primero la casilla vecina (Info %1$d).</string>
     <string name="cluster_layout_clear">Vaciar la casilla</string>
     <string name="cluster_distance_km">km</string>
@@ -1132,7 +1137,6 @@
     <string name="cluster_tyres_alert">Alerta neumático</string>
     <string name="cluster_tyres_none">Sin lectura</string>
     <string name="cluster_layout_tyre_unit">Unidad de presión</string>
-    <string name="cluster_layout_tyre_unit_note">La misma que el pop-up de presión, las burbujas y las automatizaciones.</string>
     <string name="cluster_tabs_title">Pestañas del cuadro de instrumentos</string>
     <string name="cluster_tab_note_many">Se muestra el n.º 1; el atajo «Módulo siguiente» pasa al siguiente y luego vuelve al primero.</string>
     <string name="cluster_tab_note_one">Añade un 2.º módulo para cambiar entre ellos con el atajo.</string>
@@ -1148,7 +1152,7 @@
     <string name="cluster_library_unused">Sin usar</string>
     <string name="cluster_library_slots">Casillas: %1$d</string>
     <string name="cluster_new_module_name">Nuevo módulo %1$d</string>
-    <string name="cluster_common_summary">Ajustes comunes · potencia máx. · actualización %1$s · animación %2$s · presión</string>
+    <string name="cluster_common_summary">Ajustes comunes · potencia máx. · actualización %1$s · animación %2$s</string>
     <string name="cluster_module_section">Módulo</string>
     <string name="cluster_module_name">Nombre</string>
     <string name="cluster_module_center">Centro de la pantalla</string>

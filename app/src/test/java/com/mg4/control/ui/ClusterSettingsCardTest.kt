@@ -49,8 +49,10 @@ class ClusterSettingsCardTest {
         listOf(R.id.btn_cluster_power_auto, R.id.btn_cluster_power_125, R.id.btn_cluster_power_150,
             R.id.btn_cluster_power_180, R.id.btn_cluster_power_320,
             R.id.btn_cluster_profiles_all, R.id.btn_cluster_profiles_current,
+            // Unité de pression (2026-11-21) : sa propre carte, hors de l'écran conducteur.
+            R.id.btn_tyre_unit_bar, R.id.btn_tyre_unit_psi, R.id.btn_tyre_unit_kpa,
         ).forEach { assertNotNull(v.findViewById<MaterialButton>(it)) }
-        listOf(R.id.cluster_tabs, R.id.cluster_library, R.id.cluster_tyre_unit_row, R.id.grid_cluster_profiles)
+        listOf(R.id.cluster_tabs, R.id.cluster_library, R.id.grid_cluster_profiles)
             .forEach { assertNotNull(v.findViewById<LinearLayout>(it)) }
         listOf(R.id.tv_cluster_tabs_title, R.id.tv_cluster_advanced, R.id.tv_cluster_advanced_chevron,
             R.id.tv_cluster_power_desc, R.id.tv_cluster_refresh, R.id.tv_cluster_animation, R.id.tv_cluster_profiles_info,
@@ -86,7 +88,8 @@ class ClusterSettingsCardTest {
         tous(panneau).filterIsInstance<TextView>().first { it.text.toString() == activite.getString(R.string.settings_cluster_tyres) }.performClick()
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(activite.getString(R.string.cluster_module_unit) !in textes())
-        assertTrue(activite.getString(R.string.cluster_layout_tyre_unit) in textes())
+        // L'unité de pression ne se règle plus ici : pop-up et Réglages › Interface seulement (2026-11-21).
+        assertTrue(activite.getString(R.string.cluster_layout_tyre_unit) !in textes())
         tous(panneau).filterIsInstance<android.widget.EditText>().first().setText("Mes pneus")
         fenetre.findViewById<View>(R.id.btn_cluster_layout_save).performClick()
         shadowOf(Looper.getMainLooper()).idle()
