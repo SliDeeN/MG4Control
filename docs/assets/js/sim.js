@@ -4280,8 +4280,10 @@
         const [p, t, st] = c.tyres[w], a = tyreAlert(w);
         const label = a === 'none' ? S('tyre_state_none') : a === 'ok' ? S('tyre_state_normal') : a === 'alert' ? S('tyre_state_alert', st) : S('tyre_state_code', st);
         const why = a === 'alert' ? S(st === 6 ? 'tyre_why_axle' : 'tyre_why_alert') : a === 'six' ? S('tyre_why_lone_six') : a === 'none' ? S('tyre_why_none') : '';
-        return '<div class="typ-card ' + pos + (a === 'alert' ? ' al' : '') + '"><small>' + esc(S(WIN_KEY[w])) + '</small><div class="typ-row"><b>' + esc(tyreFmt(p, u)) + '</b><span>' +
-          esc(TYRE_UNITS[u]) + '</span><em>' + (t == null ? '–' : t) + ' °C</em></div><div class="typ-st">' + esc(label) + '</div>' + (why ? '<div class="typ-why">' + esc(why) + '</div>' : '') + '</div>';
+        const ico = a === 'ok' ? '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M8,12.2 L11,15 L16.2,9.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' :
+          a === 'alert' ? MW.warning : a === 'six' ? MW.info : MW.question;
+        return '<div class="typ-card ' + pos + (a === 'alert' ? ' al' : '') + '"><small>' + esc(S(WIN_KEY[w])) + '</small><div class="typ-row"><span class="typ-v"><b>' + esc(tyreFmt(p, u)) + '</b><span>' +
+          esc(TYRE_UNITS[u]) + '</span></span><em>' + (t == null ? '–' : t) + ' °C</em></div><div class="typ-st ' + a + '">' + ico + '<span>' + esc(label) + '</span></div>' + (why ? '<div class="typ-why">' + esc(why) + '</div>' : '') + '</div>';
       };
       const svg = '<svg class="typ-car" viewBox="0 0 120 300" aria-hidden="true">' + tyreCarSvg(30, 10, 60, 280, (w) => (tyreAlert(w) === 'alert' ? '#F59E0B' : '#5B6577')) + '</svg>';
       return '<div class="a-scrim" data-a="tyBg"><div class="ov-card typ" data-hl="tyre-popup"><div class="ov-head">' + MW.target + '<div class="ov-title">' + esc(S('tyre_popup_title')) + '</div>' + units +

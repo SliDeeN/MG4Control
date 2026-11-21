@@ -2087,29 +2087,33 @@
 .cll-name { width: 100%; margin-bottom: 4px; }
 
 /* ── 2.7.1 · Pop-up Pression des pneus (sans minuterie) ── */
-.typ { width: 1140px; }
+.typ { width: 760px; }
 .typ-units { width: 240px; height: 40px; margin-right: 12px; }
 .typ-units > button { font-size: calc(14px * var(--ts, 1)); }
-.typ-body { display: grid; grid-template-columns: 1fr 150px 1fr; grid-template-rows: auto auto; gap: 14px 28px; align-items: center; padding: 4px 18px; }
-.typ-car { grid-column: 2; grid-row: 1 / 3; width: 120px; height: 300px; justify-self: center; }
-.typ-card { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-radius: 16px; background: var(--dash-section); border: 1px solid var(--dash-border); }
+.typ-body { display: grid; grid-template-columns: minmax(0, 1fr) 200px minmax(0, 1fr); grid-template-rows: auto auto; gap: 12px 16px; align-items: stretch; padding: 0; }
+.typ-car { grid-column: 2; grid-row: 1 / 3; width: 120px; height: 300px; justify-self: center; align-self: center; }
+.typ-card { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-height: 160px; box-sizing: border-box; padding: 12px 18px; border-radius: 16px; background: var(--dash-section); border: 1px solid var(--dash-border); }
 .typ-card.fl { grid-column: 1; grid-row: 1; }
 .typ-card.fr { grid-column: 3; grid-row: 1; }
 .typ-card.rl { grid-column: 1; grid-row: 2; }
 .typ-card.rr { grid-column: 3; grid-row: 2; }
 .typ-card.fl, .typ-card.rl { align-items: flex-end; text-align: right; }
 .typ-card.fr, .typ-card.rr { align-items: flex-start; text-align: left; }
-.typ-card small { color: var(--text-secondary); font-size: calc(15px * var(--ts, 1)); }
-.typ-row { display: flex; align-items: baseline; gap: 8px; }
+.typ-card small { color: var(--text-secondary); font-size: calc(17px * var(--ts, 1)); }
+.typ-row { display: flex; align-items: baseline; gap: 14px; }
 .typ-card.fl .typ-row, .typ-card.rl .typ-row { flex-direction: row-reverse; }
-.typ-row b { font-size: calc(38px * var(--ts, 1)); font-weight: 600; }
-.typ-row span, .typ-row em { font-size: calc(16px * var(--ts, 1)); color: var(--text-secondary); font-style: normal; }
-.typ-row em { margin: 0 6px; }
-.typ-st { font-size: calc(15px * var(--ts, 1)); font-weight: 600; color: var(--dash-eco); }
-.typ-card.al { border-color: var(--dash-warn); }
-.typ-card.al .typ-row b, .typ-card.al .typ-st { color: var(--dash-warn); }
-.typ-why { font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
-.typ-hint { margin-top: 10px; text-align: center; color: var(--text-secondary); font-size: calc(14px * var(--ts, 1)); }
+.typ-v { display: inline-flex; align-items: baseline; gap: 6px; }
+.typ-row b { font-size: calc(42px * var(--ts, 1)); font-weight: 700; line-height: 1.05; }
+.typ-row .typ-v span, .typ-row em { color: var(--text-secondary); font-style: normal; }
+.typ-row .typ-v span { font-size: calc(20px * var(--ts, 1)); }
+.typ-row em { font-size: calc(18px * var(--ts, 1)); }
+.typ-st { display: inline-flex; align-items: center; gap: 6px; height: 30px; margin-top: 4px; padding: 0 14px 0 10px; border-radius: 15px; font-size: calc(15px * var(--ts, 1)); font-weight: 700; white-space: nowrap; color: var(--dash-text-lo, var(--text-secondary)); background: var(--dash-border); }
+.typ-st .mw-ico { width: 18px; height: 18px; flex: none; }
+.typ-st.ok { color: var(--dash-eco); background: var(--dash-eco-dim); }
+.typ-st.alert { color: var(--dash-warn); background: var(--dash-warn-dim); }
+.typ-card.al { border: 2px solid var(--dash-warn); }
+.typ-why { font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
+.typ-hint { margin-top: 10px; text-align: right; color: var(--text-secondary); font-size: calc(15px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── 2.7.1 · Pop-up de charge : verrou de la prise, marche / arrêt, courant AC, sans charge ── */
 .cgp-btn {
