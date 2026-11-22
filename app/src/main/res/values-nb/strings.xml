@@ -966,6 +966,11 @@
     <string name="cluster_layout_energy_gross">Brutto</string>
     <string name="cluster_layout_energy_net">Netto</string>
     <string name="cluster_layout_energy_note">Brutto: all energi hentet fra batteriet siden READY. Netto: regenerering trekkes fra, som i turens gjennomsnitt.</string>
+    <string name="trip_period">Periode</string>
+    <string name="trip_period_ready">Siden READY</string>
+    <string name="trip_period_boot">Siden oppstart</string>
+    <string name="trip_period_charge">Siden siste lading</string>
+    <string name="trip_period_note">Siden READY: nullstilles hver gang bilen går i READY. Siden oppstart: siden midtskjermen ble slått på. Siden siste lading: nullstilles ved hver lading. Teksten forblir den samme.</string>
     <string name="cluster_layout_wide_busy">Full bredde: frigjør først nabofeltet (Info %1$d).</string>
     <string name="cluster_layout_clear">Tøm feltet</string>
     <string name="cluster_distance_km">km</string>

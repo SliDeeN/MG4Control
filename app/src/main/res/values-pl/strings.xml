@@ -965,6 +965,11 @@
     <string name="cluster_layout_energy_gross">Brutto</string>
     <string name="cluster_layout_energy_net">Netto</string>
     <string name="cluster_layout_energy_note">Brutto: cała energia pobrana z akumulatora od READY. Netto: odzysk jest odejmowany, jak w średniej z trasy.</string>
+    <string name="trip_period">Okres</string>
+    <string name="trip_period_ready">Od READY</string>
+    <string name="trip_period_boot">Od uruchomienia</string>
+    <string name="trip_period_charge">Od ostatniego ładowania</string>
+    <string name="trip_period_note">Od READY: zerowane przy każdym przejściu w READY. Od uruchomienia: od włączenia ekranu centralnego. Od ostatniego ładowania: zerowane przy każdym ładowaniu. Etykieta się nie zmienia.</string>
     <string name="cluster_layout_wide_busy">Cała szerokość: najpierw zwolnij sąsiednie pole (Info %1$d).</string>
     <string name="cluster_layout_clear">Wyczyść pole</string>
     <string name="cluster_distance_km">km</string>

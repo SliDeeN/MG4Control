@@ -23,7 +23,8 @@ object BubbleInfo {
     const val SLOW_EVERY = 5
     // Temps depuis READY : un chronomètre (2026-11-20), ses secondes doivent défiler. Lu sur
     // l'horloge interne, sans binder : rien ne coûte à le relire chaque seconde.
-    private val RAPIDES = setOf(TIME, RuleSignal.SPEED.name, RuleSignal.DRIVE_MINUTES.name)
+    // Compteurs de trajet (2026-11-22) : lus en mémoire ([com.mg4.control.service.TripMeter]).
+    private val RAPIDES = setOf(TIME, RuleSignal.SPEED.name, RuleSignal.DRIVE_MINUTES.name) + ClusterInfo.TRIP_KEYS
 
     /** Ce qu'affiche une valeur illisible : jamais un chiffre inventé. */
     const val UNKNOWN = "—"
@@ -45,7 +46,8 @@ object BubbleInfo {
     /** Les choix, dans l'ordre ; [available] écarte ce que la voiture ne sait pas lire. */
     fun choices(available: (RuleSignal) -> Boolean = { true }): List<String> {
         val reste = RuleSignal.entries.filter { it !in EXCLUS && it.name !in FIRST }.map { it.name }
-        return (FIRST + reste).filter { k -> k == TIME || signal(k)?.let(available) == true }
+        // Compteurs de trajet (2026-11-22) : après les plus utiles, avant le reste.
+        return (FIRST + ClusterInfo.TRIP_KEYS + reste).filter { k -> k == TIME || k in ClusterInfo.TRIP_KEYS || signal(k)?.let(available) == true }
     }
 
     fun isInfo(b: FloatingButton): Boolean = b.info != null

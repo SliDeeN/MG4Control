@@ -230,7 +230,7 @@ object FloatingButtonsOverlay {
             action(b)?.takeIf { FloatingButtonStyle.kind(it) == FloatingKind.TOGGLE }?.let { b.id to it }
         }
         mots = com.mg4.control.ui.AndroidRuleWords(ctx)
-        infosPosees = boutons.filter { BubbleInfo.isInfo(it) }.map { it.id to it.info }
+        infosPosees = boutons.filter { BubbleInfo.isInfo(it) }.map { it.id to it }
         if (infosPosees.isNotEmpty()) {
             val tour = infoTour + 1
             infoTour = tour
@@ -291,10 +291,10 @@ object FloatingButtonsOverlay {
         // Bulle d'information : la valeur relue peu après (l'action a pu la changer) ; pas d'éclair,
         // c'est la valeur elle-même qui s'affiche.
         if (BubbleInfo.isInfo(bulle.bouton)) {
-            val cle = bulle.bouton.info
+            val b = bulle.bouton
             listOf(FloatingButtonStyle.READBACK_MS, VALEUR_RELUE_MS).forEach { delai ->
                 lecteur.postDelayed({
-                    val (texte, etat) = lireInfo(ctx, cle)
+                    val (texte, etat) = lireInfo(ctx, b)
                     main.post { bulles[id]?.let { majInfo(it, texte, etat) } }
                 }, delai)
             }
@@ -736,8 +736,7 @@ object FloatingButtonsOverlay {
     /** Libellé d'une bulle d'information : son titre saisi, sinon le nom de la valeur. */
     private fun libelleInfo(ctx: Context, b: FloatingButton): String =
         b.customTitle?.trim()?.takeIf { it.isNotEmpty() }
-            ?: BubbleInfo.signal(b.info)?.let { s -> (mots ?: com.mg4.control.ui.AndroidRuleWords(ctx)).signal(s) }
-            ?: ctx.getString(R.string.floating_info_time)
+            ?: com.mg4.control.ui.widget.ClusterBlocks.nom(ctx, b.info, mots ?: com.mg4.control.ui.AndroidRuleWords(ctx))
 
     /**
      * Texte d'une bulle d'information pour la valeur [valeur] : la valeur seule, ou le libellé en
@@ -754,8 +753,19 @@ object FloatingButtonsOverlay {
     }
 
     /** Valeur lue d'une information (fil mg4-float) ; le texte et l'état oui / non. */
-    private fun lireInfo(ctx: Context, cle: String?): Pair<String, Boolean?> {
+    private fun lireInfo(ctx: Context, b: FloatingButton): Pair<String, Boolean?> {
+        val cle = b.info
         val m = mots ?: com.mg4.control.ui.AndroidRuleWords(ctx).also { mots = it }
+        val periode = com.mg4.control.model.TripPeriod.of(b.period)
+        // Compteurs de trajet (2026-11-22) : comme une case de l'écran conducteur, sur la période choisie.
+        if (cle in com.mg4.control.model.ClusterInfo.TRIP_KEYS) {
+            val bloc = com.mg4.control.model.ClusterBlock(cle, unit = b.unit, net = b.net)
+            val v = com.mg4.control.model.ClusterInfo.tripValue(bloc, TripMeter.trip(periode, null),
+                com.mg4.control.util.DistanceSetting.unit(ctx), ctx.resources.configuration.locales[0])
+                ?: return BubbleInfo.UNKNOWN to null
+            val unite = com.mg4.control.ui.widget.ClusterBlocks.unite(ctx, v.second)
+            return (if (unite.isNullOrEmpty() || v.first == BubbleInfo.UNKNOWN) v.first else "${v.first} $unite") to null
+        }
         if (cle == BubbleInfo.TIME) {
             val maintenant = System.currentTimeMillis()
             // Horloge d'usine au réveil (~2019) : pas d'heure plutôt qu'une heure fausse.
@@ -763,7 +773,8 @@ object FloatingButtonsOverlay {
             return android.text.format.DateFormat.getTimeFormat(ctx).format(java.util.Date(maintenant)) to null
         }
         val s = BubbleInfo.signal(cle) ?: return BubbleInfo.UNKNOWN to null
-        val lu = com.mg4.control.automation.CustomRules.readSignal(ctx, s)
+        val lu = if (s == RuleSignal.DRIVE_MINUTES && periode != com.mg4.control.model.TripPeriod.READY)
+            TripMeter.totals(periode).minutes else com.mg4.control.automation.CustomRules.readSignal(ctx, s)
         // Temps depuis READY : en chronomètre, sans unité.
         BubbleInfo.chrono(s, lu)?.let { return it to null }
         // Pression des pneus : dans l'unité choisie (bar, PSI, kPa).
@@ -780,15 +791,15 @@ object FloatingButtonsOverlay {
     /** Tour de relecture des informations ; 0 = aucune. */
     @Volatile private var infoTour = 0
     /** Bulles d'information posées (id, clé), pour le fil de lecture. */
-    @Volatile private var infosPosees: List<Pair<String, String?>> = emptyList()
+    @Volatile private var infosPosees: List<Pair<String, FloatingButton>> = emptyList()
 
     /** Fil mg4-float : chaque seconde l'heure et la vitesse, toutes les 5 s le reste. */
     private fun lireInfos(tour: Int, tic: Int) {
         if (infoTour != tour) return
         val ctx = app
         if (ctx != null && !marcheArriere) {
-            val lus = infosPosees.filter { (_, cle) -> tic % BubbleInfo.SLOW_EVERY == 0 || BubbleInfo.fast(cle) }
-                .map { (id, cle) -> lireInfo(ctx, cle).let { (texte, etat) -> Triple(id, texte, etat) } }
+            val lus = infosPosees.filter { (_, b) -> tic % BubbleInfo.SLOW_EVERY == 0 || BubbleInfo.fast(b.info) }
+                .map { (id, b) -> lireInfo(ctx, b).let { (texte, etat) -> Triple(id, texte, etat) } }
             if (lus.isNotEmpty()) main.post { lus.forEach { (id, texte, etat) -> bulles[id]?.let { majInfo(it, texte, etat) } } }
         }
         lecteur.postDelayed({ lireInfos(tour, tic + 1) }, BubbleInfo.TICK_MS)

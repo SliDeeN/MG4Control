@@ -226,6 +226,8 @@ class MG4ControlService : Service() {
         WindowAutoClose.startIfEnabled(applicationContext)
         // Statistiques : ne relève rien tant que l'utilisateur n'a pas activé l'enregistrement.
         StatsCollector.startIfEnabled(applicationContext)
+        // Compteurs de trajet par période (READY, démarrage, dernière charge) : bulles et combiné.
+        TripMeter.start(applicationContext)
         // Profil selon la batterie (issue #112) : tourne toujours, relit sa config à chaque
         // vérification — activer l'option suffit, sans redémarrer le service.
         com.mg4.control.automation.BatteryAutomation.start(applicationContext)

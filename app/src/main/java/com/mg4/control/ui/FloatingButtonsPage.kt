@@ -513,7 +513,7 @@ class FloatingButtonsPage {
     /** Nom d'une information : « Heure », ou le nom de la valeur dans les automatisations. */
     private fun nomInfo(cle: String?): String {
         val ctx = fragment?.context ?: return cle.orEmpty()
-        return BubbleInfo.signal(cle)?.let { AndroidRuleWords(ctx).signal(it) } ?: ctx.getString(R.string.floating_info_time)
+        return com.mg4.control.ui.widget.ClusterBlocks.nom(ctx, cle, AndroidRuleWords(ctx))
     }
 
     /** Ce que la voiture sait lire : mêmes filtres que la liste des valeurs des automatisations. */
@@ -595,11 +595,97 @@ class FloatingButtonsPage {
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_style_value), style == BubbleInfo.STYLE_VALUE)
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_style_label), style == BubbleInfo.STYLE_LABEL)
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_style_icon), style == BubbleInfo.STYLE_ICON)
+        peindreTrajet(b, info)
         val agit = BubbleInfo.tapRuns(b)
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_tap_action), agit)
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_tap_none), !agit)
         // Au toucher « Rien » : l'action ne sert à rien, sa ligne disparaît (elle est gardée).
         racine.findViewById<View>(R.id.row_floating_action).visibility = if (agit) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Compteurs de trajet dans une bulle (2026-11-22) : unité, calcul brut / net de l'énergie et
+     * période, comme pour une case de l'écran conducteur. Rangées refaites à chaque peinture.
+     */
+    private fun peindreTrajet(b: FloatingButton, info: Boolean) {
+        val ctx = fragment?.context ?: return
+        val boite = racine.findViewById<LinearLayout>(R.id.floating_info_trip_rows)
+        boite.removeAllViews()
+        val cle = b.info
+        val trajet = info && cle in com.mg4.control.model.ClusterInfo.TRIP_KEYS
+        val periode = info && com.mg4.control.model.TripPeriod.applies(cle)
+        boite.visibility = if (trajet || periode) View.VISIBLE else View.GONE
+        if (!trajet && !periode) return
+        val bloc = com.mg4.control.model.ClusterBlock(cle, unit = b.unit, net = b.net)
+        val unites = com.mg4.control.model.ClusterInfo.units(cle)
+        if (trajet && unites.isNotEmpty()) {
+            val u = com.mg4.control.model.ClusterInfo.unit(bloc)
+            val d = com.mg4.control.util.DistanceSetting.unit(ctx)
+            rangeeTrajet(boite, R.string.cluster_layout_unit, unites.map { k ->
+                Triple(nomUnite(k, d), u == k) { modifier(b.copy(unit = k)) }
+            })
+        }
+        if (cle == com.mg4.control.model.ClusterInfo.TRIP_ENERGY) {
+            val nette = b.net == true
+            rangeeTrajet(boite, R.string.cluster_layout_energy_calc, listOf(
+                Triple(ctx.getString(R.string.cluster_layout_energy_gross), !nette) { modifier(b.copy(net = null)) },
+                Triple(ctx.getString(R.string.cluster_layout_energy_net), nette) { modifier(b.copy(net = true)) },
+            ))
+        }
+        val p = com.mg4.control.model.TripPeriod.of(b.period)
+        rangeeTrajet(boite, R.string.trip_period, com.mg4.control.model.TripPeriod.entries.map { q ->
+            val nom = when (q) {
+                com.mg4.control.model.TripPeriod.READY -> R.string.trip_period_ready
+                com.mg4.control.model.TripPeriod.BOOT -> R.string.trip_period_boot
+                com.mg4.control.model.TripPeriod.CHARGE -> R.string.trip_period_charge
+            }
+            Triple(ctx.getString(nom), p == q) { modifier(b.copy(period = com.mg4.control.model.TripPeriod.keyOf(q))) }
+        })
+    }
+
+    private fun nomUnite(k: String, d: com.mg4.control.model.DistanceUnit): String = when (k) {
+        com.mg4.control.model.ClusterInfo.UNIT_KWH -> "kWh"
+        com.mg4.control.model.ClusterInfo.UNIT_WH -> "Wh"
+        else -> com.mg4.control.model.AverageUnit.entries.firstOrNull { it.key == k }?.labelFor(d) ?: k
+    }
+
+    /** Une rangée comme « Affichage » : libellé de 170 dp, boutons de 64 dp de même largeur. */
+    private fun rangeeTrajet(boite: LinearLayout, titre: Int, options: List<Triple<String, Boolean, () -> Unit>>) {
+        val ctx = boite.context
+        val d = ctx.resources.displayMetrics.density
+        val r = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .also { it.topMargin = (10 * d).toInt() }
+        }
+        r.addView(TextView(ctx).apply {
+            text = ctx.getString(titre)
+            setTextColor(ctx.getColor(R.color.text_secondary))
+            textSize = 19f
+            layoutParams = LinearLayout.LayoutParams((170 * d).toInt(), LinearLayout.LayoutParams.WRAP_CONTENT)
+        })
+        options.forEachIndexed { i, (texte, choisie, action) ->
+            val btn = MaterialButton(ctx).apply {
+                text = texte
+                isAllCaps = false
+                textSize = 18f
+                maxLines = 2
+                insetTop = 0
+                insetBottom = 0
+                cornerRadius = (14 * d).toInt()
+                strokeWidth = d.toInt().coerceAtLeast(1)
+                strokeColor = ColorStateList.valueOf(ctx.getColor(R.color.dash_border))
+                backgroundTintList = ColorStateList.valueOf(ctx.getColor(R.color.dash_btn))
+                setTextColor(ctx.getColor(R.color.text_primary))
+                layoutParams = LinearLayout.LayoutParams(0, (64 * d).toInt(), 1f)
+                    .also { if (i < options.size - 1) it.marginEnd = (4 * d).toInt() }
+                setOnClickListener { action() }
+            }
+            ProfileChips.peindre(btn, choisie)
+            r.addView(btn)
+        }
+        boite.addView(r)
     }
 
     /** Ligne « Icône » : l'icône montrée, Choisir… et Par défaut (si une autre a été choisie). */

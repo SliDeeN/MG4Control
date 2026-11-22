@@ -25,6 +25,8 @@ data class ClusterBlock(
     val distance: String? = null,
     val wide: Boolean? = null,
     val net: Boolean? = null,
+    /** Période des compteurs de trajet ([TripPeriod.key], 2026-11-22) ; `null` = depuis READY. */
+    val period: String? = null,
 )
 
 /**
@@ -228,6 +230,8 @@ object ClusterInfo {
     const val TRIP_REGEN = "TRIP_REGEN"
     const val POWER = "POWER"
     val CLUSTER = listOf(TRIP_AVERAGE, TRIP_DISTANCE, TRIP_ENERGY, TRIP_REGEN, POWER)
+    /** Les compteurs de trajet : ceux qui ont une période ([TripPeriod]), aussi proposés aux bulles. */
+    val TRIP_KEYS = listOf(TRIP_AVERAGE, TRIP_DISTANCE, TRIP_ENERGY, TRIP_REGEN)
 
     const val STYLE_VALUE = "value"
     const val STYLE_LABEL = "label"
@@ -254,7 +258,7 @@ object ClusterInfo {
 
     /** Les choix : le combiné d'abord, puis les bulles ([available] écarte ce que la voiture ne lit pas). */
     fun choices(available: (RuleSignal) -> Boolean = { true }): List<String> =
-        CLUSTER + BubbleInfo.choices(available).filter { it !in HORS_COMBINE }
+        (CLUSTER + BubbleInfo.choices(available).filter { it !in HORS_COMBINE }).distinct()
 
     fun known(key: String?): Boolean = key in CLUSTER || key == BubbleInfo.TIME || BubbleInfo.signal(key) != null
 

@@ -754,6 +754,8 @@ internal object ClusterModuleOverlay {
             profilMode = profil?.takeIf { p -> p.appliesDrive }?.driveMode,
             mode = mode,
             signaux = signaux.toMap(),
+            periode = { p -> TripMeter.trip(p, kwLisse) },
+            minutesPeriode = { p -> TripMeter.totals(p).minutes },
         )
         return runCatching {
             ClusterBlocks.build(lieu, d, lecture, ClusterModuleSettings.distanceUnit(ctx), m, langue(ctx))

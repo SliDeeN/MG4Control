@@ -75,6 +75,14 @@ data class FloatingButton(
      * + nom d'un symbole. `null` = celle par défaut (l'appli lancée, ou l'icône de l'information).
      */
     val icon: String? = null,
+    // Compteurs de trajet dans une bulle (2026-11-22) ; `null` partout = comme sur l'écran conducteur
+    // par défaut : unité par défaut, énergie brute, depuis READY.
+    /** Unité d'un compteur de trajet ([ClusterInfo.units]). */
+    val unit: String? = null,
+    /** Énergie consommée nette (récupération déduite) ; `null` = brute. */
+    val net: Boolean? = null,
+    /** Période ([TripPeriod.key]) ; `null` = depuis READY. */
+    val period: String? = null,
 )
 
 object FloatingButtons {

@@ -2078,6 +2078,14 @@
 
                             </LinearLayout>
 
+                            <!-- Compteurs de trajet (2026-11-22) : unité, calcul et période, rangées faites par le code. -->
+                            <LinearLayout
+                                android:id="@+id/floating_info_trip_rows"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:visibility="gone" />
+
                             <LinearLayout
                                 android:id="@+id/row_floating_icon"
                                 android:layout_width="match_parent"

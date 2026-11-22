@@ -449,6 +449,14 @@ class ClusterLayoutEditor(
             ))
             note(R.string.cluster_layout_energy_note)
         }
+        // Période des compteurs de trajet (2026-11-22) : le libellé ne change pas avec elle.
+        if (com.mg4.control.model.TripPeriod.applies(b.info)) {
+            val p = com.mg4.control.model.TripPeriod.of(b.period)
+            rangee(R.string.trip_period, com.mg4.control.model.TripPeriod.entries.map { q ->
+                Option(ctx.getString(nomPeriode(q)), p == q) { change(b.copy(period = com.mg4.control.model.TripPeriod.keyOf(q))) }
+            })
+            note(R.string.trip_period_note)
+        }
         if (ClusterInfo.hasDistance(b.info)) {
             val d = DistanceUnit.entries.firstOrNull { it.key == b.distance }
             rangee(R.string.settings_distance_unit, listOf(
@@ -468,6 +476,12 @@ class ClusterLayoutEditor(
         bouton(ctx.getString(R.string.cluster_layout_clear)) {
             disposition = ClusterLayouts.withSlot(disposition, slot, null); maj()
         }
+    }
+
+    private fun nomPeriode(p: com.mg4.control.model.TripPeriod): Int = when (p) {
+        com.mg4.control.model.TripPeriod.READY -> R.string.trip_period_ready
+        com.mg4.control.model.TripPeriod.BOOT -> R.string.trip_period_boot
+        com.mg4.control.model.TripPeriod.CHARGE -> R.string.trip_period_charge
     }
 
     private fun nomUnite(k: String, d: DistanceUnit): String = when (k) {

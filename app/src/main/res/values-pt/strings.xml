@@ -965,6 +965,11 @@
     <string name="cluster_layout_energy_gross">Bruta</string>
     <string name="cluster_layout_energy_net">Líquida</string>
     <string name="cluster_layout_energy_note">Bruta: toda a energia retirada da bateria desde READY. Líquida: a regeneração é descontada, como na média da viagem.</string>
+    <string name="trip_period">Período</string>
+    <string name="trip_period_ready">Desde READY</string>
+    <string name="trip_period_boot">Desde o arranque</string>
+    <string name="trip_period_charge">Desde o último carregamento</string>
+    <string name="trip_period_note">Desde READY: reposto a zero cada vez que o carro passa a READY. Desde o arranque: desde que o ecrã central se ligou. Desde o último carregamento: reposto a zero a cada carregamento. O texto mantém-se.</string>
     <string name="cluster_layout_wide_busy">Largura total: liberte primeiro a casa vizinha (Info %1$d).</string>
     <string name="cluster_layout_clear">Esvaziar a casa</string>
     <string name="cluster_distance_km">km</string>

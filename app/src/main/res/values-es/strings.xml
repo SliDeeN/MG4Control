@@ -965,6 +965,11 @@
     <string name="cluster_layout_energy_gross">Bruta</string>
     <string name="cluster_layout_energy_net">Neta</string>
     <string name="cluster_layout_energy_note">Bruta: toda la energía extraída de la batería desde READY. Neta: se resta la regeneración, como en la media del trayecto.</string>
+    <string name="trip_period">Periodo</string>
+    <string name="trip_period_ready">Desde READY</string>
+    <string name="trip_period_boot">Desde el arranque</string>
+    <string name="trip_period_charge">Desde la última carga</string>
+    <string name="trip_period_note">Desde READY: se pone a cero cada vez que el coche pasa a READY. Desde el arranque: desde que se encendió la pantalla central. Desde la última carga: se pone a cero en cada carga. El texto no cambia.</string>
     <string name="cluster_layout_wide_busy">Todo el ancho: libera primero la casilla vecina (Info %1$d).</string>
     <string name="cluster_layout_clear">Vaciar la casilla</string>
     <string name="cluster_distance_km">km</string>

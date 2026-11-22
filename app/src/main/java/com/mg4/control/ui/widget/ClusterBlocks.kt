@@ -13,6 +13,7 @@ import com.mg4.control.model.DistanceUnit
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RuleSignal
 import com.mg4.control.model.StatsTracker
+import com.mg4.control.model.TripPeriod
 import com.mg4.control.ui.AndroidRuleWords
 import com.mg4.control.ui.InfoIcons
 import java.util.Date
@@ -36,7 +37,15 @@ object ClusterBlocks {
         val profilMode: DriveMode?,
         val mode: DriveMode?,
         val signaux: Map<String, Any?> = emptyMap(),
-    )
+        /** Compteurs d'une autre période que READY ([com.mg4.control.service.TripMeter], 2026-11-22). */
+        val periode: (TripPeriod) -> ClusterInfo.Trip = { trajet },
+        /** Minutes en READY d'une autre période que READY ; `null` = inconnu. */
+        val minutesPeriode: (TripPeriod) -> Double? = { null },
+    ) {
+        /** Le trajet de la période choisie par la case [b] : celui du module pour READY. */
+        fun trajetDe(b: ClusterBlock): ClusterInfo.Trip =
+            TripPeriod.of(b.period).let { if (it == TripPeriod.READY) trajet else periode(it) }
+    }
 
     /** Signaux à lire pour [l] : ceux des cases, sauf ce que le module relève déjà (profil, mode, vitesse). */
     fun signauxLus(l: ClusterLayout): List<RuleSignal> = ClusterLayouts.slots(l).mapNotNull { b ->
@@ -112,7 +121,7 @@ object ClusterBlocks {
         fun fait(v: Pair<String, String?>, pastille: com.mg4.control.model.PillContent? = null, couleur: Int? = null) =
             ClusterGaugeView.Bloc(v.first, unite(ctx, v.second), lib, icone, pastille, style, taille, couleur)
 
-        ClusterInfo.tripValue(b, lu.trajet, general, locale)?.let { v ->
+        ClusterInfo.tripValue(b, lu.trajetDe(b), general, locale)?.let { v ->
             return fait(v, couleur = if (b.info == ClusterInfo.TRIP_REGEN && v.first != BubbleInfo.UNKNOWN) recup else null)
         }
         return when (b.info) {
@@ -134,8 +143,10 @@ object ClusterBlocks {
             else -> {
                 val s = BubbleInfo.signal(b.info) ?: return fait(BubbleInfo.UNKNOWN to null)
                 val brut = if (s == RuleSignal.SPEED) lu.vitesseKmh?.toDouble() else lu.signaux[s.name]
-                // Temps depuis READY : en chronomètre, sans unité.
-                BubbleInfo.chrono(s, brut)?.let { return fait(it to null) }
+                // Temps depuis READY : en chronomètre, sans unité ; une autre période se cumule (2026-11-22).
+                val p = TripPeriod.of(b.period)
+                val minutes = if (s == RuleSignal.DRIVE_MINUTES && p != TripPeriod.READY) lu.minutesPeriode(p) else brut
+                BubbleInfo.chrono(s, minutes)?.let { return fait(it to null) }
                 // Pression des pneus : dans l'unité choisie (bar, PSI, kPa).
                 BubbleInfo.pressure(s, brut, com.mg4.control.util.TyreUnitSetting.unit(ctx), locale)?.let { return fait(it) }
                 val converti = BubbleInfo.inDistanceUnit(s, brut, ClusterInfo.distance(b, general))

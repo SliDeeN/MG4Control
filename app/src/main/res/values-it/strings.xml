@@ -965,6 +965,11 @@
     <string name="cluster_layout_energy_gross">Lorda</string>
     <string name="cluster_layout_energy_net">Netta</string>
     <string name="cluster_layout_energy_note">Lorda: tutta l’energia prelevata dalla batteria da READY. Netta: il recupero viene sottratto, come nella media del viaggio.</string>
+    <string name="trip_period">Periodo</string>
+    <string name="trip_period_ready">Da READY</string>
+    <string name="trip_period_boot">Dall\'avvio</string>
+    <string name="trip_period_charge">Dall\'ultima ricarica</string>
+    <string name="trip_period_note">Da READY: azzerato a ogni passaggio in READY. Dall\'avvio: dall\'accensione dello schermo centrale. Dall\'ultima ricarica: azzerato a ogni ricarica. L\'etichetta resta la stessa.</string>
     <string name="cluster_layout_wide_busy">Tutta la larghezza: libera prima la casella accanto (Info %1$d).</string>
     <string name="cluster_layout_clear">Svuota la casella</string>
     <string name="cluster_distance_km">km</string>
