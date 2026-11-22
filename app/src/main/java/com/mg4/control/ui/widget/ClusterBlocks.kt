@@ -56,11 +56,40 @@ object ClusterBlocks {
         else -> BubbleInfo.signal(key)?.let { mots.signal(it) } ?: key.orEmpty()
     }
 
-    /** Libellé court au-dessus de la valeur : les mots du pied d'avant pour la moyenne et la récupération. */
-    private fun libelle(ctx: Context, key: String?, mots: AndroidRuleWords): String = when (key) {
-        ClusterInfo.TRIP_AVERAGE -> ctx.getString(R.string.cluster_trip_avg)
-        ClusterInfo.TRIP_REGEN -> ctx.getString(R.string.cluster_regen)
-        else -> nom(ctx, key, mots)
+    /**
+     * Libellé au-dessus de la valeur, toujours en capitales (issue #268, 2026-11-22, variante B) :
+     * un mot court pour les informations aux noms longs, comme « MOY. TRAJET » et « RÉCUP. » avant
+     * elles ; le nom de l'information en capitales pour les autres.
+     */
+    fun libelle(ctx: Context, key: String?, mots: AndroidRuleWords, locale: Locale): String =
+        (court(key)?.let { ctx.getString(it) } ?: nom(ctx, key, mots)).uppercase(locale)
+
+    /** Libellé court d'une information, ou `null` : son nom suffit. */
+    fun court(key: String?): Int? = when (key) {
+        ClusterInfo.TRIP_AVERAGE -> R.string.cluster_trip_avg
+        ClusterInfo.TRIP_REGEN -> R.string.cluster_regen
+        ClusterInfo.TRIP_DISTANCE -> R.string.cluster_lbl_trip_distance
+        ClusterInfo.TRIP_ENERGY -> R.string.cluster_lbl_trip_energy
+        else -> when (BubbleInfo.signal(key)) {
+            RuleSignal.OUTSIDE_TEMP -> R.string.cluster_lbl_outside_temp
+            RuleSignal.HVAC_TEMP -> R.string.cluster_lbl_hvac_temp
+            RuleSignal.DRIVE_MINUTES -> R.string.cluster_lbl_drive_time
+            RuleSignal.DRIVE_MODE -> R.string.cluster_lbl_drive_mode
+            RuleSignal.REGEN -> R.string.cluster_lbl_regen_level
+            RuleSignal.CHARGE_LIMIT -> R.string.cluster_lbl_charge_limit
+            RuleSignal.CHARGE_CURRENT -> R.string.cluster_lbl_charge_current
+            RuleSignal.TYRE_PRESSURE_MIN -> R.string.cluster_lbl_tyre_min
+            RuleSignal.TYRE_PRESSURE_FL -> R.string.cluster_lbl_tyre_fl
+            RuleSignal.TYRE_PRESSURE_FR -> R.string.cluster_lbl_tyre_fr
+            RuleSignal.TYRE_PRESSURE_RL -> R.string.cluster_lbl_tyre_rl
+            RuleSignal.TYRE_PRESSURE_RR -> R.string.cluster_lbl_tyre_rr
+            RuleSignal.TYRE_TEMP_MAX -> R.string.cluster_lbl_tyre_hot
+            RuleSignal.TYRE_TEMP_FL -> R.string.cluster_lbl_tyre_temp_fl
+            RuleSignal.TYRE_TEMP_FR -> R.string.cluster_lbl_tyre_temp_fr
+            RuleSignal.TYRE_TEMP_RL -> R.string.cluster_lbl_tyre_temp_rl
+            RuleSignal.TYRE_TEMP_RR -> R.string.cluster_lbl_tyre_temp_rr
+            else -> null
+        }
     }
 
     /** Mot d'une unité de bloc, à l'écran (« ch », « PS »… pour la puissance en chevaux). */
@@ -79,7 +108,7 @@ object ClusterBlocks {
         val style = ClusterInfo.style(b)
         val taille = ClusterInfo.size(b)
         val icone = InfoIcons.of(b.info)
-        val lib = libelle(ctx, b.info, mots)
+        val lib = libelle(ctx, b.info, mots, locale)
         fun fait(v: Pair<String, String?>, pastille: com.mg4.control.model.PillContent? = null, couleur: Int? = null) =
             ClusterGaugeView.Bloc(v.first, unite(ctx, v.second), lib, icone, pastille, style, taille, couleur)
 

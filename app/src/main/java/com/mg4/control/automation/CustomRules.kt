@@ -704,6 +704,7 @@ object CustomRules {
         RuleSignal.SPEED -> MG4Hardware.getVehicleSpeedKmh()?.toDouble()
         RuleSignal.SOC -> EnergyReader.soc()?.toDouble()
         RuleSignal.RANGE -> EnergyReader.rangeKm()?.toDouble()
+        RuleSignal.ODOMETER -> EnergyReader.odometerKm()?.toDouble()
         RuleSignal.CHARGING -> EnergyReader.charging()
         RuleSignal.OUTSIDE_TEMP -> MG4Hardware.getOutsideTempCelsius()?.toDouble()
         RuleSignal.ALTITUDE -> AndroidControls.altitude(ctx)

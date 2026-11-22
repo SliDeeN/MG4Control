@@ -1007,6 +1007,26 @@
     <string name="cluster_stopped_kw">kW à l\'arrêt</string>
     <string name="cluster_trip_avg">MOY. TRAJET</string>
     <string name="cluster_regen">RÉCUP.</string>
+    <!-- Libellés courts des cases de l'écran conducteur, en capitales (issue #268, 2026-11-22). -->
+    <string name="cluster_lbl_trip_distance">DIST. TRAJET</string>
+    <string name="cluster_lbl_trip_energy">ÉNERGIE</string>
+    <string name="cluster_lbl_outside_temp">TEMP. EXT.</string>
+    <string name="cluster_lbl_hvac_temp">CONSIGNE</string>
+    <string name="cluster_lbl_drive_time">DURÉE</string>
+    <string name="cluster_lbl_drive_mode">MODE</string>
+    <string name="cluster_lbl_regen_level">NIV. RÉGÉN.</string>
+    <string name="cluster_lbl_charge_limit">LIMITE</string>
+    <string name="cluster_lbl_charge_current">COURANT AC</string>
+    <string name="cluster_lbl_tyre_min">PNEU MIN</string>
+    <string name="cluster_lbl_tyre_fl">PNEU AV G</string>
+    <string name="cluster_lbl_tyre_fr">PNEU AV D</string>
+    <string name="cluster_lbl_tyre_rl">PNEU AR G</string>
+    <string name="cluster_lbl_tyre_rr">PNEU AR D</string>
+    <string name="cluster_lbl_tyre_hot">PNEU CHAUD</string>
+    <string name="cluster_lbl_tyre_temp_fl">TEMP. AV G</string>
+    <string name="cluster_lbl_tyre_temp_fr">TEMP. AV D</string>
+    <string name="cluster_lbl_tyre_temp_rl">TEMP. AR G</string>
+    <string name="cluster_lbl_tyre_temp_rr">TEMP. AR D</string>
     <string name="cluster_battery">BATTERIE</string>
     <string name="cluster_regen_word">récupération</string>
     <string name="cluster_stopped_word">à l\'arrêt</string>
@@ -1846,6 +1866,7 @@
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Soleil levé</string>
     <string name="rule_sig_altitude">Altitude</string>
+    <string name="rule_sig_odometer">Odomètre</string>
     <string name="rule_sig_tyre_min">Pneu le moins gonflé</string>
     <string name="rule_sig_tyre_fl">Pression pneu avant gauche</string>
     <string name="rule_sig_tyre_fr">Pression pneu avant droit</string>

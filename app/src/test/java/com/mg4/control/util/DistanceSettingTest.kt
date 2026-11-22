@@ -59,4 +59,13 @@ class DistanceSettingTest {
         assertTrue(RuleSignal.ALTITUDE.name in BubbleInfo.choices())
         assertTrue(ClusterInfo.hasDistance(RuleSignal.ALTITUDE.name))
     }
+
+    @Test
+    fun `odometer is offered and follows the distance unit`() {
+        assertEquals(7056 to " mi", BubbleInfo.inDistanceUnit(RuleSignal.ODOMETER, 11356.0, DistanceUnit.MILES))
+        assertEquals(11356.0 to " km", BubbleInfo.inDistanceUnit(RuleSignal.ODOMETER, 11356.0, DistanceUnit.KM))
+        assertTrue(RuleSignal.ODOMETER.name in BubbleInfo.choices())
+        assertTrue(ClusterInfo.hasDistance(RuleSignal.ODOMETER.name))
+        assertTrue(RuleSignal.ODOMETER.name in ClusterInfo.choices())
+    }
 }

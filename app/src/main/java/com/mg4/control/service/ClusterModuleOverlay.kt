@@ -146,8 +146,6 @@ internal object ClusterModuleOverlay {
     private var dernierModule: ClusterModule? = null
     /** Onglet dont le module était montré au dernier relevé (style du lissage, raccourci). */
     @Volatile private var ongletMontre: ClusterTab = ClusterTab.NAVIGATION
-    /** Nom du module affiché ~1 s après le raccourci « Module suivant », et jusqu'à quand (elapsedRealtime). */
-    @Volatile private var bandeau: Pair<String, Long>? = null
     private var dernierDefId: String? = null
     /** Historique des derniers km (issue #217) : accumulé en READY, hors charge, quel que soit le module montré. */
     private val histo = com.mg4.control.model.ClusterHistory.Accumulator()
@@ -314,7 +312,8 @@ internal object ClusterModuleOverlay {
 
     /**
      * Raccourci « Module suivant » (2026-11-20) : le module suivant de la liste de l'onglet affiché
-     * pour le profil en cours, son nom ~1 s sur le combiné. Un seul module ou aucun : un mot au journal.
+     * pour le profil en cours. Plus de nom en pastille sur le combiné (issue #268, 2026-11-22).
+     * Un seul module ou aucun : un mot au journal.
      */
     fun nextModule(ctx: Context) {
         val app = ctx.applicationContext
@@ -327,12 +326,9 @@ internal object ClusterModuleOverlay {
             }
             val m = ClusterModuleSettings.nextModule(app, tab) ?: return@post
             AppLogger.i(TAG, "module suivant (onglet ${tab.name}) → « ${m.name} »")
-            bandeau = m.name to SystemClock.elapsedRealtime() + BANDEAU_MS
             if (enMarche) { lecteur.removeCallbacks(tic); lecteur.post(tic) }
         }
     }
-
-    private const val BANDEAU_MS = 1_200L
 
     /** Arrêt du service. */
     fun stop() {
@@ -676,7 +672,6 @@ internal object ClusterModuleOverlay {
                     blocs = blocs,
                     // Module « Pneus » : relevé partagé de moins de 2 s (ce fil, binder).
                     pneus = if (it == ClusterModule.TYRES) pneus(ctx) else null,
-                    bandeau = bandeau?.takeIf { b -> maintenant < b.second }?.first,
                     graphe = if (it == ClusterModule.GRAPH) com.mg4.control.ui.widget.ClusterGraphs.build(ctx, def,
                         com.mg4.control.util.ClusterHistoryStore.bins(ctx), ctx.resources.configuration.locales[0]) else null,
                 )

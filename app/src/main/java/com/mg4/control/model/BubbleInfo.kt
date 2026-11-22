@@ -116,7 +116,8 @@ object BubbleInfo {
         return when (s) {
             RuleSignal.SPEED ->
                 (if (unit == DistanceUnit.KM || n == null) value else unit.speedFromKmh(n).roundToInt()) to " ${unit.speedShort}"
-            RuleSignal.RANGE ->
+            // Odomètre (issue #268) : comme l'autonomie, en miles avec l'unité générale.
+            RuleSignal.RANGE, RuleSignal.ODOMETER ->
                 (if (unit == DistanceUnit.KM || n == null) value else unit.fromKm(n).roundToInt()) to " ${unit.short}"
             // Altitude (2026-11-16) : pieds en miles, mètres sinon.
             RuleSignal.ALTITUDE ->

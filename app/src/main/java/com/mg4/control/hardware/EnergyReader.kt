@@ -177,6 +177,9 @@ object EnergyReader {
     /** La voiture charge-t-elle ([ChargeDisplay.enCharge]) ? `null` si illisible. Une seule lecture. */
     fun charging(): Boolean? = ChargeDisplay.enCharge(int(PROP_CHARGE_STATUS))
 
+    /** Compteur kilométrique total, en km (issue #268) ; `null` s'il ne se lit pas. Une seule lecture. */
+    fun odometerKm(): Int? = int(PROP_ODOMETER)?.takeIf { it > 0 }
+
     /** Autonomie annoncée par la batterie, en km ; `null` hors de 1..1500. Une seule lecture. */
     fun rangeKm(): Int? = int(PROP_RANGE)?.takeIf { it in 1..1500 }
 

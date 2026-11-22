@@ -44,7 +44,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun unit(s: RuleSignal): String = when (s) {
         RuleSignal.SPEED -> " km/h"
         RuleSignal.SOC -> " %"
-        RuleSignal.RANGE -> " km"
+        RuleSignal.RANGE, RuleSignal.ODOMETER -> " km"
         RuleSignal.OUTSIDE_TEMP -> " °C"
         RuleSignal.ALTITUDE -> " m"
         RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR -> " °C"
@@ -309,6 +309,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleSignal.IN_CALL -> R.string.rule_sig_in_call
             RuleSignal.SUN_UP -> R.string.rule_sig_sun_up
             RuleSignal.ALTITUDE -> R.string.rule_sig_altitude
+            RuleSignal.ODOMETER -> R.string.rule_sig_odometer
             RuleSignal.TYRE_PRESSURE_MIN -> R.string.rule_sig_tyre_min
             RuleSignal.TYRE_PRESSURE_FL -> R.string.rule_sig_tyre_fl
             RuleSignal.TYRE_PRESSURE_FR -> R.string.rule_sig_tyre_fr

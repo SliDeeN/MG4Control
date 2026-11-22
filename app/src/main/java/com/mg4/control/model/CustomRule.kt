@@ -138,7 +138,12 @@ enum class RuleSignal(val kind: Kind) {
     TYRE_TEMP_FL(Kind.NUMBER),
     TYRE_TEMP_FR(Kind.NUMBER),
     TYRE_TEMP_RL(Kind.NUMBER),
-    TYRE_TEMP_RR(Kind.NUMBER);
+    TYRE_TEMP_RR(Kind.NUMBER),
+    /**
+     * Compteur kilométrique total, en km (issue #268, 2026-11-22) : 0x21401566, la valeur déjà
+     * envoyée à ABRP (relevé SWI133 : 11356 km). Affiché en miles avec l'unité générale.
+     */
+    ODOMETER(Kind.NUMBER);
 
     /** Une pression de pneu, en kPa : affichée dans l'unité de pression choisie. */
     val isTyrePressure: Boolean get() = this == TYRE_PRESSURE_MIN || this == TYRE_PRESSURE_FL ||

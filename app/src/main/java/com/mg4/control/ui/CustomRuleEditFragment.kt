@@ -828,7 +828,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     private fun catSignal(sig: RuleSignal): Cat = when (sig) {
         // « Nuit (feux auto) » (2026-11-18) : rangée avec la voiture, introuvable sous « Écran et son ».
-        RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.NIGHT, RuleSignal.TURN_SIGNAL,
+        RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.NIGHT, RuleSignal.TURN_SIGNAL, RuleSignal.ODOMETER,
         RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_ALERT,
         RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR -> Cat.CAR
         RuleSignal.BT_DEVICE, RuleSignal.ALTITUDE -> Cat.PLACES
@@ -873,7 +873,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR,
             RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT,
             RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
-            RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.TURN_SIGNAL,
+            RuleSignal.LOCKED, RuleSignal.FRONT_DOOR, RuleSignal.TURN_SIGNAL, RuleSignal.ODOMETER,
             RuleSignal.TYRE_ALERT, RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX,
             RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR,
             RuleSignal.PROFILE, RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON,
@@ -907,6 +907,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> Borne(0, 50_000, 500, 50)
         RuleSignal.CHARGE_LIMIT -> Borne(40, 100, 80, 10)
         RuleSignal.ALTITUDE -> Borne(0, 4000, 500, 50)
+        // Odomètre (issue #268) : un entretien tous les X km, au pas de 500 km.
+        RuleSignal.ODOMETER -> Borne(0, 500_000, 20_000, 500)
         // Pneus : seuils en kPa, au pas de 5 kPa (0,05 bar), montrés dans l'unité choisie.
         RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR -> Borne(100, 400, 220, 5)
         RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR -> Borne(-20, 120, 60, 1)

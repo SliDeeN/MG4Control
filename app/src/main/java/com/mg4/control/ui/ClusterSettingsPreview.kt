@@ -197,6 +197,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             RuleSignal.BRIGHTNESS.name to 60.0, RuleSignal.REGEN.name to "MEDIUM", RuleSignal.GEAR.name to "D",
             RuleSignal.HVAC_ON.name to true, RuleSignal.AC_ON.name to true, RuleSignal.READY.name to true,
             RuleSignal.CHARGING.name to false, RuleSignal.PLUGGED.name to false, RuleSignal.ALTITUDE.name to 412.0,
+            RuleSignal.ODOMETER.name to 11356.0,
             RuleSignal.TYRE_PRESSURE_MIN.name to 248.0, RuleSignal.TYRE_PRESSURE_FL.name to 252.0, RuleSignal.TYRE_PRESSURE_FR.name to 248.0,
             RuleSignal.TYRE_PRESSURE_RL.name to 248.0, RuleSignal.TYRE_PRESSURE_RR.name to 256.0, RuleSignal.TYRE_TEMP_MAX.name to 16.0,
             RuleSignal.TYRE_TEMP_FL.name to 15.0, RuleSignal.TYRE_TEMP_FR.name to 16.0, RuleSignal.TYRE_TEMP_RL.name to 14.0, RuleSignal.TYRE_TEMP_RR.name to 15.0,

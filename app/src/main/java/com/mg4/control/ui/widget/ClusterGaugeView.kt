@@ -167,8 +167,6 @@ class ClusterGaugeView(context: Context) : View(context) {
         val blocs: List<Bloc?> = emptyList(),
         /** Module « Pneus » (2026-11-20) : les quatre pressions et leur état ; `null` = rien lu. */
         val pneus: com.mg4.control.model.TyrePressure.Display? = null,
-        /** Nom du module, ~1 s après le raccourci « Module suivant » (2026-11-20) ; `null` = rien. */
-        val bandeau: String? = null,
         /** Module « Graphique » (issue #217) : l'historique mis en mots ; `null` = rien à montrer. */
         val graphe: Graphe? = null,
     )
@@ -376,7 +374,6 @@ class ClusterGaugeView(context: Context) : View(context) {
         if (d == null) {
             c.pastille?.let { pastille(canvas, it) }
             jauge(canvas, c)
-            c.bandeau?.let { bandeau(canvas, it) }
             canvas.restore()
             return
         }
@@ -404,7 +401,6 @@ class ClusterGaugeView(context: Context) : View(context) {
             else if (ed != null) caseVide(canvas, cell.box, cell.slot)
         }
         if (ed != null) edition(canvas, ed, d, geo, c)
-        c.bandeau?.let { bandeau(canvas, it) }
         canvas.restore()
     }
 
@@ -578,19 +574,6 @@ class ClusterGaugeView(context: Context) : View(context) {
             donnees()
             lignes(fond = true, ecrit = true)
         }
-    }
-
-    /** Nom du module en pastille en haut du carré, par-dessus tout (raccourci « Module suivant »). */
-    private fun bandeau(canvas: Canvas, texte: String) {
-        pneuTexte.textAlign = Paint.Align.CENTER
-        pneuTexte.typeface = moyen
-        pneuTexte.textSize = 13f
-        val l = minOf(pneuTexte.measureText(texte) + 28f, COTE - 16f)
-        pneuRect.set(COTE / 2f - l / 2f, 8f, COTE / 2f + l / 2f, 34f)
-        pneuRoue.color = Color.argb(235, 0x1B, 0x26, 0x38)
-        canvas.drawRoundRect(pneuRect, 13f, 13f, pneuRoue)
-        pneuTexte.color = cTexte
-        canvas.drawText(texte, COTE / 2f, 26f, pneuTexte)
     }
 
     // ── Module « Pneus » (variante A, 2026-11-20) ────────────────────────────
