@@ -970,6 +970,8 @@
     <string name="trip_period_boot">Od uruchomienia</string>
     <string name="trip_period_charge">Od ostatniego ładowania</string>
     <string name="trip_period_note">Od READY: zerowane przy każdym przejściu w READY. Od uruchomienia: od włączenia ekranu centralnego. Od ostatniego ładowania: zerowane przy każdym ładowaniu. Etykieta się nie zmienia.</string>
+    <string name="cluster_layout_value_color">Kolor wartości</string>
+    <string name="cluster_layout_value_color_note">Domyślnie: biały, a dla odzyskanej energii kolor rekuperacji. Etykieta, jednostka i ikona pozostają szare.</string>
     <string name="cluster_layout_wide_busy">Cała szerokość: najpierw zwolnij sąsiednie pole (Info %1$d).</string>
     <string name="cluster_layout_clear">Wyczyść pole</string>
     <string name="cluster_distance_km">km</string>

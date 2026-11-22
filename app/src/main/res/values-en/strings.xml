@@ -970,6 +970,8 @@
     <string name="trip_period_boot">Since start-up</string>
     <string name="trip_period_charge">Since last charge</string>
     <string name="trip_period_note">Since READY: reset each time the car goes READY. Since start-up: since the central screen came on. Since last charge: reset at each charge. The label stays the same.</string>
+    <string name="cluster_layout_value_color">Value colour</string>
+    <string name="cluster_layout_value_color_note">Default: white, and the regeneration colour for energy recovered. The label, unit and icon stay grey.</string>
     <string name="cluster_layout_wide_busy">Full width: first free the neighbouring slot (Info %1$d).</string>
     <string name="cluster_layout_clear">Clear the slot</string>
     <string name="cluster_distance_km">km</string>

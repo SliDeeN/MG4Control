@@ -27,6 +27,8 @@ data class ClusterBlock(
     val net: Boolean? = null,
     /** Période des compteurs de trajet ([TripPeriod.key], 2026-11-22) ; `null` = depuis READY. */
     val period: String? = null,
+    /** Couleur de la valeur, ARGB (2026-11-22) ; `null` = blanc, ou la couleur de la récupération pour elle. */
+    val color: Int? = null,
 )
 
 /**

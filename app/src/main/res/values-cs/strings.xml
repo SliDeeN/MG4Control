@@ -877,6 +877,8 @@
     <string name="trip_period_boot">Od spuštění</string>
     <string name="trip_period_charge">Od posledního nabíjení</string>
     <string name="trip_period_note">Od READY: vynuluje se při každém přechodu do READY. Od spuštění: od zapnutí centrální obrazovky. Od posledního nabíjení: vynuluje se při každém nabíjení. Popisek zůstává stejný.</string>
+    <string name="cluster_layout_value_color">Barva hodnoty</string>
+    <string name="cluster_layout_value_color_note">Výchozí: bílá, u rekuperované energie barva rekuperace. Popisek, jednotka a ikona zůstávají šedé.</string>
     <string name="cluster_layout_wide_busy">Celá šířka: nejprve uvolněte sousední pole (Info %1$d).</string>
     <string name="cluster_layout_clear">Vyprázdnit pole</string>
     <string name="cluster_distance_km">km</string>

@@ -970,6 +970,8 @@
     <string name="trip_period_boot">Seit dem Start</string>
     <string name="trip_period_charge">Seit dem letzten Laden</string>
     <string name="trip_period_note">Seit READY: bei jedem Wechsel in READY zurückgesetzt. Seit dem Start: seit dem Einschalten des Zentralbildschirms. Seit dem letzten Laden: bei jedem Laden zurückgesetzt. Die Bezeichnung bleibt gleich.</string>
+    <string name="cluster_layout_value_color">Farbe des Werts</string>
+    <string name="cluster_layout_value_color_note">Standard: Weiß, für die rekuperierte Energie die Rekuperationsfarbe. Bezeichnung, Einheit und Symbol bleiben grau.</string>
     <string name="cluster_layout_wide_busy">Ganze Breite: zuerst das Nachbarfeld freigeben (Info %1$d).</string>
     <string name="cluster_layout_clear">Feld leeren</string>
     <string name="cluster_distance_km">km</string>

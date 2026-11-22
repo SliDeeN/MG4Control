@@ -971,6 +971,8 @@
     <string name="trip_period_boot">Siden oppstart</string>
     <string name="trip_period_charge">Siden siste lading</string>
     <string name="trip_period_note">Siden READY: nullstilles hver gang bilen går i READY. Siden oppstart: siden midtskjermen ble slått på. Siden siste lading: nullstilles ved hver lading. Teksten forblir den samme.</string>
+    <string name="cluster_layout_value_color">Verdifarge</string>
+    <string name="cluster_layout_value_color_note">Standard: hvit, og regenereringsfargen for gjenvunnet energi. Tekst, enhet og ikon forblir grå.</string>
     <string name="cluster_layout_wide_busy">Full bredde: frigjør først nabofeltet (Info %1$d).</string>
     <string name="cluster_layout_clear">Tøm feltet</string>
     <string name="cluster_distance_km">km</string>

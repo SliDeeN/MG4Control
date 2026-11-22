@@ -988,6 +988,8 @@
     <string name="trip_period_boot">Depuis le démarrage</string>
     <string name="trip_period_charge">Depuis la dernière charge</string>
     <string name="trip_period_note">Depuis READY : remis à zéro à chaque passage en READY. Depuis le démarrage : depuis l\'allumage de l\'écran central. Depuis la dernière charge : remis à zéro à chaque charge. Le libellé reste le même.</string>
+    <string name="cluster_layout_value_color">Couleur de la valeur</string>
+    <string name="cluster_layout_value_color_note">Par défaut : blanc, et la couleur de la récupération pour l\'énergie récupérée. Le libellé, l\'unité et l\'icône restent gris.</string>
     <string name="cluster_layout_wide_busy">Toute la largeur : libérez d\'abord la case voisine (Info %1$d).</string>
     <string name="cluster_layout_clear">Vider la case</string>
     <string name="cluster_distance_km">km</string>

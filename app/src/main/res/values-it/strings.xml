@@ -970,6 +970,8 @@
     <string name="trip_period_boot">Dall\'avvio</string>
     <string name="trip_period_charge">Dall\'ultima ricarica</string>
     <string name="trip_period_note">Da READY: azzerato a ogni passaggio in READY. Dall\'avvio: dall\'accensione dello schermo centrale. Dall\'ultima ricarica: azzerato a ogni ricarica. L\'etichetta resta la stessa.</string>
+    <string name="cluster_layout_value_color">Colore del valore</string>
+    <string name="cluster_layout_value_color_note">Predefinito: bianco, e il colore del recupero per l\'energia recuperata. Etichetta, unità e icona restano grigie.</string>
     <string name="cluster_layout_wide_busy">Tutta la larghezza: libera prima la casella accanto (Info %1$d).</string>
     <string name="cluster_layout_clear">Svuota la casella</string>
     <string name="cluster_distance_km">km</string>

@@ -118,8 +118,10 @@ object ClusterBlocks {
         val taille = ClusterInfo.size(b)
         val icone = InfoIcons.of(b.info)
         val lib = libelle(ctx, b.info, mots, locale)
+        // Couleur choisie pour la valeur (2026-11-22) : par-dessus celle de la récupération ; jamais sur « — ».
         fun fait(v: Pair<String, String?>, pastille: com.mg4.control.model.PillContent? = null, couleur: Int? = null) =
-            ClusterGaugeView.Bloc(v.first, unite(ctx, v.second), lib, icone, pastille, style, taille, couleur)
+            ClusterGaugeView.Bloc(v.first, unite(ctx, v.second), lib, icone, pastille, style, taille,
+                if (v.first != BubbleInfo.UNKNOWN) b.color ?: couleur else couleur)
 
         ClusterInfo.tripValue(b, lu.trajetDe(b), general, locale)?.let { v ->
             return fait(v, couleur = if (b.info == ClusterInfo.TRIP_REGEN && v.first != BubbleInfo.UNKNOWN) recup else null)

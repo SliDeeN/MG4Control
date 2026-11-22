@@ -433,6 +433,20 @@ class ClusterLayoutEditor(
         rangee(R.string.cluster_layout_size, listOf(ClusterInfo.SIZE_S, ClusterInfo.SIZE_M, ClusterInfo.SIZE_L).map { t ->
             Option(t, taille == t) { change(b.copy(size = t)) }
         })
+        // Couleur de la valeur (2026-11-22) : le chiffre seul ; libellé, unité et icône restent gris.
+        // Pas pour une pastille (profil, mode), qui a déjà la couleur de son mode.
+        if (st != ClusterInfo.STYLE_PILL) {
+            etiquette(R.string.cluster_layout_value_color)
+            val defaut = if (b.info == ClusterInfo.TRIP_REGEN) disposition.regenColor ?: ctx.getColor(R.color.cluster_accent)
+                else ctx.getColor(R.color.cluster_text)
+            couleur(b.color, { defaut }) { c ->
+                // Relue à chaque choix : la saisie d'un code ne refait pas le panneau.
+                ClusterLayouts.slots(disposition)[slot]?.let { actuel ->
+                    disposition = ClusterLayouts.withSlot(disposition, slot, actuel.copy(color = c))
+                }
+            }
+            note(R.string.cluster_layout_value_color_note)
+        }
         val unites = ClusterInfo.units(b.info)
         if (unites.isNotEmpty()) {
             val u = ClusterInfo.unit(b)

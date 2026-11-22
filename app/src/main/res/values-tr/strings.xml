@@ -970,6 +970,8 @@
     <string name="trip_period_boot">Açılıştan beri</string>
     <string name="trip_period_charge">Son şarjdan beri</string>
     <string name="trip_period_note">READY\'den beri: araç her READY\'ye geçtiğinde sıfırlanır. Açılıştan beri: orta ekran açıldığından beri. Son şarjdan beri: her şarjda sıfırlanır. Etiket aynı kalır.</string>
+    <string name="cluster_layout_value_color">Değer rengi</string>
+    <string name="cluster_layout_value_color_note">Varsayılan: beyaz; geri kazanılan enerji için rejenerasyon rengi. Etiket, birim ve simge gri kalır.</string>
     <string name="cluster_layout_wide_busy">Tam genişlik: önce yandaki kutuyu boşaltın (Bilgi %1$d).</string>
     <string name="cluster_layout_clear">Kutuyu boşalt</string>
     <string name="cluster_distance_km">km</string>
