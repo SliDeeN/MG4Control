@@ -1,7 +1,9 @@
 package com.mg4.control.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Boutons flottants (2026-10-23) : taille aimantée, titre par défaut, positions. */
@@ -109,5 +111,14 @@ class FloatingButtonsTest {
         assertEquals(124 to null, FloatingButtons.confirmTopOffset(124, 37, 124))
         // Origine encore inconnue : la première mesure attend aussi sa confirmation.
         assertEquals(null to 124, FloatingButtons.confirmTopOffset(null, null, 124))
+    }
+
+    @Test fun `only the two possible top bar origins are followed`() {
+        // Menu caché ou à droite : 0 ; menu affiché à gauche : sa largeur.
+        assertTrue(FloatingButtons.plausibleTopOffset(0, 142))
+        assertTrue(FloatingButtons.plausibleTopOffset(142, 142))
+        // Fenêtre ramenée par Android (bulle trop à droite, ou posée sur le menu) : écartée.
+        assertFalse(FloatingButtons.plausibleTopOffset(-37, 142))
+        assertFalse(FloatingButtons.plausibleTopOffset(171, 142))
     }
 }

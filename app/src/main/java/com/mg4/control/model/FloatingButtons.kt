@@ -153,6 +153,14 @@ object FloatingButtons {
      * valeur [measured] différente de [current] n'est retenue que si la mesure précédente
      * ([candidate]) disait déjà la même chose. Rend (origine retenue, nouveau candidat).
      */
+    /**
+     * Origine possible des fenêtres de la barre (issue #266, 2026-11-22) : 0 (menu caché, ou à droite
+     * en conduite à droite) ou la largeur du menu affiché à gauche, [railPx]. Toute autre mesure vient
+     * d'une fenêtre qu'Android a ramenée dans sa zone : la suivre décalait toutes les bulles, qui se
+     * faisaient ramener à leur tour — elles filaient vers la droite, un pas par seconde.
+     */
+    fun plausibleTopOffset(measured: Int, railPx: Int): Boolean = measured == 0 || measured == railPx
+
     fun confirmTopOffset(current: Int?, candidate: Int?, measured: Int): Pair<Int?, Int?> = when (measured) {
         current -> current to null
         candidate -> measured to null

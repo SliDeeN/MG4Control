@@ -152,6 +152,8 @@ object FloatingButtonsOverlay {
      */
     private var decalageBarre: Int? = null
     private var candidatBarre: Int? = null
+    /** Dernière mesure écartée (issue #266) : notée une fois au journal, pas toutes les 500 ms. */
+    private var mesureIgnoree: Int? = null
 
     /** Au démarrage du service et à chaque changement de réglage. */
     fun refresh(context: Context) {
@@ -386,9 +388,26 @@ object FloatingButtonsOverlay {
         val wm = fenetres ?: return
         val enHaut = bulles.values.filter { dansLaBarre(it) }
         if (enHaut.any { it.enDeplacement }) return
-        val temoin = enHaut.firstOrNull { it.vue.isAttachedToWindow && it.vue.scaleX == 1f && it.vue.width > 0 } ?: return
+        val zone = ecran(wm).x
+        val rail = (ecranReel(wm).x - zone).coerceAtLeast(0)
+        // Témoin : de préférence une bulle loin des bords de sa zone, qu'Android n'a pas pu ramener
+        // (issue #266) ; la plus à gauche d'entre elles.
+        val prets = enHaut.filter { it.vue.isAttachedToWindow && it.vue.scaleX == 1f && it.vue.width > 0 }
+        val temoin = prets.filter { it.params.x > 0 && it.params.x + it.vue.width < zone }.minByOrNull { it.params.x }
+            ?: prets.firstOrNull() ?: return
         val loc = IntArray(2).also { temoin.vue.getLocationOnScreen(it) }
         val mesure = loc[0] - temoin.params.x
+        // Ni 0 ni la largeur du menu : une fenêtre ramenée par Android, pas l'origine de la barre.
+        if (!FloatingButtons.plausibleTopOffset(mesure, rail)) {
+            if (mesure != mesureIgnoree) {
+                mesureIgnoree = mesure
+                AppLogger.w(TAG, "barre du haut : origine mesurée $mesure px sur « ${temoin.vue.text} » (fenêtre à ${loc[0]} px, " +
+                    "demandée à ${temoin.params.x} px, menu $rail px) — ignorée, bulle ramenée par Android")
+            }
+            candidatBarre = null
+            return
+        }
+        mesureIgnoree = null
         val (retenu, candidat) = FloatingButtons.confirmTopOffset(decalageBarre, candidatBarre, mesure)
         candidatBarre = candidat
         if (retenu == null || retenu == decalageBarre && enHaut.all { it.decalage == retenu }) return
