@@ -995,6 +995,9 @@
     <string name="backup_import_newer">Este ficheiro vem de uma versão mais recente do MG4Control: o que esta versão não conhece será ignorado.</string>
     <string name="backup_import_warning">Todas as definições atuais serão substituídas (as contas ABRP e os atalhos Webhook mantêm-se). O MG4Control reinicia depois; lembre-se de reativar o serviço de acessibilidade se o usava.</string>
     <string name="backup_import_ok">Substituir e reiniciar</string>
+    <string name="backup_import_other_family">Importação recusada: este ficheiro vem de um carro com %1$s e este tem %2$s. Estes dois firmwares não guardam as definições da mesma forma.</string>
+    <string name="backup_import_same_family">Firmware diferente mas da mesma família (%1$s → %2$s): as definições são compatíveis.</string>
+    <string name="backup_import_unknown_fw">Firmware de origem desconhecido: verifique as definições depois da importação.</string>
     <string name="cluster_layout_wide_busy">Largura total: liberte primeiro a casa vizinha (Info %1$d).</string>
     <string name="cluster_layout_clear">Esvaziar a casa</string>
     <string name="cluster_distance_km">km</string>

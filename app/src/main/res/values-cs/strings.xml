@@ -902,6 +902,9 @@
     <string name="backup_import_newer">Tento soubor pochází z novější verze MG4Control: co tato verze nezná, bude ignorováno.</string>
     <string name="backup_import_warning">Všechna současná nastavení budou nahrazena (účty ABRP a zkratky Webhook zůstanou). MG4Control se pak restartuje; pokud jste používali službu usnadnění, nezapomeňte ji znovu zapnout.</string>
     <string name="backup_import_ok">Nahradit a restartovat</string>
+    <string name="backup_import_other_family">Import odmítnut: tento soubor pochází z auta s %1$s a toto má %2$s. Tyto dva firmwary neukládají nastavení stejným způsobem.</string>
+    <string name="backup_import_same_family">Jiný firmware, ale stejná rodina (%1$s → %2$s): nastavení jsou kompatibilní.</string>
+    <string name="backup_import_unknown_fw">Neznámý zdrojový firmware: po importu zkontrolujte nastavení.</string>
     <string name="cluster_layout_wide_busy">Celá šířka: nejprve uvolněte sousední pole (Info %1$d).</string>
     <string name="cluster_layout_clear">Vyprázdnit pole</string>
     <string name="cluster_distance_km">km</string>

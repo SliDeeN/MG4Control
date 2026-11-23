@@ -996,6 +996,9 @@
     <string name="backup_import_newer">Denne filen kommer fra en nyere MG4Control-versjon: det denne versjonen ikke kjenner, blir ignorert.</string>
     <string name="backup_import_warning">Alle nåværende innstillinger erstattes (ABRP-kontoer og Webhook-snarveier beholdes). MG4Control starter så på nytt; husk å slå på tilgjengelighetstjenesten igjen hvis du brukte den.</string>
     <string name="backup_import_ok">Erstatt og start på nytt</string>
+    <string name="backup_import_other_family">Import avvist: denne filen kommer fra en bil med %1$s, og denne har %2$s. Disse to fastvarene lagrer ikke innstillinger på samme måte.</string>
+    <string name="backup_import_same_family">Annen fastvare, men samme familie (%1$s → %2$s): innstillingene er kompatible.</string>
+    <string name="backup_import_unknown_fw">Ukjent kildefastvare: sjekk innstillingene etter importen.</string>
     <string name="cluster_layout_wide_busy">Full bredde: frigjør først nabofeltet (Info %1$d).</string>
     <string name="cluster_layout_clear">Tøm feltet</string>
     <string name="cluster_distance_km">km</string>

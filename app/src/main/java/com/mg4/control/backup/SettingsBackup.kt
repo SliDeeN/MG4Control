@@ -38,6 +38,8 @@ object SettingsBackup {
         // Démarrage où la fenêtre clim d'origine a été fermée, et nettoyage des gestes du plein écran :
         // des numéros de démarrage de CET écran, sans sens sur un écran réinitialisé.
         "saic_hvac_closed_boot", "immersive_gestures_boot",
+        // Mode de firmware forcé (voiture non reconnue) : ne vaut que pour l'écran où il a été choisi.
+        "forced_firmware_gen",
     )
 
     /** Date du dernier export (ms), montrée sous les boutons. */
@@ -104,6 +106,35 @@ object SettingsBackup {
 
     private fun estWebhook(o: JSONObject) = o.optString("kind") == "webhook"
 
+    // ── Firmware (2026-11-23) ─────────────────────────────────────────────────
+
+    /**
+     * Familles de firmware : les réglages s'écrivent de la même façon dans une famille, pas d'une
+     * famille à l'autre (sa décision : import refusé entre familles). [com.mg4.control.util.FirmwareInfo.Gen]
+     * par son nom ; SWI173 est déjà rangé en SWI131. `null` = inconnu.
+     */
+    fun famille(gen: String?): String? = when (gen) {
+        "SWI133" -> "SWI133"
+        "SWI69", "SWI131" -> "A9"
+        "SWI132" -> "SWI132"
+        "SWI68", "SWI165" -> "SDK"
+        else -> null
+    }
+
+    enum class Compat { SAME, SAME_FAMILY, OTHER_FAMILY, UNKNOWN }
+
+    /** Le fichier exporté en [fichier] peut-il s'importer sur un écran en [actuel] ? */
+    fun compat(fichier: String?, actuel: String?): Compat {
+        val f = famille(fichier)
+        val a = famille(actuel)
+        return when {
+            f == null || a == null -> Compat.UNKNOWN
+            f != a -> Compat.OTHER_FAMILY
+            fichier == actuel -> Compat.SAME
+            else -> Compat.SAME_FAMILY
+        }
+    }
+
     // ── Lecture ────────────────────────────────────────────────────────────────
 
     /** Ce qu'un fichier contient, pour la fenêtre de confirmation ; `null` si ce n'en est pas un. */
@@ -153,9 +184,14 @@ object SettingsBackup {
      * gardé tel quel, les raccourcis Webhook de cet écran compris. Écriture synchrone : l'appelant
      * redémarre l'application juste après. `false` si le fichier n'est pas lisible (rien n'est touché).
      */
-    fun import(ctx: Context, texte: String): Boolean {
+    fun import(ctx: Context, texte: String, firmwareActuel: String? = null): Boolean {
         val o = runCatching { JSONObject(texte) }.getOrNull() ?: return false
         val prefs = o.optJSONObject("prefs") ?: return false
+        // Garde-fou : la fenêtre refuse déjà un fichier d'une autre famille de firmware.
+        if (compat(o.optString("firmware").ifEmpty { null }, firmwareActuel) == Compat.OTHER_FAMILY) {
+            AppLogger.w(TAG, "import refusé : fichier ${o.optString("firmware")}, écran $firmwareActuel (autre famille)")
+            return false
+        }
         val avecStats = o.optJSONObject("files")?.has(STATS_FICHIER) == true
         for (f in FICHIERS) {
             val donnees = prefs.optJSONObject(f) ?: continue

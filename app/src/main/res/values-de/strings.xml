@@ -995,6 +995,9 @@
     <string name="backup_import_newer">Diese Datei stammt aus einer neueren MG4Control-Version: Was diese Version nicht kennt, wird ignoriert.</string>
     <string name="backup_import_warning">Alle aktuellen Einstellungen werden ersetzt (ABRP-Konten und Webhook-Kurzbefehle bleiben). MG4Control startet danach neu; denken Sie daran, den Bedienungshilfe-Dienst wieder einzuschalten, falls Sie ihn genutzt haben.</string>
     <string name="backup_import_ok">Ersetzen und neu starten</string>
+    <string name="backup_import_other_family">Import abgelehnt: Diese Datei stammt von einem Auto mit %1$s, dieses hat %2$s. Diese beiden Firmwares speichern Einstellungen nicht auf die gleiche Weise.</string>
+    <string name="backup_import_same_family">Andere Firmware, aber dieselbe Familie (%1$s → %2$s): Die Einstellungen sind kompatibel.</string>
+    <string name="backup_import_unknown_fw">Unbekannte Herkunfts-Firmware: Prüfen Sie Ihre Einstellungen nach dem Import.</string>
     <string name="cluster_layout_wide_busy">Ganze Breite: zuerst das Nachbarfeld freigeben (Info %1$d).</string>
     <string name="cluster_layout_clear">Feld leeren</string>
     <string name="cluster_distance_km">km</string>

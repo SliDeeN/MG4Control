@@ -995,6 +995,9 @@
     <string name="backup_import_newer">Bu dosya MG4Control\'ün daha yeni bir sürümünden: bu sürümün bilmediği şeyler yok sayılacak.</string>
     <string name="backup_import_warning">Mevcut tüm ayarlar değiştirilecek (ABRP hesapları ve Webhook kısayolları korunur). MG4Control ardından yeniden başlar; kullanıyorsanız erişilebilirlik hizmetini yeniden açmayı unutmayın.</string>
     <string name="backup_import_ok">Değiştir ve yeniden başlat</string>
+    <string name="backup_import_other_family">İçe aktarma reddedildi: bu dosya %1$s yazılımlı bir araçtan geliyor, bu araç ise %2$s. Bu iki yazılım ayarları aynı şekilde kaydetmiyor.</string>
+    <string name="backup_import_same_family">Farklı yazılım ama aynı aile (%1$s → %2$s): ayarlar uyumlu.</string>
+    <string name="backup_import_unknown_fw">Kaynak yazılım bilinmiyor: içe aktarmadan sonra ayarlarınızı kontrol edin.</string>
     <string name="cluster_layout_wide_busy">Tam genişlik: önce yandaki kutuyu boşaltın (Bilgi %1$d).</string>
     <string name="cluster_layout_clear">Kutuyu boşalt</string>
     <string name="cluster_distance_km">km</string>

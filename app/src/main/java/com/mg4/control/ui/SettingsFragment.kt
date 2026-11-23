@@ -1212,8 +1212,22 @@ class SettingsFragment : Fragment() {
                 ton = AppDialog.Ton.ALERTE, oui = getString(R.string.nav_close))
             return
         }
+        // Famille de firmware (2026-11-23) : refusé d'une famille à l'autre, signalé dans la même.
+        val actuel = com.mg4.control.util.FirmwareInfo.getGeneration().name
+        val compat = com.mg4.control.backup.SettingsBackup.compat(r.firmware.ifEmpty { null }, actuel)
+        if (compat == com.mg4.control.backup.SettingsBackup.Compat.OTHER_FAMILY) {
+            AppDialog.confirmer(ctx, titre = getString(R.string.backup_import_title),
+                message = getString(R.string.backup_import_other_family, r.firmware, actuel),
+                ton = AppDialog.Ton.ALERTE, oui = getString(R.string.nav_close))
+            return
+        }
         val lignes = buildList {
             add(getString(R.string.backup_import_from, r.date, r.app, r.firmware))
+            when (compat) {
+                com.mg4.control.backup.SettingsBackup.Compat.SAME_FAMILY -> add(getString(R.string.backup_import_same_family, r.firmware, actuel))
+                com.mg4.control.backup.SettingsBackup.Compat.UNKNOWN -> add(getString(R.string.backup_import_unknown_fw))
+                else -> Unit
+            }
             add("• " + getString(R.string.backup_import_profiles, r.profils) + (r.defaut?.let { " — " + getString(R.string.backup_import_default, it) } ?: ""))
             add("• " + getString(R.string.backup_import_rules, r.automatisations))
             add("• " + getString(R.string.backup_import_custom, r.raccourcis))
@@ -1228,7 +1242,7 @@ class SettingsFragment : Fragment() {
             onOui = {
                 val app = ctx.applicationContext
                 Thread {
-                    val ok = texte != null && com.mg4.control.backup.SettingsBackup.import(app, texte)
+                    val ok = texte != null && com.mg4.control.backup.SettingsBackup.import(app, texte, actuel)
                     if (ok) com.mg4.control.backup.AppRestart.relancer(app)
                     else view?.post {
                         AppDialog.confirmer(ctx, titre = getString(R.string.backup_import_title),

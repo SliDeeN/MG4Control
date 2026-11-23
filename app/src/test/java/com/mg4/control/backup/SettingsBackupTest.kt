@@ -118,4 +118,25 @@ class SettingsBackupTest {
         assertEquals("""{"trips":[1,2]}""", File(ctx.filesDir, "stats_history.json").readText())
         assertFalse(SettingsBackup.import(ctx, "pas du json"))
     }
+
+    @Test
+    fun `import is refused between firmware families, allowed within one`() {
+        assertEquals(SettingsBackup.Compat.SAME, SettingsBackup.compat("SWI133", "SWI133"))
+        assertEquals(SettingsBackup.Compat.SAME_FAMILY, SettingsBackup.compat("SWI69", "SWI131"))
+        assertEquals(SettingsBackup.Compat.SAME_FAMILY, SettingsBackup.compat("SWI68", "SWI165"))
+        assertEquals(SettingsBackup.Compat.OTHER_FAMILY, SettingsBackup.compat("SWI133", "SWI68"))
+        assertEquals(SettingsBackup.Compat.OTHER_FAMILY, SettingsBackup.compat("SWI132", "SWI131"))
+        assertEquals(SettingsBackup.Compat.UNKNOWN, SettingsBackup.compat("UNKNOWN", "SWI133"))
+        assertEquals(SettingsBackup.Compat.UNKNOWN, SettingsBackup.compat(null, "SWI133"))
+
+        remplir()
+        p("mg4_settings").edit().putString("forced_firmware_gen", "SWI133").commit()
+        val texte = SettingsBackup.export(ctx, false, "2.7.1", "SWI133", "2026-11-23 10:00")
+        assertFalse("mode forcé jamais exporté", texte.contains("forced_firmware_gen"))
+        p("mg4_settings").edit().putBoolean("floating_enabled", false).commit()
+        assertFalse("autre famille : refusé", SettingsBackup.import(ctx, texte, "SWI69"))
+        assertFalse("rien n'a été touché", p("mg4_settings").getBoolean("floating_enabled", true))
+        assertTrue(SettingsBackup.import(ctx, texte, "SWI133"))
+        assertTrue(p("mg4_settings").getBoolean("floating_enabled", false))
+    }
 }
