@@ -1479,6 +1479,14 @@
     <string name="preclim_surv_screen_title">VIGILANCIA POR CÁMARA</string>
     <string name="preclim_surv_screen_text">Este vehículo se graba de forma continua, en 360°.</string>
     <string name="preclim_surv_status">MG4Control · desde las %1$s · batería %2$s · fin hacia las %3$s · desbloquea para detener</string>
+    <string name="preclim_unlimited_title">Duración ilimitada</string>
+    <string name="preclim_unlimited_text">La climatización funciona sin límite de tiempo solo mientras el coche siga en READY. No abra la puerta del conductor: el coche saldría de READY y la duración volvería a 2 h. También se detiene si la batería baja del %1$d %% o si se desbloquea el coche.</string>
+    <string name="preclim_unlimited_ok">Entendido</string>
+    <string name="preclim_plan_unlimited">Clima ya · sin límite de tiempo, mientras el coche siga en READY</string>
+    <string name="preclim_unlimited_label">En marcha desde hace</string>
+    <string name="preclim_unlimited_sub">sin límite, mientras el coche siga en READY</string>
+    <string name="preclim_unlimited_line">Sin límite de tiempo (READY)</string>
+    <string name="cluster_preclim_unlimited">Sin límite · desde hace %1$s</string>
     <string name="preclim_surv_end_done">Vigilancia terminada</string>
     <string name="preclim_surv_end_stopped">Vigilancia detenida</string>
     <string name="preclim_surv_end_driving">El coche se mueve: vigilancia detenida</string>

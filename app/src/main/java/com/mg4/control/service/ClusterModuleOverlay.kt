@@ -778,6 +778,9 @@ internal object ClusterModuleOverlay {
         val etape = when {
             decompte -> ClusterGaugeView.Etape.Decompte(((e.lockAtMs - maintenant).coerceAtLeast(0L) + 999).div(1000).toInt())
             step is PreClimatePlan.Step.Waiting -> ClusterGaugeView.Etape.Attente(e.wallTimes.getOrNull(step.index)?.first ?: 0)
+            step is PreClimatePlan.Step.Running && e.req.mode == PreClimateMode.NOW &&
+                PreClimatePlan.isUnlimited(e.cycles[step.index]) ->
+                ClusterGaugeView.Etape.Illimite(((maintenant - step.fromMs) / 60_000L).toInt())
             step is PreClimatePlan.Step.Running && e.req.mode == PreClimateMode.AT_TIME ->
                 ClusterGaugeView.Etape.Cycle(step.index + 1, e.cycles.size, e.wallTimes.getOrNull(step.index)?.second ?: 0)
             else -> ClusterGaugeView.Etape.Restant(
@@ -786,6 +789,7 @@ internal object ClusterModuleOverlay {
         }
         // Comme l'écran central : le décompte se vide, le reste se remplit.
         val part = if (decompte) (e.lockAtMs - maintenant).coerceAtLeast(0L).toFloat() / (e.lockAtMs - e.startMs).coerceAtLeast(1L)
+            else if (step is PreClimatePlan.Step.Running && PreClimatePlan.isUnlimited(e.cycles[step.index])) 1f
             else step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
         return ClusterGaugeView.PreClim(
             chien = e.req.dog,

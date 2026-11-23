@@ -1381,6 +1381,14 @@
     <string name="preclim_surv_screen_title">KAMEROVÝ DOHLED</string>
     <string name="preclim_surv_screen_text">Toto vozidlo je nepřetržitě monitorováno kamerami se záznamem v rozsahu 360°.</string>
     <string name="preclim_surv_status">MG4Control · od %1$s · baterie %2$s · skončí kolem %3$s · odemkněte pro ukončení</string>
+    <string name="preclim_unlimited_title">Neomezená doba</string>
+    <string name="preclim_unlimited_text">Klimatizace běží bez časového omezení jen tehdy, dokud auto zůstává v režimu READY. Neotvírejte dveře řidiče: auto by opustilo READY a doba by se vrátila na 2 h. Zastaví se také, pokud baterie klesne pod %1$d %% nebo se auto odemkne.</string>
+    <string name="preclim_unlimited_ok">Rozumím</string>
+    <string name="preclim_plan_unlimited">Klima hned · bez časového omezení, dokud auto zůstává v READY</string>
+    <string name="preclim_unlimited_label">Běží už</string>
+    <string name="preclim_unlimited_sub">bez omezení, dokud auto zůstává v READY</string>
+    <string name="preclim_unlimited_line">Bez časového omezení (READY)</string>
+    <string name="cluster_preclim_unlimited">Bez omezení · už %1$s</string>
     <string name="preclim_surv_end_done">Dohled dokončen</string>
     <string name="preclim_surv_end_stopped">Dohled zastaven</string>
     <string name="preclim_surv_end_driving">Vůz se rozjel: dohled zastaven</string>

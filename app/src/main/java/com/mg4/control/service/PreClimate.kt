@@ -169,7 +169,13 @@ object PreClimate {
                 // (issue #180) : « Maintenant » seulement aussi, et elle l'emporte sur le mode chien.
                 surveillance = surveillance,
                 dog = req.dog && !surveillance && req.mode == PreClimateMode.NOW,
-                maxMin = PreClimatePlan.maxMinutes(req.copy(surveillance = surveillance)))
+                maxMin = PreClimatePlan.maxMinutes(req.copy(surveillance = surveillance)).let { m ->
+                    // Sans limite seulement voiture en READY (2026-11-23) : sinon 2 h, comme au repli.
+                    if (m == PreClimatePlan.UNLIMITED && com.mg4.control.hardware.ReadyWatcher.ready != true) {
+                        AppLogger.w(TAG, "durée illimitée demandée hors READY → ${PreClimatePlan.UNLIMITED_FALLBACK_MIN} min")
+                        PreClimatePlan.UNLIMITED_FALLBACK_MIN
+                    } else m
+                })
             val maintenant = SystemClock.elapsedRealtime()
             val mur = minuteDuJour()
             val cycles = PreClimatePlan.cycles(borne, maintenant, mur)
@@ -311,6 +317,23 @@ object PreClimate {
         if (kmh != null && kmh > DRIVING_KMH) { terminer(PreClimateEnd.DRIVING); return }
         val soc = EnergyReader.soc()
         if (soc != null && soc < e.minSoc) { terminer(PreClimateEnd.BATTERY); return }
+        // Durée illimitée : la voiture est sortie de READY (porte conducteur…) — le mode continue,
+        // arrêté 2 h plus tard (sa décision du 2026-11-23).
+        if (e.cycles.size == 1 && PreClimatePlan.isUnlimited(e.cycles[0]) &&
+            com.mg4.control.hardware.ReadyWatcher.ready == false) {
+            val cycle = PreClimatePlan.fallback(e.cycles[0], maintenant)
+            val finMur = (e.startWallMinute + (cycle.endMs - e.startMs) / 60_000.0)
+            val replie = e.copy(
+                req = e.req.copy(maxMin = ((cycle.endMs - e.startMs) / 60_000L).toInt()),
+                cycles = listOf(cycle),
+                wallTimes = listOf((e.wallTimes.firstOrNull()?.first ?: e.startWallMinute.toInt()) to
+                    Math.floorMod(Math.round(finMur), 1440L).toInt()))
+            AppLogger.w(TAG, "sortie de READY pendant la durée illimitée → arrêt dans " +
+                "${PreClimatePlan.UNLIMITED_FALLBACK_MIN} min (vers ${replie.wallTimes[0].second / 60}:${"%02d".format(replie.wallTimes[0].second % 60)})")
+            etat = replie
+            suivre(replie, maintenant)
+            return
+        }
         val step = PreClimatePlan.step(e.cycles, e.lockAtMs, maintenant)
         if (step == PreClimatePlan.Step.Done) { terminer(PreClimateEnd.DONE); return }
 

@@ -1479,6 +1479,14 @@
     <string name="preclim_surv_screen_title">CAMERA SURVEILLANCE</string>
     <string name="preclim_surv_screen_text">This vehicle is being recorded continuously, in 360°.</string>
     <string name="preclim_surv_status">MG4Control · since %1$s · battery %2$s · stops around %3$s · unlock to stop</string>
+    <string name="preclim_unlimited_title">Unlimited duration</string>
+    <string name="preclim_unlimited_text">The climate runs with no time limit only while the car stays READY. Do not open the driver\'s door: the car would leave READY and the duration would go back to 2 h. It also stops if the battery drops below %1$d %% or the car is unlocked.</string>
+    <string name="preclim_unlimited_ok">Got it</string>
+    <string name="preclim_plan_unlimited">Climate now · no time limit, while the car stays READY</string>
+    <string name="preclim_unlimited_label">Running for</string>
+    <string name="preclim_unlimited_sub">no limit, while the car stays READY</string>
+    <string name="preclim_unlimited_line">No time limit (READY)</string>
+    <string name="cluster_preclim_unlimited">No limit · for %1$s</string>
     <string name="preclim_surv_end_done">Surveillance finished</string>
     <string name="preclim_surv_end_stopped">Surveillance stopped</string>
     <string name="preclim_surv_end_driving">The car is moving: surveillance stopped</string>

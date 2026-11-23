@@ -48,8 +48,9 @@ class PreClimatePlanTest {
         assertEquals(1_000L, borne.startMs)
         assertEquals(1_000L + 60 * min, borne.endMs)
         assertEquals(listOf(1038 to 1098), PreClimatePlan.wallTimes(req(PreClimateMode.NOW, maxMin = 60), maintenant))
-        // L'ancien « Sans limite » (0) enregistré redevient la durée par défaut.
-        assertEquals(PreClimatePlan.DEFAULT_MAX_MIN, PreClimatePlan.maxMinutes(req(PreClimateMode.NOW, maxMin = 0)))
+        // Un 0 enregistré (ancien « Sans limite ») redevient la durée par défaut au rechargement : la
+        // durée illimitée de 2026-11-23 n'est jamais enregistrée.
+        assertEquals(PreClimatePlan.DEFAULT_MAX_MIN, PreClimatePlan.clampMax(0))
         assertFalse(0 in PreClimatePlan.MAX_CHOICES)
     }
 
@@ -191,5 +192,38 @@ class PreClimatePlanTest {
         assertFalse(PreClimateScreenMode.mayDim(dog = false, surveillance = true, survFollows = false))
         assertTrue(PreClimateScreenMode.mayDim(dog = false, surveillance = true, survFollows = true))
         assertFalse(PreClimateScreenMode.mayDim(dog = true, surveillance = false, survFollows = true))
+    }
+
+    // ── Durée illimitée (2026-11-23) ─────────────────────────────────────────
+
+    @Test fun `unlimited only in Now, without dog or surveillance`() {
+        val now = req(PreClimateMode.NOW, maxMin = PreClimatePlan.UNLIMITED)
+        assertTrue(PreClimatePlan.unlimited(now))
+        assertEquals(PreClimatePlan.UNLIMITED, PreClimatePlan.maxMinutes(now))
+        assertFalse(PreClimatePlan.unlimited(now.copy(dog = true)))
+        assertEquals(PreClimatePlan.DOG_MAX_MIN, PreClimatePlan.maxMinutes(now.copy(dog = true)))
+        assertFalse(PreClimatePlan.unlimited(now.copy(surveillance = true)))
+        assertEquals(PreClimatePlan.UNLIMITED_FALLBACK_MIN, PreClimatePlan.maxMinutes(now.copy(surveillance = true)))
+        assertFalse(PreClimatePlan.unlimited(now.copy(mode = PreClimateMode.AT_TIME)))
+    }
+
+    @Test fun `an unlimited cycle never ends and has no end time`() {
+        val now = req(PreClimateMode.NOW, maxMin = PreClimatePlan.UNLIMITED)
+        val c = PreClimatePlan.cycles(now, 1_000L, 600.0).single()
+        assertTrue(PreClimatePlan.isUnlimited(c))
+        // Une semaine plus tard : toujours en marche.
+        assertTrue(PreClimatePlan.step(listOf(c), 1_000L, 7 * 24 * 3_600_000L) is PreClimatePlan.Step.Running)
+        assertEquals(600 to -1, PreClimatePlan.wallTimes(now, 600.0).single())
+    }
+
+    @Test fun `leaving READY keeps it running for two more hours`() {
+        val c = PreClimatePlan.cycles(req(PreClimateMode.NOW, maxMin = PreClimatePlan.UNLIMITED), 0L, 600.0).single()
+        val sortie = 5 * 3_600_000L
+        val repli = PreClimatePlan.fallback(c, sortie)
+        assertFalse(PreClimatePlan.isUnlimited(repli))
+        assertEquals(0L, repli.startMs)
+        assertEquals(sortie + 120 * 60_000L, repli.endMs)
+        assertTrue(PreClimatePlan.step(listOf(repli), 0L, sortie + 119 * 60_000L) is PreClimatePlan.Step.Running)
+        assertEquals(PreClimatePlan.Step.Done, PreClimatePlan.step(listOf(repli), 0L, sortie + 121 * 60_000L))
     }
 }

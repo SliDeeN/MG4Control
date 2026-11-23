@@ -66,6 +66,31 @@ object PreClimatePopupOverlay {
     private var demarrage = false
     private var vues: Vues? = null
     private var req: PreClimateRequest? = null
+    /** Durée choisie avant « ∞ » : « Annuler » dans l'avertissement y revient. */
+    private var dureeAvantInfinie = PreClimatePlan.UNLIMITED_FALLBACK_MIN
+
+    /**
+     * READY suivi tant que le pop-up est ouvert (2026-11-23) : « ∞ » apparaît et disparaît en direct ;
+     * choisie, elle repasse à 2 h si la voiture quitte READY.
+     */
+    private val ecouteReady = com.mg4.control.hardware.ReadyWatcher.Listener { ready, _ ->
+        handler.post {
+            val r = req ?: return@post
+            if (!ready && PreClimatePlan.unlimited(r)) {
+                AppLogger.i(TAG, "Pop-up — sortie de READY : durée illimitée ramenée à ${PreClimatePlan.UNLIMITED_FALLBACK_MIN} min")
+                vues?.avertIllimite?.visibility = View.GONE
+            }
+            changer { it }
+        }
+    }
+
+    /** « ∞ » proposée : « Maintenant », ni mode chien ni surveillance, voiture en READY. */
+    private fun infiniPossible(r: PreClimateRequest): Boolean =
+        r.mode == PreClimateMode.NOW && !r.dog && !r.surveillance && com.mg4.control.hardware.ReadyWatcher.ready == true
+
+    /** Une durée illimitée qui n'est plus possible repasse à 2 h. */
+    private fun sansInfiniHorsReady(r: PreClimateRequest): PreClimateRequest =
+        if (r.maxMin == PreClimatePlan.UNLIMITED && !infiniPossible(r)) r.copy(maxMin = PreClimatePlan.UNLIMITED_FALLBACK_MIN) else r
     /**
      * Appli caméra (issue #180), lue à l'ouverture : la surveillance est proposée à tous depuis le
      * 2026-11-08 ; l'appli ne fait que dire, sous « Clim coupée », si quelque chose sera filmé.
@@ -145,6 +170,7 @@ object PreClimatePopupOverlay {
         gestionnaire = wm
         vues = v
         demarrage = false
+        com.mg4.control.hardware.ReadyWatcher.add(ecouteReady)
         peindre()
         AppLogger.i(TAG, "Pop-up affiché — clim ${clim.temp ?: "?"} °C, ventilation ${if (clim.auto) "AUTO" else clim.fan ?: "?"}, " +
             "bornes ${clim.tempMin}–${clim.tempMax} °C / ${clim.fanMin}–${clim.fanMax}, " +
@@ -164,6 +190,7 @@ object PreClimatePopupOverlay {
         handler.post {
             val v = vue ?: return@post
             runCatching { gestionnaire?.removeView(v) }
+            com.mg4.control.hardware.ReadyWatcher.remove(ecouteReady)
             vue = null
             vues = null
             gestionnaire = null
@@ -222,6 +249,13 @@ object PreClimatePopupOverlay {
         val rappel: View = racine.findViewById(R.id.preclim_unlock_layer)
         val rappelJamais: TextView = racine.findViewById(R.id.preclim_unlock_never)
         val rappelOk: TextView = racine.findViewById(R.id.preclim_unlock_ok)
+        // Durée illimitée (2026-11-23) : avertissement par-dessus la carte.
+        val avertIllimite: View = racine.findViewById(R.id.preclim_unlimited_layer)
+        val illimiteTexte: TextView = racine.findViewById(R.id.preclim_unlimited_text)
+        val illimiteOk: TextView = racine.findViewById(R.id.preclim_unlimited_ok)
+        val illimiteAnnuler: TextView = racine.findViewById(R.id.preclim_unlimited_cancel)
+        /** La puce « ∞ », montrée seulement voiture en READY. */
+        var puceInfinie: TextView? = null
         val cases = mutableListOf<TextView>()
         val puces = mutableListOf<TextView>()
         val crans = mutableListOf<View>()
@@ -284,6 +318,42 @@ object PreClimatePopupOverlay {
             })
             v.puces += puce
         }
+        // « ∞ » (2026-11-23) : sans limite tant que la voiture reste en READY ; avertissement au choix.
+        v.puceInfinie = TextView(v.themed).apply {
+            gravity = Gravity.CENTER
+            textSize = 24f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            maxLines = 1
+            text = "∞"
+            contentDescription = v.s(R.string.preclim_unlimited_title)
+            setOnClickListener {
+                val r = req ?: return@setOnClickListener
+                if (PreClimatePlan.unlimited(r) || r.dog || r.surveillance) return@setOnClickListener
+                dureeAvantInfinie = PreClimatePlan.maxMinutes(r)
+                changer { it.copy(maxMin = PreClimatePlan.UNLIMITED) }
+                v.illimiteTexte.text = v.s(R.string.preclim_unlimited_text, PreClimateSettings.minSoc(v.loc))
+                v.avertIllimite.visibility = View.VISIBLE
+                AppLogger.i(TAG, "Pop-up — durée illimitée choisie, avertissement affiché")
+            }
+        }
+        v.rangeeMax.addView(v.puceInfinie, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
+            marginStart = v.dp(8f)
+        })
+        OverlayKit.fond(v.racine.findViewById(R.id.preclim_unlimited_badge), v.alerteDoux, ovale = true)
+        v.racine.findViewById<ImageView>(R.id.preclim_unlimited_icon).imageTintList = ColorStateList.valueOf(v.alerte)
+        OverlayKit.fond(v.illimiteOk, v.alerte, rayon = v.dp(12f).toFloat())
+        v.illimiteOk.setTextColor(v.surAlerte)
+        v.illimiteOk.setOnClickListener {
+            v.avertIllimite.visibility = View.GONE
+            AppLogger.i(TAG, "Pop-up — durée illimitée confirmée")
+        }
+        val renoncer = View.OnClickListener {
+            v.avertIllimite.visibility = View.GONE
+            changer { it.copy(maxMin = dureeAvantInfinie) }
+            AppLogger.i(TAG, "Pop-up — durée illimitée annulée")
+        }
+        v.illimiteAnnuler.setOnClickListener(renoncer)
+        v.avertIllimite.setOnClickListener(renoncer)
 
         v.premier.libelle.text = v.s(R.string.preclim_first)
         v.duree.libelle.text = v.s(R.string.preclim_run)
@@ -358,7 +428,7 @@ object PreClimatePopupOverlay {
     }
 
     private fun changer(f: (PreClimateRequest) -> PreClimateRequest) {
-        val r = f(req ?: return)
+        val r = sansInfiniHorsReady(f(req ?: return))
         req = r
         // Enregistré à chaque changement, et pas seulement à « Démarrer » : fermé sans démarrer, ou
         // démarrage refusé (pas en P), le pop-up rouvre quand même sur ces réglages.
@@ -379,6 +449,13 @@ object PreClimatePopupOverlay {
                 v.dp(if (on) 2f else 1f), v.dp(12f).toFloat())
             puce.setTextColor(if (on) v.texte else v.texte2)
             puce.alpha = if (r.dog && !on) ALPHA_GRISE else 1f
+        }
+        val illimitee = PreClimatePlan.unlimited(r)
+        v.puceInfinie?.let { puce ->
+            puce.visibility = if (infiniPossible(r)) View.VISIBLE else View.GONE
+            OverlayKit.fond(puce, if (illimitee) v.accentDoux else v.bouton, if (illimitee) v.accent else v.bordure,
+                v.dp(if (illimitee) 2f else 1f), v.dp(12f).toFloat())
+            puce.setTextColor(if (illimitee) v.texte else v.texte2)
         }
         val mur = PreClimate.minuteDuJour()
         v.premier.valeur.text = heure(v, r.firstMinuteOfDay)
@@ -424,6 +501,7 @@ object PreClimatePopupOverlay {
         v.plan.text = when {
             surv -> v.s(R.string.preclim_plan_surv, heure(v, (mur + max).roundToInt()))
             maintenant && r.dog -> v.s(R.string.preclim_plan_dog, heure(v, (mur + max).roundToInt()))
+            illimitee -> v.s(R.string.preclim_plan_unlimited)
             maintenant -> v.s(R.string.preclim_plan_now, heure(v, (mur + max).roundToInt()))
             else -> {
                 val cycles = PreClimatePlan.wallTimes(r, mur)

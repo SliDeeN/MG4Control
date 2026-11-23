@@ -108,7 +108,8 @@ object PreClimateSettings {
 
     fun saveRequest(ctx: Context, r: PreClimateRequest) {
         prefs(ctx).edit()
-            .putInt(KEY_MAX, r.maxMin)
+            // Durée illimitée jamais retenue (2026-11-23) : le pop-up rouvre sur 2 h.
+            .putInt(KEY_MAX, if (r.maxMin == PreClimatePlan.UNLIMITED) PreClimatePlan.UNLIMITED_FALLBACK_MIN else r.maxMin)
             .putInt(KEY_RUN, r.runMin)
             .putInt(KEY_RUNS, r.runs)
             .putInt(KEY_PAUSE, r.pauseMin)

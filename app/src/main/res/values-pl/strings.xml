@@ -1479,6 +1479,14 @@
     <string name="preclim_surv_screen_title">MONITORING KAMER</string>
     <string name="preclim_surv_screen_text">Ten pojazd jest nagrywany bez przerwy, w 360°.</string>
     <string name="preclim_surv_status">MG4Control · od %1$s · bateria %2$s · koniec około %3$s · odblokuj, aby zatrzymać</string>
+    <string name="preclim_unlimited_title">Czas nieograniczony</string>
+    <string name="preclim_unlimited_text">Klimatyzacja działa bez limitu czasu tylko dopóki samochód pozostaje w READY. Nie otwieraj drzwi kierowcy: samochód wyszedłby z READY, a czas wróciłby do 2 h. Zatrzyma się też, gdy bateria spadnie poniżej %1$d %% lub samochód zostanie odblokowany.</string>
+    <string name="preclim_unlimited_ok">Rozumiem</string>
+    <string name="preclim_plan_unlimited">Klima od razu · bez limitu czasu, dopóki samochód jest w READY</string>
+    <string name="preclim_unlimited_label">Działa od</string>
+    <string name="preclim_unlimited_sub">bez limitu, dopóki samochód jest w READY</string>
+    <string name="preclim_unlimited_line">Bez limitu czasu (READY)</string>
+    <string name="cluster_preclim_unlimited">Bez limitu · od %1$s</string>
     <string name="preclim_surv_end_done">Nadzór zakończony</string>
     <string name="preclim_surv_end_stopped">Nadzór zatrzymany</string>
     <string name="preclim_surv_end_driving">Samochód jedzie: nadzór zatrzymany</string>

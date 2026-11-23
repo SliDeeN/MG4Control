@@ -1480,6 +1480,14 @@
     <string name="preclim_surv_screen_title">KAMERAOVERVÅKNING</string>
     <string name="preclim_surv_screen_text">Denne bilen filmes kontinuerlig, i 360°.</string>
     <string name="preclim_surv_status">MG4Control · siden %1$s · batteri %2$s · stopper rundt %3$s · lås opp for å stoppe</string>
+    <string name="preclim_unlimited_title">Ubegrenset varighet</string>
+    <string name="preclim_unlimited_text">Klimaanlegget går uten tidsgrense bare så lenge bilen står i READY. Ikke åpne førerdøren: bilen ville gått ut av READY, og varigheten ville gått tilbake til 2 t. Stopper også hvis batteriet går under %1$d %% eller bilen låses opp.</string>
+    <string name="preclim_unlimited_ok">Skjønner</string>
+    <string name="preclim_plan_unlimited">Klima nå · uten tidsgrense, så lenge bilen står i READY</string>
+    <string name="preclim_unlimited_label">Har gått i</string>
+    <string name="preclim_unlimited_sub">uten grense, så lenge bilen står i READY</string>
+    <string name="preclim_unlimited_line">Uten tidsgrense (READY)</string>
+    <string name="cluster_preclim_unlimited">Uten grense · i %1$s</string>
     <string name="preclim_surv_end_done">Overvåking fullført</string>
     <string name="preclim_surv_end_stopped">Overvåking stoppet</string>
     <string name="preclim_surv_end_driving">Bilen beveger seg: overvåking stoppet</string>

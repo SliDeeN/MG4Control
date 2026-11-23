@@ -99,6 +99,27 @@ object PreClimatePlan {
      */
     val MAX_CHOICES = listOf(15, 30, 60, 120)
     const val DEFAULT_MAX_MIN = 60
+
+    /**
+     * Durée illimitée (2026-11-23) : en « Maintenant », ni mode chien ni surveillance, et seulement
+     * voiture en READY — elle ne reste allumée sans limite que là. Proposée par le pop-up tant que
+     * la voiture est en READY ; si elle en sort pendant le mode, la durée repasse à
+     * [UNLIMITED_FALLBACK_MIN] à partir de cet instant (sa décision). Jamais mémorisée.
+     */
+    const val UNLIMITED = 0
+    const val UNLIMITED_FALLBACK_MIN = 120
+    /** Fin d'un cycle sans limite, en temps monotone : bien au-delà de toute nuit, sans débordement. */
+    private const val SANS_FIN_MS = Long.MAX_VALUE / 4
+
+    /** Le mode tourne-t-il sans limite ? */
+    fun unlimited(req: PreClimateRequest): Boolean =
+        req.mode == PreClimateMode.NOW && !req.dog && !req.surveillance && req.maxMin == UNLIMITED
+
+    /** Cycle sans limite (repli à faire si la voiture sort de READY). */
+    fun isUnlimited(c: Cycle): Boolean = c.endMs >= SANS_FIN_MS
+
+    /** Repli à la sortie de READY : le même cycle, arrêté [UNLIMITED_FALLBACK_MIN] après [nowMs]. */
+    fun fallback(c: Cycle, nowMs: Long): Cycle = Cycle(c.startMs, nowMs + UNLIMITED_FALLBACK_MIN * MS_PAR_MIN)
     /** Mode chien : toujours la durée la plus longue, sans choix. */
     const val DOG_MAX_MIN = 120
 
@@ -154,15 +175,21 @@ object PreClimatePlan {
      * Durée maximale effective en mode [PreClimateMode.NOW] : celle choisie, ou 2 h en mode chien.
      * La surveillance garde la durée choisie, et l'emporte sur un mode chien resté coché.
      */
-    fun maxMinutes(req: PreClimateRequest): Int =
-        if (req.dog && !req.surveillance && req.mode == PreClimateMode.NOW) DOG_MAX_MIN else clampMax(req.maxMin)
+    fun maxMinutes(req: PreClimateRequest): Int = when {
+        req.dog && !req.surveillance && req.mode == PreClimateMode.NOW -> DOG_MAX_MIN
+        unlimited(req) -> UNLIMITED
+        // Illimitée gardée par la surveillance : 2 h, pas la durée par défaut.
+        req.maxMin == UNLIMITED -> UNLIMITED_FALLBACK_MIN
+        else -> clampMax(req.maxMin)
+    }
 
     /**
      * Cycles de [req], [startMs] étant l'instant (monotone) du démarrage et [nowMinuteOfDay]
      * l'heure murale au même instant. Mode NOW : un seul cycle, du démarrage à la durée maximale.
      */
     fun cycles(req: PreClimateRequest, startMs: Long, nowMinuteOfDay: Double): List<Cycle> = when (req.mode) {
-        PreClimateMode.NOW -> listOf(Cycle(startMs, startMs + maxMinutes(req) * MS_PAR_MIN))
+        PreClimateMode.NOW -> listOf(Cycle(startMs,
+            if (unlimited(req)) SANS_FIN_MS else startMs + maxMinutes(req) * MS_PAR_MIN))
         PreClimateMode.AT_TIME -> {
             val first = startMs + (minutesUntil(req.firstMinuteOfDay, nowMinuteOfDay) * MS_PAR_MIN).toLong()
             (0 until req.runs.coerceIn(RUNS_MIN, RUNS_MAX)).map { i ->
@@ -177,7 +204,7 @@ object PreClimatePlan {
         cycles(req, 0L, nowMinuteOfDay).map { c ->
             // Arrondi, pas troncature : 1109,9999 doit rester 18:30 et non devenir 18:29.
             fun mur(ms: Long) = Math.floorMod(Math.round(nowMinuteOfDay + ms / MS_PAR_MIN.toDouble()), MINUTES_PAR_JOUR.toLong()).toInt()
-            mur(c.startMs) to mur(c.endMs)
+            mur(c.startMs) to (if (isUnlimited(c)) -1 else mur(c.endMs))
         }
 
     /** Où en est le programme. */

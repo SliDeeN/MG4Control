@@ -331,7 +331,15 @@ class PreClimateActivity : Activity() {
         v.anneau.fraction = step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
         v.anneau.couleur = couleurClim(e)
         val aUneHeure = e.req.mode == PreClimateMode.AT_TIME
-        when (step) {
+        // Durée illimitée (2026-11-23) : le temps écoulé, anneau plein, tant que la voiture reste en READY.
+        if (step is PreClimatePlan.Step.Running && !aUneHeure && PreClimatePlan.isUnlimited(e.cycles[step.index])) {
+            v.anneau.anim = PreClimateRingView.Anim.ONDES
+            v.anneau.fraction = 1f
+            v.anneauTitre.text = v.s(R.string.preclim_unlimited_label)
+            v.anneauGrand.text = duree(((maintenant - step.fromMs) / 60_000L).toInt())
+            v.anneauSous.text = v.s(R.string.preclim_unlimited_sub)
+            pastille(v.etat, v.s(R.string.preclim_state_run), v.accentDoux, v.accent)
+        } else when (step) {
             is PreClimatePlan.Step.Waiting -> {
                 v.anneau.anim = PreClimateRingView.Anim.ORBITE
                 v.anneauTitre.text = v.s(R.string.preclim_wait_label)
@@ -439,7 +447,8 @@ class PreClimateActivity : Activity() {
         } else {
             listOf(
                 v.s(R.string.preclim_started_at, heure(e.startWallMinute.toInt())),
-                v.s(R.string.preclim_off_at, heure((e.startWallMinute + e.req.maxMin).roundToInt())),
+                if (e.cycles.firstOrNull()?.let { PreClimatePlan.isUnlimited(it) } == true) v.s(R.string.preclim_unlimited_line)
+                else v.s(R.string.preclim_off_at, heure((e.startWallMinute + e.req.maxMin).roundToInt())),
             )
         }
         textes.forEach { t ->

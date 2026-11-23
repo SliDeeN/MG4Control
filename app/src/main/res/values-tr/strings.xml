@@ -1479,6 +1479,14 @@
     <string name="preclim_surv_screen_title">KAMERA GÖZETİMİ</string>
     <string name="preclim_surv_screen_text">Bu araç sürekli olarak 360° kaydediliyor.</string>
     <string name="preclim_surv_status">MG4Control · %1$s itibarıyla · batarya %2$s · bitiş yaklaşık %3$s · durdurmak için kilidi açın</string>
+    <string name="preclim_unlimited_title">Sınırsız süre</string>
+    <string name="preclim_unlimited_text">Klima yalnızca araç READY durumunda kaldığı sürece süre sınırı olmadan çalışır. Sürücü kapısını açmayın: araç READY\'den çıkar ve süre 2 saate döner. Batarya %1$d %% altına düşerse veya araç kilidi açılırsa da durur.</string>
+    <string name="preclim_unlimited_ok">Anladım</string>
+    <string name="preclim_plan_unlimited">Klima hemen · süre sınırı yok, araç READY kaldığı sürece</string>
+    <string name="preclim_unlimited_label">Çalışma süresi</string>
+    <string name="preclim_unlimited_sub">sınırsız, araç READY kaldığı sürece</string>
+    <string name="preclim_unlimited_line">Süre sınırı yok (READY)</string>
+    <string name="cluster_preclim_unlimited">Sınırsız · %1$s süredir</string>
     <string name="preclim_surv_end_done">Gözetim bitti</string>
     <string name="preclim_surv_end_stopped">Gözetim durduruldu</string>
     <string name="preclim_surv_end_driving">Araç hareket ediyor: gözetim durduruldu</string>

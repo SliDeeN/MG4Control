@@ -1479,6 +1479,14 @@
     <string name="preclim_surv_screen_title">KAMERAÜBERWACHUNG</string>
     <string name="preclim_surv_screen_text">Dieses Fahrzeug wird ständig gefilmt, in 360°.</string>
     <string name="preclim_surv_status">MG4Control · seit %1$s · Batterie %2$s · Ende gegen %3$s · zum Beenden entriegeln</string>
+    <string name="preclim_unlimited_title">Unbegrenzte Dauer</string>
+    <string name="preclim_unlimited_text">Die Klimaanlage läuft nur dann unbegrenzt, solange das Auto in READY bleibt. Öffnen Sie nicht die Fahrertür: Das Auto würde READY verlassen und die Dauer ginge auf 2 h zurück. Stopp auch, wenn die Batterie unter %1$d %% fällt oder das Auto entriegelt wird.</string>
+    <string name="preclim_unlimited_ok">Verstanden</string>
+    <string name="preclim_plan_unlimited">Klima sofort · ohne Zeitlimit, solange das Auto in READY bleibt</string>
+    <string name="preclim_unlimited_label">Läuft seit</string>
+    <string name="preclim_unlimited_sub">ohne Limit, solange das Auto in READY bleibt</string>
+    <string name="preclim_unlimited_line">Ohne Zeitlimit (READY)</string>
+    <string name="cluster_preclim_unlimited">Ohne Limit · seit %1$s</string>
     <string name="preclim_surv_end_done">Überwachung beendet</string>
     <string name="preclim_surv_end_stopped">Überwachung gestoppt</string>
     <string name="preclim_surv_end_driving">Das Auto fährt: Überwachung gestoppt</string>

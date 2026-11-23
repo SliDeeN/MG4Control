@@ -1500,6 +1500,14 @@
     <string name="preclim_surv_screen_title">SURVEILLANCE CAMÉRA</string>
     <string name="preclim_surv_screen_text">Ce véhicule est filmé en continu, à 360°.</string>
     <string name="preclim_surv_status">MG4Control · depuis %1$s · batterie %2$s · arrêt vers %3$s · déverrouillez pour arrêter</string>
+    <string name="preclim_unlimited_title">Durée illimitée</string>
+    <string name="preclim_unlimited_text">La clim tourne sans limite de durée seulement tant que la voiture reste en READY. N\'ouvrez pas la porte conducteur : la voiture sortirait de READY et la durée repasserait à 2 h. Arrêt aussi si la batterie passe sous %1$d %% ou si la voiture est déverrouillée.</string>
+    <string name="preclim_unlimited_ok">J\'ai compris</string>
+    <string name="preclim_plan_unlimited">Clim tout de suite · sans limite de durée, tant que la voiture reste en READY</string>
+    <string name="preclim_unlimited_label">En marche depuis</string>
+    <string name="preclim_unlimited_sub">sans limite, tant que la voiture reste en READY</string>
+    <string name="preclim_unlimited_line">Sans limite de durée (READY)</string>
+    <string name="cluster_preclim_unlimited">Sans limite · depuis %1$s</string>
     <string name="preclim_surv_end_done">Surveillance terminée</string>
     <string name="preclim_surv_end_stopped">Surveillance arrêtée</string>
     <string name="preclim_surv_end_driving">La voiture roule : surveillance arrêtée</string>
