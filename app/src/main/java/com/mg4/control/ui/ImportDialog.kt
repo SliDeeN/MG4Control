@@ -26,6 +26,8 @@ internal class ImportDialog(
     private val ctx: Context,
     private val nom: String,
     private val parcourir: () -> Unit,
+    /** Titre de la fenêtre (2026-11-23) ; `null` = celui de l'import des automatisations. */
+    private val titre: String? = null,
     private val lu: (String?, String) -> Unit,
 ) {
     private val main = Handler(Looper.getMainLooper())
@@ -43,7 +45,7 @@ internal class ImportDialog(
         // Clé branchée : c'est sans doute de là que vient le fichier.
         choix = if (usb != null) Destination.USB else Destination.DOWNLOADS
         val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_rule_value, null)
-        vue.findViewById<TextView>(R.id.rule_value_title).text = s(R.string.rule_import_title_from)
+        vue.findViewById<TextView>(R.id.rule_value_title).text = titre ?: s(R.string.rule_import_title_from)
         vue.findViewById<TextView>(R.id.rule_value_subtitle).apply {
             text = s(R.string.rule_import_subtitle)
             visibility = View.VISIBLE

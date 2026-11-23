@@ -39,7 +39,12 @@ internal class ExportDialog(
     private val titreFait: String,
     private val fichiers: () -> List<Pair<String, String>>,
     private val parcourir: () -> Unit,
+    /** Case à cocher sous les destinations (2026-11-23, sauvegarde des réglages) ; `null` = aucune. */
+    private val case: Case? = null,
 ) {
+    /** Une option de l'export, lue par [fichiers] au moment d'écrire. */
+    class Case(val libelle: String, var coche: Boolean)
+
     private val main = Handler(Looper.getMainLooper())
     private var dialog: AlertDialog? = null
     private var tuiles: LinearLayout? = null
@@ -64,6 +69,18 @@ internal class ExportDialog(
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         tuiles = rangee
         peindre()
+        case?.let { c ->
+            vue.findViewById<LinearLayout>(R.id.rule_value_body).addView(android.widget.CheckBox(ctx).apply {
+                text = c.libelle
+                isChecked = c.coche
+                setTextColor(ctx.getColor(R.color.text_primary))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
+                buttonTintList = ColorStateList.valueOf(ctx.getColor(R.color.dash_accent))
+                setPadding(dp(8f), dp(6f), 0, dp(6f))
+                setOnCheckedChangeListener { _, on -> c.coche = on }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .also { it.topMargin = dp(14f) })
+        }
         vue.findViewById<TextView>(R.id.rule_value_cancel).apply {
             text = s(R.string.profile_cancel)
             setOnClickListener { dialog?.dismiss() }

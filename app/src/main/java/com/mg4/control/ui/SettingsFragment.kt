@@ -90,6 +90,10 @@ class SettingsFragment : Fragment() {
 
     /** « Enregistrer… » du diagnostic : la fenêtre ouverte, et le sélecteur de dossier qui lui répond. */
     private var exportDialog: ExportDialog? = null
+    /** Import de la sauvegarde des réglages (issue #269) : la fenêtre ouverte, et le sélecteur de fichier. */
+    private var importDialog: ImportDialog? = null
+    private val choisirFichier = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { doc -> importDialog?.surFichier(doc) }
     private val choisirDossier = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { arbre ->
         exportDialog?.surDossier(arbre)
@@ -1135,6 +1139,7 @@ class SettingsFragment : Fragment() {
         }
 
         // ── Bouton Infos ─────────────────────────────────────────────────────
+        brancherSauvegarde(view)
         view.findViewById<MaterialButton>(R.id.btn_infos).setOnClickListener {
             showInfosDialog()
         }
@@ -1150,6 +1155,88 @@ class SettingsFragment : Fragment() {
         setupFirmwareChips(view)
         setupDataUsage(view)
         bindCategoryRail(view, savedInstanceState)
+    }
+
+    // ── Sauvegarde des réglages (issue #269, 2026-11-23) ──────────────────────────
+
+    private fun brancherSauvegarde(view: View) {
+        majDernierExport(view)
+        view.findViewById<MaterialButton>(R.id.btn_backup_export).setOnClickListener {
+            val ctx = context ?: return@setOnClickListener
+            val stats = ExportDialog.Case(getString(R.string.backup_include_stats), false)
+            exportDialog = ExportDialog(ctx,
+                titre = getString(R.string.backup_export_title),
+                sousTitre = getString(R.string.backup_export_subtitle),
+                bouton = getString(R.string.backup_export),
+                titreFait = getString(R.string.backup_export_done),
+                fichiers = {
+                    val date = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date())
+                    val texte = com.mg4.control.backup.SettingsBackup.export(ctx, stats.coche, BuildConfig.VERSION_NAME,
+                        com.mg4.control.util.FirmwareInfo.getGeneration().name, date)
+                    ctx.getSharedPreferences("mg4_settings", android.content.Context.MODE_PRIVATE).edit()
+                        .putLong(com.mg4.control.backup.SettingsBackup.KEY_LAST_EXPORT, System.currentTimeMillis()).apply()
+                    view.post { majDernierExport(view) }
+                    listOf(com.mg4.control.backup.SettingsBackup.FILE_NAME to texte)
+                },
+                parcourir = { choisirDossier.launch(null) },
+                case = stats,
+            ).also { it.ouvrir() }
+        }
+        view.findViewById<MaterialButton>(R.id.btn_backup_import).setOnClickListener {
+            val ctx = context ?: return@setOnClickListener
+            importDialog = ImportDialog(ctx, com.mg4.control.backup.SettingsBackup.FILE_NAME,
+                parcourir = { choisirFichier.launch(arrayOf("application/json", "application/octet-stream", "text/plain", "*/*")) },
+                titre = getString(R.string.backup_import_title_from),
+            ) { texte, ou -> confirmerImport(texte, ou) }.also { it.ouvrir() }
+        }
+    }
+
+    private fun majDernierExport(view: View) {
+        val ms = view.context.getSharedPreferences("mg4_settings", android.content.Context.MODE_PRIVATE)
+            .getLong(com.mg4.control.backup.SettingsBackup.KEY_LAST_EXPORT, 0L)
+        view.findViewById<TextView>(R.id.tv_backup_last)?.apply {
+            visibility = if (ms > 0L) View.VISIBLE else View.GONE
+            if (ms > 0L) text = getString(R.string.backup_last_export,
+                android.text.format.DateFormat.getDateFormat(context).format(java.util.Date(ms)) + " " +
+                    android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(ms)))
+        }
+    }
+
+    /** Le fichier lu : son contenu en clair, puis « Remplacer et redémarrer ». */
+    private fun confirmerImport(texte: String?, ou: String) {
+        val ctx = context ?: return
+        val r = com.mg4.control.backup.SettingsBackup.lire(texte)
+        if (r == null) {
+            AppDialog.confirmer(ctx, titre = getString(R.string.backup_import_title),
+                message = getString(if (texte == null) R.string.backup_import_not_found else R.string.backup_import_unreadable, ou),
+                ton = AppDialog.Ton.ALERTE, oui = getString(R.string.nav_close))
+            return
+        }
+        val lignes = buildList {
+            add(getString(R.string.backup_import_from, r.date, r.app, r.firmware))
+            add("• " + getString(R.string.backup_import_profiles, r.profils) + (r.defaut?.let { " — " + getString(R.string.backup_import_default, it) } ?: ""))
+            add("• " + getString(R.string.backup_import_rules, r.automatisations))
+            add("• " + getString(R.string.backup_import_custom, r.raccourcis))
+            add("• " + getString(R.string.backup_import_settings, r.reglages))
+            if (r.stats) add("• " + getString(R.string.backup_import_stats))
+            if (r.plusRecent) add(getString(R.string.backup_import_newer))
+            add("")
+            add(getString(R.string.backup_import_warning))
+        }
+        AppDialog.confirmer(ctx, titre = getString(R.string.backup_import_title), message = lignes.joinToString("\n"),
+            ton = AppDialog.Ton.ALERTE, oui = getString(R.string.backup_import_ok), non = getString(R.string.profile_cancel),
+            onOui = {
+                val app = ctx.applicationContext
+                Thread {
+                    val ok = texte != null && com.mg4.control.backup.SettingsBackup.import(app, texte)
+                    if (ok) com.mg4.control.backup.AppRestart.relancer(app)
+                    else view?.post {
+                        AppDialog.confirmer(ctx, titre = getString(R.string.backup_import_title),
+                            message = getString(R.string.backup_import_unreadable, ou), ton = AppDialog.Ton.ALERTE,
+                            oui = getString(R.string.nav_close))
+                    }
+                }.start()
+            })
     }
 
     override fun onResume() {
