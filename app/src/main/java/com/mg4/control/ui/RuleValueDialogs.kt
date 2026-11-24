@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import com.mg4.control.R
+import com.mg4.control.model.AirFlow
 import com.mg4.control.service.OverlayKit
 import java.util.Locale
 
@@ -288,6 +289,63 @@ internal object RuleValueDialogs {
             return@fenetre {
                 if (actifs.isEmpty()) false else { onOk(actifs.sorted()); true }
             }
+        }
+    }
+
+    /**
+     * Sens de l'air (issue #275) : Visage, Pieds, Pare-brise AV cumulables, comme sur la page Clim.
+     * [valeur] et le résultat sont la valeur de la voiture (0–6, [AirFlow]) ; le dernier bouton
+     * allumé ne s'éteint pas : l'air doit bien sortir quelque part.
+     */
+    fun sensAir(ctx: Context, titre: CharSequence, valeur: Int, onOk: (Int) -> Unit) {
+        var v = valeur.takeIf { AirFlow.partsOf(it) != null } ?: 1
+        fenetre(ctx, titre, null, LARGEUR_DP) { corps ->
+            val rangee = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                isBaselineAligned = false
+            }
+            val boutons = listOf(
+                Triple(AirFlow.FACE, R.drawable.ic_air_face, R.string.clim_air_face),
+                Triple(AirFlow.FEET, R.drawable.ic_air_feet, R.string.clim_air_feet),
+                Triple(AirFlow.WINDSHIELD, R.drawable.ic_air_windshield_front, R.string.clim_air_windshield_front),
+            )
+            val cases = boutons.mapIndexed { i, (_, icone, libelle) ->
+                TextView(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, dp(ctx, 120f), 1f).also { if (i > 0) it.marginStart = dp(ctx, 12f) }
+                    gravity = Gravity.CENTER
+                    text = ctx.getString(libelle)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+                    paint.isFakeBoldText = true
+                    maxLines = 2
+                    setCompoundDrawablesRelativeWithIntrinsicBounds(0, icone, 0, 0)
+                    compoundDrawablePadding = dp(ctx, 6f)
+                    val p = dp(ctx, 8f)
+                    setPadding(p, p, p, p)
+                }
+            }
+            fun peindre() {
+                val parts = AirFlow.partsOf(v)
+                val allumes = listOf(parts?.face == true, parts?.feet == true, parts?.windshield == true)
+                cases.forEachIndexed { i, c ->
+                    val on = allumes[i]
+                    OverlayKit.fond(c,
+                        ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn),
+                        ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border),
+                        dp(ctx, if (on) 2f else 1f), dp(ctx, 12f).toFloat())
+                    c.setTextColor(ctx.getColor(if (on) R.color.text_primary else R.color.text_secondary))
+                    c.compoundDrawableTintList = ColorStateList.valueOf(
+                        ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
+                }
+            }
+            cases.forEachIndexed { i, c ->
+                c.setOnClickListener {
+                    AirFlow.toggled(v, boutons[i].first)?.let { v = it; peindre() }
+                }
+                rangee.addView(c)
+            }
+            peindre()
+            corps.addView(rangee)
+            return@fenetre { onOk(v); true }
         }
     }
 

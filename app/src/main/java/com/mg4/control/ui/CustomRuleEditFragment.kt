@@ -1623,7 +1623,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                     valeurs(nom, listOf(s(R.string.rule_seat_off) to "0", "1" to "1", "2" to "2", "3" to "3"), meme, ok = ::fini)
                 ExternalApi.SET_HVAC_TEMP -> nombre(16, 30, 21, " °C")
                 ExternalApi.SET_HVAC_FAN -> nombre(1, 7, 3)
-                RuleKeys.AIR_FLOW -> nombre(0, 6, 1)
+                RuleKeys.AIR_FLOW -> RuleValueDialogs.sensAir(ctx, nom, meme?.toIntOrNull() ?: 1) { fini("$it") }
                 RuleKeys.AUTO_VOLUME -> valeurs(nom, listOf(s(R.string.rule_level_high) to "0", s(R.string.rule_level_medium) to "1",
                     s(R.string.rule_level_low) to "2"), meme, ok = ::fini)
                 RuleKeys.BRIGHTNESS -> nombre(0, 100, 50, " %", 5)

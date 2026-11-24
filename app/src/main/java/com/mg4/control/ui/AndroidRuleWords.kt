@@ -4,6 +4,7 @@ import android.content.Context
 import com.mg4.control.R
 import com.mg4.control.api.ExternalApi
 import com.mg4.control.bluetooth.BluetoothProfileManager
+import com.mg4.control.model.AirFlow
 import com.mg4.control.model.ChargePortLock
 import com.mg4.control.model.TurnSignal
 import com.mg4.control.model.ChargeControl
@@ -109,7 +110,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleKeys.BRIGHTNESS, RuleKeys.CHARGE_LIMIT -> "$value %"
             RuleKeys.VOLUME -> value
             RuleKeys.VOLUME_STEP -> if (value.startsWith("-")) value else "+$value"
-            RuleKeys.AIR_FLOW -> value
+            RuleKeys.AIR_FLOW -> airFlow(value)
             RuleKeys.CHARGE_CURRENT -> chargeCurrent(value)
             RuleKeys.AUTO_VOLUME -> t(when (value) { "0" -> R.string.rule_level_high; "1" -> R.string.rule_level_medium; else -> R.string.rule_level_low })
             in RuleKeys.ALL -> when (value) {
@@ -135,6 +136,16 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     }
 
     /** Courant de charge AC (#215) : « 6 A », « 16 A », « Max »… ; texte inconnu tel quel. */
+    /** Sens de l'air (issue #275) : « Visage + Pieds » plutôt que la valeur brute 0–6. */
+    fun airFlow(v: String): String {
+        val p = v.toIntOrNull()?.let { AirFlow.partsOf(it) } ?: return v
+        return listOfNotNull(
+            t(R.string.clim_air_face).takeIf { p.face },
+            t(R.string.clim_air_feet).takeIf { p.feet },
+            t(R.string.clim_air_windshield_front).takeIf { p.windshield },
+        ).joinToString(" + ")
+    }
+
     fun chargeCurrent(v: String): String {
         val code = ChargeCurrent.code(v) ?: return v
         return ChargeCurrent.amperes(code)?.let { "$it A" } ?: t(R.string.charge_current_max)
