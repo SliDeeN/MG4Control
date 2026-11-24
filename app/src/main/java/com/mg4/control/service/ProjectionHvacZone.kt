@@ -52,8 +52,9 @@ object ProjectionHvacZone {
      * celle que les boutons flottants de la barre du haut laissent libre.
      */
     private const val LARGEUR_DP = com.mg4.control.model.FloatingButtons.TOP_HVAC_DP
-    /** Sous la barre système, de quoi couvrir une languette qui en dépasse. */
-    private const val DEBORD_DP = 16f
+    // Hauteur : la barre système seule. Le débord de 16 dp sous la barre (pour une languette qui en
+    // dépasse) a été retiré (issue #274) : il couvrait le haut de l'image d'Android Auto / CarPlay,
+    // et un appui sur la recherche de Waze ouvrait la clim.
 
     private val main = Handler(Looper.getMainLooper())
     private val lecteur: Handler by lazy { Handler(HandlerThread("mg4-zone").also { it.start() }.looper) }
@@ -122,7 +123,7 @@ object ProjectionHvacZone {
         for (type in intArrayOf(TYPE_ZONE, TYPE_ZONE_REPLI)) {
             val params = WindowManager.LayoutParams(
                 (LARGEUR_DP * d).roundToInt(),
-                barre + (DEBORD_DP * d).roundToInt(),
+                barre,
                 type,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT,
