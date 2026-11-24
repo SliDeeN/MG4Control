@@ -37,13 +37,14 @@ enum class SoundEvent(val key: String) {
  * sur « En ligne » (MG4Control remet la source ensuite, issue #190) ; volume MÉDIA réglé par son.
  * [NAVIGATION] : comme une annonce du GPS, qui baisse la musique sans changer de source ; volume de
  * NAVIGATION réglé par son. Dans les deux cas, le volume d'avant revient à la fin s'il n'a pas bougé.
+ * Navigation par défaut depuis le 2026-11-24 (validé sur SWI133) ; Média reste en repli.
  */
 enum class SoundChannel(val key: String) {
     MEDIA("media"),
     NAVIGATION("navigation");
 
     companion object {
-        fun of(key: String?): SoundChannel = entries.firstOrNull { it.key == key } ?: MEDIA
+        fun of(key: String?): SoundChannel = entries.firstOrNull { it.key == key } ?: NAVIGATION
     }
 }
 
@@ -113,6 +114,15 @@ object SoundAutomationRules {
     }
 
     /** Volume à régler pour un son : le sien, ramené dans l'échelle de la voiture, ou la moitié. */
+    /**
+     * [v] pris sur l'échelle 0–[fromMax] et porté sur 0–[toMax], en proportion : les volumes réglés
+     * sur l'échelle média passent sur celle de la navigation (2026-11-24). Échelles égales ou
+     * illisibles : inchangé.
+     */
+    fun rescale(v: Int, fromMax: Int, toMax: Int): Int =
+        if (fromMax <= 0 || toMax <= 0 || fromMax == toMax) v
+        else Math.round(v.coerceIn(0, fromMax) * toMax.toFloat() / fromMax).coerceIn(0, toMax)
+
     fun volumeFor(slot: SoundSlot, max: Int): Int = (slot.volume ?: (max / 2)).coerceIn(0, max.coerceAtLeast(0))
 
     /**

@@ -77,6 +77,11 @@ object CustomRuleStore {
         write(ctx, all(ctx).map { com.mg4.control.model.RuleLogic.renameVariable(it, old, new) })
     }
 
+    /** Volumes des sons importés de toutes les automatisations passés par [f] (changement d'échelle). */
+    fun mapSoundVolumes(ctx: Context, f: (Int) -> Int) = synchronized(LOCK) {
+        write(ctx, all(ctx).map { com.mg4.control.model.RuleLogic.mapSoundVolumes(it, f) })
+    }
+
     fun setEnabled(ctx: Context, id: String, enabled: Boolean) = synchronized(LOCK) {
         write(ctx, all(ctx).map { if (it.id == id) it.copy(enabled = enabled) else it })
     }

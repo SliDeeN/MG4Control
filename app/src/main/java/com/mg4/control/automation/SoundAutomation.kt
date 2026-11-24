@@ -92,9 +92,26 @@ object SoundAutomation {
     fun start(context: Context) {
         app = context.applicationContext
         fil.post {
+            migrerCanal(app ?: return@post)
             actualiser()
             if (abonne) fil.postDelayed({ attendreSource(SystemClock.elapsedRealtime() + DEMARRAGE_MAX_MS - DEMARRAGE_MS) }, DEMARRAGE_MS)
         }
+    }
+
+    /**
+     * Canal Navigation par défaut (2026-11-24) : les volumes d'avant, sur l'échelle média, passent
+     * sur celle de la navigation. Une fois ; retentée au prochain démarrage si une échelle est illisible.
+     */
+    private fun migrerCanal(ctx: Context) {
+        if (!SoundAutomationSettings.needsNavigationMigration(ctx)) return
+        val media = MG4Hardware.getMediaVolumeMax()
+        val nav = MG4Hardware.getNavVolumeMax()
+        if (media <= 0 || nav <= 0) {
+            AppLogger.i(TAG, "canal Navigation par défaut : échelles illisibles (média $media, navigation $nav), conversion au prochain démarrage")
+            return
+        }
+        SoundAutomationSettings.migrateToNavigation(ctx, media, nav)
+        AppLogger.i(TAG, "canal Navigation par défaut : volumes portés de 0–$media à 0–$nav")
     }
 
     /** Son du démarrage : dès que la voiture a remis une source, ou à [limite] au plus tard. */

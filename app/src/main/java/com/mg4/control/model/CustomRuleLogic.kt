@@ -224,6 +224,18 @@ object RuleLogic {
         )
     }
 
+    /** Volumes des sons importés de [rule] (« Jouer un son », [RULE_SOUND]) passés par [f], à toute profondeur. */
+    fun mapSoundVolumes(rule: CustomRule, f: (Int) -> Int): CustomRule {
+        fun a(l: List<RuleAction>?, d: Int): List<RuleAction>? {
+            if (l == null || d > MAX_DEPTH) return l
+            return l.map {
+                val son = it.type == RuleAction.Type.PLAY_SOUND && it.key?.startsWith(RULE_SOUND) == true && it.count != null
+                it.copy(count = if (son) f(it.count!!) else it.count, then = a(it.then, d + 1), otherwise = a(it.otherwise, d + 1))
+            }
+        }
+        return rule.copy(actions = a(rule.actions, 0).orEmpty())
+    }
+
     /** Les lieux dont une règle a besoin : seule leur appartenance est calculée. */
     fun places(rule: CustomRule): Set<String> {
         val out = mutableSetOf<String>()

@@ -97,8 +97,24 @@ object SoundAutomationSettings {
         CHAMPS.forEach { e.remove(cle(index, it)) }
     }
 
-    /** Canal des sons, commun à tous ([SoundChannel]) ; Média par défaut. */
+    /** Canal des sons, commun à tous ([SoundChannel]) ; Navigation par défaut. */
     fun channel(ctx: Context): SoundChannel = SoundChannel.of(prefs(ctx).getString(KEY_CHANNEL, null))
+
+    /** Canal jamais enregistré : les volumes sont encore sur l'échelle média ([migrateToNavigation]). */
+    fun needsNavigationMigration(ctx: Context): Boolean = !prefs(ctx).contains(KEY_CHANNEL)
+
+    /**
+     * Passage au canal Navigation par défaut (2026-11-24) : les volumes réglés sur l'échelle média
+     * ([mediaMax]) — sons de la page et sons des automatisations — portés en proportion sur celle de
+     * la navigation ([navMax]), puis le canal enregistré : une seule fois.
+     */
+    fun migrateToNavigation(ctx: Context, mediaMax: Int, navMax: Int) {
+        val f = { v: Int -> SoundAutomationRules.rescale(v, mediaMax, navMax) }
+        val e = prefs(ctx).edit()
+        slots(ctx).forEachIndexed { i, s -> if (s.volume != null) ecrire(e, i, s.copy(volume = f(s.volume))) }
+        e.putString(KEY_CHANNEL, SoundChannel.NAVIGATION.key).apply()
+        CustomRuleStore.mapSoundVolumes(ctx, f)
+    }
     fun setChannel(ctx: Context, c: SoundChannel) = prefs(ctx).edit().putString(KEY_CHANNEL, c.key).apply()
 
     fun profiles(ctx: Context): Set<String> =
