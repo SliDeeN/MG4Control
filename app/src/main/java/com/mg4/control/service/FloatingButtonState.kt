@@ -101,9 +101,10 @@ object FloatingButtonState {
     /** Siège chauffant : coupé ou niveau 1 à 3, les libellés du pop-up HVAC. */
     private fun niveau(loc: Context, n: Int): String? = when (n) {
         0 -> loc.getString(R.string.climate_off)
-        1 -> loc.getString(R.string.climate_level_1)
-        2 -> loc.getString(R.string.climate_level_2)
-        3 -> loc.getString(R.string.climate_level_3)
+        // Faible / Moyen / Fort, comme les bulles d'information et les automatisations (2026-11-24).
+        1 -> loc.getString(R.string.rule_level_low)
+        2 -> loc.getString(R.string.rule_level_medium)
+        3 -> loc.getString(R.string.rule_level_high)
         else -> null
     }
 }

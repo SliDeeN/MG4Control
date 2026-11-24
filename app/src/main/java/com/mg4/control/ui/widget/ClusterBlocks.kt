@@ -151,6 +151,8 @@ object ClusterBlocks {
                 BubbleInfo.chrono(s, minutes)?.let { return fait(it to null) }
                 // Pression des pneus : dans l'unité choisie (bar, PSI, kPa).
                 BubbleInfo.pressure(s, brut, com.mg4.control.util.TyreUnitSetting.unit(ctx), locale)?.let { return fait(it) }
+                // Sièges chauffants : Arrêt / Faible / Moyen / Fort plutôt que 0–3 (2026-11-24).
+                BubbleInfo.seatLevel(s, brut)?.let { n -> mots.seatLevel(n)?.let { return fait(it to null) } }
                 val converti = BubbleInfo.inDistanceUnit(s, brut, ClusterInfo.distance(b, general))
                 val v = converti?.first ?: brut
                 val u = (converti?.second ?: mots.unit(s).ifEmpty { BubbleInfo.extraUnit(s) }).trim()

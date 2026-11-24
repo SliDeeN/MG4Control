@@ -100,6 +100,16 @@ object BubbleInfo {
     }
 
     /**
+     * Niveau d'un siège chauffant (2026-11-24) : l'entier 0–3 lu, à mettre en mots par l'écran
+     * (Arrêt / Faible / Moyen / Fort) ; `null` pour les autres informations ou une valeur illisible.
+     */
+    fun seatLevel(s: RuleSignal, value: Any?): Int? {
+        if (s != RuleSignal.SEAT_HEAT_LEFT && s != RuleSignal.SEAT_HEAT_RIGHT) return null
+        val n = (value as? Number)?.toDouble()?.takeUnless { it.isNaN() } ?: return null
+        return Math.round(n).toInt().takeIf { it in 0..3 }
+    }
+
+    /**
      * Pression d'un pneu (2026-11-20) : lue en kPa, montrée dans l'unité choisie — le texte et
      * l'unité ; `null` pour les autres informations, ou sans valeur lisible.
      */

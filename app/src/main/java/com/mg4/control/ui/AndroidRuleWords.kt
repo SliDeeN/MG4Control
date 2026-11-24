@@ -54,9 +54,22 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
 
     /** Pression des pneus : stockée en kPa, montrée dans l'unité choisie (« 2,2 bar »). */
     override fun number(s: RuleSignal, n: Double): String? {
+        if (s == RuleSignal.SEAT_HEAT_LEFT || s == RuleSignal.SEAT_HEAT_RIGHT) return seatLevel(Math.round(n).toInt())
         if (!s.isTyrePressure) return null
         val u = com.mg4.control.util.TyreUnitSetting.unit(ctx)
         return com.mg4.control.model.TyrePressure.format(Math.round(n).toInt(), u, ctx.resources.configuration.locales[0]) + " " + u.label
+    }
+
+    /**
+     * Niveau d'un siège chauffant en mots (2026-11-24, sa demande) : 0 Arrêt, 1 Faible, 2 Moyen,
+     * 3 Fort — le 1 est le plus doux (vert dans le pop-up HVAC). `null` hors de 0..3.
+     */
+    fun seatLevel(n: Int): String? = when (n) {
+        0 -> t(R.string.rule_seat_off)
+        1 -> t(R.string.rule_level_low)
+        2 -> t(R.string.rule_level_medium)
+        3 -> t(R.string.rule_level_high)
+        else -> null
     }
 
     override fun value(s: RuleSignal, text: String): String = when (s) {
@@ -124,7 +137,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
                 "0", "false" -> t(R.string.rule_off)
                 else -> value
             }
-            ExternalApi.SET_SEAT_HEAT_LEFT, ExternalApi.SET_SEAT_HEAT_RIGHT -> if (value == "0") t(R.string.rule_seat_off) else value
+            ExternalApi.SET_SEAT_HEAT_LEFT, ExternalApi.SET_SEAT_HEAT_RIGHT -> value.toIntOrNull()?.let { seatLevel(it) } ?: value
             ExternalApi.SET_HVAC_TEMP -> "$value °C"
             ExternalApi.SET_PROFILE -> profils[value] ?: value
             ExternalApi.SET_REGEN -> RegenLevel.entries.firstOrNull { it.name.equals(value, true) }?.let { regen(it) } ?: value

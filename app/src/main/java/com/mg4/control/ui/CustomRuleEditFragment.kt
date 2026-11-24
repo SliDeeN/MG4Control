@@ -1622,7 +1622,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 ExternalApi.SET_DRIVE_MODE -> valeurs(nom, DriveMode.entries.map { mots.driveMode(it) to it.name }, meme, ok = ::fini)
                 ExternalApi.SET_REGEN -> valeurs(nom, RegenLevel.entries.map { mots.regen(it) to it.name }, meme, ok = ::fini)
                 ExternalApi.SET_SEAT_HEAT_LEFT, ExternalApi.SET_SEAT_HEAT_RIGHT ->
-                    valeurs(nom, listOf(s(R.string.rule_seat_off) to "0", "1" to "1", "2" to "2", "3" to "3"), meme, ok = ::fini)
+                    valeurs(nom, (0..3).map { (mots.seatLevel(it) ?: "$it") to "$it" }, meme, ok = ::fini)
                 ExternalApi.SET_HVAC_TEMP -> nombre(16, 30, 21, " °C")
                 ExternalApi.SET_HVAC_FAN -> nombre(1, 7, 3)
                 RuleKeys.AIR_FLOW -> RuleValueDialogs.sensAir(ctx, nom, meme?.toIntOrNull() ?: 1) { fini("$it") }

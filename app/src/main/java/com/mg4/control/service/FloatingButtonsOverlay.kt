@@ -780,6 +780,8 @@ object FloatingButtonsOverlay {
         // Pression des pneus : dans l'unité choisie (bar, PSI, kPa).
         BubbleInfo.pressure(s, lu, com.mg4.control.util.TyreUnitSetting.unit(ctx), ctx.resources.configuration.locales[0])
             ?.let { (texte, unite) -> return "$texte $unite" to null }
+        // Sièges chauffants : Arrêt / Faible / Moyen / Fort plutôt que 0–3 (2026-11-24).
+        BubbleInfo.seatLevel(s, lu)?.let { n -> m.seatLevel(n)?.let { return it to BubbleInfo.toggleState(lu) } }
         // Vitesse et autonomie dans l'unité générale ; en Auto, relue dans la voiture (ce fil, binder).
         val converti = BubbleInfo.inDistanceUnit(s, lu, com.mg4.control.util.DistanceSetting.unitReading(ctx))
         val v = converti?.first ?: lu
