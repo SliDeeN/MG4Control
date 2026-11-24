@@ -1502,6 +1502,8 @@
     <string name="preclim_camp_msg_cam">Videoovervåking på</string>
     <string name="preclim_camp_msg_ecall">eCall aktiv</string>
     <string name="preclim_camp_kept">Innstillingene huskes til neste natt</string>
+    <string name="preclim_camp_hvac_mode">Modus</string>
+    <string name="preclim_camp_manual">Manuell</string>
     <string name="preclim_plan_camp">Camping om %1$s · stopper under %2$d %%</string>
     <string name="preclim_camp_warn_ready">Bilen må stå i READY hele natten: ikke slå den av. Så lenge den er i READY, går klimaanlegget uten tidsgrense.</string>
     <string name="preclim_camp_warn_door">Å åpne førerdøren tar bilen ut av READY: campingen fortsetter da i 2 t, så slår bilen seg av.</string>

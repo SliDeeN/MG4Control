@@ -1501,6 +1501,8 @@
     <string name="preclim_camp_msg_cam">Videovigilancia activa</string>
     <string name="preclim_camp_msg_ecall">eCall activo</string>
     <string name="preclim_camp_kept">Ajustes guardados para la próxima noche</string>
+    <string name="preclim_camp_hvac_mode">Modo</string>
+    <string name="preclim_camp_manual">Manual</string>
     <string name="preclim_plan_camp">Camping en %1$s · parada bajo el %2$d %%</string>
     <string name="preclim_camp_warn_ready">El coche debe seguir en READY toda la noche: no lo apague. Mientras esté en READY, la climatización funciona sin límite de tiempo.</string>
     <string name="preclim_camp_warn_door">Abrir la puerta del conductor saca el coche de READY: el modo camping sigue 2 h y luego el coche se apaga.</string>

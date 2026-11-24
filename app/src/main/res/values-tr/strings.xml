@@ -1501,6 +1501,8 @@
     <string name="preclim_camp_msg_cam">Video gözetimi açık</string>
     <string name="preclim_camp_msg_ecall">eCall etkin</string>
     <string name="preclim_camp_kept">Ayarlar bir sonraki gece için saklanır</string>
+    <string name="preclim_camp_hvac_mode">Mod</string>
+    <string name="preclim_camp_manual">Manuel</string>
     <string name="preclim_plan_camp">Kamp %1$s içinde · %%%2$d altında durur</string>
     <string name="preclim_camp_warn_ready">Araç bütün gece READY durumunda kalmalı: kapatmayın. READY olduğu sürece klima süre sınırı olmadan çalışır.</string>
     <string name="preclim_camp_warn_door">Sürücü kapısını açmak aracı READY durumundan çıkarır: kamp modu 2 saat daha sürer, sonra araç kapanır.</string>

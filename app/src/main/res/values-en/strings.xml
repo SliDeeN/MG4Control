@@ -1501,6 +1501,8 @@
     <string name="preclim_camp_msg_cam">Video surveillance on</string>
     <string name="preclim_camp_msg_ecall">eCall active</string>
     <string name="preclim_camp_kept">Settings kept for the next night</string>
+    <string name="preclim_camp_hvac_mode">Mode</string>
+    <string name="preclim_camp_manual">Manual</string>
     <string name="preclim_plan_camp">Camping in %1$s · stops below %2$d %%</string>
     <string name="preclim_camp_warn_ready">The car must stay READY all night: don\'t switch it off. While it is READY, the climate runs with no time limit.</string>
     <string name="preclim_camp_warn_door">Opening the driver\'s door takes the car out of READY: camping then goes on for 2 h, then the car switches off.</string>

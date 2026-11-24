@@ -1522,6 +1522,8 @@
     <string name="preclim_camp_msg_cam">Surveillance vidéo active</string>
     <string name="preclim_camp_msg_ecall">eCall actif</string>
     <string name="preclim_camp_kept">Réglages retenus pour la prochaine nuit</string>
+    <string name="preclim_camp_hvac_mode">Mode</string>
+    <string name="preclim_camp_manual">Manuel</string>
     <string name="preclim_plan_camp">Camping dans %1$s · arrêt sous %2$d %%</string>
     <string name="preclim_camp_warn_ready">La voiture doit rester en READY toute la nuit : ne l\'éteignez pas. Tant qu\'elle est en READY, la clim tourne sans limite de durée.</string>
     <string name="preclim_camp_warn_door">Ouvrir la porte conducteur fait sortir la voiture de READY : le camping continue alors 2 h, puis la voiture s\'éteint.</string>

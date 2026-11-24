@@ -130,6 +130,8 @@ object PreClimatePopupOverlay {
     private class Clim(
         val tempMin: Int, val tempMax: Int, val fanMin: Int, val fanMax: Int,
         val temp: Int?, val fan: Int?, val auto: Boolean, val ac: Boolean?, val on: Boolean?,
+        /** Ce que la voiture expose (mode camping, 2026-11-24) : ECO, débit en AUTO, dégivrage arrière. */
+        val ecoOk: Boolean = false, val autoVolOk: Boolean = false, val degivrageArOk: Boolean = false,
     )
 
     private fun ouvrir(app: Context, lu: MG4Hardware.ClimateState?) {
@@ -139,7 +141,8 @@ object PreClimatePopupOverlay {
             tempMin = lu?.tempMin ?: TEMP_MIN_REPLI, tempMax = lu?.tempMax ?: TEMP_MAX_REPLI,
             fanMin = lu?.fanMin ?: FAN_MIN_REPLI, fanMax = lu?.fanMax ?: FAN_MAX_REPLI,
             temp = lu?.tempC, fan = r?.ventilationReelle ?: lu?.lastManualFan, auto = r?.enAuto == true,
-            ac = lu?.acOn, on = lu?.powerOn)
+            ac = lu?.acOn, on = lu?.powerOn,
+            ecoOk = lu?.ecoOn != null, autoVolOk = lu?.autoVolume != null, degivrageArOk = lu?.defrostRear != null)
         val dernier = PreClimateSettings.lastRequest(app, PreClimate.minuteDuJour(), clim.temp, clim.fan)
         camera = DashcamApp.detecter(app)
         sansCamera = PreClimateSettings.survWithoutCamera(app)
@@ -262,6 +265,7 @@ object PreClimatePopupOverlay {
         val campTuile: TextView = racine.findViewById(R.id.preclim_camp_toggle)
         val campBloc: LinearLayout = racine.findViewById(R.id.preclim_camping)
         val campClim: LinearLayout = racine.findViewById(R.id.preclim_camp_climate)
+        val legendeClim: View = racine.findViewById(R.id.preclim_clim_caption)
         val avertCamping: View = racine.findViewById(R.id.preclim_camp_warn_layer)
         val campRangees: LinearLayout = racine.findViewById(R.id.preclim_camp_warn_rows)
         val campOk: TextView = racine.findViewById(R.id.preclim_camp_warn_ok)
@@ -272,6 +276,15 @@ object PreClimatePopupOverlay {
         var campVideo: View? = null
         var puceCamera: TextView? = null
         var puceEcall: TextView? = null
+        // Clim du camping (2026-11-24) : ventilation ou débit en AUTO selon le mode, sens de l'air, options.
+        var campVentil: View? = null
+        var campLigneVentil: Ligne? = null
+        var campDebit: View? = null
+        var campAir: View? = null
+        val campBoutonsAir = mutableListOf<Pair<Int, TextView>>()
+        var puceAc: TextView? = null
+        var puceEco: TextView? = null
+        var puceDegivrage: TextView? = null
         val cases = mutableListOf<TextView>()
         val puces = mutableListOf<TextView>()
         val crans = mutableListOf<View>()
@@ -475,12 +488,85 @@ object PreClimatePopupOverlay {
         v.puceCamera = puce(R.string.preclim_camp_msg_cam) { it.copy(msgCamera = !it.msgCamera) }
         v.puceEcall = puce(R.string.preclim_camp_msg_ecall) { it.copy(msgEcall = !it.msgEcall) }
         v.campBloc.addView(rangee(v, R.string.preclim_camp_message, messages))
+        // « Réglages retenus… » en bas de cette colonne : celle de la clim est pleine.
+        v.campBloc.addView(TextView(v.themed).apply {
+            text = v.s(R.string.preclim_camp_kept)
+            setTextColor(v.texte2)
+            textSize = 13f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = v.dp(8f) })
 
-        // ── Droite : A/C et recirculation, sous la ventilation ──
-        v.campClim.addView(rangeeChoix(v, R.string.clim_ac, listOf(v.s(R.string.segment_no), v.s(R.string.segment_yes)),
-            if (camping.ac) 1 else 0, 200f) { modifier { c -> c.copy(ac = it == 1) } })
-        v.campClim.addView(rangeeChoix(v, R.string.clim_section_loop, listOf(v.s(R.string.clim_loop_inner), v.s(R.string.clim_loop_outside)),
-            if (camping.recircInner) 0 else 1, 260f) { modifier { c -> c.copy(recircInner = it == 0) } })
+        // ── Droite, sous la température : mode, ventilation ou débit, sens de l'air, options, recirculation ──
+        v.campClim.addView(rangeeChoix(v, R.string.preclim_camp_hvac_mode, listOf(v.s(R.string.clim_auto), v.s(R.string.preclim_camp_manual)),
+            if (camping.auto) 0 else 1, 220f) { modifier { c -> c.copy(auto = it == 0) } })
+        val ventil = ligneReglage(v, v.campClim)
+        ventil.libelle.text = v.s(R.string.clim_fan)
+        pas(ventil) { r, d -> r.camping?.let { r.copy(camping = it.copy(fan = (it.fan + d).coerceIn(v.clim.fanMin, v.clim.fanMax))) } ?: r }
+        v.campLigneVentil = ventil
+        v.campVentil = ventil.libelle.parent as View
+        // Débit en AUTO (#178) : Faible, Moyen, Fort — 2, 1, 0 pour la voiture.
+        val debits = listOf(2, 1, 0)
+        val debit = rangeeChoix(v, R.string.clim_section_autovol,
+            listOf(R.string.rule_level_low, R.string.rule_level_medium, R.string.rule_level_high).map { v.s(it) },
+            debits.indexOf(camping.autoVolume).coerceAtLeast(0), 280f) { modifier { c -> c.copy(autoVolume = debits[it]) } }
+        v.campClim.addView(debit)
+        v.campDebit = debit
+        // Sens de l'air : trois boutons à pictogramme, cumulables ; le dernier allumé reste allumé.
+        val boutons = LinearLayout(v.themed).apply { orientation = LinearLayout.HORIZONTAL }
+        listOf(
+            Triple(com.mg4.control.model.AirFlow.FACE, R.drawable.ic_air_face, R.string.clim_air_face),
+            Triple(com.mg4.control.model.AirFlow.FEET, R.drawable.ic_air_feet, R.string.clim_air_feet),
+            Triple(com.mg4.control.model.AirFlow.WINDSHIELD, R.drawable.ic_air_windshield_front, R.string.clim_air_windshield_front),
+        ).forEach { (bit, icone, nom) ->
+            val b = TextView(v.themed).apply {
+                gravity = Gravity.CENTER
+                contentDescription = v.s(nom)
+                setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                background = null
+                setOnClickListener {
+                    modifier { c ->
+                        val sens = com.mg4.control.model.AirFlow.FACE or com.mg4.control.model.AirFlow.FEET or com.mg4.control.model.AirFlow.WINDSHIELD
+                        val m = c.airMask xor bit
+                        if (m and sens == 0) c else c.copy(airMask = m)
+                    }
+                }
+            }
+            val ic = v.themed.getDrawable(icone)?.mutate()
+            val cote = v.dp(26f)
+            ic?.setBounds(0, 0, cote, cote)
+            b.setCompoundDrawables(ic, null, null, null)
+            b.setPadding(v.dp(16f), 0, v.dp(16f), 0)
+            boutons.addView(b, LinearLayout.LayoutParams(v.dp(62f), v.dp(38f)).apply {
+                if (boutons.childCount > 0) marginStart = v.dp(6f)
+            })
+            v.campBoutonsAir += bit to b
+        }
+        val air = rangee(v, R.string.clim_section_airflow, boutons)
+        v.campClim.addView(air)
+        v.campAir = air
+        // Options : A/C, ECO et dégivrage arrière, puces cumulables (les deux dernières si la voiture les expose).
+        val options = LinearLayout(v.themed).apply { orientation = LinearLayout.HORIZONTAL }
+        fun option(texte: Int, bascule: (CampingConfig) -> CampingConfig): TextView = TextView(v.themed).apply {
+            text = v.s(texte)
+            gravity = Gravity.CENTER
+            textSize = 15f
+            maxLines = 1
+            setPadding(v.dp(13f), 0, v.dp(13f), 0)
+            setOnClickListener { modifier(bascule) }
+            options.addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, v.dp(38f)).apply {
+                if (options.childCount > 0) marginStart = v.dp(6f)
+            })
+        }
+        v.puceAc = option(R.string.clim_ac) { it.copy(ac = !it.ac) }
+        if (v.clim.ecoOk) v.puceEco = option(R.string.clim_eco) { it.copy(eco = !it.eco) }
+        if (v.clim.degivrageArOk) v.puceDegivrage = option(R.string.clim_air_windshield_rear) {
+            it.copy(airMask = it.airMask xor com.mg4.control.model.AirFlow.REAR_DEFROST)
+        }
+        v.campClim.addView(rangee(v, R.string.rule_sec_options, options))
+        v.campClim.addView(rangeeChoix(v, R.string.clim_section_loop,
+            listOf(v.s(R.string.clim_loop_inner), v.s(R.string.clim_loop_outside), v.s(R.string.clim_loop_auto)),
+            camping.recirc.coerceIn(0, 2), 300f) { modifier { c -> c.copy(recirc = it) } })
     }
 
     /** Une ligne « intitulé − valeur + » ajoutée à [dans], resserrée à 42 dp. */
@@ -628,6 +714,9 @@ object PreClimatePopupOverlay {
         v.arretsSurveillance.visibility = if (surv) View.VISIBLE else View.GONE
         v.arretsSurveillance.text = v.s(R.string.preclim_surv_stops, PreClimateSettings.minSoc(v.loc))
         listOf(v.ligneTemp, v.ligneVentil, v.barre, v.actuels).forEach { it.visibility = if (surv) View.GONE else View.VISIBLE }
+        // Camping : six lignes de clim — sans titre, ni ligne « actuels », ni ventilation de la pré-climatisation.
+        if (camp) listOf(v.ligneVentil, v.barre, v.legendeClim, v.actuels).forEach { it.visibility = View.GONE }
+        else v.legendeClim.visibility = View.VISIBLE
         v.panneauSurveillance.visibility = if (surv) View.VISIBLE else View.GONE
         peindreCamera(v, surv)
         if (surv && !survPossible) {
@@ -722,6 +811,27 @@ object PreClimatePopupOverlay {
         // Vidéo (2026-11-24) : la ligne dès que l'appli caméra se pilote ; seul son Oui / Non compte
         // (l'interrupteur de la page Garde-voiture ne vaut que pour la surveillance).
         v.campVideo?.visibility = if (camera.pilotable) View.VISIBLE else View.GONE
+        // Clim : ventilation en manuel, débit en AUTO (si la voiture l'expose) ; sens de l'air grisé
+        // quand AUTO le laisse à la voiture (« Ce que règle AUTO »).
+        v.campVentil?.visibility = if (c.auto) View.GONE else View.VISIBLE
+        v.campLigneVentil?.valeur?.text = c.fan.toString()
+        v.campDebit?.visibility = if (c.auto && v.clim.autoVolOk) View.VISIBLE else View.GONE
+        val airVoiture = c.auto && com.mg4.control.util.ClimateAutoScope.carSetsAir(v.loc)
+        v.campAir?.alpha = if (airVoiture) ALPHA_GRISE else 1f
+        v.campBoutonsAir.forEach { (bit, b) ->
+            val on = c.airMask and bit != 0
+            b.isEnabled = !airVoiture
+            OverlayKit.fond(b, if (on) v.accentDoux else v.bouton, if (on) v.accent else v.bordure,
+                v.dp(if (on) 2f else 1f), v.dp(12f).toFloat())
+            b.compoundDrawables[0]?.setTint(if (on) v.texte else v.texte2)
+        }
+        listOf(v.puceAc to c.ac, v.puceEco to c.eco,
+            v.puceDegivrage to (c.airMask and com.mg4.control.model.AirFlow.REAR_DEFROST != 0)).forEach { (puce, on) ->
+            puce ?: return@forEach
+            OverlayKit.fond(puce, if (on) v.accentDoux else v.bouton, if (on) v.accent else v.bordure,
+                v.dp(if (on) 2f else 1f), v.dp(19f).toFloat())
+            puce.setTextColor(if (on) v.texte else v.texte2)
+        }
         // « Surveillance vidéo active » grisée quand rien ne filmera : le choix retenu est gardé.
         val filmera = camera.pilotable && c.record
         listOf(Triple(v.puceCamera, c.msgCamera, filmera), Triple(v.puceEcall, c.msgEcall, true)).forEach { (puce, choisi, permis) ->

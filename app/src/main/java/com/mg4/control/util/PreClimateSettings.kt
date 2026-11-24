@@ -53,7 +53,13 @@ object PreClimateSettings {
     private const val KEY_CAMP_TEMP = "preclim_camp_temp"
     private const val KEY_CAMP_FAN = "preclim_camp_fan"
     private const val KEY_CAMP_AC = "preclim_camp_ac"
+    /** Ancienne clé (intérieur oui / non), relue tant que [KEY_CAMP_LOOP] n'existe pas. */
     private const val KEY_CAMP_RECIRC = "preclim_camp_recirc_inner"
+    private const val KEY_CAMP_LOOP = "preclim_camp_recirc"
+    private const val KEY_CAMP_AUTO = "preclim_camp_auto"
+    private const val KEY_CAMP_AUTOVOL = "preclim_camp_auto_volume"
+    private const val KEY_CAMP_AIR = "preclim_camp_air"
+    private const val KEY_CAMP_ECO = "preclim_camp_eco"
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -72,7 +78,16 @@ object PreClimateSettings {
             tempC = p.getInt(KEY_CAMP_TEMP, d.tempC),
             fan = p.getInt(KEY_CAMP_FAN, d.fan),
             ac = p.getBoolean(KEY_CAMP_AC, d.ac),
-            recircInner = p.getBoolean(KEY_CAMP_RECIRC, d.recircInner),
+            recirc = p.getInt(KEY_CAMP_LOOP, if (p.contains(KEY_CAMP_RECIRC)) (if (p.getBoolean(KEY_CAMP_RECIRC, true)) 0 else 1) else d.recirc)
+                .takeIf { it in 0..2 } ?: d.recirc,
+            auto = p.getBoolean(KEY_CAMP_AUTO, d.auto),
+            autoVolume = p.getInt(KEY_CAMP_AUTOVOL, d.autoVolume).takeIf { it in 0..2 } ?: d.autoVolume,
+            // Au moins un sens de l'air : un masque sans visage, pieds ni pare-brise reprend les pieds.
+            airMask = p.getInt(KEY_CAMP_AIR, d.airMask).let { m ->
+                if (m and (com.mg4.control.model.AirFlow.FACE or com.mg4.control.model.AirFlow.FEET or com.mg4.control.model.AirFlow.WINDSHIELD) == 0)
+                    m or com.mg4.control.model.AirFlow.FEET else m
+            },
+            eco = p.getBoolean(KEY_CAMP_ECO, d.eco),
         )
     }
 
@@ -88,7 +103,12 @@ object PreClimateSettings {
             .putInt(KEY_CAMP_TEMP, c.tempC)
             .putInt(KEY_CAMP_FAN, c.fan)
             .putBoolean(KEY_CAMP_AC, c.ac)
-            .putBoolean(KEY_CAMP_RECIRC, c.recircInner)
+            .putInt(KEY_CAMP_LOOP, c.recirc)
+            .remove(KEY_CAMP_RECIRC)
+            .putBoolean(KEY_CAMP_AUTO, c.auto)
+            .putInt(KEY_CAMP_AUTOVOL, c.autoVolume)
+            .putInt(KEY_CAMP_AIR, c.airMask)
+            .putBoolean(KEY_CAMP_ECO, c.eco)
             .apply()
     }
 

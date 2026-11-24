@@ -1501,6 +1501,8 @@
     <string name="preclim_camp_msg_cam">Videoüberwachung aktiv</string>
     <string name="preclim_camp_msg_ecall">eCall aktiv</string>
     <string name="preclim_camp_kept">Einstellungen bleiben für die nächste Nacht</string>
+    <string name="preclim_camp_hvac_mode">Modus</string>
+    <string name="preclim_camp_manual">Manuell</string>
     <string name="preclim_plan_camp">Camping in %1$s · Stopp unter %2$d %%</string>
     <string name="preclim_camp_warn_ready">Das Auto muss die ganze Nacht in READY bleiben: Schalten Sie es nicht aus. Solange es in READY ist, läuft die Klimaanlage ohne Zeitlimit.</string>
     <string name="preclim_camp_warn_door">Das Öffnen der Fahrertür beendet READY: Der Camping-Modus läuft dann noch 2 h, danach schaltet sich das Auto aus.</string>

@@ -1403,6 +1403,8 @@
     <string name="preclim_camp_msg_cam">Kamerový dohled aktivní</string>
     <string name="preclim_camp_msg_ecall">eCall aktivní</string>
     <string name="preclim_camp_kept">Nastavení zůstane na další noc</string>
+    <string name="preclim_camp_hvac_mode">Režim</string>
+    <string name="preclim_camp_manual">Ruční</string>
     <string name="preclim_plan_camp">Kempování za %1$s · zastaví pod %2$d %%</string>
     <string name="preclim_camp_warn_ready">Auto musí zůstat celou noc v READY: nevypínejte ho. Dokud je v READY, klimatizace běží bez časového omezení.</string>
     <string name="preclim_camp_warn_door">Otevření dveří řidiče ukončí READY: kempování pak běží ještě 2 h a potom se auto vypne.</string>

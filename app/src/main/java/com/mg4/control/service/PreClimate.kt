@@ -191,7 +191,7 @@ object PreClimate {
             val maintenant = SystemClock.elapsedRealtime()
             val mur = minuteDuJour()
             val cycles = PreClimatePlan.cycles(borne, maintenant, mur)
-            val snap = instantane(clim)
+            val snap = instantane(clim, camping = camp != null)
             val soc = EnergyReader.soc()
             presetApplied = false
             lastStepKey = null
@@ -215,7 +215,7 @@ object PreClimate {
                 "1er cycle dans ${"%.0f".format(java.util.Locale.US, PreClimatePlan.minutesUntil(borne.firstMinuteOfDay, mur))} min") +
                 (if (borne.surveillance) ", SURVEILLANCE (clim coupée)" else
                     ", clim ${borne.tempC} °C ventil. ${borne.fan}${if (borne.dog) ", mode chien" else ""}") +
-                (camp?.let { ", CAMPING (A/C ${it.ac}, recyclage ${if (it.recircInner) "intérieur" else "extérieur"}, portes ${if (it.lockDoors) "verrouillées" else "non verrouillées"}, " +
+                (camp?.let { ", CAMPING (${if (it.auto) "AUTO débit ${it.autoVolume}" else "manuel"}, A/C ${it.ac}, ECO ${it.eco}, air ${it.airMask}, recyclage ${it.recirc}, portes ${if (it.lockDoors) "verrouillées" else "non verrouillées"}, " +
                     "vidéo ${it.record}, écran ${it.screen}, messages caméra ${it.msgCamera} eCall ${it.msgEcall})" } ?: "") + ", activation dans " +
                 "${(e.lockAtMs - maintenant) / 1000} s, arrêt sous ${e.minSoc} % (batterie ${soc ?: "?"} %) ; avant : $snap")
             principal.post {
@@ -426,11 +426,32 @@ object PreClimate {
 
     /** Réglages de la pré-climatisation : marche, consigne, ventilation, compresseur. */
     private fun appliquer(req: PreClimateRequest) {
+        req.camping?.let { appliquerCamping(it); return }
         val ok = PreClimateClimate.applySteps(req).map { pas ->
             ecrire(pas).also { if (pas == ClimateStep.PowerOn) SystemClock.sleep(CLIM_START_MS) }
         }.all { it }
         presetApplied = true
         AppLogger.i(TAG, "clim réglée : ${req.tempC} °C, ventilation ${req.fan}, A/C → ok=$ok")
+    }
+
+    /**
+     * Mode camping (2026-11-24) : tous ses réglages de clim, par le même chemin que les profils —
+     * AUTO et son débit, ventilation, A/C, ECO, sens de l'air et dégivrage arrière, recirculation,
+     * dans l'ordre qui tient en AUTO (#177). En AUTO, le sens de l'air reste à la voiture si
+     * « Ce que règle AUTO » le lui laisse ; le dégivrage arrière, lui, est toujours écrit.
+     */
+    private fun appliquerCamping(c: com.mg4.control.model.CampingConfig) {
+        val etat = MG4Hardware.getClimateState()
+        val airVoiture = c.auto && com.mg4.control.util.ClimateAutoScope.carSetsAir(appContext)
+        val air = if (airVoiture) c.airMask and com.mg4.control.model.AirFlow.REAR_DEFROST else c.airMask
+        val ok = MG4Hardware.applyProfileClimate(
+            power = true, ac = c.ac, autoMode = c.auto, targetTemp = c.tempC, fanLevel = c.fan,
+            loopMode = c.recirc, airFlow = air,
+            eco = c.eco.takeIf { etat?.ecoOn != null },
+            autoVolume = c.autoVolume.takeIf { c.auto && etat?.autoVolume != null })
+        presetApplied = true
+        AppLogger.i(TAG, "camping : clim réglée (${c.tempC} °C, ${if (c.auto) "AUTO débit ${c.autoVolume}" else "ventilation ${c.fan}"}, " +
+            "A/C ${c.ac}, ECO ${c.eco}, air $air${if (airVoiture) " (sens laissé à AUTO)" else ""}, recyclage ${c.recirc}) → ok=$ok")
     }
 
     /** Surveillance : clim arrêtée pour toute la durée ; ses réglages d'avant reviennent à la fin. */
@@ -449,6 +470,9 @@ object PreClimate {
             is ClimateStep.Ac -> MG4Hardware.setClimateAc(pas.on)
             is ClimateStep.Loop -> MG4Hardware.setClimateLoopMode(pas.mode)
             is ClimateStep.Air -> MG4Hardware.setClimateAirFlow(pas.direction)
+            is ClimateStep.Eco -> MG4Hardware.setClimateEco(pas.on)
+            is ClimateStep.DefrostRear -> MG4Hardware.setClimateDefrostRear(pas.on)
+            is ClimateStep.AutoVolume -> MG4Hardware.setClimateAutoVolume(pas.level)
         }
     } catch (e: Exception) {
         AppLogger.w(TAG, "écriture clim $pas : ${e.message}")
@@ -517,7 +541,8 @@ object PreClimate {
 
     // ── Outils ───────────────────────────────────────────────────────────────
 
-    private fun instantane(s: MG4Hardware.ClimateState): ClimateSnapshot {
+    /** [camping] : relève aussi ECO, le dégivrage arrière et le débit en AUTO, que le camping règle. */
+    private fun instantane(s: MG4Hardware.ClimateState, camping: Boolean = false): ClimateSnapshot {
         val r = s.reglages()
         return ClimateSnapshot(
             powerOn = s.powerOn,
@@ -528,6 +553,9 @@ object PreClimate {
             ac = s.acOn,
             loopMode = s.loopMode,
             airFlow = s.airFlow,
+            eco = s.ecoOn.takeIf { camping },
+            defrostRear = s.defrostRear.takeIf { camping },
+            autoVolume = s.autoVolume.takeIf { camping },
         )
     }
 

@@ -1501,6 +1501,8 @@
     <string name="preclim_camp_msg_cam">Videovigilância ativa</string>
     <string name="preclim_camp_msg_ecall">eCall ativo</string>
     <string name="preclim_camp_kept">Definições guardadas para a próxima noite</string>
+    <string name="preclim_camp_hvac_mode">Modo</string>
+    <string name="preclim_camp_manual">Manual</string>
     <string name="preclim_plan_camp">Campismo dentro de %1$s · para abaixo de %2$d %%</string>
     <string name="preclim_camp_warn_ready">O carro tem de ficar em READY toda a noite: não o desligue. Enquanto estiver em READY, a climatização funciona sem limite de tempo.</string>
     <string name="preclim_camp_warn_door">Abrir a porta do condutor tira o carro de READY: o campismo continua 2 h e depois o carro desliga-se.</string>

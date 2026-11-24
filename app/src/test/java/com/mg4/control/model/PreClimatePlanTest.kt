@@ -249,14 +249,15 @@ class PreClimatePlanTest {
         assertEquals(35, CampingPlan.clampSoc(33))
     }
 
-    @Test fun `camping sets its own climate, A-C and recirculation included`() {
-        val c = camp().let { it.copy(camping = it.camping!!.copy(tempC = 18, fan = 2, ac = false, recircInner = false)) }
-        assertEquals(listOf(ClimateStep.PowerOn, ClimateStep.Temp(18), ClimateStep.Fan(2), ClimateStep.Ac(false),
-            ClimateStep.Loop(PreClimateClimate.LOOP_OUTSIDE)), PreClimateClimate.applySteps(c))
-        val dedans = camp()
-        assertEquals(ClimateStep.Loop(PreClimateClimate.LOOP_INNER), PreClimateClimate.applySteps(dedans).last())
-        // Hors camping : comme avant, A/C toujours en marche, recirculation non touchée.
-        assertEquals(listOf(ClimateStep.PowerOn, ClimateStep.Temp(25), ClimateStep.Fan(8), ClimateStep.Ac(true)),
-            PreClimateClimate.applySteps(req(PreClimateMode.NOW)))
+    @Test fun `the end of camping puts back ECO, rear defrost and AUTO airflow too`() {
+        val snap = ClimateSnapshot(powerOn = true, tempC = 21, fan = null, auto = true, ac = true, loopMode = 2, airFlow = 1,
+            eco = false, defrostRear = false, autoVolume = 1)
+        assertEquals(listOf(ClimateStep.Temp(21), ClimateStep.AutoVolume(1), ClimateStep.AutoOn, ClimateStep.Ac(true),
+            ClimateStep.Loop(2), ClimateStep.DefrostRear(false), ClimateStep.Eco(false)),
+            PreClimateClimate.restoreSteps(snap, presetApplied = true, climOn = true))
+        // Hors camping, rien n'est relevé : ni ECO, ni dégivrage arrière, ni débit.
+        val avant = snap.copy(eco = null, defrostRear = null, autoVolume = null)
+        assertEquals(listOf(ClimateStep.Temp(21), ClimateStep.AutoOn, ClimateStep.Ac(true), ClimateStep.Loop(2)),
+            PreClimateClimate.restoreSteps(avant, presetApplied = true, climOn = true))
     }
 }

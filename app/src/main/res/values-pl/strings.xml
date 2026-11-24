@@ -1501,6 +1501,8 @@
     <string name="preclim_camp_msg_cam">Monitoring wideo włączony</string>
     <string name="preclim_camp_msg_ecall">eCall aktywny</string>
     <string name="preclim_camp_kept">Ustawienia zapamiętane na następną noc</string>
+    <string name="preclim_camp_hvac_mode">Tryb</string>
+    <string name="preclim_camp_manual">Ręczny</string>
     <string name="preclim_plan_camp">Kemping za %1$s · stop poniżej %2$d %%</string>
     <string name="preclim_camp_warn_ready">Samochód musi pozostać w READY przez całą noc: nie wyłączaj go. Dopóki jest w READY, klimatyzacja działa bez limitu czasu.</string>
     <string name="preclim_camp_warn_door">Otwarcie drzwi kierowcy wyłącza READY: kemping trwa wtedy jeszcze 2 h, potem samochód się wyłącza.</string>

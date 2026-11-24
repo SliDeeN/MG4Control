@@ -80,8 +80,15 @@ data class CampingConfig(
     val tempC: Int = CampingPlan.DEFAULT_TEMP,
     val fan: Int = CampingPlan.DEFAULT_FAN,
     val ac: Boolean = true,
-    /** Recirculation : intérieur (vrai) ou air extérieur. */
-    val recircInner: Boolean = true,
+    /** Recirculation (MG4Hardware.LoopMode) : 0 intérieur, 1 extérieur, 2 auto. */
+    val recirc: Int = 0,
+    /** Clim en AUTO (2026-11-24) : la ventilation est alors au débit [autoVolume], pas à [fan]. */
+    val auto: Boolean = false,
+    /** Débit en AUTO (MG4Hardware.AutoVolume, #178) : 0 fort, 1 moyen, 2 faible. */
+    val autoVolume: Int = 2,
+    /** Sens de l'air et dégivrage arrière, en boutons [AirFlow] (comme le profil) : pieds par défaut. */
+    val airMask: Int = AirFlow.FEET,
+    val eco: Boolean = false,
 )
 
 object CampingPlan {
@@ -389,6 +396,10 @@ data class ClimateSnapshot(
     val ac: Boolean?,
     val loopMode: Int?,
     val airFlow: Int?,
+    /** Relevés seulement pour le mode camping (2026-11-24), qui les règle ; `null` = pas touchés. */
+    val eco: Boolean? = null,
+    val defrostRear: Boolean? = null,
+    val autoVolume: Int? = null,
 )
 
 /** Une écriture de la clim, dans l'ordre où la faire. */
@@ -401,6 +412,9 @@ sealed class ClimateStep {
     data class Ac(val on: Boolean) : ClimateStep()
     data class Loop(val mode: Int) : ClimateStep()
     data class Air(val direction: Int) : ClimateStep()
+    data class Eco(val on: Boolean) : ClimateStep()
+    data class DefrostRear(val on: Boolean) : ClimateStep()
+    data class AutoVolume(val level: Int) : ClimateStep()
 }
 
 object PreClimateClimate {
@@ -411,17 +425,8 @@ object PreClimateClimate {
      * envoyé en même temps que la mise en marche ne prenait pas toujours). Compresseur TOUJOURS
      * en marche : le choix a été retiré du pop-up le 2026-10-23, à sa demande.
      */
-    fun applySteps(req: PreClimateRequest): List<ClimateStep> {
-        val c = req.camping?.takeIf { PreClimatePlan.camping(req) }
-            ?: return listOf(ClimateStep.PowerOn, ClimateStep.Temp(req.tempC), ClimateStep.Fan(req.fan), ClimateStep.Ac(true))
-        // Mode camping (2026-11-24) : ses propres réglages — A/C au choix, et la recirculation.
-        return listOf(ClimateStep.PowerOn, ClimateStep.Temp(c.tempC), ClimateStep.Fan(c.fan), ClimateStep.Ac(c.ac),
-            ClimateStep.Loop(if (c.recircInner) LOOP_INNER else LOOP_OUTSIDE))
-    }
-
-    /** Recirculation intérieure / air extérieur (MG4Hardware.LoopMode, mesuré sur SWI133). */
-    const val LOOP_INNER = 0
-    const val LOOP_OUTSIDE = 1
+    fun applySteps(req: PreClimateRequest): List<ClimateStep> = listOf(
+        ClimateStep.PowerOn, ClimateStep.Temp(req.tempC), ClimateStep.Fan(req.fan), ClimateStep.Ac(true))
 
     /**
      * Écritures qui rendent à la clim l'état de [snap].
@@ -447,11 +452,15 @@ object PreClimateClimate {
         val pas = mutableListOf<ClimateStep>()
         if (climOn != true) pas += ClimateStep.PowerOn
         snap.tempC?.let { pas += ClimateStep.Temp(it) }
+        // Débit en AUTO avant AUTO : la voiture y repart directement (mode camping seulement).
+        snap.autoVolume?.let { pas += ClimateStep.AutoVolume(it) }
         if (snap.auto == true) pas += ClimateStep.AutoOn
         else snap.fan?.let { pas += ClimateStep.Fan(it) }
         snap.ac?.let { pas += ClimateStep.Ac(it) }
         snap.loopMode?.let { pas += ClimateStep.Loop(it) }
         if (snap.auto != true) snap.airFlow?.takeIf { it in 0..6 }?.let { pas += ClimateStep.Air(it) }
+        snap.defrostRear?.let { pas += ClimateStep.DefrostRear(it) }
+        snap.eco?.let { pas += ClimateStep.Eco(it) }
         if (snap.powerOn == false) pas += ClimateStep.PowerOff
         return pas
     }
