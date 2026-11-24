@@ -35,6 +35,8 @@ object SettingsBackup {
         "restore_prompt_dismissed", "nav_side_detected", "cluster_power_learned", "audio_setting_last_source",
         "clim_last_manual_fan", "stats_export_dest", "stats_export_tree", "update_overlay_last_check",
         "update_overlay_last_ok", KEY_LAST_EXPORT,
+        // Prévision météo en cache de la luminosité auto : périmée à l'import, refaite à la requête suivante.
+        "autobri_forecast",
         // Démarrage où la fenêtre clim d'origine a été fermée, et nettoyage des gestes du plein écran :
         // des numéros de démarrage de CET écran, sans sens sur un écran réinitialisé.
         "saic_hvac_closed_boot", "immersive_gestures_boot",
@@ -55,6 +57,8 @@ object SettingsBackup {
     fun exclue(fichier: String, cle: String): Boolean = when (fichier) {
         "mg4_settings" -> cle in ETAT_REGLAGES || cle.startsWith("autobri_last")
         "mg4_abrp" -> cle == "accounts_json" || cle == "position_consent"
+        // Dernière source du raccourci « Cycle des sources » : un état, pas un réglage.
+        "mg4_shortcuts" -> cle == "shortcut_audio_cycle_last"
         "mg4_custom_rules" -> cle == "last_runs_json" || cle == "last_skips_json" || cle == "run_counts_json"
         "mg4_stats" -> cle == "last_reading_ms" || cle == "last_reading_soc" || cle == "pending_state"
         else -> false
