@@ -20,6 +20,10 @@ import android.widget.Toast
 import com.mg4.control.R
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.hardware.ReadyWatcher
+import com.mg4.control.model.CampingConfig
+import com.mg4.control.model.CampingPlan
+import com.mg4.control.model.CampingScreen
 import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateRequest
@@ -66,31 +70,32 @@ object PreClimatePopupOverlay {
     private var demarrage = false
     private var vues: Vues? = null
     private var req: PreClimateRequest? = null
-    /** Durée choisie avant « ∞ » : « Annuler » dans l'avertissement y revient. */
-    private var dureeAvantInfinie = PreClimatePlan.UNLIMITED_FALLBACK_MIN
+    /**
+     * Réglages du mode camping (2026-11-24), relus à l'ouverture : ceux de la dernière nuit. Choisi,
+     * le camping les porte dans [req] ; ils sont enregistrés à chaque changement ([changer]).
+     */
+    private var camping: CampingConfig = CampingConfig()
+    /** Le choix d'avant la tuile « Camping » : « Annuler » dans l'avertissement y revient. */
+    private var avantCamping: PreClimateRequest? = null
 
     /**
-     * READY suivi tant que le pop-up est ouvert (2026-11-23) : « ∞ » apparaît et disparaît en direct ;
-     * choisie, elle repasse à 2 h si la voiture quitte READY.
+     * READY suivi tant que le pop-up est ouvert : la tuile « Camping » apparaît et disparaît en direct ;
+     * choisie, elle est retirée si la voiture quitte READY (2026-11-24, comme « ∞ » avant elle).
      */
-    private val ecouteReady = com.mg4.control.hardware.ReadyWatcher.Listener { ready, _ ->
+    private val ecouteReady = ReadyWatcher.Listener { ready, _ ->
         handler.post {
             val r = req ?: return@post
-            if (!ready && PreClimatePlan.unlimited(r)) {
-                AppLogger.i(TAG, "Pop-up — sortie de READY : durée illimitée ramenée à ${PreClimatePlan.UNLIMITED_FALLBACK_MIN} min")
-                vues?.avertIllimite?.visibility = View.GONE
-            }
-            changer { it }
+            if (!ready && r.camping != null) {
+                AppLogger.i(TAG, "Pop-up — sortie de READY : mode camping retiré")
+                vues?.avertCamping?.visibility = View.GONE
+                changer { it.copy(camping = null) }
+            } else peindre()
         }
     }
 
-    /** « ∞ » proposée : « Maintenant », ni mode chien ni surveillance, voiture en READY. */
-    private fun infiniPossible(r: PreClimateRequest): Boolean =
-        r.mode == PreClimateMode.NOW && !r.dog && !r.surveillance && com.mg4.control.hardware.ReadyWatcher.ready == true
-
-    /** Une durée illimitée qui n'est plus possible repasse à 2 h. */
-    private fun sansInfiniHorsReady(r: PreClimateRequest): PreClimateRequest =
-        if (r.maxMin == PreClimatePlan.UNLIMITED && !infiniPossible(r)) r.copy(maxMin = PreClimatePlan.UNLIMITED_FALLBACK_MIN) else r
+    /** Tuile « Camping » proposée : « Maintenant », voiture en READY. */
+    private fun campingPossible(r: PreClimateRequest): Boolean =
+        r.mode == PreClimateMode.NOW && ReadyWatcher.ready == true
     /**
      * Appli caméra (issue #180), lue à l'ouverture : la surveillance est proposée à tous depuis le
      * 2026-11-08 ; l'appli ne fait que dire, sous « Clim coupée », si quelque chose sera filmé.
@@ -143,6 +148,10 @@ object PreClimatePopupOverlay {
             tempC = dernier.tempC.coerceIn(clim.tempMin, clim.tempMax),
             fan = dernier.fan.coerceIn(clim.fanMin, clim.fanMax),
         )
+        camping = PreClimateSettings.camping(app).let {
+            it.copy(tempC = it.tempC.coerceIn(clim.tempMin, clim.tempMax), fan = it.fan.coerceIn(clim.fanMin, clim.fanMax))
+        }
+        avantCamping = null
         val c = OverlayKit.contextes(app, LARGEUR_DP, HAUTEUR_DP)
         val v = try {
             val racine = LayoutInflater.from(c.themed).inflate(R.layout.overlay_preclim_setup, null)
@@ -170,7 +179,7 @@ object PreClimatePopupOverlay {
         gestionnaire = wm
         vues = v
         demarrage = false
-        com.mg4.control.hardware.ReadyWatcher.add(ecouteReady)
+        ReadyWatcher.add(ecouteReady)
         peindre()
         AppLogger.i(TAG, "Pop-up affiché — clim ${clim.temp ?: "?"} °C, ventilation ${if (clim.auto) "AUTO" else clim.fan ?: "?"}, " +
             "bornes ${clim.tempMin}–${clim.tempMax} °C / ${clim.fanMin}–${clim.fanMax}, " +
@@ -190,7 +199,7 @@ object PreClimatePopupOverlay {
         handler.post {
             val v = vue ?: return@post
             runCatching { gestionnaire?.removeView(v) }
-            com.mg4.control.hardware.ReadyWatcher.remove(ecouteReady)
+            ReadyWatcher.remove(ecouteReady)
             vue = null
             vues = null
             gestionnaire = null
@@ -249,13 +258,20 @@ object PreClimatePopupOverlay {
         val rappel: View = racine.findViewById(R.id.preclim_unlock_layer)
         val rappelJamais: TextView = racine.findViewById(R.id.preclim_unlock_never)
         val rappelOk: TextView = racine.findViewById(R.id.preclim_unlock_ok)
-        // Durée illimitée (2026-11-23) : avertissement par-dessus la carte.
-        val avertIllimite: View = racine.findViewById(R.id.preclim_unlimited_layer)
-        val illimiteTexte: TextView = racine.findViewById(R.id.preclim_unlimited_text)
-        val illimiteOk: TextView = racine.findViewById(R.id.preclim_unlimited_ok)
-        val illimiteAnnuler: TextView = racine.findViewById(R.id.preclim_unlimited_cancel)
-        /** La puce « ∞ », montrée seulement voiture en READY. */
-        var puceInfinie: TextView? = null
+        // Mode camping (2026-11-24) : tuile, réglages, clim en plus, avertissement par-dessus la carte.
+        val campTuile: TextView = racine.findViewById(R.id.preclim_camp_toggle)
+        val campBloc: LinearLayout = racine.findViewById(R.id.preclim_camping)
+        val campClim: LinearLayout = racine.findViewById(R.id.preclim_camp_climate)
+        val avertCamping: View = racine.findViewById(R.id.preclim_camp_warn_layer)
+        val campRangees: LinearLayout = racine.findViewById(R.id.preclim_camp_warn_rows)
+        val campOk: TextView = racine.findViewById(R.id.preclim_camp_warn_ok)
+        val campAnnuler: TextView = racine.findViewById(R.id.preclim_camp_warn_cancel)
+        var campDelai: Ligne? = null
+        var campBatterie: Ligne? = null
+        /** Ligne « Enregistrement vidéo » : seulement si l'appli caméra se pilote et filme d'office. */
+        var campVideo: View? = null
+        var puceCamera: TextView? = null
+        var puceEcall: TextView? = null
         val cases = mutableListOf<TextView>()
         val puces = mutableListOf<TextView>()
         val crans = mutableListOf<View>()
@@ -318,43 +334,6 @@ object PreClimatePopupOverlay {
             })
             v.puces += puce
         }
-        // « ∞ » (2026-11-23) : sans limite tant que la voiture reste en READY ; avertissement au choix.
-        v.puceInfinie = TextView(v.themed).apply {
-            gravity = Gravity.CENTER
-            textSize = 24f
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-            maxLines = 1
-            text = "∞"
-            contentDescription = v.s(R.string.preclim_unlimited_title)
-            setOnClickListener {
-                val r = req ?: return@setOnClickListener
-                if (PreClimatePlan.unlimited(r) || r.dog || r.surveillance) return@setOnClickListener
-                dureeAvantInfinie = PreClimatePlan.maxMinutes(r)
-                changer { it.copy(maxMin = PreClimatePlan.UNLIMITED) }
-                v.illimiteTexte.text = v.s(R.string.preclim_unlimited_text, PreClimateSettings.minSoc(v.loc))
-                v.avertIllimite.visibility = View.VISIBLE
-                AppLogger.i(TAG, "Pop-up — durée illimitée choisie, avertissement affiché")
-            }
-        }
-        v.rangeeMax.addView(v.puceInfinie, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
-            marginStart = v.dp(8f)
-        })
-        OverlayKit.fond(v.racine.findViewById(R.id.preclim_unlimited_badge), v.alerteDoux, ovale = true)
-        v.racine.findViewById<ImageView>(R.id.preclim_unlimited_icon).imageTintList = ColorStateList.valueOf(v.alerte)
-        OverlayKit.fond(v.illimiteOk, v.alerte, rayon = v.dp(12f).toFloat())
-        v.illimiteOk.setTextColor(v.surAlerte)
-        v.illimiteOk.setOnClickListener {
-            v.avertIllimite.visibility = View.GONE
-            AppLogger.i(TAG, "Pop-up — durée illimitée confirmée")
-        }
-        val renoncer = View.OnClickListener {
-            v.avertIllimite.visibility = View.GONE
-            changer { it.copy(maxMin = dureeAvantInfinie) }
-            AppLogger.i(TAG, "Pop-up — durée illimitée annulée")
-        }
-        v.illimiteAnnuler.setOnClickListener(renoncer)
-        v.avertIllimite.setOnClickListener(renoncer)
-
         v.premier.libelle.text = v.s(R.string.preclim_first)
         v.duree.libelle.text = v.s(R.string.preclim_run)
         v.cycles.libelle.text = v.s(R.string.preclim_runs)
@@ -365,8 +344,17 @@ object PreClimatePopupOverlay {
         pas(v.duree) { r, d -> r.copy(runMin = PreClimatePlan.clampRun(r.runMin + d * PreClimatePlan.RUN_STEP)) }
         pas(v.cycles) { r, d -> r.copy(runs = PreClimatePlan.clampRuns(r.runs + d)) }
         pas(v.pause) { r, d -> r.copy(pauseMin = PreClimatePlan.clampPause(r.pauseMin + d * PreClimatePlan.PAUSE_STEP)) }
-        pas(v.temp) { r, d -> r.copy(tempC = (r.tempC + d).coerceIn(v.clim.tempMin, v.clim.tempMax)) }
-        pas(v.ventil) { r, d -> r.copy(fan = (r.fan + d).coerceIn(v.clim.fanMin, v.clim.fanMax)) }
+        // En camping, la température et la ventilation sont les siennes (retenues d'une nuit à l'autre).
+        pas(v.temp) { r, d ->
+            val c = r.camping
+            if (c != null) r.copy(camping = c.copy(tempC = (c.tempC + d).coerceIn(v.clim.tempMin, v.clim.tempMax)))
+            else r.copy(tempC = (r.tempC + d).coerceIn(v.clim.tempMin, v.clim.tempMax))
+        }
+        pas(v.ventil) { r, d ->
+            val c = r.camping
+            if (c != null) r.copy(camping = c.copy(fan = (c.fan + d).coerceIn(v.clim.fanMin, v.clim.fanMax)))
+            else r.copy(fan = (r.fan + d).coerceIn(v.clim.fanMin, v.clim.fanMax))
+        }
 
         // Crans de la ventilation, sous sa ligne.
         (v.clim.fanMin..v.clim.fanMax).forEach { _ ->
@@ -378,12 +366,13 @@ object PreClimatePopupOverlay {
         }
 
         v.chien.setOnClickListener {
-            changer { it.copy(dog = !it.dog, surveillance = false) }
+            changer { it.copy(dog = !it.dog, surveillance = false, camping = null) }
         }
-        // Surveillance : exclusive du mode chien.
+        // Surveillance : exclusive du mode chien et du camping.
         v.surveillance.setOnClickListener {
-            changer { it.copy(surveillance = !it.surveillance, dog = false) }
+            changer { it.copy(surveillance = !it.surveillance, dog = false, camping = null) }
         }
+        brancherCamping(app, v)
         v.demarrer.setOnClickListener { demarrer(app) }
         brancherRappel(app, v)
     }
@@ -419,6 +408,158 @@ object PreClimatePopupOverlay {
         }
     }
 
+    /**
+     * Mode camping (2026-11-24) : la tuile (avertissement à chaque choix), ses réglages à gauche —
+     * délai, portes, batterie minimum, vidéo, écran la nuit, message — et l'A/C et la recirculation
+     * à droite. Lignes de 42 dp : elles tiennent dans la carte de 440 dp.
+     */
+    private fun brancherCamping(app: Context, v: Vues) {
+        v.campTuile.setOnClickListener {
+            val r = req ?: return@setOnClickListener
+            if (r.camping != null) { changer { it.copy(camping = null) }; return@setOnClickListener }
+            avantCamping = r
+            changer { it.copy(camping = camping, dog = false, surveillance = false) }
+            montrerAvertCamping(v)
+        }
+        OverlayKit.fond(v.racine.findViewById(R.id.preclim_camp_warn_badge), v.alerteDoux, ovale = true)
+        v.racine.findViewById<ImageView>(R.id.preclim_camp_warn_icon).imageTintList = ColorStateList.valueOf(v.alerte)
+        OverlayKit.fond(v.campOk, v.alerte, rayon = v.dp(12f).toFloat())
+        v.campOk.setTextColor(v.surAlerte)
+        v.campOk.setOnClickListener {
+            v.avertCamping.visibility = View.GONE
+            AppLogger.i(TAG, "Pop-up — mode camping confirmé")
+        }
+        val renoncer = View.OnClickListener {
+            v.avertCamping.visibility = View.GONE
+            val avant = avantCamping
+            changer { avant ?: it.copy(camping = null) }
+            AppLogger.i(TAG, "Pop-up — mode camping annulé")
+        }
+        v.campAnnuler.setOnClickListener(renoncer)
+        v.avertCamping.setOnClickListener(renoncer)
+
+        // ── Gauche : les réglages du camping ──
+        fun modifier(f: (CampingConfig) -> CampingConfig) = changer { r -> r.camping?.let { r.copy(camping = f(it)) } ?: r }
+        val delai = ligneReglage(v, v.campBloc)
+        delai.libelle.text = v.s(R.string.preclim_camp_delay)
+        pas(delai) { r, d -> r.camping?.let { r.copy(camping = it.copy(delayS = CampingPlan.stepDelay(it.delayS, d))) } ?: r }
+        v.campDelai = delai
+        v.campBloc.addView(rangeeChoix(v, R.string.preclim_camp_lock, listOf(v.s(R.string.segment_no), v.s(R.string.segment_yes)),
+            if (camping.lockDoors) 1 else 0, 200f) { modifier { c -> c.copy(lockDoors = it == 1) } })
+        val batterie = ligneReglage(v, v.campBloc)
+        batterie.libelle.text = v.s(R.string.preclim_camp_soc)
+        pas(batterie) { r, d -> r.camping?.let { r.copy(camping = it.copy(minSoc = CampingPlan.clampSoc(it.minSoc + d * CampingPlan.SOC_STEP))) } ?: r }
+        v.campBatterie = batterie
+        val video = rangeeChoix(v, R.string.preclim_camp_record, listOf(v.s(R.string.segment_no), v.s(R.string.segment_yes)),
+            if (camping.record) 1 else 0, 200f) { modifier { c -> c.copy(record = it == 1) } }
+        v.campBloc.addView(video)
+        v.campVideo = video
+        val ecrans = listOf(CampingScreen.DIM, CampingScreen.FULL, CampingScreen.OFF, CampingScreen.FOLLOW)
+        v.campBloc.addView(rangeeChoix(v, R.string.preclim_camp_screen,
+            listOf(R.string.preclim_camp_screen_dim, R.string.preclim_camp_screen_full, R.string.preclim_camp_screen_off,
+                R.string.preclim_camp_screen_follow).map { v.s(it) },
+            ecrans.indexOf(camping.screen).coerceAtLeast(0), 360f) { modifier { c -> c.copy(screen = ecrans[it]) } })
+        // Message : deux puces à cocher, aucune ou les deux.
+        val messages = LinearLayout(v.themed).apply { orientation = LinearLayout.HORIZONTAL }
+        fun puce(texte: Int, bascule: (CampingConfig) -> CampingConfig): TextView = TextView(v.themed).apply {
+            text = v.s(texte)
+            gravity = Gravity.CENTER
+            textSize = 15f
+            maxLines = 1
+            setPadding(v.dp(14f), 0, v.dp(14f), 0)
+            setOnClickListener { modifier(bascule) }
+            messages.addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, v.dp(38f)).apply {
+                if (messages.childCount > 0) marginStart = v.dp(8f)
+            })
+        }
+        v.puceCamera = puce(R.string.preclim_camp_msg_cam) { it.copy(msgCamera = !it.msgCamera) }
+        v.puceEcall = puce(R.string.preclim_camp_msg_ecall) { it.copy(msgEcall = !it.msgEcall) }
+        v.campBloc.addView(rangee(v, R.string.preclim_camp_message, messages))
+
+        // ── Droite : A/C et recirculation, sous la ventilation ──
+        v.campClim.addView(rangeeChoix(v, R.string.clim_ac, listOf(v.s(R.string.segment_no), v.s(R.string.segment_yes)),
+            if (camping.ac) 1 else 0, 200f) { modifier { c -> c.copy(ac = it == 1) } })
+        v.campClim.addView(rangeeChoix(v, R.string.clim_section_loop, listOf(v.s(R.string.clim_loop_inner), v.s(R.string.clim_loop_outside)),
+            if (camping.recircInner) 0 else 1, 260f) { modifier { c -> c.copy(recircInner = it == 0) } })
+    }
+
+    /** Une ligne « intitulé − valeur + » ajoutée à [dans], resserrée à 42 dp. */
+    private fun ligneReglage(v: Vues, dans: LinearLayout): Ligne {
+        val vue = LayoutInflater.from(v.themed).inflate(R.layout.item_preclim_stepper, dans, false)
+        vue.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, v.dp(42f))
+        dans.addView(vue)
+        return Ligne(vue).also {
+            // Boutons à 40 dp : ils tiennent dans la ligne de 42 dp.
+            listOf(it.moins, it.plus).forEach { bouton ->
+                bouton.imageTintList = ColorStateList.valueOf(v.texte)
+                bouton.layoutParams = bouton.layoutParams.apply { width = v.dp(40f); height = v.dp(40f) }
+            }
+        }
+    }
+
+    /** Une ligne « intitulé · [contenu] » de 42 dp. */
+    private fun rangee(v: Vues, intitule: Int, contenu: View, largeurDp: Float? = null): LinearLayout =
+        LinearLayout(v.themed).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, v.dp(42f))
+            addView(TextView(v.themed).apply {
+                text = v.s(intitule)
+                setTextColor(v.texte)
+                textSize = 16f
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = v.dp(10f) })
+            addView(contenu, LinearLayout.LayoutParams(largeurDp?.let { v.dp(it) } ?: LinearLayout.LayoutParams.WRAP_CONTENT,
+                if (largeurDp != null) v.dp(38f) else LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+
+    /** Une ligne à segments (AppDialog.segments), de [largeurDp] de large. */
+    private fun rangeeChoix(v: Vues, intitule: Int, libelles: List<String>, choisi: Int, largeurDp: Float, onChoix: (Int) -> Unit): LinearLayout {
+        val segments = LinearLayout(v.themed).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundResource(R.drawable.bg_dialog_segments)
+            setPadding(v.dp(3f), v.dp(3f), v.dp(3f), v.dp(3f))
+        }
+        AppDialog.segments(segments, libelles, choisi, onChoix)
+        (0 until segments.childCount).forEach { (segments.getChildAt(it) as TextView).textSize = 14f }
+        return rangee(v, intitule, segments, largeurDp)
+    }
+
+    /** Avertissement du camping (2026-11-24), à chaque choix de la tuile : ses lignes relues chaque fois. */
+    private fun montrerAvertCamping(v: Vues) {
+        val c = req?.camping ?: return
+        v.campRangees.removeAllViews()
+        listOfNotNull(
+            R.drawable.ic_preclim_tent to v.s(R.string.preclim_camp_warn_ready),
+            R.drawable.ic_preclim_handle to v.s(R.string.preclim_camp_warn_door),
+            if (c.lockDoors) R.drawable.ic_preclim_key to v.s(R.string.preclim_camp_warn_unlock) else null,
+            R.drawable.ic_cluster_battery_charging to v.s(R.string.preclim_camp_warn_battery, c.minSoc),
+            R.drawable.ic_dialog_warning to v.s(R.string.preclim_camp_warn_lights),
+        ).forEach { (icone, texte) ->
+            v.campRangees.addView(LinearLayout(v.themed).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, v.dp(7f), 0, v.dp(7f))
+                addView(ImageView(v.themed).apply {
+                    setImageResource(icone)
+                    imageTintList = ColorStateList.valueOf(v.alerte)
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }, LinearLayout.LayoutParams(v.dp(24f), v.dp(24f)).apply { marginEnd = v.dp(14f) })
+                addView(TextView(v.themed).apply {
+                    text = texte
+                    setTextColor(v.texte2)
+                    textSize = 16f
+                }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            })
+        }
+        v.avertCamping.visibility = View.VISIBLE
+        AppLogger.i(TAG, "Pop-up — mode camping choisi, avertissement affiché")
+    }
+
+    /** « 45 s », « 2 min », « 10 min » : le délai avant activation. */
+    private fun delai(v: Vues, secondes: Int): String =
+        if (secondes >= 60) v.s(R.string.cluster_duration_min, secondes / 60) else "$secondes s"
+
     private operator fun <T> List<T>.component6(): T = this[5]
 
     /** Branche − et + d'une ligne ; maintenus, ils répètent le pas. */
@@ -428,8 +569,9 @@ object PreClimatePopupOverlay {
     }
 
     private fun changer(f: (PreClimateRequest) -> PreClimateRequest) {
-        val r = sansInfiniHorsReady(f(req ?: return))
+        val r = f(req ?: return)
         req = r
+        r.camping?.let { camping = it }
         // Enregistré à chaque changement, et pas seulement à « Démarrer » : fermé sans démarrer, ou
         // démarrage refusé (pas en P), le pop-up rouvre quand même sur ces réglages.
         vues?.let { PreClimateSettings.saveRequest(it.loc, r) }
@@ -440,8 +582,16 @@ object PreClimatePopupOverlay {
         val v = vues ?: return
         val r = req ?: return
         val maintenant = r.mode == PreClimateMode.NOW
-        v.blocMaintenant.visibility = if (maintenant) View.VISIBLE else View.GONE
+        val camp = PreClimatePlan.camping(r)
+        // Camping (2026-11-24) : ses réglages à la place des onglets et des durées.
+        v.modes.visibility = if (camp) View.GONE else View.VISIBLE
+        v.blocMaintenant.visibility = if (maintenant && !camp) View.VISIBLE else View.GONE
         v.blocHeure.visibility = if (maintenant) View.GONE else View.VISIBLE
+        v.campBloc.visibility = if (camp) View.VISIBLE else View.GONE
+        v.campClim.visibility = if (camp) View.VISIBLE else View.GONE
+        v.campTuile.visibility = if (camp || campingPossible(r)) View.VISIBLE else View.GONE
+        peindreBascule(v, v.campTuile, camp, v.accent, v.accentDoux)
+        if (camp) peindreCamping(v, r.camping!!)
         val max = PreClimatePlan.maxMinutes(r)
         v.puces.forEachIndexed { i, puce ->
             val on = PreClimatePlan.MAX_CHOICES[i] == max
@@ -450,24 +600,19 @@ object PreClimatePopupOverlay {
             puce.setTextColor(if (on) v.texte else v.texte2)
             puce.alpha = if (r.dog && !on) ALPHA_GRISE else 1f
         }
-        val illimitee = PreClimatePlan.unlimited(r)
-        v.puceInfinie?.let { puce ->
-            puce.visibility = if (infiniPossible(r)) View.VISIBLE else View.GONE
-            OverlayKit.fond(puce, if (illimitee) v.accentDoux else v.bouton, if (illimitee) v.accent else v.bordure,
-                v.dp(if (illimitee) 2f else 1f), v.dp(12f).toFloat())
-            puce.setTextColor(if (illimitee) v.texte else v.texte2)
-        }
         val mur = PreClimate.minuteDuJour()
         v.premier.valeur.text = heure(v, r.firstMinuteOfDay)
         v.duree.valeur.text = duree(v, r.runMin)
         v.cycles.valeur.text = r.runs.toString()
         v.pause.valeur.text = duree(v, r.pauseMin)
-        v.temp.valeur.text = v.s(R.string.preclim_value_celsius, r.tempC)
-        v.ventil.valeur.text = r.fan.toString()
+        val temp = r.camping?.takeIf { camp }?.tempC ?: r.tempC
+        val ventil = r.camping?.takeIf { camp }?.fan ?: r.fan
+        v.temp.valeur.text = v.s(R.string.preclim_value_celsius, temp)
+        v.ventil.valeur.text = ventil.toString()
         v.crans.forEachIndexed { i, cran ->
-            OverlayKit.fond(cran, if (v.clim.fanMin + i <= r.fan) v.accent else v.bordure, rayon = v.dp(3f).toFloat())
+            OverlayKit.fond(cran, if (v.clim.fanMin + i <= ventil) v.accent else v.bordure, rayon = v.dp(3f).toFloat())
         }
-        v.actuels.text = v.s(R.string.preclim_current, resumeActuel(v))
+        v.actuels.text = if (camp) v.s(R.string.preclim_camp_kept) else v.s(R.string.preclim_current, resumeActuel(v))
         v.chien.visibility = if (maintenant) View.VISIBLE else View.GONE
         v.avertChien.visibility = if (maintenant && r.dog) View.VISIBLE else View.GONE
         peindreBascule(v, v.chien, r.dog, v.accent, v.accentDoux)
@@ -476,8 +621,8 @@ object PreClimatePopupOverlay {
         val surv = maintenant && r.surveillance
         v.surveillance.visibility = if (maintenant) View.VISIBLE else View.GONE
         peindreBascule(v, v.surveillance, surv, v.danger, v.dangerDoux)
-        v.titre.text = v.s(if (surv) R.string.preclim_surv else R.string.preclim_title)
-        v.icone.setImageResource(if (surv) R.drawable.ic_preclim_cctv else R.drawable.ic_hvac_ac)
+        v.titre.text = v.s(when { surv -> R.string.preclim_surv; camp -> R.string.preclim_camp; else -> R.string.preclim_title })
+        v.icone.setImageResource(when { surv -> R.drawable.ic_preclim_cctv; camp -> R.drawable.ic_preclim_tent; else -> R.drawable.ic_hvac_ac })
         v.icone.imageTintList = ColorStateList.valueOf(if (surv) v.danger else v.accent)
         v.legendeMaintenant.text = v.s(if (surv) R.string.preclim_surv_caption else R.string.preclim_now_caption)
         v.arretsSurveillance.visibility = if (surv) View.VISIBLE else View.GONE
@@ -501,7 +646,7 @@ object PreClimatePopupOverlay {
         v.plan.text = when {
             surv -> v.s(R.string.preclim_plan_surv, heure(v, (mur + max).roundToInt()))
             maintenant && r.dog -> v.s(R.string.preclim_plan_dog, heure(v, (mur + max).roundToInt()))
-            illimitee -> v.s(R.string.preclim_plan_unlimited)
+            camp -> r.camping!!.let { v.s(R.string.preclim_plan_camp, delai(v, it.delayS), it.minSoc) }
             maintenant -> v.s(R.string.preclim_plan_now, heure(v, (mur + max).roundToInt()))
             else -> {
                 val cycles = PreClimatePlan.wallTimes(r, mur)
@@ -566,7 +711,25 @@ object PreClimatePopupOverlay {
         v.texteClimCoupee.visibility = if (visible) View.GONE else View.VISIBLE
     }
 
-    /** Bouton à bascule du bas (mode chien, surveillance) : cerclé de [vif] quand il est choisi. */
+    /** Valeurs du camping : délai, seuil, puces du message ; la ligne vidéo seulement si l'appli caméra filme d'office. */
+    private fun peindreCamping(v: Vues, c: CampingConfig) {
+        v.campDelai?.valeur?.text = delai(v, c.delayS)
+        v.campDelai?.moins?.alpha = if (c.delayS == CampingPlan.DELAYS_S.first()) ALPHA_GRISE else 1f
+        v.campDelai?.plus?.alpha = if (c.delayS == CampingPlan.DELAYS_S.last()) ALPHA_GRISE else 1f
+        v.campBatterie?.valeur?.text = v.s(R.string.preclim_value_percent, c.minSoc)
+        v.campBatterie?.moins?.alpha = if (c.minSoc <= CampingPlan.SOC_MIN) ALPHA_GRISE else 1f
+        v.campBatterie?.plus?.alpha = if (c.minSoc >= CampingPlan.SOC_MAX) ALPHA_GRISE else 1f
+        val filme = camera.pilotable && PreClimateSettings.dashcamAuto(v.loc)
+        v.campVideo?.visibility = if (filme) View.VISIBLE else View.GONE
+        listOf(v.puceCamera to c.msgCamera, v.puceEcall to c.msgEcall).forEach { (puce, on) ->
+            puce ?: return@forEach
+            OverlayKit.fond(puce, if (on) v.accentDoux else v.bouton, if (on) v.accent else v.bordure,
+                v.dp(if (on) 2f else 1f), v.dp(19f).toFloat())
+            puce.setTextColor(if (on) v.texte else v.texte2)
+        }
+    }
+
+    /** Bouton à bascule du bas (mode chien, surveillance, camping) : cerclé de [vif] quand il est choisi. */
     private fun peindreBascule(v: Vues, t: TextView, choisi: Boolean, vif: Int, doux: Int) {
         OverlayKit.fond(t, if (choisi) doux else v.bouton, if (choisi) vif else v.bordure,
             v.dp(if (choisi) 2f else 1f), v.dp(12f).toFloat())

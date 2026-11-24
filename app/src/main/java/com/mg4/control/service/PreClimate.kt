@@ -61,9 +61,12 @@ object PreClimate {
     /** Écran de fin : l'état est gardé ce temps, puis oublié. */
     private const val END_KEEP_MS = 5 * 60_000L
     private const val WAKE_MAX_MS = 26 * 3_600_000L
+    /** Mode camping : vidéo relancée toutes les 115 min, avant le plafond de 120 min de l'appli caméra. */
+    private const val CAMP_REC_RELANCE_MS = 115 * 60_000L
 
     enum class Phase { COUNTDOWN, ACTIVE, ENDED }
-    enum class LockState { PENDING, LOCKED, FAILED }
+    /** [NONE] : mode camping sans verrouillage (2026-11-24) — rien n'est verrouillé, pas de retour guetté. */
+    enum class LockState { PENDING, LOCKED, FAILED, NONE }
 
     /** Ce que montre l'écran de suivi ([PreClimateScreen]). Temps monotones. */
     data class Etat(
@@ -112,6 +115,8 @@ object PreClimate {
     private var lockConfirmedAt = 0L
     private var climOffReads = 0
     private var ticks = 0
+    /** Mode camping : dernier START de l'appli caméra (elle s'arrête d'elle-même à 120 min) ; 0 = rien de lancé. */
+    private var campRecAt = 0L
     /** Puissance des écrans (issue #210) : un relevé par seconde, moyenné sur cinq. */
     private val puissance = com.mg4.control.model.PowerSmoother()
 
@@ -161,18 +166,23 @@ object PreClimate {
             appContext = app
             // Surveillance : appli dashcam ou « sans caméra » permis (vérifié plus haut) ; pilotable, elle filme d'office.
             val surveillance = req.surveillance && req.mode == PreClimateMode.NOW
+            // Mode camping (2026-11-24) : sa consigne et sa ventilation, bornées comme les autres.
+            val camp = req.camping?.takeIf { PreClimatePlan.camping(req) }?.let {
+                it.copy(tempC = it.tempC.coerceIn(clim.tempMin, clim.tempMax), fan = it.fan.coerceIn(clim.fanMin, clim.fanMax))
+            }
             val borne = req.copy(
-                tempC = req.tempC.coerceIn(clim.tempMin, clim.tempMax),
-                fan = req.fan.coerceIn(clim.fanMin, clim.fanMax),
+                tempC = (camp?.tempC ?: req.tempC).coerceIn(clim.tempMin, clim.tempMax),
+                fan = (camp?.fan ?: req.fan).coerceIn(clim.fanMin, clim.fanMax),
+                camping = camp,
                 // Mode chien : « Maintenant » seulement — en attente, la clim serait coupée — et 2 h.
                 // Le choix de durée enregistré plus haut reste celui de l'utilisateur. Surveillance
                 // (issue #180) : « Maintenant » seulement aussi, et elle l'emporte sur le mode chien.
                 surveillance = surveillance,
                 dog = req.dog && !surveillance && req.mode == PreClimateMode.NOW,
                 maxMin = PreClimatePlan.maxMinutes(req.copy(surveillance = surveillance)).let { m ->
-                    // Sans limite seulement voiture en READY (2026-11-23) : sinon 2 h, comme au repli.
+                    // Sans limite seulement voiture en READY : sinon 2 h, comme au repli.
                     if (m == PreClimatePlan.UNLIMITED && com.mg4.control.hardware.ReadyWatcher.ready != true) {
-                        AppLogger.w(TAG, "durée illimitée demandée hors READY → ${PreClimatePlan.UNLIMITED_FALLBACK_MIN} min")
+                        AppLogger.w(TAG, "mode camping demandé hors READY → ${PreClimatePlan.UNLIMITED_FALLBACK_MIN} min")
                         PreClimatePlan.UNLIMITED_FALLBACK_MIN
                     } else m
                 })
@@ -186,13 +196,15 @@ object PreClimate {
             unlockWatch = UnlockWatch()
             climOffReads = 0
             ticks = 0
+            campRecAt = 0L
             puissance.reset()
             val e = Etat(
                 phase = Phase.COUNTDOWN, req = borne, startMs = maintenant, startWallMinute = mur,
-                lockAtMs = maintenant + PreClimateSettings.lockSeconds(app) * 1_000L,
+                // Camping : son propre délai avant activation, indépendant de celui de la page.
+                lockAtMs = maintenant + (camp?.delayS ?: PreClimateSettings.lockSeconds(app)) * 1_000L,
                 cycles = cycles, wallTimes = PreClimatePlan.wallTimes(borne, mur), step = null,
                 lock = LockState.PENDING, soc = soc, socStart = soc,
-                outsideC = MG4Hardware.getOutsideTempCelsius(), minSoc = PreClimateSettings.minSoc(app),
+                outsideC = MG4Hardware.getOutsideTempCelsius(), minSoc = camp?.minSoc ?: PreClimateSettings.minSoc(app),
                 snapshot = snap)
             etat = e
             prendreVeille(app)
@@ -200,7 +212,9 @@ object PreClimate {
                 "max ${borne.maxMin} min" else "${borne.runs} × ${borne.runMin} min (pause ${borne.pauseMin} min), " +
                 "1er cycle dans ${"%.0f".format(java.util.Locale.US, PreClimatePlan.minutesUntil(borne.firstMinuteOfDay, mur))} min") +
                 (if (borne.surveillance) ", SURVEILLANCE (clim coupée)" else
-                    ", clim ${borne.tempC} °C ventil. ${borne.fan}${if (borne.dog) ", mode chien" else ""}") + ", verrouillage dans " +
+                    ", clim ${borne.tempC} °C ventil. ${borne.fan}${if (borne.dog) ", mode chien" else ""}") +
+                (camp?.let { ", CAMPING (A/C ${it.ac}, recyclage ${if (it.recircInner) "intérieur" else "extérieur"}, portes ${if (it.lockDoors) "verrouillées" else "non verrouillées"}, " +
+                    "vidéo ${it.record}, écran ${it.screen}, messages caméra ${it.msgCamera} eCall ${it.msgEcall})" } ?: "") + ", activation dans " +
                 "${(e.lockAtMs - maintenant) / 1000} s, arrêt sous ${e.minSoc} % (batterie ${soc ?: "?"} %) ; avant : $snap")
             principal.post {
                 surDepart()
@@ -271,11 +285,35 @@ object PreClimate {
     }
 
     private fun verrouiller(e: Etat, maintenant: Long) {
+        val camp = e.req.camping
+        // Camping sans verrouillage (2026-11-24) : rien n'est verrouillé, l'écran de nuit s'affiche.
+        if (camp != null && !camp.lockDoors) {
+            AppLogger.i(TAG, "mode camping actif — portes laissées déverrouillées (réglage)")
+            val actif = e.copy(phase = Phase.ACTIVE, lock = LockState.NONE)
+            etat = actif
+            lancerVideoCamping(e)
+            suivre(actif, maintenant)
+            return
+        }
         MG4Hardware.lockDoors()
         val actif = e.copy(phase = Phase.ACTIVE, lock = LockState.PENDING)
         etat = actif
         travail.postDelayed({ verifierVerrou(1) }, LOCK_CHECK_MS)
+        lancerVideoCamping(e)
         suivre(actif, maintenant)
+    }
+
+    /**
+     * Mode camping : l'appli caméra filme à l'activation, si le réglage le demande et qu'elle se pilote
+     * (DashcamRemote vérifie l'enregistrement automatique et l'appli). Elle s'arrête d'elle-même à
+     * 120 min : [suivre] la relance avant.
+     */
+    private fun lancerVideoCamping(e: Etat) {
+        val camp = e.req.camping ?: return
+        val app = appContext ?: return
+        if (!camp.record) return
+        campRecAt = SystemClock.elapsedRealtime()
+        DashcamRemote.demarrer(app, com.mg4.control.model.DashcamContract.MAX_MINUTES, 0)
     }
 
     /** Relit le verrouillage ; au premier échec, essaie la voie de repli. */
@@ -336,6 +374,14 @@ object PreClimate {
         }
         val step = PreClimatePlan.step(e.cycles, e.lockAtMs, maintenant)
         if (step == PreClimatePlan.Step.Done) { terminer(PreClimateEnd.DONE); return }
+        // Camping : nouvel enregistrement avant que l'appli caméra n'arrête le sien (120 min au plus).
+        if (campRecAt > 0L && maintenant - campRecAt >= CAMP_REC_RELANCE_MS) {
+            campRecAt = maintenant
+            appContext?.let {
+                AppLogger.i(TAG, "mode camping : enregistrement vidéo relancé (plafond de l'appli à ${com.mg4.control.model.DashcamContract.MAX_MINUTES} min)")
+                DashcamRemote.relancer(it, com.mg4.control.model.DashcamContract.MAX_MINUTES)
+            }
+        }
 
         val cle = when (step) {
             is PreClimatePlan.Step.Waiting -> "W${step.index}"
@@ -417,7 +463,8 @@ object PreClimate {
         travail.removeCallbacks(tick)
         AppLogger.i(TAG, "fin : $fin")
         // Avant l'extinction ; sans effet si l'appli caméra n'a pas été lancée.
-        if (e.req.surveillance) DashcamRemote.arreter(fin.name)
+        if (e.req.surveillance || campRecAt > 0L) DashcamRemote.arreter(fin.name)
+        campRecAt = 0L
 
         val pas = PreClimateClimate.restoreSteps(e.snapshot, presetApplied, MG4Hardware.getClimateState()?.powerOn)
         val ok = pas.map { p ->

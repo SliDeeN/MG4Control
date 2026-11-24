@@ -34,6 +34,8 @@ object DashcamRemote {
 
     /** Après STOP, le temps d'entendre le « stopped » final pour le journal. */
     private const val ECOUTE_APRES_STOP_MS = 20_000L
+    /** Entre le STOP et le START d'une relance (mode camping). */
+    private const val RELANCE_MS = 3_000L
     /** L'appli répond au test de clé en 8 s au plus. */
     private const val DELAI_TEST_USB_MS = 10_000L
 
@@ -108,6 +110,16 @@ object DashcamRemote {
             desinscription = fin
             principal.postDelayed(fin, ECOUTE_APRES_STOP_MS)
         }
+    }
+
+    /**
+     * Mode camping (2026-11-24) : l'appli caméra plafonne un enregistrement à 120 min — STOP, puis
+     * un nouveau START [RELANCE_MS] plus tard (un nouveau fichier ; quelques secondes sans image).
+     */
+    fun relancer(context: Context, minutes: Int) {
+        val app = context.applicationContext
+        arreter("relance")
+        principal.postDelayed({ demarrer(app, minutes, 0) }, RELANCE_MS)
     }
 
     private fun ecouter(app: Context, c: DashcamContract.Commands) {

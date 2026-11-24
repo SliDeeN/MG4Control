@@ -1,6 +1,9 @@
 package com.mg4.control.util
 
 import android.content.Context
+import com.mg4.control.model.CampingConfig
+import com.mg4.control.model.CampingPlan
+import com.mg4.control.model.CampingScreen
 import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateRequest
@@ -39,7 +42,55 @@ object PreClimateSettings {
     /** Surveillance : demander à l'appli caméra de filmer en continu (2026-11-08) : activé par défaut. */
     private const val KEY_DASHCAM_AUTO = "preclim_dashcam_auto"
 
+    /** Mode camping (2026-11-24) : ses réglages, retenus pour la nuit suivante. */
+    private const val KEY_CAMP_DELAY = "preclim_camp_delay_s"
+    private const val KEY_CAMP_LOCK = "preclim_camp_lock"
+    private const val KEY_CAMP_SOC = "preclim_camp_min_soc"
+    private const val KEY_CAMP_RECORD = "preclim_camp_record"
+    private const val KEY_CAMP_SCREEN = "preclim_camp_screen"
+    private const val KEY_CAMP_MSG_CAM = "preclim_camp_msg_camera"
+    private const val KEY_CAMP_MSG_ECALL = "preclim_camp_msg_ecall"
+    private const val KEY_CAMP_TEMP = "preclim_camp_temp"
+    private const val KEY_CAMP_FAN = "preclim_camp_fan"
+    private const val KEY_CAMP_AC = "preclim_camp_ac"
+    private const val KEY_CAMP_RECIRC = "preclim_camp_recirc_inner"
+
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    /** Réglages du mode camping ; jamais vus : ceux de [CampingConfig] par défaut. */
+    fun camping(ctx: Context): CampingConfig {
+        val p = prefs(ctx)
+        val d = CampingConfig()
+        return CampingConfig(
+            delayS = CampingPlan.clampDelay(p.getInt(KEY_CAMP_DELAY, d.delayS)),
+            lockDoors = p.getBoolean(KEY_CAMP_LOCK, d.lockDoors),
+            minSoc = CampingPlan.clampSoc(p.getInt(KEY_CAMP_SOC, d.minSoc)),
+            record = p.getBoolean(KEY_CAMP_RECORD, d.record),
+            screen = CampingScreen.entries.firstOrNull { it.name == p.getString(KEY_CAMP_SCREEN, null) } ?: d.screen,
+            msgCamera = p.getBoolean(KEY_CAMP_MSG_CAM, d.msgCamera),
+            msgEcall = p.getBoolean(KEY_CAMP_MSG_ECALL, d.msgEcall),
+            tempC = p.getInt(KEY_CAMP_TEMP, d.tempC),
+            fan = p.getInt(KEY_CAMP_FAN, d.fan),
+            ac = p.getBoolean(KEY_CAMP_AC, d.ac),
+            recircInner = p.getBoolean(KEY_CAMP_RECIRC, d.recircInner),
+        )
+    }
+
+    fun saveCamping(ctx: Context, c: CampingConfig) {
+        prefs(ctx).edit()
+            .putInt(KEY_CAMP_DELAY, CampingPlan.clampDelay(c.delayS))
+            .putBoolean(KEY_CAMP_LOCK, c.lockDoors)
+            .putInt(KEY_CAMP_SOC, CampingPlan.clampSoc(c.minSoc))
+            .putBoolean(KEY_CAMP_RECORD, c.record)
+            .putString(KEY_CAMP_SCREEN, c.screen.name)
+            .putBoolean(KEY_CAMP_MSG_CAM, c.msgCamera)
+            .putBoolean(KEY_CAMP_MSG_ECALL, c.msgEcall)
+            .putInt(KEY_CAMP_TEMP, c.tempC)
+            .putInt(KEY_CAMP_FAN, c.fan)
+            .putBoolean(KEY_CAMP_AC, c.ac)
+            .putBoolean(KEY_CAMP_RECIRC, c.recircInner)
+            .apply()
+    }
 
     fun lockSeconds(ctx: Context): Int = PreClimatePlan.clampLock(prefs(ctx).getInt(KEY_LOCK, PreClimatePlan.DEFAULT_LOCK_S))
     fun setLockSeconds(ctx: Context, s: Int) = prefs(ctx).edit().putInt(KEY_LOCK, PreClimatePlan.clampLock(s)).apply()
@@ -108,8 +159,7 @@ object PreClimateSettings {
 
     fun saveRequest(ctx: Context, r: PreClimateRequest) {
         prefs(ctx).edit()
-            // Durée illimitée jamais retenue (2026-11-23) : le pop-up rouvre sur 2 h.
-            .putInt(KEY_MAX, if (r.maxMin == PreClimatePlan.UNLIMITED) PreClimatePlan.UNLIMITED_FALLBACK_MIN else r.maxMin)
+            .putInt(KEY_MAX, PreClimatePlan.clampMax(r.maxMin))
             .putInt(KEY_RUN, r.runMin)
             .putInt(KEY_RUNS, r.runs)
             .putInt(KEY_PAUSE, r.pauseMin)
@@ -118,6 +168,8 @@ object PreClimateSettings {
             .putBoolean(KEY_DOG, r.dog)
             .putBoolean(KEY_SURV, r.surveillance)
             .apply()
+        // Le choix du camping n'est jamais retenu (tuile en READY seulement) ; ses réglages, si.
+        r.camping?.let { saveCamping(ctx, it) }
     }
 
     private const val DEFAULT_TEMP = 21

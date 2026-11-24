@@ -41,7 +41,71 @@ data class PreClimateRequest(
      * (2 h au plus).
      */
     val surveillance: Boolean = false,
+    /**
+     * Mode camping (2026-11-24, remplace la durée « ∞ » du 2026-11-23) : on dort dans la voiture,
+     * laissée en READY — elle reste allumée sans limite. Ses réglages ([CampingConfig]) sont les siens
+     * et retenus d'une nuit à l'autre. « Maintenant » seulement, exclusif du mode chien et de la
+     * surveillance ; jamais mémorisé comme choisi (la tuile n'existe qu'en READY, avec un avertissement).
+     */
+    val camping: CampingConfig? = null,
 )
+
+/** Ce que montre l'écran central pendant le camping (2026-11-24). */
+enum class CampingScreen {
+    /** L'avertissement, sous un voile et à la luminosité minimale : lisible de près, l'habitacle reste sombre. */
+    DIM,
+    /** L'avertissement en plein, comme la surveillance. */
+    FULL,
+    /** Noir ; un toucher le rallume 10 s. */
+    OFF,
+    /** L'écran de suivi de la pré-climatisation (anneau « En marche depuis »), atténué selon le réglage général. */
+    FOLLOW,
+}
+
+/**
+ * Réglages du mode camping, retenus pour la nuit suivante (sa demande du 2026-11-24). Le délai et le
+ * seuil de batterie sont les siens, indépendants de ceux de la page Garde-voiture.
+ */
+data class CampingConfig(
+    /** Délai avant l'activation (verrouillage, vidéo, écran de nuit), en secondes : l'un de [CampingPlan.DELAYS_S]. */
+    val delayS: Int = CampingPlan.DEFAULT_DELAY_S,
+    val lockDoors: Boolean = true,
+    val minSoc: Int = CampingPlan.DEFAULT_SOC,
+    /** Enregistrement vidéo par l'appli caméra — seulement si elle se pilote et que l'enregistrement auto est permis. */
+    val record: Boolean = true,
+    val screen: CampingScreen = CampingScreen.DIM,
+    /** Messages de l'écran d'avertissement. */
+    val msgCamera: Boolean = true,
+    val msgEcall: Boolean = false,
+    val tempC: Int = CampingPlan.DEFAULT_TEMP,
+    val fan: Int = CampingPlan.DEFAULT_FAN,
+    val ac: Boolean = true,
+    /** Recirculation : intérieur (vrai) ou air extérieur. */
+    val recircInner: Boolean = true,
+)
+
+object CampingPlan {
+    /** Délais avant activation, en secondes (2026-11-24) : jusqu'à 10 min pour s'installer. */
+    val DELAYS_S = listOf(10, 20, 30, 45, 60, 120, 180, 300, 600)
+    const val DEFAULT_DELAY_S = 60
+    const val SOC_MIN = 10
+    const val SOC_MAX = 60
+    const val SOC_STEP = 5
+    const val DEFAULT_SOC = 30
+    const val DEFAULT_TEMP = 19
+    const val DEFAULT_FAN = 2
+
+    /** Le délai voisin de [current] dans la direction [direction] (±1), borné à la liste. */
+    fun stepDelay(current: Int, direction: Int): Int {
+        val i = DELAYS_S.indexOf(clampDelay(current))
+        return DELAYS_S[(i + direction).coerceIn(0, DELAYS_S.lastIndex)]
+    }
+
+    /** Un délai hors liste (réglage ancien, valeur abîmée) revient au plus proche. */
+    fun clampDelay(s: Int): Int = DELAYS_S.minByOrNull { kotlin.math.abs(it - s) } ?: DEFAULT_DELAY_S
+
+    fun clampSoc(pct: Int): Int = (Math.round(pct / SOC_STEP.toFloat()) * SOC_STEP).coerceIn(SOC_MIN, SOC_MAX)
+}
 
 /** L'écran de suivi pendant l'attente, portes verrouillées (page du raccourci). */
 enum class PreClimateScreenMode {
@@ -101,10 +165,9 @@ object PreClimatePlan {
     const val DEFAULT_MAX_MIN = 60
 
     /**
-     * Durée illimitée (2026-11-23) : en « Maintenant », ni mode chien ni surveillance, et seulement
-     * voiture en READY — elle ne reste allumée sans limite que là. Proposée par le pop-up tant que
-     * la voiture est en READY ; si elle en sort pendant le mode, la durée repasse à
-     * [UNLIMITED_FALLBACK_MIN] à partir de cet instant (sa décision). Jamais mémorisée.
+     * Sans limite de durée : le mode camping (2026-11-24, qui remplace la durée « ∞ »), voiture en
+     * READY seulement — elle ne reste allumée sans limite que là. Si elle en sort pendant le mode, il
+     * s'arrête [UNLIMITED_FALLBACK_MIN] plus tard (sa décision du 2026-11-23, gardée).
      */
     const val UNLIMITED = 0
     const val UNLIMITED_FALLBACK_MIN = 120
@@ -112,8 +175,11 @@ object PreClimatePlan {
     private const val SANS_FIN_MS = Long.MAX_VALUE / 4
 
     /** Le mode tourne-t-il sans limite ? */
-    fun unlimited(req: PreClimateRequest): Boolean =
-        req.mode == PreClimateMode.NOW && !req.dog && !req.surveillance && req.maxMin == UNLIMITED
+    fun unlimited(req: PreClimateRequest): Boolean = camping(req)
+
+    /** Le mode camping est-il choisi ? « Maintenant » seulement ; le mode chien et la surveillance l'excluent. */
+    fun camping(req: PreClimateRequest): Boolean =
+        req.camping != null && req.mode == PreClimateMode.NOW && !req.dog && !req.surveillance
 
     /** Cycle sans limite (repli à faire si la voiture sort de READY). */
     fun isUnlimited(c: Cycle): Boolean = c.endMs >= SANS_FIN_MS
@@ -178,8 +244,6 @@ object PreClimatePlan {
     fun maxMinutes(req: PreClimateRequest): Int = when {
         req.dog && !req.surveillance && req.mode == PreClimateMode.NOW -> DOG_MAX_MIN
         unlimited(req) -> UNLIMITED
-        // Illimitée gardée par la surveillance : 2 h, pas la durée par défaut.
-        req.maxMin == UNLIMITED -> UNLIMITED_FALLBACK_MIN
         else -> clampMax(req.maxMin)
     }
 
@@ -347,8 +411,17 @@ object PreClimateClimate {
      * envoyé en même temps que la mise en marche ne prenait pas toujours). Compresseur TOUJOURS
      * en marche : le choix a été retiré du pop-up le 2026-10-23, à sa demande.
      */
-    fun applySteps(req: PreClimateRequest): List<ClimateStep> = listOf(
-        ClimateStep.PowerOn, ClimateStep.Temp(req.tempC), ClimateStep.Fan(req.fan), ClimateStep.Ac(true))
+    fun applySteps(req: PreClimateRequest): List<ClimateStep> {
+        val c = req.camping?.takeIf { PreClimatePlan.camping(req) }
+            ?: return listOf(ClimateStep.PowerOn, ClimateStep.Temp(req.tempC), ClimateStep.Fan(req.fan), ClimateStep.Ac(true))
+        // Mode camping (2026-11-24) : ses propres réglages — A/C au choix, et la recirculation.
+        return listOf(ClimateStep.PowerOn, ClimateStep.Temp(c.tempC), ClimateStep.Fan(c.fan), ClimateStep.Ac(c.ac),
+            ClimateStep.Loop(if (c.recircInner) LOOP_INNER else LOOP_OUTSIDE))
+    }
+
+    /** Recirculation intérieure / air extérieur (MG4Hardware.LoopMode, mesuré sur SWI133). */
+    const val LOOP_INNER = 0
+    const val LOOP_OUTSIDE = 1
 
     /**
      * Écritures qui rendent à la clim l'état de [snap].

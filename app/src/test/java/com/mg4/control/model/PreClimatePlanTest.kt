@@ -194,30 +194,36 @@ class PreClimatePlanTest {
         assertFalse(PreClimateScreenMode.mayDim(dog = true, surveillance = false, survFollows = true))
     }
 
-    // ── Durée illimitée (2026-11-23) ─────────────────────────────────────────
+    // ── Mode camping (2026-11-24, remplace la durée « ∞ ») ──────────────────────
 
-    @Test fun `unlimited only in Now, without dog or surveillance`() {
-        val now = req(PreClimateMode.NOW, maxMin = PreClimatePlan.UNLIMITED)
-        assertTrue(PreClimatePlan.unlimited(now))
-        assertEquals(PreClimatePlan.UNLIMITED, PreClimatePlan.maxMinutes(now))
-        assertFalse(PreClimatePlan.unlimited(now.copy(dog = true)))
-        assertEquals(PreClimatePlan.DOG_MAX_MIN, PreClimatePlan.maxMinutes(now.copy(dog = true)))
-        assertFalse(PreClimatePlan.unlimited(now.copy(surveillance = true)))
-        assertEquals(PreClimatePlan.UNLIMITED_FALLBACK_MIN, PreClimatePlan.maxMinutes(now.copy(surveillance = true)))
-        assertFalse(PreClimatePlan.unlimited(now.copy(mode = PreClimateMode.AT_TIME)))
+    private fun camp(r: PreClimateRequest = req(PreClimateMode.NOW)) = r.copy(camping = CampingConfig())
+
+    @Test fun `camping only in Now, without dog or surveillance`() {
+        val c = camp()
+        assertTrue(PreClimatePlan.camping(c))
+        assertTrue(PreClimatePlan.unlimited(c))
+        assertEquals(PreClimatePlan.UNLIMITED, PreClimatePlan.maxMinutes(c))
+        assertFalse(PreClimatePlan.camping(c.copy(dog = true)))
+        assertEquals(PreClimatePlan.DOG_MAX_MIN, PreClimatePlan.maxMinutes(c.copy(dog = true)))
+        assertFalse(PreClimatePlan.camping(c.copy(surveillance = true)))
+        assertEquals(60, PreClimatePlan.maxMinutes(c.copy(surveillance = true)))
+        assertFalse(PreClimatePlan.camping(c.copy(mode = PreClimateMode.AT_TIME)))
+        // Une durée 0 seule ne veut plus rien dire : la durée par défaut.
+        assertFalse(PreClimatePlan.unlimited(req(PreClimateMode.NOW, maxMin = PreClimatePlan.UNLIMITED)))
+        assertEquals(PreClimatePlan.DEFAULT_MAX_MIN, PreClimatePlan.maxMinutes(req(PreClimateMode.NOW, maxMin = PreClimatePlan.UNLIMITED)))
     }
 
-    @Test fun `an unlimited cycle never ends and has no end time`() {
-        val now = req(PreClimateMode.NOW, maxMin = PreClimatePlan.UNLIMITED)
-        val c = PreClimatePlan.cycles(now, 1_000L, 600.0).single()
-        assertTrue(PreClimatePlan.isUnlimited(c))
+    @Test fun `a camping cycle never ends and has no end time`() {
+        val c = camp()
+        val cycle = PreClimatePlan.cycles(c, 1_000L, 600.0).single()
+        assertTrue(PreClimatePlan.isUnlimited(cycle))
         // Une semaine plus tard : toujours en marche.
-        assertTrue(PreClimatePlan.step(listOf(c), 1_000L, 7 * 24 * 3_600_000L) is PreClimatePlan.Step.Running)
-        assertEquals(600 to -1, PreClimatePlan.wallTimes(now, 600.0).single())
+        assertTrue(PreClimatePlan.step(listOf(cycle), 1_000L, 7 * 24 * 3_600_000L) is PreClimatePlan.Step.Running)
+        assertEquals(600 to -1, PreClimatePlan.wallTimes(c, 600.0).single())
     }
 
-    @Test fun `leaving READY keeps it running for two more hours`() {
-        val c = PreClimatePlan.cycles(req(PreClimateMode.NOW, maxMin = PreClimatePlan.UNLIMITED), 0L, 600.0).single()
+    @Test fun `leaving READY keeps camping running for two more hours`() {
+        val c = PreClimatePlan.cycles(camp(), 0L, 600.0).single()
         val sortie = 5 * 3_600_000L
         val repli = PreClimatePlan.fallback(c, sortie)
         assertFalse(PreClimatePlan.isUnlimited(repli))
@@ -225,5 +231,32 @@ class PreClimatePlanTest {
         assertEquals(sortie + 120 * 60_000L, repli.endMs)
         assertTrue(PreClimatePlan.step(listOf(repli), 0L, sortie + 119 * 60_000L) is PreClimatePlan.Step.Running)
         assertEquals(PreClimatePlan.Step.Done, PreClimatePlan.step(listOf(repli), 0L, sortie + 121 * 60_000L))
+    }
+
+    @Test fun `camping delay steps through its list and stays inside it`() {
+        assertEquals(120, CampingPlan.stepDelay(60, 1))
+        assertEquals(45, CampingPlan.stepDelay(60, -1))
+        assertEquals(10, CampingPlan.stepDelay(10, -1))
+        assertEquals(600, CampingPlan.stepDelay(600, 1))
+        // Une valeur hors liste revient à la plus proche.
+        assertEquals(60, CampingPlan.clampDelay(70))
+        assertEquals(600, CampingPlan.clampDelay(5_000))
+    }
+
+    @Test fun `camping battery threshold goes from 10 to 60 in steps of 5`() {
+        assertEquals(10, CampingPlan.clampSoc(0))
+        assertEquals(60, CampingPlan.clampSoc(95))
+        assertEquals(35, CampingPlan.clampSoc(33))
+    }
+
+    @Test fun `camping sets its own climate, A-C and recirculation included`() {
+        val c = camp().let { it.copy(camping = it.camping!!.copy(tempC = 18, fan = 2, ac = false, recircInner = false)) }
+        assertEquals(listOf(ClimateStep.PowerOn, ClimateStep.Temp(18), ClimateStep.Fan(2), ClimateStep.Ac(false),
+            ClimateStep.Loop(PreClimateClimate.LOOP_OUTSIDE)), PreClimateClimate.applySteps(c))
+        val dedans = camp()
+        assertEquals(ClimateStep.Loop(PreClimateClimate.LOOP_INNER), PreClimateClimate.applySteps(dedans).last())
+        // Hors camping : comme avant, A/C toujours en marche, recirculation non touchée.
+        assertEquals(listOf(ClimateStep.PowerOn, ClimateStep.Temp(25), ClimateStep.Fan(8), ClimateStep.Ac(true)),
+            PreClimateClimate.applySteps(req(PreClimateMode.NOW)))
     }
 }

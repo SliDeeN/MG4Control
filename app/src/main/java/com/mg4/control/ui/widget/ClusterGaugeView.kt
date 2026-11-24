@@ -117,6 +117,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val chien: Boolean,
         /** Surveillance (issue #180) : sa propre fiche, temps restant en grand (maquette C du 2026-10-30). */
         val surveillance: Boolean = false,
+        /** Mode camping (2026-11-24) : sa tente et son titre. */
+        val camping: Boolean = false,
         val tendance: PreClimateTrend,
         val enMarche: Boolean,
         val consigneC: Int,
@@ -256,7 +258,8 @@ class ClusterGaugeView(context: Context) : View(context) {
     private val cAlerte = sombre.getColor(R.color.dash_warn)
     private val cDanger = sombre.getColor(R.color.dash_danger)
     private val icones = listOf(R.drawable.ic_cluster_bolt, R.drawable.ic_cluster_battery_charging, R.drawable.ic_cluster_clock,
-        R.drawable.ic_hvac_ac, R.drawable.ic_cluster_flame, R.drawable.ic_preclim_paw, R.drawable.ic_preclim_cctv)
+        R.drawable.ic_hvac_ac, R.drawable.ic_cluster_flame, R.drawable.ic_preclim_paw, R.drawable.ic_preclim_cctv,
+        R.drawable.ic_preclim_tent)
         .associateWith { ContextCompat.getDrawable(context, it)?.mutate() }
 
     private val locale: Locale = context.resources.configuration.locales[0]
@@ -934,6 +937,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         // En-tête : patte, flamme ou flocon, et le titre.
         val icone = when {
             p.chien -> R.drawable.ic_preclim_paw
+            p.camping -> R.drawable.ic_preclim_tent
             p.tendance == PreClimateTrend.HEATING -> R.drawable.ic_cluster_flame
             else -> R.drawable.ic_hvac_ac
         }
@@ -943,7 +947,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             it.setBounds(18, 21, 40, 43)
             it.draw(canvas)
         }
-        aGauche(canvas, context.getString(if (p.chien) R.string.preclim_dog else R.string.preclim_title),
+        aGauche(canvas, context.getString(when { p.chien -> R.string.preclim_dog; p.camping -> R.string.preclim_camp; else -> R.string.preclim_title }),
             48f, 38f, 16f, cTexte, moyen)
 
         if (p.chien) {
@@ -984,7 +988,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             PreClimate.LockState.LOCKED -> context.getString(R.string.preclim_lock_ok)
             PreClimate.LockState.FAILED -> context.getString(R.string.preclim_lock_failed)
             PreClimate.LockState.PENDING -> context.getString(R.string.preclim_lock_pending)
-            null -> null
+            PreClimate.LockState.NONE, null -> null
         }
         aGauche(canvas, listOfNotNull(context.getString(R.string.preclim_battery, batterie), verrou).joinToString(" · "),
             MARGE_FICHE, 234f, 13f, if (p.verrou == PreClimate.LockState.FAILED) cAlerte else cTexte2, Typeface.DEFAULT)
@@ -1037,7 +1041,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             PreClimate.LockState.LOCKED -> context.getString(R.string.preclim_lock_ok)
             PreClimate.LockState.FAILED -> context.getString(R.string.preclim_lock_failed)
             PreClimate.LockState.PENDING -> context.getString(R.string.preclim_lock_pending)
-            null -> null
+            PreClimate.LockState.NONE, null -> null
         }
         aGauche(canvas, listOfNotNull(context.getString(R.string.preclim_battery, batterie), verrou).joinToString(" · "),
             MARGE_FICHE, 234f, 13f, if (p.verrou == PreClimate.LockState.FAILED) cAlerte else cTexte2, Typeface.DEFAULT)

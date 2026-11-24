@@ -25,6 +25,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.mg4.control.R
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.CampingScreen
 import com.mg4.control.model.ClimateSnapshot
 import com.mg4.control.model.PreClimateEnd
 import com.mg4.control.model.PreClimateMode
@@ -62,7 +63,8 @@ class PreClimateActivity : Activity() {
     private lateinit var v: Vues
     private val handler = Handler(Looper.getMainLooper())
     private var eveilJusqua = 0L
-    private var attenue: Boolean? = null
+    /** Voile posé : (atténuer, mode) — repeint seulement quand l'un change. */
+    private var attenue: Pair<Boolean, PreClimateScreenMode>? = null
     private var fermetureFin: Runnable? = null
     private val ecoute: (PreClimate.Etat) -> Unit = { e -> peindre(e) }
 
@@ -119,7 +121,10 @@ class PreClimateActivity : Activity() {
         super.onStart()
         PreClimate.ecouteur = ecoute
         // État de l'appli caméra : la pastille « REC » suit sans attendre le relevé suivant.
-        DashcamRemote.ecouteur = { if (PreClimate.etat?.req?.surveillance == true) peindreRec() }
+        DashcamRemote.ecouteur = {
+            val r = PreClimate.etat?.req
+            if (r?.surveillance == true || r?.camping != null) peindreRec()
+        }
         val e = PreClimate.etat
         if (e == null) finish() else peindre(e)
     }
@@ -162,6 +167,9 @@ class PreClimateActivity : Activity() {
         val cdChiffre: TextView = racine.findViewById(R.id.preclim_cd_number)
         val cdClim: TextView = racine.findViewById(R.id.preclim_cd_clim)
         val cdAvertChien: TextView = racine.findViewById(R.id.preclim_cd_dog_warning)
+        val cdUnite: TextView = racine.findViewById(R.id.preclim_cd_unit)
+        val cdTitre: TextView = racine.findViewById(R.id.preclim_cd_title)
+        val cdTexte: TextView = racine.findViewById(R.id.preclim_cd_text)
         val cdAnnuler: TextView = racine.findViewById(R.id.preclim_cd_cancel)
         val suivi: View = racine.findViewById(R.id.preclim_live)
         val titre: TextView = racine.findViewById(R.id.preclim_live_title)
@@ -190,6 +198,9 @@ class PreClimateActivity : Activity() {
         val survCadre: View = racine.findViewById(R.id.preclim_surv_frame)
         val survIcone: ImageView = racine.findViewById(R.id.preclim_surv_icon)
         val survTitre: TextView = racine.findViewById(R.id.preclim_surv_title)
+        val survTexte: TextView = racine.findViewById(R.id.preclim_surv_text)
+        val survEcall: TextView = racine.findViewById(R.id.preclim_surv_ecall)
+        val survReady: TextView = racine.findViewById(R.id.preclim_surv_ready)
         val survEtat: TextView = racine.findViewById(R.id.preclim_surv_status)
         val survRec: TextView = racine.findViewById(R.id.preclim_surv_rec)
         val survMasquer: TextView = racine.findViewById(R.id.preclim_surv_hide)
@@ -244,14 +255,27 @@ class PreClimateActivity : Activity() {
     /** Un toucher : l'écran se rallume pour [EVEIL_MS]. */
     fun eveiller() {
         eveilJusqua = SystemClock.elapsedRealtime() + EVEIL_MS
-        attenuer(false)
+        attenuer(false, attenue?.second ?: PreClimateSettings.screenMode(v.loc))
     }
 
-    /** Voile et luminosité de la fenêtre : selon le réglage, pendant l'attente ; rendus au toucher. */
-    private fun attenuer(oui: Boolean) {
-        if (oui == attenue) return
-        attenue = oui
-        val mode = PreClimateSettings.screenMode(v.loc)
+    /**
+     * Mode camping (2026-11-24) : le voile suit son propre choix — Atténué et Éteint comme ceux de la
+     * page, Plein jamais atténué, Suivi le réglage de la page.
+     */
+    private fun modeEcran(e: PreClimate.Etat): PreClimateScreenMode = when (e.req.camping?.screen) {
+        CampingScreen.DIM -> PreClimateScreenMode.DIM
+        CampingScreen.OFF -> PreClimateScreenMode.OFF
+        CampingScreen.FULL -> PreClimateScreenMode.NORMAL
+        else -> PreClimateSettings.screenMode(v.loc)
+    }
+
+    /**
+     * Voile et luminosité de la fenêtre : selon le réglage, pendant l'attente ; rendus au toucher.
+     * [mode] : celui de la page Garde-voiture, ou celui choisi pour le camping ([modeEcran]).
+     */
+    private fun attenuer(oui: Boolean, mode: PreClimateScreenMode = PreClimateSettings.screenMode(v.loc)) {
+        if (attenue == (oui to mode)) return
+        attenue = oui to mode
         val voile = when {
             !oui || mode == PreClimateScreenMode.NORMAL -> 0f
             mode == PreClimateScreenMode.OFF -> VOILE_ETEINT
@@ -271,22 +295,28 @@ class PreClimateActivity : Activity() {
         val maintenant = SystemClock.elapsedRealtime()
         val chien = e.req.dog && e.phase == PreClimate.Phase.ACTIVE
         val surv = e.req.surveillance && e.phase == PreClimate.Phase.ACTIVE
+        // Mode camping (2026-11-24) : l'écran d'avertissement, sauf « Suivi » (l'écran de suivi).
+        val camp = e.req.camping != null && e.phase == PreClimate.Phase.ACTIVE
+        val campAvert = camp && e.req.camping?.screen != CampingScreen.FOLLOW
         v.decompte.visibility = if (e.phase == PreClimate.Phase.COUNTDOWN) View.VISIBLE else View.GONE
-        v.suivi.visibility = if (e.phase == PreClimate.Phase.ACTIVE && !chien && !surv) View.VISIBLE else View.GONE
+        v.suivi.visibility = if (e.phase == PreClimate.Phase.ACTIVE && !chien && !surv && !campAvert) View.VISIBLE else View.GONE
         v.chien.visibility = if (chien) View.VISIBLE else View.GONE
-        v.surv.visibility = if (surv) View.VISIBLE else View.GONE
+        v.surv.visibility = if (surv || campAvert) View.VISIBLE else View.GONE
         v.fin.visibility = if (e.phase == PreClimate.Phase.ENDED) View.VISIBLE else View.GONE
         when {
             e.phase == PreClimate.Phase.COUNTDOWN -> peindreDecompte(e, maintenant)
+            campAvert -> peindreCamping(e, maintenant)
             surv -> peindreSurveillance(e)
             chien -> peindreChien(e, maintenant)
             e.phase == PreClimate.Phase.ACTIVE -> peindreSuivi(e, maintenant)
             else -> peindreFin(e)
         }
         // Le mode chien ne s'atténue jamais : les passants doivent pouvoir lire. La surveillance non
-        // plus, sauf si le réglage « Appliquer aussi à la surveillance » le demande (2026-11-13).
+        // plus, sauf si le réglage « Appliquer aussi à la surveillance » le demande (2026-11-13). Le
+        // camping suit son propre choix d'écran.
         attenuer(e.phase == PreClimate.Phase.ACTIVE && maintenant > eveilJusqua &&
-            PreClimateScreenMode.mayDim(chien, surv, PreClimateSettings.survFollowsScreen(v.loc)))
+            (camp || PreClimateScreenMode.mayDim(chien, surv, PreClimateSettings.survFollowsScreen(v.loc))),
+            if (camp) modeEcran(e) else PreClimateSettings.screenMode(v.loc))
         peindreParticules(e)
     }
 
@@ -295,8 +325,10 @@ class PreClimateActivity : Activity() {
      * où on ne les verrait plus, et pendant l'attente, où rien ne chauffe ni ne refroidit.
      */
     private fun peindreParticules(e: PreClimate.Etat) {
+        // Ni sur la surveillance, ni sur l'avertissement du camping : seulement l'écran de suivi.
+        val avertCamping = e.req.camping?.let { it.screen != CampingScreen.FOLLOW } == true
         val enMarche = e.phase == PreClimate.Phase.ACTIVE && e.step is PreClimatePlan.Step.Running && !e.req.surveillance &&
-            v.voile.visibility != View.VISIBLE
+            !avertCamping && v.voile.visibility != View.VISIBLE
         v.particules.tendance = PreClimatePlan.trend(e.req.tempC, e.outsideC)
         v.particules.intensite = PreClimatePlan.intensity(e.req.tempC, e.outsideC)
         v.particules.visibility = if (enMarche) View.VISIBLE else View.GONE
@@ -310,11 +342,19 @@ class PreClimateActivity : Activity() {
 
     private fun peindreDecompte(e: PreClimate.Etat, maintenant: Long) {
         val reste = (e.lockAtMs - maintenant).coerceAtLeast(0L)
-        v.cdChiffre.text = ((reste + 999) / 1000).toString()
+        val secondes = ((reste + 999) / 1000).toInt()
+        val camp = e.req.camping != null
+        // Camping : jusqu'à 10 min, en « m:ss » au-delà d'une minute (2026-11-24).
+        v.cdChiffre.text = if (secondes >= 60) "${secondes / 60}:${"%02d".format(Locale.US, secondes % 60)}" else secondes.toString()
+        v.cdChiffre.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (secondes >= 60) 64f else 96f)
+        v.cdUnite.text = v.s(if (camp) R.string.preclim_cd_unit_camp else R.string.preclim_cd_unit)
+        v.cdTitre.text = v.s(if (camp) R.string.preclim_cd_camp_title else R.string.preclim_cd_title)
+        v.cdTexte.text = v.s(if (camp) R.string.preclim_cd_camp_text else R.string.preclim_cd_text)
         v.cdAnneau.anim = PreClimateRingView.Anim.AUCUNE
         v.cdAnneau.fraction = reste.toFloat() / (e.lockAtMs - e.startMs).coerceAtLeast(1L)
         val clim = resumeDemande(e)
         v.cdClim.text = when {
+            camp -> v.s(R.string.preclim_cd_camp, clim)
             e.req.surveillance -> v.s(R.string.preclim_cd_surv)
             e.req.mode == PreClimateMode.NOW -> v.s(R.string.preclim_cd_now, clim)
             else -> v.s(R.string.preclim_cd_at, heure(e.wallTimes.firstOrNull()?.first ?: 0), clim)
@@ -325,7 +365,8 @@ class PreClimateActivity : Activity() {
     }
 
     private fun peindreSuivi(e: PreClimate.Etat, maintenant: Long) {
-        v.titre.text = v.s(R.string.preclim_live_title, heure(PreClimate.minuteDuJour().toInt()))
+        v.titre.text = if (e.req.camping != null) v.s(R.string.preclim_camp) + " · " + heure(PreClimate.minuteDuJour().toInt())
+            else v.s(R.string.preclim_live_title, heure(PreClimate.minuteDuJour().toInt()))
         peindreVerrou(e)
         val step = e.step
         v.anneau.fraction = step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
@@ -394,8 +435,38 @@ class PreClimateActivity : Activity() {
         v.chienEtat.text = v.s(R.string.preclim_dog_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e))
     }
 
+    /**
+     * Mode camping (2026-11-24) : l'écran de la surveillance, avec les messages choisis — « Surveillance
+     * vidéo active » (titre et texte de la surveillance), « eCall actif », en grand s'il est seul —, la
+     * pastille REC si la vidéo tourne, et le temps qui reste si la voiture est sortie de READY.
+     */
+    private fun peindreCamping(e: PreClimate.Etat, maintenant: Long) {
+        val c = e.req.camping ?: return
+        v.survIcone.setImageResource(if (c.msgCamera || !c.msgEcall) R.drawable.ic_preclim_cctv else R.drawable.ic_preclim_tent)
+        v.survTitre.visibility = if (c.msgCamera) View.VISIBLE else View.GONE
+        v.survTexte.visibility = if (c.msgCamera) View.VISIBLE else View.GONE
+        v.survEcall.visibility = if (c.msgEcall) View.VISIBLE else View.GONE
+        val seul = c.msgEcall && !c.msgCamera
+        v.survEcall.text = v.s(R.string.preclim_camp_msg_ecall)
+        v.survEcall.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (seul) 58f else 28f)
+        v.survEcall.setTextColor(if (seul) v.danger else v.texte)
+        v.survEtat.text = v.s(R.string.preclim_camp_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e))
+        // Sortie de READY : le camping s'arrête 2 h plus tard — le temps qui reste, en orange.
+        val cycle = e.cycles.firstOrNull()
+        val replie = cycle != null && !PreClimatePlan.isUnlimited(cycle)
+        v.survReady.visibility = if (replie) View.VISIBLE else View.GONE
+        if (replie && cycle != null) v.survReady.text = v.s(R.string.preclim_camp_ready_left, duree(minutesRestantes(cycle.endMs, maintenant)))
+        peindreRec()
+    }
+
     /** Surveillance (issue #180) : l'avertissement est fixe ; la ligne d'état et « REC » changent. */
     private fun peindreSurveillance(e: PreClimate.Etat) {
+        // Les vues partagées avec le camping reprennent leur état de la surveillance.
+        v.survIcone.setImageResource(R.drawable.ic_preclim_cctv)
+        v.survTitre.visibility = View.VISIBLE
+        v.survTexte.visibility = View.VISIBLE
+        v.survEcall.visibility = View.GONE
+        v.survReady.visibility = View.GONE
         v.survEtat.text = v.s(R.string.preclim_surv_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e),
             heure((e.startWallMinute + e.req.maxMin).roundToInt()))
         peindreRec()
@@ -423,7 +494,9 @@ class PreClimateActivity : Activity() {
         PreClimate.LockState.PENDING -> pastille(v.verrou, v.s(R.string.preclim_lock_pending), v.bouton, v.texte2)
         PreClimate.LockState.LOCKED -> pastille(v.verrou, v.s(R.string.preclim_lock_ok), v.bouton, v.texte)
         PreClimate.LockState.FAILED -> pastille(v.verrou, v.s(R.string.preclim_lock_failed), v.alerteDoux, v.alerte)
-    }
+        // Camping sans verrouillage : pas de pastille.
+        PreClimate.LockState.NONE -> { v.verrou.visibility = View.GONE }
+    }.also { if (e.lock != PreClimate.LockState.NONE) v.verrou.visibility = View.VISIBLE }
 
     /** Les cycles et leur état (à une heure) ; le début et la fin prévue (tout de suite). */
     private fun lignes(e: PreClimate.Etat, step: PreClimatePlan.Step?) {
@@ -470,8 +543,11 @@ class PreClimateActivity : Activity() {
     private fun quitterAnnule(e: PreClimate.Etat) {
         if (isFinishing) return
         v.racine.visibility = View.INVISIBLE
-        Toast.makeText(v.loc, v.s(if (e.req.surveillance) R.string.preclim_surv_cancelled else R.string.preclim_cancelled),
-            Toast.LENGTH_SHORT).show()
+        Toast.makeText(v.loc, v.s(when {
+            e.req.camping != null -> R.string.preclim_camp_cancelled
+            e.req.surveillance -> R.string.preclim_surv_cancelled
+            else -> R.string.preclim_cancelled
+        }), Toast.LENGTH_SHORT).show()
         PreClimate.oublierFin()
         finish()
     }
@@ -480,16 +556,20 @@ class PreClimateActivity : Activity() {
         val fin = e.end ?: return
         val heureFin = heure((e.endWallMinute ?: PreClimate.minuteDuJour()).toInt())
         val surv = e.req.surveillance
+        val camp = e.req.camping != null
         val (titre, couleur, icone) = when (fin) {
-            PreClimateEnd.DONE -> Triple(v.s(if (surv) R.string.preclim_surv_end_done else R.string.preclim_end_done), v.vert, "✓")
+            PreClimateEnd.DONE -> Triple(v.s(when { camp -> R.string.preclim_camp_end; surv -> R.string.preclim_surv_end_done; else -> R.string.preclim_end_done }), v.vert, "✓")
             PreClimateEnd.BATTERY -> Triple(v.s(R.string.preclim_end_battery, e.minSoc), v.alerte, "!")
             PreClimateEnd.UNLOCKED -> Triple(v.s(R.string.preclim_end_back), v.vert, "✓")
             PreClimateEnd.DRIVING -> Triple(v.s(if (surv) R.string.preclim_surv_end_driving else R.string.preclim_end_driving), v.accent, "✓")
             PreClimateEnd.STOPPED, PreClimateEnd.CANCELLED ->
-                Triple(v.s(if (surv) R.string.preclim_surv_end_stopped else R.string.preclim_end_stopped), v.accent, "✓")
+                Triple(v.s(when { camp -> R.string.preclim_camp_end; surv -> R.string.preclim_surv_end_stopped; else -> R.string.preclim_end_stopped }), v.accent, "✓")
         }
         val texte = buildList {
-            if (fin == PreClimateEnd.DONE) add(when {
+            // Camping : le temps passé, de l'heure de départ à celle de fin.
+            if (camp && e.endWallMinute != null) add(v.s(R.string.preclim_camp_end_ran,
+                duree(Math.floorMod((e.endWallMinute - e.startWallMinute).roundToInt(), 1440))))
+            else if (fin == PreClimateEnd.DONE) add(when {
                 surv -> v.s(R.string.preclim_surv_end_ran, duree(e.req.maxMin))
                 e.req.mode == PreClimateMode.AT_TIME -> v.s(R.string.preclim_end_cycles, e.cycles.size, duree(e.req.runMin))
                 else -> v.s(R.string.preclim_end_now, duree(e.req.maxMin))
@@ -540,9 +620,10 @@ class PreClimateActivity : Activity() {
     private fun watts(w: Int): String =
         java.text.NumberFormat.getIntegerInstance(v.locale).format(w) + " W"
 
-    /** « 25 °C · ventilation 8 · A/C » : ce que la pré-climatisation règle (compresseur toujours en marche). */
+    /** « 25 °C · ventilation 8 · A/C » : ce que la pré-climatisation règle (compresseur toujours en marche, sauf camping sans A/C). */
     private fun resumeDemande(e: PreClimate.Etat): String = v.s(
-        R.string.preclim_summary_ac, v.s(R.string.preclim_value_celsius, e.req.tempC), e.req.fan.toString())
+        if (e.req.camping?.ac == false) R.string.preclim_summary else R.string.preclim_summary_ac,
+        v.s(R.string.preclim_value_celsius, e.req.tempC), e.req.fan.toString())
 
     /** « Clim rétablie : 21 °C · ventilation 4 » — ou « arrêtée (…) » si elle l'était. */
     private fun restauration(s: ClimateSnapshot): String {

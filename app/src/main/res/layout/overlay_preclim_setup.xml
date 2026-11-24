@@ -134,6 +134,16 @@
 
                 </LinearLayout>
 
+                <!-- Mode camping (2026-11-24) : ses réglages à la place des onglets et des durées —
+                     délai avant activation, portes, batterie minimum, vidéo, écran la nuit, message.
+                     Lignes de 42 dp construites par le code (PreClimatePopupOverlay). -->
+                <LinearLayout
+                    android:id="@+id/preclim_camping"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
+
             </LinearLayout>
 
             <!-- ── Droite : les réglages de la clim, et ceux d'avant qui reviendront ── -->
@@ -165,6 +175,15 @@
                     android:layout_height="6dp"
                     android:layout_marginTop="6dp"
                     android:orientation="horizontal" />
+
+                <!-- Mode camping (2026-11-24) : A/C et recirculation, en plus ; lignes faites par le code. -->
+                <LinearLayout
+                    android:id="@+id/preclim_camp_climate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
 
                 <!-- Surveillance (issue #180) : clim coupée, à la place de la température et de la
                      ventilation ; avertissement aux couleurs d'alerte, peint par le code. -->
@@ -371,6 +390,23 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:maxLines="1" />
+
+            <!-- Mode camping (2026-11-24) : « Maintenant » et voiture en READY seulement ; peint par le code. -->
+            <TextView
+                android:id="@+id/preclim_camp_toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginEnd="10dp"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="18dp"
+                android:drawableStart="@drawable/ic_preclim_tent"
+                android:drawablePadding="8dp"
+                android:text="@string/preclim_camp_short"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/preclim_cancel"
@@ -644,10 +680,11 @@
 
     </FrameLayout>
 
-    <!-- ── Durée illimitée (2026-11-23) : avertissement montré en touchant « ∞ », par-dessus la
-         carte de réglage ; « J'ai compris » garde ∞, « Annuler » revient à la durée d'avant. ── -->
+    <!-- ── Mode camping (2026-11-24) : avertissement montré en touchant la tuile « Camping », par-dessus
+         la carte de réglage (il remplace celui de la durée « ∞ ») ; « J'ai compris » garde le camping,
+         « Annuler » revient au choix d'avant. Les lignes sont faites par le code. ── -->
     <FrameLayout
-        android:id="@+id/preclim_unlimited_layer"
+        android:id="@+id/preclim_camp_warn_layer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#99000000"
@@ -656,12 +693,15 @@
         android:visibility="gone">
 
         <LinearLayout
-            android:layout_width="720dp"
+            android:layout_width="780dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:orientation="vertical"
             android:background="@drawable/bg_hvac_modern_card"
-            android:padding="20dp"
+            android:paddingStart="22dp"
+            android:paddingEnd="22dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp"
             android:clickable="true"
             android:focusable="true">
 
@@ -672,14 +712,14 @@
                 android:gravity="center_vertical">
 
                 <FrameLayout
-                    android:id="@+id/preclim_unlimited_badge"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp">
+                    android:id="@+id/preclim_camp_warn_badge"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp">
 
                     <ImageView
-                        android:id="@+id/preclim_unlimited_icon"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:id="@+id/preclim_camp_warn_icon"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:importantForAccessibility="no"
                         android:src="@drawable/ic_dialog_warning" />
@@ -691,29 +731,28 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="14dp"
-                    android:text="@string/preclim_unlimited_title"
+                    android:text="@string/preclim_camp"
                     android:textColor="@color/text_primary"
                     android:textSize="22sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/preclim_unlimited_text"
+            <LinearLayout
+                android:id="@+id/preclim_camp_warn_rows"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="18sp" />
+                android:layout_marginTop="6dp"
+                android:orientation="vertical" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="14dp"
                 android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/preclim_unlimited_cancel"
+                    android:id="@+id/preclim_camp_warn_cancel"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
@@ -727,7 +766,7 @@
                     android:ellipsize="end" />
 
                 <TextView
-                    android:id="@+id/preclim_unlimited_ok"
+                    android:id="@+id/preclim_camp_warn_ok"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
