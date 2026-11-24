@@ -2130,3 +2130,8 @@
 .cgp-idle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
 .cgp-idle b { font-size: calc(18px * var(--ts, 1)); }
 .cgp-idle span { color: var(--text-secondary); font-size: calc(14px * var(--ts, 1)); }
+
+/* Sens de l'air d'une action (#275) et case « statistiques » de la sauvegarde (#269), 2026-11-24. */
+.rv-air { margin-top: 6px; }
+.rv-air .b.air { min-height: 84px; }
+.mw-bkstats { margin: 12px 4px 0; }
