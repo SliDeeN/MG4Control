@@ -1526,6 +1526,7 @@
     <string name="sound_stop">Stopp</string>
     <string name="sound_remove">Entfernen</string>
     <string name="sound_volume">Fahrzeuglautstärke während des Tons</string>
+    <string name="sound_volume_nav">Navigationslautstärke während des Tons</string>
     <string name="sound_when">Wann</string>
     <string name="sound_event_app_start">MG4Control startet</string>
     <string name="sound_event_ready_on">READY an</string>
@@ -1538,6 +1539,11 @@
     <string name="sound_profiles">Profile</string>
     <string name="sound_profiles_all">Alle Profile</string>
     <string name="sound_guard">Ein Ereignis während eines laufenden Tons wird ignoriert: nie zwei Töne nacheinander. Am Ende des Tons kehrt die Lautstärke auf den vorherigen Wert zurück, außer Sie haben sie inzwischen geändert.</string>
+    <string name="sound_channel">Tonkanal</string>
+    <string name="sound_channel_media">Medien</string>
+    <string name="sound_channel_nav">Navigation</string>
+    <string name="sound_channel_media_desc">Der Ton wird wie Musik abgespielt und pausiert Ihre Musik. Das Auto kann kurz auf die Quelle „Online“ wechseln: MG4Control stellt Ihre Quelle danach wieder her. Lautstärke für jeden Ton einstellbar.</string>
+    <string name="sound_channel_nav_desc">Der Ton wird wie eine Navigationsansage abgespielt: Die Musik wird kurz leiser und die Quelle wechselt nicht. Navigationslautstärke für jeden Ton einstellbar.</string>
     <string name="sound_import_title">Ton %1$d importieren</string>
     <string name="sound_import_subtitle">USB-Stick · Audiodateien bis 30 s</string>
     <string name="sound_import_subtitle_skipped">USB-Stick · nicht angebotene Dateien über 30 s: %1$d</string>

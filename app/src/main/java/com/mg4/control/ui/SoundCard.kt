@@ -18,6 +18,7 @@ import com.mg4.control.automation.SoundAutomationSettings
 import com.mg4.control.automation.SoundImport
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.SoundAutomationRules
+import com.mg4.control.model.SoundChannel
 import com.mg4.control.model.SoundEvent
 import com.mg4.control.model.SoundSlot
 import com.mg4.control.profile.ProfileManager
@@ -43,6 +44,7 @@ class SoundCard {
         val retirer: MaterialButton = racine.findViewById(R.id.btn_sound_remove)
         val volume: TextView = racine.findViewById(R.id.sound_slot_volume_value)
         val curseur: Slider = racine.findViewById(R.id.slider_sound_volume)
+        val libelleVolume: TextView = racine.findViewById(R.id.sound_slot_volume_label)
         val evenements: LinearLayout = racine.findViewById(R.id.sound_slot_events)
     }
 
@@ -65,6 +67,7 @@ class SoundCard {
     private var indication: TextView? = null
     private var lignes: List<Ligne> = emptyList()
     private var profils: LinearLayout? = null
+    private var canalTexte: TextView? = null
     private var max = 0
     /** Ligne dépliée, -1 = aucune. */
     private var ouverte = -1
@@ -76,18 +79,38 @@ class SoundCard {
         ajouter = view.findViewById<MaterialButton>(R.id.btn_sound_add).apply { setOnClickListener { importer(f, null) } }
         indication = view.findViewById(R.id.sound_add_hint)
         profils = view.findViewById(R.id.sound_profiles)
+        canalTexte = view.findViewById(R.id.sound_channel_desc)
+        brancherCanal(f, view.findViewById(R.id.sound_channel_segments))
         lignes = emptyList()
         peindre()
         griser(actif)
         SoundAutomation.surChangement = { peindre() }
-        // Le curseur prend l'échelle de la voiture.
+        lireEchelle(f)
+    }
+
+    /** Le curseur prend l'échelle de la voiture pour le canal choisi (média ou navigation). */
+    private fun lireEchelle(f: Fragment) {
+        val canal = SoundAutomationSettings.channel(f.requireContext())
         f.viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val m = MG4Hardware.getMediaVolumeMax()
+            val m = SoundAutomation.volumeMax(canal)
             withContext(Dispatchers.Main) {
                 if (!f.isAdded) return@withContext
                 max = m.coerceAtLeast(0)
                 peindre()
             }
+        }
+    }
+
+    /** Canal des sons : Média / Navigation, commun à tous les sons. */
+    private fun brancherCanal(f: Fragment, rangee: LinearLayout) {
+        val ctx = f.requireContext()
+        val canaux = listOf(SoundChannel.MEDIA, SoundChannel.NAVIGATION)
+        rangee.removeAllViews()
+        AppDialog.segments(rangee, listOf(ctx.getString(R.string.sound_channel_media), ctx.getString(R.string.sound_channel_nav)),
+            canaux.indexOf(SoundAutomationSettings.channel(ctx))) { rang ->
+            SoundAutomationSettings.setChannel(ctx, canaux[rang])
+            peindre()
+            lireEchelle(f)
         }
     }
 
@@ -168,6 +191,8 @@ class SoundCard {
         val sons = SoundAutomationSettings.slots(ctx)
         poserLignes(f, sons.size)
         if (ouverte !in sons.indices) ouverte = -1
+        val navigation = SoundAutomationSettings.channel(ctx) == SoundChannel.NAVIGATION
+        canalTexte?.text = ctx.getString(if (navigation) R.string.sound_channel_nav_desc else R.string.sound_channel_media_desc)
         lignes.forEachIndexed { i, l ->
             val s = sons[i]
             val e = l.reglages
@@ -195,6 +220,7 @@ class SoundCard {
             }
             e.volume.text = ctx.getString(R.string.door_volume_level_value, e.curseur.value.toInt(), e.curseur.valueTo.toInt())
             l.volume.text = ctx.getString(R.string.sound_row_volume, e.curseur.value.toInt())
+            e.libelleVolume.text = ctx.getString(if (navigation) R.string.sound_volume_nav else R.string.sound_volume)
             if (ouvert) evenements(f, i, e, sons)
         }
         val plafond = maxSons()

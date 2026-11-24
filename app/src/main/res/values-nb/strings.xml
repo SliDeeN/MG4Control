@@ -1527,6 +1527,7 @@
     <string name="sound_stop">Stopp</string>
     <string name="sound_remove">Fjern</string>
     <string name="sound_volume">Bilvolum under lyden</string>
+    <string name="sound_volume_nav">Navigasjonsvolum under lyden</string>
     <string name="sound_when">Når</string>
     <string name="sound_event_app_start">MG4Control starter</string>
     <string name="sound_event_ready_on">READY på</string>
@@ -1539,6 +1540,11 @@
     <string name="sound_profiles">Profiler</string>
     <string name="sound_profiles_all">Alle profiler</string>
     <string name="sound_guard">En hendelse som kommer mens en lyd spilles av blir ignorert: aldri to lyder på rad. Når lyden slutter, går volumet tilbake til forrige nivå, med mindre du endret det i mellomtiden.</string>
+    <string name="sound_channel">Lydkanal</string>
+    <string name="sound_channel_media">Medier</string>
+    <string name="sound_channel_nav">Navigasjon</string>
+    <string name="sound_channel_media_desc">Lyden spilles som musikk og setter din musikk på pause. Bilen kan bytte til kilden «Online» et øyeblikk: MG4Control setter deretter din tilbake. Volum kan stilles for hver lyd.</string>
+    <string name="sound_channel_nav_desc">Lyden spilles som en GPS-melding: musikken senkes et øyeblikk og kilden endres ikke. Navigasjonsvolum kan stilles for hver lyd.</string>
     <string name="sound_import_title">Importer lyd %1$d</string>
     <string name="sound_import_subtitle">USB-stasjon · lydfiler opptil 30 s</string>
     <string name="sound_import_subtitle_skipped">USB-stasjon · filer over 30 s tilbys ikke: %1$d</string>

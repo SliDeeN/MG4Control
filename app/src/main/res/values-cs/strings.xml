@@ -1428,6 +1428,7 @@
     <string name="sound_stop">Zastavit</string>
     <string name="sound_remove">Odebrat</string>
     <string name="sound_volume">Hlasitost zvuku ve voze během přehrávání</string>
+    <string name="sound_volume_nav">Hlasitost navigace během zvuku</string>
     <string name="sound_when">Kdy</string>
     <string name="sound_event_app_start">Spuštění MG4Control</string>
     <string name="sound_event_ready_on">Přechod do READY</string>
@@ -1440,6 +1441,11 @@
     <string name="sound_profiles">Profily</string>
     <string name="sound_profiles_all">Všechny profily</string>
     <string name="sound_guard">Událost, která nastane během přehrávání zvuku, se ignoruje: další zvuk se nezařadí do fronty. Po skončení zvuku se hlasitost vrátí na předchozí úroveň, pokud jste ji mezitím nezměnili.</string>
+    <string name="sound_channel">Kanál zvuků</string>
+    <string name="sound_channel_media">Média</string>
+    <string name="sound_channel_nav">Navigace</string>
+    <string name="sound_channel_media_desc">Zvuk hraje jako hudba a pozastaví tu vaši. Auto může na chvíli přepnout na zdroj «Online»: MG4Control pak vrátí ten váš. Hlasitost lze nastavit pro každý zvuk.</string>
+    <string name="sound_channel_nav_desc">Zvuk hraje jako hlášení navigace: hudba se na chvíli ztiší a zdroj se nezmění. Hlasitost navigace lze nastavit pro každý zvuk.</string>
     <string name="sound_import_title">Import zvuku %1$d</string>
     <string name="sound_import_subtitle">USB disk · zvukové soubory do 30 s</string>
     <string name="sound_import_subtitle_skipped">USB disk · nenabízené soubory delší než 30 s: %1$d</string>

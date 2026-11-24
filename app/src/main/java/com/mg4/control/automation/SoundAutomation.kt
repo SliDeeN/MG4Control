@@ -15,6 +15,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.ReadyWatcher
 import com.mg4.control.model.SoundAutomationRules
+import com.mg4.control.model.SoundChannel
 import com.mg4.control.model.SoundEvent
 import com.mg4.control.model.SoundGuard
 import com.mg4.control.model.SoundSlot
@@ -28,9 +29,11 @@ import java.io.File
  * démarrage de MG4Control, entrée ou sortie de READY, passage en P ou en D, ouverture d'une porte
  * avant (SWI132, SWI133), profil appliqué.
  *
- * Volume : celui de la VOITURE (volume média), réglé juste avant le son puis rendu à la fin —
- * seulement s'il n'a pas bougé entre-temps (décision du 2026-10-23). Le son passe donc par le canal
- * média, avec une demande de focus audio transitoire pour mettre la musique en pause. Garde-fou
+ * Canal ([SoundChannel], 2026-11-24) : Média par défaut — volume média de la voiture, focus audio
+ * transitoire qui met la musique en pause. Navigation : le son passe comme une annonce du GPS, focus
+ * « baisser la musique », volume de navigation. Dans les deux cas le volume du canal est réglé juste
+ * avant le son puis rendu à la fin, seulement s'il n'a pas bougé entre-temps (décision du
+ * 2026-10-23). Garde-fou
  * ([SoundGuard]) : un événement qui arrive pendant un son est ignoré. Rien en Mode Garage.
  *
  * Tout se passe sur le fil `mg4-sound` ; le boîtier est tenu éveillé le temps du son (un son de
@@ -67,6 +70,8 @@ object SoundAutomation {
     private var focus: AudioFocusRequest? = null
     private var veille: PowerManager.WakeLock? = null
     private var volumeAvant = -1
+    /** Canal dont le volume a été réglé pour le son en cours : c'est lui qu'on rend. */
+    private var canalVolume = SoundChannel.MEDIA
     private var volumeMis = -1
     private var finForcee: Runnable? = null
     private var dernierRapport: Int? = null
@@ -133,7 +138,7 @@ object SoundAutomation {
         app = context.applicationContext
         fil.post {
             val ctx = app ?: return@post
-            val v = volume ?: MG4Hardware.getMediaVolume().takeIf { it >= 0 }
+            val v = volume ?: volumeActuel(SoundAutomationSettings.channel(ctx)).takeIf { it >= 0 }
             jouer(ctx, -1, SoundSlot(path = chemin, title = titre, durationMs = dureeMs, volume = v), "automatisation", ecoute = false)
         }
     }
@@ -224,8 +229,9 @@ object SoundAutomation {
             AppLogger.i(TAG, "son ${index + 1} ($raison) ignoré : un son joue encore (${garde.remainingMs(maintenant)} ms)")
             return
         }
+        val canal = SoundAutomationSettings.channel(ctx)
         // Lecteur prêt AVANT de toucher au focus et au volume : un fichier illisible ne change rien.
-        val p = preparer(chemin)
+        val p = preparer(chemin, canal)
         if (p == null) {
             AppLogger.w(TAG, "son ${index + 1} ($raison) : lecture impossible")
             garde.release()
@@ -240,12 +246,13 @@ object SoundAutomation {
         verifSource = null
         sourceAvant = sourceAttendue ?: MG4Hardware.currentAudioSource()
         sourceAttendue = null
-        demanderFocus(ctx)
-        // Volume de la voiture pour ce son ; rendu à la fin s'il n'a pas bougé entre-temps.
-        val max = MG4Hardware.getMediaVolumeMax()
-        val avant = MG4Hardware.getMediaVolume()
+        demanderFocus(ctx, canal)
+        // Volume du canal pour ce son ; rendu à la fin s'il n'a pas bougé entre-temps.
+        val max = volumeMax(canal)
+        val avant = volumeActuel(canal)
         val cible = SoundAutomationRules.volumeFor(s, max)
-        if (max > 0 && avant >= 0 && avant != cible && MG4Hardware.setMediaVolume(cible)) {
+        canalVolume = canal
+        if (max > 0 && avant >= 0 && avant != cible && reglerVolume(canal, cible)) {
             volumeAvant = avant
             volumeMis = cible
         }
@@ -258,7 +265,7 @@ object SoundAutomation {
         }
         enLecture = index
         finForcee = Runnable { terminer("délai dépassé") }.also { fil.postDelayed(it, s.durationMs + SECURITE_MS) }
-        AppLogger.i(TAG, "son ${index + 1} « ${s.title} » (${s.durationMs} ms) — $raison — volume " +
+        AppLogger.i(TAG, "son ${index + 1} « ${s.title} » (${s.durationMs} ms) — $raison — canal ${canal.key} — volume " +
             (if (volumeMis >= 0) "$avant → $volumeMis" else "inchangé ($avant)") +
             " — source ${sourceAvant?.name ?: "illisible"}" + if (ecoute) " — écoute" else "")
         prevenir()
@@ -276,15 +283,35 @@ object SoundAutomation {
         PARTAGEE("mémoire partagée"),
     }
 
+    /** Volume de la voiture pour [canal] : média ou navigation. */
+    fun volumeMax(canal: SoundChannel): Int =
+        if (canal == SoundChannel.NAVIGATION) MG4Hardware.getNavVolumeMax() else MG4Hardware.getMediaVolumeMax()
+    private fun volumeActuel(canal: SoundChannel): Int =
+        if (canal == SoundChannel.NAVIGATION) MG4Hardware.getNavVolume() else MG4Hardware.getMediaVolume()
+    private fun reglerVolume(canal: SoundChannel, niveau: Int): Boolean =
+        if (canal == SoundChannel.NAVIGATION) MG4Hardware.setNavVolume(niveau) else MG4Hardware.setMediaVolume(niveau)
+
+    /**
+     * Ce que le son dit être à la voiture. Navigation : l'usage des annonces du GPS ; la voiture le
+     * mélange à la musique sans changer de source (essais d'un utilisateur SWI68, 2026-11-24).
+     */
+    private fun attributs(canal: SoundChannel): AudioAttributes = when (canal) {
+        SoundChannel.MEDIA -> AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+        SoundChannel.NAVIGATION -> AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+    }
+
     /** Lecteur prêt à jouer [chemin], par la première [Voie] qui marche ; `null` si aucune. */
-    private fun preparer(chemin: String): MediaPlayer? {
+    private fun preparer(chemin: String, canal: SoundChannel): MediaPlayer? {
         for (voie in Voie.entries) {
             val p = MediaPlayer()
             try {
-                p.setAudioAttributes(AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build())
+                p.setAudioAttributes(attributs(canal))
                 when (voie) {
                     Voie.MEMOIRE -> p.setDataSource(SonEnMemoire(File(chemin).readBytes()))
                     Voie.PARTAGEE -> p.setDataSource(copiePartagee(File(chemin)).path)
@@ -325,9 +352,9 @@ object SoundAutomation {
         }
         lecteur = null
         if (volumeMis >= 0) {
-            val actuel = MG4Hardware.getMediaVolume()
+            val actuel = volumeActuel(canalVolume)
             if (SoundAutomationRules.shouldRestore(actuel, volumeMis)) {
-                MG4Hardware.setMediaVolume(volumeAvant)
+                reglerVolume(canalVolume, volumeAvant)
                 AppLogger.i(TAG, "volume rendu : $volumeMis → $volumeAvant")
             } else {
                 AppLogger.i(TAG, "volume changé pendant le son ($actuel), laissé tel quel")
@@ -375,10 +402,13 @@ object SoundAutomation {
         principal.post { surChangement?.invoke() }
     }
 
-    private fun demanderFocus(ctx: Context) {
+    /** Média : la musique en pause le temps du son. Navigation : la musique seulement baissée. */
+    private fun demanderFocus(ctx: Context, canal: SoundChannel) {
         val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
-        val f = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-            .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build())
+        val gain = if (canal == SoundChannel.NAVIGATION) AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+            else AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        val f = AudioFocusRequest.Builder(gain)
+            .setAudioAttributes(attributs(canal))
             .setOnAudioFocusChangeListener { }
             .build()
         val r = runCatching { am.requestAudioFocus(f) }.getOrNull()

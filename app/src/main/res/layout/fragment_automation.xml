@@ -2695,6 +2695,41 @@
                         android:layout_marginTop="12dp"
                         android:layout_marginBottom="12dp" />
 
+                    <!-- Canal des sons (2026-11-24) : Média / Navigation, posé par SoundCard. -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/sound_channel"
+                            android:textColor="@color/text_primary"
+                            android:textSize="19sp" />
+
+                        <LinearLayout
+                            android:id="@+id/sound_channel_segments"
+                            android:layout_width="440dp"
+                            android:layout_height="60dp"
+                            android:layout_marginStart="12dp"
+                            android:background="@drawable/bg_dialog_segments"
+                            android:orientation="horizontal"
+                            android:padding="4dp" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/sound_channel_desc"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:layout_marginBottom="14dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="17sp" />
+
                     <!-- Liste des sons (2026-10-29) : une ligne dépliable par son, posée par SoundCard ;
                          autant de sons que de moments possibles sur ce firmware. -->
                     <LinearLayout

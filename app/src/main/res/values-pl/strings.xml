@@ -1526,6 +1526,7 @@
     <string name="sound_stop">Zatrzymaj</string>
     <string name="sound_remove">Usuń</string>
     <string name="sound_volume">Głośność samochodu podczas dźwięku</string>
+    <string name="sound_volume_nav">Głośność nawigacji podczas dźwięku</string>
     <string name="sound_when">Kiedy</string>
     <string name="sound_event_app_start">Uruchomienie MG4Control</string>
     <string name="sound_event_ready_on">READY włączone</string>
@@ -1538,6 +1539,11 @@
     <string name="sound_profiles">Profile</string>
     <string name="sound_profiles_all">Wszystkie profile</string>
     <string name="sound_guard">Zdarzenie, które nadejdzie podczas odtwarzania dźwięku, jest pomijane: nigdy dwa dźwięki z rzędu. Po zakończeniu dźwięku głośność wraca do poprzedniego poziomu, chyba że w międzyczasie ją zmieniłeś.</string>
+    <string name="sound_channel">Kanał dźwięków</string>
+    <string name="sound_channel_media">Multimedia</string>
+    <string name="sound_channel_nav">Nawigacja</string>
+    <string name="sound_channel_media_desc">Dźwięk gra jak muzyka i wstrzymuje Twoją. Samochód może na chwilę przełączyć się na źródło «Online»: MG4Control potem przywraca Twoje. Głośność ustawiana dla każdego dźwięku.</string>
+    <string name="sound_channel_nav_desc">Dźwięk gra jak komunikat nawigacji: muzyka na chwilę cichnie, a źródło się nie zmienia. Głośność nawigacji ustawiana dla każdego dźwięku.</string>
     <string name="sound_import_title">Import dźwięku %1$d</string>
     <string name="sound_import_subtitle">Pendrive · pliki audio do 30 s</string>
     <string name="sound_import_subtitle_skipped">Pendrive · pominięte pliki dłuższe niż 30 s: %1$d</string>

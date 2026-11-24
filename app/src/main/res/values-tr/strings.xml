@@ -1526,6 +1526,7 @@
     <string name="sound_stop">Durdur</string>
     <string name="sound_remove">Kaldır</string>
     <string name="sound_volume">Ses sırasında araç ses seviyesi</string>
+    <string name="sound_volume_nav">Ses sırasında navigasyon ses düzeyi</string>
     <string name="sound_when">Ne zaman</string>
     <string name="sound_event_app_start">MG4Control başlatılınca</string>
     <string name="sound_event_ready_on">READY açılınca</string>
@@ -1538,6 +1539,11 @@
     <string name="sound_profiles">Profiller</string>
     <string name="sound_profiles_all">Tüm profiller</string>
     <string name="sound_guard">Bir ses çalarken gelen olay yok sayılır: asla art arda iki ses çalmaz. Ses bitince ses seviyesi önceki değerine döner; arada siz değiştirdiyseniz dokunulmaz.</string>
+    <string name="sound_channel">Ses kanalı</string>
+    <string name="sound_channel_media">Medya</string>
+    <string name="sound_channel_nav">Navigasyon</string>
+    <string name="sound_channel_media_desc">Ses müzik gibi çalar ve sizin müziğinizi duraklatır. Araç kısa bir süre «Çevrimiçi» kaynağına geçebilir: MG4Control ardından sizin kaynağınızı geri getirir. Ses düzeyi her ses için ayarlanabilir.</string>
+    <string name="sound_channel_nav_desc">Ses bir GPS anonsu gibi çalar: müzik kısa bir süre kısılır ve kaynak değişmez. Navigasyon ses düzeyi her ses için ayarlanabilir.</string>
     <string name="sound_import_title">%1$d. sesi içe aktar</string>
     <string name="sound_import_subtitle">USB bellek · en fazla 30 sn’lik ses dosyaları</string>
     <string name="sound_import_subtitle_skipped">USB bellek · önerilmeyen 30 sn’den uzun dosyalar: %1$d</string>

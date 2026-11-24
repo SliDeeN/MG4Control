@@ -4281,6 +4281,48 @@ object MG4Hardware {
 
     private const val VOL_TAG = "MG4_VOL"
 
+    // ── Volume de navigation (canal Navigation des sons, 2026-11-24) ───────────
+    // Lu dans les firmwares. Ancien SDK (SWI133) : SmartSound VOL_TYPE_NAVIGATION = 4, que le
+    // service (ISmartSoundBinder.setVolume) traduit en usage 12 = USAGE_ASSISTANCE_NAVIGATION_GUIDANCE,
+    // celui du son. A9 (SWI69) : CarAdapterAudioManager.getGroupIdFromType REFUSE le type 4
+    // (« volume type is illegal ») ; le curseur de navigation des Réglages (« guidage vocal »,
+    // SoundSingleModel.onVolumeChanged) est le type 2, traduit en usage 11.
+    private const val VOL_TYPE_NAV_OLD_SDK = 4
+    private const val VOL_TYPE_NAV_A9      = 2
+
+    /** Max du volume de navigation ; -1 si indisponible (firmware sans voie SAIC). */
+    fun getNavVolumeMax(): Int {
+        val v = when {
+            isOldSdkSound() -> smartSoundGetInt("getMaxVolume", VOL_TYPE_NAV_OLD_SDK)
+            isA9Sound()     -> audioGetArg(AUDIO_GET_MAX_VOL, VOL_TYPE_NAV_A9)
+            else            -> -1
+        }
+        AppLogger.i(VOL_TAG, "getNavVolumeMax = $v [oldSdk=${isOldSdkSound()} a9=${isA9Sound()}]")
+        return v
+    }
+
+    /** Volume de navigation courant ; -1 si indisponible. */
+    fun getNavVolume(): Int {
+        val v = when {
+            isOldSdkSound() -> smartSoundGetInt("getVolume", VOL_TYPE_NAV_OLD_SDK)
+            isA9Sound()     -> audioGetArg(AUDIO_GET_VOLUME, VOL_TYPE_NAV_A9)
+            else            -> -1
+        }
+        AppLogger.i(VOL_TAG, "getNavVolume = $v")
+        return v
+    }
+
+    /** Fixe le volume de navigation. */
+    fun setNavVolume(level: Int): Boolean {
+        val ok = when {
+            isOldSdkSound() -> smartSoundSetVolume(level, VOL_TYPE_NAV_OLD_SDK)
+            isA9Sound()     -> audioSet3(AUDIO_SET_VOLUME, VOL_TYPE_NAV_A9, level, 0)
+            else            -> false
+        }
+        AppLogger.i(VOL_TAG, "setNavVolume($level) = $ok")
+        return ok
+    }
+
     /**
      * Voies du volume média, dans l'ordre : SAIC (ancien SDK ou A9), puis le CarAudioManager
      * d'Android Automotive, puis AudioManager — ces deux replis viennent du fork sensoyg (firmware
@@ -4408,12 +4450,12 @@ object MG4Hardware {
         return try { m.javaClass.getMethod(method, Int::class.javaPrimitiveType).invoke(m, arg) as? Int ?: -1 }
         catch (_: Exception) { -1 }
     }
-    private fun smartSoundSetVolume(level: Int): Boolean {
+    private fun smartSoundSetVolume(level: Int, type: Int = VOL_TYPE_MEDIA): Boolean {
         val m = sSmartSound ?: return false
         return try {
             m.javaClass.getMethod("setVolume", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
-                .invoke(m, VOL_TYPE_MEDIA, level, 0); true
-        } catch (e: Exception) { AppLogger.w(TAG, "setMediaVolume oldSdk exc: ${e.message}"); false }
+                .invoke(m, type, level, 0); true
+        } catch (e: Exception) { AppLogger.w(TAG, "setVolume($type) oldSdk exc: ${e.message}"); false }
     }
 
     // A9 : ICarAudioService via binder. getVolume(usage)/getMaxVolume(usage) = 1 arg ; setVolume(usage,val,flags) = 3 args.

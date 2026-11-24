@@ -1526,6 +1526,7 @@
     <string name="sound_stop">Parar</string>
     <string name="sound_remove">Remover</string>
     <string name="sound_volume">Volume do carro durante o som</string>
+    <string name="sound_volume_nav">Volume de navegação durante o som</string>
     <string name="sound_when">Quando</string>
     <string name="sound_event_app_start">Arranque do MG4Control</string>
     <string name="sound_event_ready_on">Entrada em READY</string>
@@ -1538,6 +1539,11 @@
     <string name="sound_profiles">Perfis</string>
     <string name="sound_profiles_all">Todos os perfis</string>
     <string name="sound_guard">Um evento que chega enquanto um som está a tocar é ignorado: nunca dois sons seguidos. No fim do som, o volume volta ao valor anterior, exceto se o tiver alterado entretanto.</string>
+    <string name="sound_channel">Canal dos sons</string>
+    <string name="sound_channel_media">Multimédia</string>
+    <string name="sound_channel_nav">Navegação</string>
+    <string name="sound_channel_media_desc">O som toca como música e põe a sua em pausa. O carro pode passar por instantes para a fonte «Online»: o MG4Control volta depois a pôr a sua. Volume ajustável para cada som.</string>
+    <string name="sound_channel_nav_desc">O som toca como um aviso do GPS: a música baixa por instantes e a fonte não muda. Volume de navegação ajustável para cada som.</string>
     <string name="sound_import_title">Importar o som %1$d</string>
     <string name="sound_import_subtitle">Pen USB · ficheiros de áudio até 30 s</string>
     <string name="sound_import_subtitle_skipped">Pen USB · ficheiros com mais de 30 s não propostos: %1$d</string>

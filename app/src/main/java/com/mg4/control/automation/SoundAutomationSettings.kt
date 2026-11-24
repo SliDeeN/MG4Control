@@ -3,6 +3,7 @@ package com.mg4.control.automation
 import android.content.Context
 import android.content.SharedPreferences
 import com.mg4.control.model.SoundAutomationRules
+import com.mg4.control.model.SoundChannel
 import com.mg4.control.model.SoundSlot
 import java.io.File
 
@@ -21,6 +22,7 @@ object SoundAutomationSettings {
     private const val KEY_ENABLED = "sound_enabled"
     private const val KEY_PROFILES = "sound_profiles"
     private const val KEY_COUNT = "sound_count"
+    private const val KEY_CHANNEL = "sound_channel"
     /** Les deux emplacements fixes d'avant la liste. */
     private const val ANCIENS_EMPLACEMENTS = 2
     private val CHAMPS = listOf("path", "title", "duration", "volume", "events")
@@ -94,6 +96,10 @@ object SoundAutomationSettings {
     private fun effacer(e: SharedPreferences.Editor, index: Int) {
         CHAMPS.forEach { e.remove(cle(index, it)) }
     }
+
+    /** Canal des sons, commun à tous ([SoundChannel]) ; Média par défaut. */
+    fun channel(ctx: Context): SoundChannel = SoundChannel.of(prefs(ctx).getString(KEY_CHANNEL, null))
+    fun setChannel(ctx: Context, c: SoundChannel) = prefs(ctx).edit().putString(KEY_CHANNEL, c.key).apply()
 
     fun profiles(ctx: Context): Set<String> =
         prefs(ctx).getString(KEY_PROFILES, null).orEmpty().split(',').filter { it.isNotBlank() }.toSet()

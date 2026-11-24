@@ -1490,7 +1490,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     /** Volume de la voiture pendant un son importé : 0 = inchangé. */
     private fun volumeSon(a: RuleAction, ok: (RuleAction) -> Unit) {
-        val max = MG4Hardware.getMediaVolumeMax().takeIf { it > 0 } ?: 40
+        // L'échelle du canal choisi dans la page Sons : média ou navigation.
+        val max = com.mg4.control.automation.SoundAutomation
+            .volumeMax(com.mg4.control.automation.SoundAutomationSettings.channel(ctx)).takeIf { it > 0 } ?: 40
         RuleValueDialogs.nombre(ctx, s(R.string.rule_sound_volume), null, a.count ?: 0, 0, max,
             texte = { if (it == 0) s(R.string.rule_sound_volume_unchanged) else "$it" }) { v ->
             ok(a.copy(count = v.takeIf { it > 0 }))

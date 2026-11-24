@@ -29,6 +29,24 @@ enum class SoundEvent(val key: String) {
     }
 }
 
+/**
+ * Canal des sons (2026-11-24, idée d'un utilisateur SWI68) : par quoi passe le son, pour tous les
+ * sons (page Sons et action « Jouer un son »).
+ *
+ * [MEDIA] : comme avant, de la musique qui met la vraie en pause ; la voiture peut passer un instant
+ * sur « En ligne » (MG4Control remet la source ensuite, issue #190) ; volume MÉDIA réglé par son.
+ * [NAVIGATION] : comme une annonce du GPS, qui baisse la musique sans changer de source ; volume de
+ * NAVIGATION réglé par son. Dans les deux cas, le volume d'avant revient à la fin s'il n'a pas bougé.
+ */
+enum class SoundChannel(val key: String) {
+    MEDIA("media"),
+    NAVIGATION("navigation");
+
+    companion object {
+        fun of(key: String?): SoundChannel = entries.firstOrNull { it.key == key } ?: MEDIA
+    }
+}
+
 /** Un emplacement de son : le fichier copié dans l'appli, sa durée, le volume voulu, ses événements. */
 data class SoundSlot(
     val path: String? = null,

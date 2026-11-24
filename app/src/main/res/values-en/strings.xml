@@ -1526,6 +1526,7 @@
     <string name="sound_stop">Stop</string>
     <string name="sound_remove">Remove</string>
     <string name="sound_volume">Car volume during the sound</string>
+    <string name="sound_volume_nav">Navigation volume during the sound</string>
     <string name="sound_when">When</string>
     <string name="sound_event_app_start">MG4Control starts</string>
     <string name="sound_event_ready_on">READY on</string>
@@ -1538,6 +1539,11 @@
     <string name="sound_profiles">Profiles</string>
     <string name="sound_profiles_all">All profiles</string>
     <string name="sound_guard">An event that arrives while a sound is playing is ignored: never two sounds in a row. When the sound ends, the volume goes back to its previous level, unless you changed it meanwhile.</string>
+    <string name="sound_channel">Sound channel</string>
+    <string name="sound_channel_media">Media</string>
+    <string name="sound_channel_nav">Navigation</string>
+    <string name="sound_channel_media_desc">The sound plays like music and pauses yours. The car may switch to the \"Online\" source for a moment: MG4Control then puts yours back. Volume set for each sound.</string>
+    <string name="sound_channel_nav_desc">The sound plays like a GPS announcement: the music is lowered for a moment and the source does not change. Navigation volume set for each sound.</string>
     <string name="sound_import_title">Import sound %1$d</string>
     <string name="sound_import_subtitle">USB drive · audio files up to 30 s</string>
     <string name="sound_import_subtitle_skipped">USB drive · files over 30 s not offered: %1$d</string>
