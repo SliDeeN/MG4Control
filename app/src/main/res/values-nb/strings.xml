@@ -342,7 +342,7 @@
     <string name="settings_popup_delay_desc">Profilvelger, automasjonsbekreftelse og HVAC pop-up. Hver handling starter forsinkelsen på nytt.</string>
     <string name="settings_fullscreen">Fullskjerm</string>
     <string name="settings_fullscreen_switch">Skjul statuslinjen og navigasjonslinjen</string>
-    <string name="settings_fullscreen_desc">Hele skjermhøyden for MG4Control. Sveip fra kanten for å bringe stolpene tilbake et øyeblikk.</string>
+    <string name="settings_fullscreen_desc">Hele skjermen for MG4Control: bilens øvre linje og sidelinje skjules.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Stor</string>
     <string name="settings_text_size_xlarge">Ekstra stor</string>

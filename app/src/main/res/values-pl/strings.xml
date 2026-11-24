@@ -340,7 +340,7 @@
     <string name="settings_popup_delay_desc">Wybór profilu, potwierdzenie automatyzacji i okno HVAC. Każda czynność odlicza czas od nowa.</string>
     <string name="settings_fullscreen">Pełny ekran</string>
     <string name="settings_fullscreen_switch">Ukryj pasek stanu i pasek nawigacji</string>
-    <string name="settings_fullscreen_desc">Cała wysokość ekranu dla MG4Control. Przesuń od krawędzi, aby na chwilę przywrócić paski.</string>
+    <string name="settings_fullscreen_desc">Cały ekran dla MG4Control: górny pasek i pasek boczny samochodu są ukryte.</string>
     <string name="settings_text_size_standard">Standardowy</string>
     <string name="settings_text_size_large">Duży</string>
     <string name="settings_text_size_xlarge">Bardzo duży</string>

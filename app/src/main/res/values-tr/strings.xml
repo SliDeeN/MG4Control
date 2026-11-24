@@ -340,7 +340,7 @@
     <string name="settings_popup_delay_desc">Profil seçici, otomasyon onayı ve HVAC açılır penceresi. Her işlem süreyi yeniden başlatır.</string>
     <string name="settings_fullscreen">Tam ekran</string>
     <string name="settings_fullscreen_switch">Durum çubuğunu ve gezinme çubuğunu gizle</string>
-    <string name="settings_fullscreen_desc">Ekranın tüm yüksekliği MG4Control için. Çubukları kısa süreliğine geri getirmek için kenardan kaydırın.</string>
+    <string name="settings_fullscreen_desc">Ekranın tamamı MG4Control için: aracın üst çubuğu ve yan çubuğu gizlenir.</string>
     <string name="settings_text_size_standard">Standart</string>
     <string name="settings_text_size_large">Büyük</string>
     <string name="settings_text_size_xlarge">Çok büyük</string>

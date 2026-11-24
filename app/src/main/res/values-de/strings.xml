@@ -340,7 +340,7 @@
     <string name="settings_popup_delay_desc">Profilauswahl, Automatisierungsabfrage und HVAC-Pop-up. Jede Aktion startet die Zeit neu.</string>
     <string name="settings_fullscreen">Vollbild</string>
     <string name="settings_fullscreen_switch">Statusleiste und Navigationsleiste ausblenden</string>
-    <string name="settings_fullscreen_desc">Die ganze Bildschirmhöhe für MG4Control. Vom Rand wischen, um die Leisten kurz wieder einzublenden.</string>
+    <string name="settings_fullscreen_desc">Der ganze Bildschirm für MG4Control: Die obere Leiste und die Seitenleiste des Fahrzeugs werden ausgeblendet.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Groß</string>
     <string name="settings_text_size_xlarge">Sehr groß</string>

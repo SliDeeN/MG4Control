@@ -294,7 +294,7 @@
     <string name="settings_popup_delay_desc">Výběr profilu, potvrzení automatizace a okno klimatizace. Každá akce spustí odpočet znovu.</string>
     <string name="settings_fullscreen">Celá obrazovka</string>
     <string name="settings_fullscreen_switch">Skrýt stavový a navigační panel</string>
-    <string name="settings_fullscreen_desc">MG4Control využije celou výšku obrazovky. Přejetím od okraje na chvíli znovu zobrazíte panely.</string>
+    <string name="settings_fullscreen_desc">Celá obrazovka pro MG4Control: horní lišta infotainmentu i boční lišta se skryjí.</string>
     <string name="settings_text_size_standard">Standardní</string>
     <string name="settings_text_size_large">Velký</string>
     <string name="settings_text_size_xlarge">Extra velký</string>

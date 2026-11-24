@@ -12,8 +12,9 @@ import androidx.core.view.WindowInsetsControllerCompat
  *
  * Validé en voiture le 2026-10-23 avec l'écran de suivi de la pré-climatisation, qui l'utilise
  * toujours. Pour l'application, c'est le réglage « Plein écran » (Réglages › Interface), désactivé
- * par défaut. Un glissement depuis le bord fait réapparaître les barres un instant ; une activité le
- * réapplique quand elle reprend le focus (une fenêtre de dialogue peut les avoir fait revenir).
+ * par défaut. SAIC bloque le glissement depuis le bord : les barres ne reviennent pas tant que
+ * l'option est active (issue #272). Une activité réapplique le plein écran quand elle reprend le
+ * focus (une fenêtre de dialogue peut avoir fait revenir les barres).
  */
 object FullScreen {
 

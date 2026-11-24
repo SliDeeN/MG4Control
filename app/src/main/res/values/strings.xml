@@ -343,7 +343,7 @@
     <string name="settings_popup_delay_desc">Sélecteur de profils, confirmation d\'automatisation et pop-up HVAC. Chaque action relance le délai.</string>
     <string name="settings_fullscreen">Plein écran</string>
     <string name="settings_fullscreen_switch">Masquer la barre d\'état et la barre de navigation</string>
-    <string name="settings_fullscreen_desc">Toute la hauteur de l\'écran pour MG4Control. Glissez depuis le bord pour faire réapparaître les barres un instant.</string>
+    <string name="settings_fullscreen_desc">Tout l\'écran pour MG4Control : le bandeau du haut et la barre latérale de la voiture sont masqués.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Grand</string>
     <string name="settings_text_size_xlarge">Très grand</string>
