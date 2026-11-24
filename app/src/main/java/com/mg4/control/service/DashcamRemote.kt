@@ -61,17 +61,22 @@ object DashcamRemote {
         return Rec(horloge.state == DashcamRecState.PAUSED, RecClock.format(horloge.elapsedMs(SystemClock.elapsedRealtime())))
     }
 
-    /** Début de la surveillance : demande l'enregistrement si le réglage et l'appli le permettent. */
-    fun demarrer(context: Context, surveillanceMin: Int, lockSeconds: Int) {
+    /**
+     * Début de la surveillance : demande l'enregistrement si le réglage et l'appli le permettent.
+     * [camping] (2026-11-24) : l'interrupteur de la page ne compte pas — le Oui / Non de la fenêtre du
+     * camping a déjà décidé ; seule l'appli doit se piloter.
+     */
+    fun demarrer(context: Context, surveillanceMin: Int, lockSeconds: Int, camping: Boolean = false) {
         val app = context.applicationContext
+        val mode = if (camping) "camping" else "surveillance"
         principal.post {
-            if (!PreClimateSettings.dashcamAuto(app)) {
-                AppLogger.i(TAG, "surveillance : enregistrement automatique désactivé dans les réglages")
+            if (!camping && !PreClimateSettings.dashcamAuto(app)) {
+                AppLogger.i(TAG, "$mode : enregistrement automatique désactivé dans les réglages")
                 return@post
             }
             val d = DashcamApp.detecter(app)
             if (d !is DashcamApp.Detection.Pilotable) {
-                AppLogger.i(TAG, "surveillance : pas d'appli caméra pilotable (${d.javaClass.simpleName}) — rien n'est filmé par MG4Control")
+                AppLogger.i(TAG, "$mode : pas d'appli caméra pilotable (${d.javaClass.simpleName}) — rien n'est filmé par MG4Control")
                 return@post
             }
             val c = d.commandes
@@ -116,10 +121,10 @@ object DashcamRemote {
      * Mode camping (2026-11-24) : l'appli caméra plafonne un enregistrement à 120 min — STOP, puis
      * un nouveau START [RELANCE_MS] plus tard (un nouveau fichier ; quelques secondes sans image).
      */
-    fun relancer(context: Context, minutes: Int) {
+    fun relancer(context: Context, minutes: Int, camping: Boolean = false) {
         val app = context.applicationContext
         arreter("relance")
-        principal.postDelayed({ demarrer(app, minutes, 0) }, RELANCE_MS)
+        principal.postDelayed({ demarrer(app, minutes, 0, camping) }, RELANCE_MS)
     }
 
     private fun ecouter(app: Context, c: DashcamContract.Commands) {

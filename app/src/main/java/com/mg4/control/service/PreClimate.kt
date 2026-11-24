@@ -168,7 +168,9 @@ object PreClimate {
             val surveillance = req.surveillance && req.mode == PreClimateMode.NOW
             // Mode camping (2026-11-24) : sa consigne et sa ventilation, bornées comme les autres.
             val camp = req.camping?.takeIf { PreClimatePlan.camping(req) }?.let {
-                it.copy(tempC = it.tempC.coerceIn(clim.tempMin, clim.tempMax), fan = it.fan.coerceIn(clim.fanMin, clim.fanMax))
+                it.copy(tempC = it.tempC.coerceIn(clim.tempMin, clim.tempMax), fan = it.fan.coerceIn(clim.fanMin, clim.fanMax),
+                    // Vidéo seulement avec une appli caméra pilotable : sinon ni START, ni message caméra la nuit.
+                    record = it.record && DashcamApp.detecter(app) is DashcamApp.Detection.Pilotable)
             }
             val borne = req.copy(
                 tempC = (camp?.tempC ?: req.tempC).coerceIn(clim.tempMin, clim.tempMax),
@@ -313,7 +315,7 @@ object PreClimate {
         val app = appContext ?: return
         if (!camp.record) return
         campRecAt = SystemClock.elapsedRealtime()
-        DashcamRemote.demarrer(app, com.mg4.control.model.DashcamContract.MAX_MINUTES, 0)
+        DashcamRemote.demarrer(app, com.mg4.control.model.DashcamContract.MAX_MINUTES, 0, camping = true)
     }
 
     /** Relit le verrouillage ; au premier échec, essaie la voie de repli. */
@@ -379,7 +381,7 @@ object PreClimate {
             campRecAt = maintenant
             appContext?.let {
                 AppLogger.i(TAG, "mode camping : enregistrement vidéo relancé (plafond de l'appli à ${com.mg4.control.model.DashcamContract.MAX_MINUTES} min)")
-                DashcamRemote.relancer(it, com.mg4.control.model.DashcamContract.MAX_MINUTES)
+                DashcamRemote.relancer(it, com.mg4.control.model.DashcamContract.MAX_MINUTES, camping = true)
             }
         }
 

@@ -442,11 +442,13 @@ class PreClimateActivity : Activity() {
      */
     private fun peindreCamping(e: PreClimate.Etat, maintenant: Long) {
         val c = e.req.camping ?: return
-        v.survIcone.setImageResource(if (c.msgCamera || !c.msgEcall) R.drawable.ic_preclim_cctv else R.drawable.ic_preclim_tent)
-        v.survTitre.visibility = if (c.msgCamera) View.VISIBLE else View.GONE
-        v.survTexte.visibility = if (c.msgCamera) View.VISIBLE else View.GONE
+        // Message caméra seulement si la vidéo est vraiment demandée (2026-11-24) ; sans message, la tente.
+        val camera = c.msgCamera && c.record
+        v.survIcone.setImageResource(if (camera) R.drawable.ic_preclim_cctv else R.drawable.ic_preclim_tent)
+        v.survTitre.visibility = if (camera) View.VISIBLE else View.GONE
+        v.survTexte.visibility = if (camera) View.VISIBLE else View.GONE
         v.survEcall.visibility = if (c.msgEcall) View.VISIBLE else View.GONE
-        val seul = c.msgEcall && !c.msgCamera
+        val seul = c.msgEcall && !camera
         v.survEcall.text = v.s(R.string.preclim_camp_msg_ecall)
         v.survEcall.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (seul) 58f else 28f)
         v.survEcall.setTextColor(if (seul) v.danger else v.texte)

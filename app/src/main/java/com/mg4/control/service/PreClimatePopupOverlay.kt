@@ -719,13 +719,19 @@ object PreClimatePopupOverlay {
         v.campBatterie?.valeur?.text = v.s(R.string.preclim_value_percent, c.minSoc)
         v.campBatterie?.moins?.alpha = if (c.minSoc <= CampingPlan.SOC_MIN) ALPHA_GRISE else 1f
         v.campBatterie?.plus?.alpha = if (c.minSoc >= CampingPlan.SOC_MAX) ALPHA_GRISE else 1f
-        val filme = camera.pilotable && PreClimateSettings.dashcamAuto(v.loc)
-        v.campVideo?.visibility = if (filme) View.VISIBLE else View.GONE
-        listOf(v.puceCamera to c.msgCamera, v.puceEcall to c.msgEcall).forEach { (puce, on) ->
+        // Vidéo (2026-11-24) : la ligne dès que l'appli caméra se pilote ; seul son Oui / Non compte
+        // (l'interrupteur de la page Garde-voiture ne vaut que pour la surveillance).
+        v.campVideo?.visibility = if (camera.pilotable) View.VISIBLE else View.GONE
+        // « Surveillance vidéo active » grisée quand rien ne filmera : le choix retenu est gardé.
+        val filmera = camera.pilotable && c.record
+        listOf(Triple(v.puceCamera, c.msgCamera, filmera), Triple(v.puceEcall, c.msgEcall, true)).forEach { (puce, choisi, permis) ->
             puce ?: return@forEach
+            val on = choisi && permis
             OverlayKit.fond(puce, if (on) v.accentDoux else v.bouton, if (on) v.accent else v.bordure,
                 v.dp(if (on) 2f else 1f), v.dp(19f).toFloat())
             puce.setTextColor(if (on) v.texte else v.texte2)
+            puce.isEnabled = permis
+            puce.alpha = if (permis) 1f else ALPHA_GRISE
         }
     }
 
