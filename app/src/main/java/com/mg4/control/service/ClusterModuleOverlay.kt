@@ -508,6 +508,9 @@ internal object ClusterModuleOverlay {
             }
             if (on != haloMontre) {
                 haloMontre = on
+                // Une ligne par bascule : à comparer avec la sonde de la pédale (MG4_BRAKE).
+                if (actif) AppLogger.i(TAG, String.format(java.util.Locale.US, "halo de freinage %s (décélération %.1f m/s²)",
+                    if (on) "allumé" else "éteint", frein.deceleration ?: 0f))
                 val intensite = ClusterModuleSettings.brakeIntensity(ctx)
                 main.post { vue?.freinage(on, intensite) }
             }
