@@ -1378,6 +1378,7 @@ class MG4ControlService : Service() {
                     }, 500L)
                 }
                 MG4Hardware.CarIgnitionItem.OFF -> {
+                    com.mg4.control.profile.OnePedalGuard.stopWatch("contact coupé")
                     // Extinction → on oublie le choix manuel : le prochain cycle repart sur le défaut/BT
                     if (ProfileApplier.lastManualProfileId != null) {
                         AppLogger.i(TAG, "Katman5 IGNITION_OFF → reset du choix manuel")

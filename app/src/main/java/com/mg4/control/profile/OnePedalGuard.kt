@@ -18,6 +18,12 @@ import com.mg4.control.model.RegenLevel
  * arme donc cette garde : 3 s après le passage en READY (ou après l'application si la voiture y
  * est déjà), One Pedal est relu et, s'il manque, réécrit puis relu encore. Le journal dit ce qui
  * s'est passé — de quoi confirmer la cause au prochain diagnostic.
+ *
+ * Surveillance courte (issue #277, 2026-11-25, SWI68) : au démarrage à chaud, la voiture annule
+ * One Pedal juste après l'écriture, SANS passer en READY. L'armement lance donc aussi une
+ * relecture chaque seconde pendant [WATCH_MS] ; One Pedal relu coupé est réécrit, au plus
+ * [MAX_WATCH_REWRITES] fois — au-delà, c'est peut-être le conducteur qui l'a coupé depuis l'écran
+ * de la voiture : on le laisse faire. La relecture au READY reste en plus.
  */
 object OnePedalGuard {
 
@@ -26,6 +32,24 @@ object OnePedalGuard {
     const val WINDOW_MS = 30 * 60_000L
     private const val CHECK_DELAY_MS = 3_000L
     private const val RECHECK_DELAY_MS = 2_000L
+    /** Surveillance courte après l'armement (issue #277) : durée, cadence, réécritures permises. */
+    const val WATCH_MS = 30_000L
+    private const val WATCH_TICK_MS = 1_000L
+    const val MAX_WATCH_REWRITES = 2
+
+    /** Ce que fait la surveillance courte à une relecture, sans Android. */
+    enum class Watch { CONTINUE, REWRITE, GIVE_UP, END }
+
+    /**
+     * [on] l'état relu (`null` : illisible, on attend la relecture suivante), [ageMs] le temps
+     * depuis l'armement, [rewrites] les réécritures déjà faites par la surveillance.
+     */
+    fun watch(on: Boolean?, ageMs: Long, rewrites: Int): Watch = when {
+        ageMs > WATCH_MS -> Watch.END
+        on != false -> Watch.CONTINUE
+        rewrites >= MAX_WATCH_REWRITES -> Watch.GIVE_UP
+        else -> Watch.REWRITE
+    }
 
     /** Ce qu'il faut faire à la relecture, sans Android. */
     enum class Decision { OK, REWRITE, EXPIRED }
@@ -44,6 +68,9 @@ object OnePedalGuard {
     @Volatile private var armedAt: Long? = null
     @Volatile private var profileName: String = ""
     private var listening = false
+    private var watchRewrites = 0
+    /** Surveillance courte en cours (Handler.hasCallbacks n'existe qu'à partir de l'API 29). */
+    private var watching = false
 
     private val listener = ReadyWatcher.Listener { ready, _ ->
         if (ready && armedAt != null) planCheck("passage en READY")
@@ -54,8 +81,14 @@ object OnePedalGuard {
         main.post {
             armedAt = SystemClock.elapsedRealtime()
             profileName = profile
-            AppLogger.i(TAG, "  One Pedal : vérification armée pour le passage en READY (profil '$profile')")
+            AppLogger.i(TAG, "  One Pedal : vérification armée — relecture chaque seconde pendant ${WATCH_MS / 1000} s, " +
+                "puis au passage en READY (profil '$profile')")
             if (!listening) { listening = true; ReadyWatcher.add(listener) }
+            // Surveillance courte (issue #277) : la voiture peut l'annuler sans aucun READY.
+            watchRewrites = 0
+            watching = true
+            main.removeCallbacks(watchTick)
+            main.postDelayed(watchTick, WATCH_TICK_MS)
             // Déjà en READY (profil choisi en roulant, ou READY lu avant) : vérifier tout de suite.
             if (ReadyWatcher.ready == true) planCheck("déjà en READY")
         }
@@ -67,6 +100,45 @@ object OnePedalGuard {
             if (armedAt == null) return@post
             AppLogger.i(TAG, "  One Pedal : vérification annulée ($reason)")
             stop()
+        }
+    }
+
+    /** Contact coupé : la surveillance courte s'arrête (le prochain profil la relancera). */
+    fun stopWatch(reason: String) {
+        main.post {
+            if (!watching) return@post
+            watching = false
+            main.removeCallbacks(watchTick)
+            AppLogger.i(TAG, "One Pedal : surveillance arrêtée ($reason)")
+        }
+    }
+
+    private val watchTick: Runnable = object : Runnable {
+        override fun run() {
+            val depuis = armedAt ?: run { watching = false; return }
+            val on = runCatching { MG4Hardware.isOnePedalOn() }.getOrNull()
+            when (watch(on, SystemClock.elapsedRealtime() - depuis, watchRewrites)) {
+                Watch.END -> {
+                    AppLogger.i(TAG, "One Pedal : surveillance de ${WATCH_MS / 1000} s terminée " +
+                        "(${watchRewrites} réécriture(s), relu ${on ?: "illisible"}, profil '$profileName')")
+                    watching = false
+                    return
+                }
+                Watch.GIVE_UP -> {
+                    AppLogger.w(TAG, "One Pedal : encore coupé après $MAX_WATCH_REWRITES réécritures — laissé tel quel " +
+                        "(peut-être coupé par le conducteur, profil '$profileName')")
+                    watching = false
+                    return
+                }
+                Watch.REWRITE -> {
+                    watchRewrites++
+                    val ok = runCatching { MG4Hardware.setRegenLevel(RegenLevel.ONE_PEDAL) }.getOrDefault(false)
+                    AppLogger.w(TAG, "One Pedal : coupé ${(SystemClock.elapsedRealtime() - depuis) / 1000} s après " +
+                        "l'application sans READY — réécrit → $ok ($watchRewrites/$MAX_WATCH_REWRITES, profil '$profileName')")
+                }
+                Watch.CONTINUE -> Unit
+            }
+            main.postDelayed(this, WATCH_TICK_MS)
         }
     }
 
@@ -98,6 +170,8 @@ object OnePedalGuard {
 
     private fun stop() {
         main.removeCallbacks(check)
+        main.removeCallbacks(watchTick)
+        watching = false
         armedAt = null
         if (listening) { listening = false; ReadyWatcher.remove(listener) }
     }

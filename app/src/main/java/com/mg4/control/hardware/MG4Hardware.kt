@@ -2229,6 +2229,9 @@ object MG4Hardware {
 
     fun setOnePedal(enabled: Boolean): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setOnePedal → ${if (enabled) "On" else "Off"}")
+        // MG4Control coupe One Pedal (autre niveau de régénération, raccourci, automatisation,
+        // réglage rapide…) : la vérification du profil ne doit pas le remettre (issue #277).
+        if (!enabled) com.mg4.control.profile.OnePedalGuard.disarm("One Pedal coupé par MG4Control")
         val intVal = if (enabled) 1 else 0
         val ok = setIntPropertyCPM(PROP_ONE_PEDAL, AREA_GLOBAL, intVal)
         if (!ok) binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_ONE_PEDAL, intVal)
