@@ -832,16 +832,13 @@ object PreClimatePopupOverlay {
                 v.dp(if (on) 2f else 1f), v.dp(19f).toFloat())
             puce.setTextColor(if (on) v.texte else v.texte2)
         }
-        // « Surveillance vidéo active » grisée quand rien ne filmera : le choix retenu est gardé.
-        val filmera = camera.pilotable && c.record
-        listOf(Triple(v.puceCamera, c.msgCamera, filmera), Triple(v.puceEcall, c.msgEcall, true)).forEach { (puce, choisi, permis) ->
+        // « Surveillance vidéo active » toujours au choix (2026-11-25) : une dashcam que MG4Control ne
+        // pilote pas peut filmer seule en READY — le message reste utile sans vidéo lancée par nous.
+        listOf(v.puceCamera to c.msgCamera, v.puceEcall to c.msgEcall).forEach { (puce, on) ->
             puce ?: return@forEach
-            val on = choisi && permis
             OverlayKit.fond(puce, if (on) v.accentDoux else v.bouton, if (on) v.accent else v.bordure,
                 v.dp(if (on) 2f else 1f), v.dp(19f).toFloat())
             puce.setTextColor(if (on) v.texte else v.texte2)
-            puce.isEnabled = permis
-            puce.alpha = if (permis) 1f else ALPHA_GRISE
         }
     }
 

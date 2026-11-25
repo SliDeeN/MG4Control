@@ -442,8 +442,9 @@ class PreClimateActivity : Activity() {
      */
     private fun peindreCamping(e: PreClimate.Etat, maintenant: Long) {
         val c = e.req.camping ?: return
-        // Message caméra seulement si la vidéo est vraiment demandée (2026-11-24) ; sans message, la tente.
-        val camera = c.msgCamera && c.record
+        // Message caméra dès qu'il est choisi (2026-11-25) : une dashcam non pilotée par MG4Control peut
+        // filmer seule en READY. La pastille REC, elle, ne suit que notre vidéo. Sans message, la tente.
+        val camera = c.msgCamera
         v.survIcone.setImageResource(if (camera) R.drawable.ic_preclim_cctv else R.drawable.ic_preclim_tent)
         v.survTitre.visibility = if (camera) View.VISIBLE else View.GONE
         v.survTexte.visibility = if (camera) View.VISIBLE else View.GONE
