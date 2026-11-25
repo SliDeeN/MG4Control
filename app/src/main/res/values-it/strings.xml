@@ -1023,7 +1023,9 @@
     <string name="settings_cluster_brake_soft">Discreta</string>
     <string name="settings_cluster_brake_medium">Media</string>
     <string name="settings_cluster_brake_strong">Forte</string>
-    <string name="settings_cluster_brake_desc">Il bordo del display conducente si illumina di rosso quando si preme il pedale del freno, o quando l\'auto rallenta bruscamente senza di esso (forte rigenerazione).</string>
+    <string name="settings_cluster_brake_desc">Il bordo del display conducente si illumina di rosso quando si preme il pedale del freno, o quando l\'auto rallenta bruscamente senza di esso (forte rigenerazione). Stima: non indica lo stato reale delle luci di stop.</string>
+    <string name="settings_cluster_brake_warn_msg">Questo alone è una stima di MG4Control: si accende in base al pedale del freno e al rallentamento dell\'auto. Non indica lo stato reale delle luci di stop, che possono essere accese mentre l\'alone è spento, e viceversa.\n\nNon affidatevi a esso per sapere se i veicoli dietro di voi vedono che state frenando.</string>
+    <string name="settings_cluster_brake_warn_ok">Attiva</string>
     <string name="cluster_regen_kw">RIGEN. kW</string>
     <string name="cluster_stopped_kw">kW da fermo</string>
     <string name="cluster_trip_avg">MEDIA VIAGGIO</string>

@@ -1024,7 +1024,9 @@
     <string name="settings_cluster_brake_soft">Diskret</string>
     <string name="settings_cluster_brake_medium">Middels</string>
     <string name="settings_cluster_brake_strong">Sterk</string>
-    <string name="settings_cluster_brake_desc">Kanten av førerskjermen lyser rødt når du trykker på bremsepedalen, eller når bilen bremser kraftig ned uten den (kraftig regenerering).</string>
+    <string name="settings_cluster_brake_desc">Kanten av førerskjermen lyser rødt når du trykker på bremsepedalen, eller når bilen bremser kraftig ned uten den (kraftig regenerering). Anslag: viser ikke den faktiske tilstanden til bremselysene.</string>
+    <string name="settings_cluster_brake_warn_msg">Denne gløden er et anslag fra MG4Control: den tennes ut fra bremsepedalen og at bilen sakker farten. Den viser ikke den faktiske tilstanden til bremselysene, som kan være på mens gløden er av, og omvendt.\n\nIkke stol på den for å vite om kjøretøyene bak deg ser at du bremser.</string>
+    <string name="settings_cluster_brake_warn_ok">Slå på</string>
     <string name="cluster_regen_kw">REGEN kW</string>
     <string name="cluster_stopped_kw">kW stasjonær</string>
     <string name="cluster_trip_avg">TRIP AVG</string>

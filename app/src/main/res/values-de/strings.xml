@@ -1023,7 +1023,9 @@
     <string name="settings_cluster_brake_soft">Dezent</string>
     <string name="settings_cluster_brake_medium">Mittel</string>
     <string name="settings_cluster_brake_strong">Stark</string>
-    <string name="settings_cluster_brake_desc">Der Rand der Fahreranzeige leuchtet rot, wenn Sie das Bremspedal treten oder das Auto ohne Pedal stark verzögert (starke Rekuperation).</string>
+    <string name="settings_cluster_brake_desc">Der Rand der Fahreranzeige leuchtet rot, wenn Sie das Bremspedal treten oder das Auto ohne Pedal stark verzögert (starke Rekuperation). Schätzung: zeigt nicht den tatsächlichen Zustand der Bremslichter.</string>
+    <string name="settings_cluster_brake_warn_msg">Dieses Leuchten ist eine Schätzung von MG4Control: Es geht anhand des Bremspedals und der Verzögerung des Autos an. Es zeigt nicht den tatsächlichen Zustand der Bremslichter, die leuchten können, während das Leuchten aus ist, und umgekehrt.\n\nVerlassen Sie sich nicht darauf, um zu wissen, ob die Fahrzeuge hinter Ihnen Ihr Bremsen sehen.</string>
+    <string name="settings_cluster_brake_warn_ok">Aktivieren</string>
     <string name="cluster_regen_kw">REKUP. kW</string>
     <string name="cluster_stopped_kw">kW im Stand</string>
     <string name="cluster_trip_avg">Ø FAHRT</string>

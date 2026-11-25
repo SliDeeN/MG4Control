@@ -1023,7 +1023,9 @@
     <string name="settings_cluster_brake_soft">Delikatna</string>
     <string name="settings_cluster_brake_medium">Średnia</string>
     <string name="settings_cluster_brake_strong">Mocna</string>
-    <string name="settings_cluster_brake_desc">Krawędź ekranu kierowcy świeci na czerwono po naciśnięciu pedału hamulca lub gdy samochód mocno zwalnia bez niego (silna rekuperacja).</string>
+    <string name="settings_cluster_brake_desc">Krawędź ekranu kierowcy świeci na czerwono po naciśnięciu pedału hamulca lub gdy samochód mocno zwalnia bez niego (silna rekuperacja). Szacunek: nie pokazuje rzeczywistego stanu świateł stop.</string>
+    <string name="settings_cluster_brake_warn_msg">Ta poświata to szacunek MG4Control: zapala się na podstawie pedału hamulca i zwalniania samochodu. Nie pokazuje rzeczywistego stanu świateł stop, które mogą świecić, gdy poświata jest zgaszona, i odwrotnie.\n\nNie polegaj na niej, aby wiedzieć, czy pojazdy za Tobą widzą, że hamujesz.</string>
+    <string name="settings_cluster_brake_warn_ok">Włącz</string>
     <string name="cluster_regen_kw">ODZYSK kW</string>
     <string name="cluster_stopped_kw">kW na postoju</string>
     <string name="cluster_trip_avg">ŚR. PODRÓŻY</string>

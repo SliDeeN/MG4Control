@@ -1023,7 +1023,9 @@
     <string name="settings_cluster_brake_soft">Subtle</string>
     <string name="settings_cluster_brake_medium">Medium</string>
     <string name="settings_cluster_brake_strong">Strong</string>
-    <string name="settings_cluster_brake_desc">The edge of the driver display glows red when you press the brake pedal, or when the car slows down hard without it (strong regeneration).</string>
+    <string name="settings_cluster_brake_desc">The edge of the driver display glows red when you press the brake pedal, or when the car slows down hard without it (strong regeneration). Estimate: does not show the real state of the brake lights.</string>
+    <string name="settings_cluster_brake_warn_msg">This glow is an estimate by MG4Control: it lights up from the brake pedal and the car slowing down. It does not show the real state of the brake lights, which may be on while the glow is off, and the other way round.\n\nDo not rely on it to know whether the vehicles behind you can see that you are braking.</string>
+    <string name="settings_cluster_brake_warn_ok">Turn on</string>
     <string name="cluster_regen_kw">REGEN kW</string>
     <string name="cluster_stopped_kw">kW stationary</string>
     <string name="cluster_trip_avg">TRIP AVG</string>

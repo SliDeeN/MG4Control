@@ -1023,7 +1023,9 @@
     <string name="settings_cluster_brake_soft">Discreta</string>
     <string name="settings_cluster_brake_medium">Média</string>
     <string name="settings_cluster_brake_strong">Forte</string>
-    <string name="settings_cluster_brake_desc">A borda do ecrã do condutor acende a vermelho ao carregar no pedal do travão, ou quando o carro abranda com força sem ele (regeneração forte).</string>
+    <string name="settings_cluster_brake_desc">A borda do ecrã do condutor acende a vermelho ao carregar no pedal do travão, ou quando o carro abranda com força sem ele (regeneração forte). Estimativa: não indica o estado real das luzes de travagem.</string>
+    <string name="settings_cluster_brake_warn_msg">Este halo é uma estimativa do MG4Control: acende-se de acordo com o pedal do travão e o abrandamento do carro. Não indica o estado real das luzes de travagem, que podem estar acesas com o halo apagado, e vice-versa.\n\nNão confie nele para saber se os veículos atrás de si veem que está a travar.</string>
+    <string name="settings_cluster_brake_warn_ok">Ativar</string>
     <string name="cluster_regen_kw">REGEN. kW</string>
     <string name="cluster_stopped_kw">kW parado</string>
     <string name="cluster_trip_avg">MÉDIA VIAGEM</string>

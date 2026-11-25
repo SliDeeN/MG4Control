@@ -1023,7 +1023,9 @@
     <string name="settings_cluster_brake_soft">Hafif</string>
     <string name="settings_cluster_brake_medium">Orta</string>
     <string name="settings_cluster_brake_strong">Güçlü</string>
-    <string name="settings_cluster_brake_desc">Fren pedalına bastığınızda veya araç pedal olmadan sert yavaşladığında (güçlü rejenerasyon) sürücü ekranının kenarı kırmızı yanar.</string>
+    <string name="settings_cluster_brake_desc">Fren pedalına bastığınızda veya araç pedal olmadan sert yavaşladığında (güçlü rejenerasyon) sürücü ekranının kenarı kırmızı yanar. Tahmin: fren lambalarının gerçek durumunu göstermez.</string>
+    <string name="settings_cluster_brake_warn_msg">Bu parıltı MG4Control\'ün bir tahminidir: fren pedalına ve aracın yavaşlamasına göre yanar. Fren lambalarının gerçek durumunu göstermez; parıltı sönükken lambalar yanıyor olabilir, tersi de mümkündür.\n\nArkanızdaki araçların fren yaptığınızı görüp görmediğini anlamak için ona güvenmeyin.</string>
+    <string name="settings_cluster_brake_warn_ok">Etkinleştir</string>
     <string name="cluster_regen_kw">REJEN. kW</string>
     <string name="cluster_stopped_kw">kW duruşta</string>
     <string name="cluster_trip_avg">ORT. YOLCULUK</string>

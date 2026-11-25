@@ -930,7 +930,9 @@
     <string name="settings_cluster_brake_soft">Jemná</string>
     <string name="settings_cluster_brake_medium">Střední</string>
     <string name="settings_cluster_brake_strong">Silná</string>
-    <string name="settings_cluster_brake_desc">Okraj displeje řidiče se rozsvítí červeně při sešlápnutí brzdového pedálu nebo když auto prudce zpomaluje bez něj (silná rekuperace).</string>
+    <string name="settings_cluster_brake_desc">Okraj displeje řidiče se rozsvítí červeně při sešlápnutí brzdového pedálu nebo když auto prudce zpomaluje bez něj (silná rekuperace). Odhad: neukazuje skutečný stav brzdových světel.</string>
+    <string name="settings_cluster_brake_warn_msg">Tato záře je odhad aplikace MG4Control: rozsvítí se podle brzdového pedálu a zpomalování auta. Neukazuje skutečný stav brzdových světel, která mohou svítit, když je záře zhasnutá, a naopak.\n\nNespoléhejte na ni, abyste věděli, zda vozidla za vámi vidí, že brzdíte.</string>
+    <string name="settings_cluster_brake_warn_ok">Zapnout</string>
     <string name="cluster_regen_kw">REKUP. kW</string>
     <string name="cluster_stopped_kw">kW při stání</string>
     <string name="cluster_trip_avg">PRŮM. JÍZDY</string>

@@ -817,11 +817,26 @@ class SettingsFragment : Fragment() {
                 updateClusterCard()
             }
         }
+        fun reglerFrein(on: Boolean) {
+            ClusterModuleSettings.setBrakeGlowOn(requireContext(), on)
+            AppLogger.i(ClusterModuleOverlay.TAG, "Halo de freinage ${if (on) "activé" else "désactivé"} (commun)")
+            updateClusterCard()
+        }
+        // Activation : avertissement à chaque fois (2026-11-25) — le halo est une estimation, pas
+        // l'état réel des feux stop. Annuler, ou fermer sans répondre, remet l'interrupteur sur Non.
         switchFrein.setOnCheckedChangeListener { _, checked ->
             if (majFrein) return@setOnCheckedChangeListener
-            ClusterModuleSettings.setBrakeGlowOn(requireContext(), checked)
-            AppLogger.i(ClusterModuleOverlay.TAG, "Halo de freinage ${if (checked) "activé" else "désactivé"} (commun)")
-            updateClusterCard()
+            if (!checked) { reglerFrein(false); return@setOnCheckedChangeListener }
+            AppDialog.confirmer(
+                requireContext(),
+                titre = getString(R.string.settings_cluster_brake_glow),
+                message = getString(R.string.settings_cluster_brake_warn_msg),
+                ton = AppDialog.Ton.ALERTE,
+                oui = getString(R.string.settings_cluster_brake_warn_ok),
+                non = getString(R.string.profile_cancel),
+                onOui = { if (isAdded) reglerFrein(true) },
+                onNon = { if (isAdded) { majFrein = true; switchFrein.isChecked = false; majFrein = false } },
+            )
         }
         intensiteBtns.forEach { (i, btn) ->
             btn.setOnClickListener {

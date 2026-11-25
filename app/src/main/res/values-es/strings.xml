@@ -1023,7 +1023,9 @@
     <string name="settings_cluster_brake_soft">Discreta</string>
     <string name="settings_cluster_brake_medium">Media</string>
     <string name="settings_cluster_brake_strong">Fuerte</string>
-    <string name="settings_cluster_brake_desc">El borde de la pantalla del conductor se ilumina en rojo al pisar el pedal de freno, o cuando el coche desacelera con fuerza sin él (regeneración fuerte).</string>
+    <string name="settings_cluster_brake_desc">El borde de la pantalla del conductor se ilumina en rojo al pisar el pedal de freno, o cuando el coche desacelera con fuerza sin él (regeneración fuerte). Estimación: no indica el estado real de las luces de freno.</string>
+    <string name="settings_cluster_brake_warn_msg">Este halo es una estimación de MG4Control: se enciende según el pedal de freno y la deceleración del coche. No indica el estado real de las luces de freno, que pueden estar encendidas mientras el halo está apagado, y al revés.\n\nNo confíe en él para saber si los vehículos que van detrás ven que está frenando.</string>
+    <string name="settings_cluster_brake_warn_ok">Activar</string>
     <string name="cluster_regen_kw">REGEN. kW</string>
     <string name="cluster_stopped_kw">kW parado</string>
     <string name="cluster_trip_avg">MEDIA VIAJE</string>
