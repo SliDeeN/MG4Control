@@ -1018,6 +1018,12 @@
     <string name="settings_cluster_power_desc">Auto: escala de %1$d kW, aprendida ao conduzir. Sobe assim que um pico a ultrapassa e desce após 5 viagens mais calmas.</string>
     <string name="settings_cluster_animation">Duração da animação</string>
     <string name="settings_cluster_animation_desc">Tempo que o indicador leva a deslizar de um valor para o seguinte. Mais longo: mais suave, mas acompanha mais devagar.</string>
+    <string name="settings_cluster_brake_glow">Halo de travagem</string>
+    <string name="settings_cluster_brake_intensity">Intensidade</string>
+    <string name="settings_cluster_brake_soft">Discreta</string>
+    <string name="settings_cluster_brake_medium">Média</string>
+    <string name="settings_cluster_brake_strong">Forte</string>
+    <string name="settings_cluster_brake_desc">A borda do ecrã do condutor acende a vermelho quando o carro abranda com força (travagem ou regeneração forte). Calculado a partir da velocidade: nenhum sensor de travão é lido.</string>
     <string name="cluster_regen_kw">REGEN. kW</string>
     <string name="cluster_stopped_kw">kW parado</string>
     <string name="cluster_trip_avg">MÉDIA VIAGEM</string>

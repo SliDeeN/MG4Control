@@ -462,6 +462,12 @@ internal object ClusterModuleOverlay {
             }
             lecteur.removeCallbacks(tic)
             lecteur.post(tic)
+            // Vue reposée : elle repart sans halo.
+            frein.reset()
+            haloPermis = false
+            haloMontre = false
+            lecteur.removeCallbacks(releveFrein)
+            lecteur.post(releveFrein)
         }
     }
 
@@ -470,6 +476,42 @@ internal object ClusterModuleOverlay {
             enMarche = false
             lecteur.removeCallbacks(relancePret)
             lecteur.removeCallbacks(tic)
+            lecteur.removeCallbacks(releveFrein)
+            frein.reset()
+            haloMontre = false
+            main.post { vue?.freinage(false, null) }
+        }
+    }
+
+    // ── Halo de freinage (issue #278) ──
+    private val frein = com.mg4.control.model.BrakeGlow()
+    /** Un module est à l'écran — ni fiche de pré-climatisation ni charge (fil du lecteur, mis à jour par [tic]). */
+    private var haloPermis = false
+    private var haloMontre = false
+
+    /**
+     * Vitesse relue toutes les [com.mg4.control.model.BrakeGlow.RELEVE_MS] pour le halo seulement,
+     * quelle que soit l'actualisation de la jauge (1 s par défaut, trop lente pour un freinage).
+     * Option coupée : relue une fois par seconde, sans lire la vitesse.
+     */
+    private val releveFrein = object : Runnable {
+        override fun run() {
+            if (!enMarche) return
+            val ctx = appContext ?: return
+            val actif = ClusterModuleSettings.brakeGlowOn(ctx) && haloPermis && ReadyWatcher.ready == true
+            val on = if (actif) {
+                val kmh = runCatching { MG4Hardware.getVehicleSpeedKmh() }.getOrNull()?.takeIf { it in 0f..300f }
+                frein.add(SystemClock.elapsedRealtime(), kmh)
+            } else {
+                frein.reset()
+                false
+            }
+            if (on != haloMontre) {
+                haloMontre = on
+                val intensite = ClusterModuleSettings.brakeIntensity(ctx)
+                main.post { vue?.freinage(on, intensite) }
+            }
+            lecteur.postDelayed(this, if (actif) com.mg4.control.model.BrakeGlow.RELEVE_MS else 1_000L)
         }
     }
 
@@ -676,6 +718,7 @@ internal object ClusterModuleOverlay {
                         com.mg4.control.util.ClusterHistoryStore.bins(ctx), ctx.resources.configuration.locales[0]) else null,
                 )
             }
+            haloPermis = contenu != null && preClim == null && !session.active
             main.post {
                 val v = vue ?: return@post
                 if (contenu == null) {

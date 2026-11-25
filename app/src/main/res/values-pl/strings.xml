@@ -1018,6 +1018,12 @@
     <string name="settings_cluster_power_desc">Auto: skala %1$d kW, wyuczona podczas jazdy. Rośnie, gdy tylko szczyt ją przekroczy, i maleje po 5 spokojniejszych podróżach.</string>
     <string name="settings_cluster_animation">Czas animacji</string>
     <string name="settings_cluster_animation_desc">Czas, w jakim wskaźnik przechodzi od jednej wartości do następnej. Dłużej: płynniej, ale wolniej nadąża.</string>
+    <string name="settings_cluster_brake_glow">Poświata hamowania</string>
+    <string name="settings_cluster_brake_intensity">Intensywność</string>
+    <string name="settings_cluster_brake_soft">Delikatna</string>
+    <string name="settings_cluster_brake_medium">Średnia</string>
+    <string name="settings_cluster_brake_strong">Mocna</string>
+    <string name="settings_cluster_brake_desc">Krawędź ekranu kierowcy świeci na czerwono, gdy samochód mocno zwalnia (hamowanie lub silna rekuperacja). Obliczane na podstawie prędkości: żaden czujnik hamulca nie jest odczytywany.</string>
     <string name="cluster_regen_kw">ODZYSK kW</string>
     <string name="cluster_stopped_kw">kW na postoju</string>
     <string name="cluster_trip_avg">ŚR. PODRÓŻY</string>

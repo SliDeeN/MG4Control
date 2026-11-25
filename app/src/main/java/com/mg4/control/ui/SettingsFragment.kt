@@ -469,6 +469,15 @@ class SettingsFragment : Fragment() {
             320 to view.findViewById(R.id.btn_cluster_power_320),
         )
         val tvPowerDesc = view.findViewById<TextView>(R.id.tv_cluster_power_desc)
+        // Halo de freinage (issue #278) : réglage commun, l'intensité grisée tant qu'il est coupé.
+        val switchFrein = view.findViewById<Switch>(R.id.switch_cluster_brake_glow)
+        val rowIntensite = view.findViewById<View>(R.id.row_cluster_brake_intensity)
+        val intensiteBtns: List<Pair<com.mg4.control.model.BrakeGlow.Intensity, MaterialButton>> = listOf(
+            com.mg4.control.model.BrakeGlow.Intensity.SOFT to view.findViewById(R.id.btn_cluster_brake_soft),
+            com.mg4.control.model.BrakeGlow.Intensity.MEDIUM to view.findViewById(R.id.btn_cluster_brake_medium),
+            com.mg4.control.model.BrakeGlow.Intensity.STRONG to view.findViewById(R.id.btn_cluster_brake_strong),
+        )
+        var majFrein = false
 
         selectionCombine = emptySet()
         var profils: List<DrivingProfile> = emptyList()
@@ -749,6 +758,13 @@ class SettingsFragment : Fragment() {
             tvClusterAnimation.text = texteActualisation(animation)
             powerBtns.forEach { (kw, btn) -> peindre(btn, kw == puissance) }
             tvPowerDesc.text = getString(R.string.settings_cluster_power_desc, ClusterModuleSettings.learnedPowerKw(ctx))
+            val frein = ClusterModuleSettings.brakeGlowOn(ctx)
+            majFrein = true
+            switchFrein.isChecked = frein
+            majFrein = false
+            val intensite = ClusterModuleSettings.brakeIntensity(ctx)
+            intensiteBtns.forEach { (i, btn) -> peindre(btn, i == intensite); btn.isEnabled = frein }
+            rowIntensite.alpha = if (frein) 1f else 0.45f
         }
         /** Rangées de cinq puces, refaites à chaque retour sur l'écran : un profil a pu changer. */
         fun construirePuces() {
@@ -798,6 +814,19 @@ class SettingsFragment : Fragment() {
             btn.setOnClickListener {
                 ClusterModuleSettings.setPowerMax(requireContext(), kw)
                 AppLogger.i(ClusterModuleOverlay.TAG, "Puissance maxi de la jauge → ${kw?.let { "$it kW" } ?: "Auto"} (commune)")
+                updateClusterCard()
+            }
+        }
+        switchFrein.setOnCheckedChangeListener { _, checked ->
+            if (majFrein) return@setOnCheckedChangeListener
+            ClusterModuleSettings.setBrakeGlowOn(requireContext(), checked)
+            AppLogger.i(ClusterModuleOverlay.TAG, "Halo de freinage ${if (checked) "activé" else "désactivé"} (commun)")
+            updateClusterCard()
+        }
+        intensiteBtns.forEach { (i, btn) ->
+            btn.setOnClickListener {
+                ClusterModuleSettings.setBrakeIntensity(requireContext(), i)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Halo de freinage : intensité ${i.key} (commune)")
                 updateClusterCard()
             }
         }

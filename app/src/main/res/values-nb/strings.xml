@@ -1019,6 +1019,12 @@
     <string name="settings_cluster_power_desc">Auto: %1$d kW-skala, lært under kjøring. Den går opp så snart en topp overstiger den og kommer ned etter 5 roligere turer.</string>
     <string name="settings_cluster_animation">Animasjonens varighet</string>
     <string name="settings_cluster_animation_desc">Tid det tar for måleren å gli fra en verdi til den neste. Lengre: jevnere, men den følger saktere.</string>
+    <string name="settings_cluster_brake_glow">Bremseglød</string>
+    <string name="settings_cluster_brake_intensity">Intensitet</string>
+    <string name="settings_cluster_brake_soft">Diskret</string>
+    <string name="settings_cluster_brake_medium">Middels</string>
+    <string name="settings_cluster_brake_strong">Sterk</string>
+    <string name="settings_cluster_brake_desc">Kanten av førerskjermen lyser rødt når bilen bremser kraftig ned (bremsing eller kraftig regenerering). Beregnet ut fra hastigheten: ingen bremsesensor leses.</string>
     <string name="cluster_regen_kw">REGEN kW</string>
     <string name="cluster_stopped_kw">kW stasjonær</string>
     <string name="cluster_trip_avg">TRIP AVG</string>

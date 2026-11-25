@@ -218,6 +218,19 @@ object ClusterModuleSettings {
     fun setPowerMax(ctx: Context, kw: Int?) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
         .apply { if (kw == null) putInt(KEY_COMMON_POWER_MAX, 0) else putInt(KEY_COMMON_POWER_MAX, kw) }.apply()
 
+    /** Halo de freinage (issue #278) : coupé par défaut, intensité Moyenne. Tous modules, tous profils. */
+    const val KEY_COMMON_BRAKE_GLOW = "cluster_common_brake_glow"
+    const val KEY_COMMON_BRAKE_INTENSITY = "cluster_common_brake_intensity"
+
+    fun brakeGlowOn(ctx: Context?): Boolean =
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getBoolean(KEY_COMMON_BRAKE_GLOW, false) ?: false
+    fun setBrakeGlowOn(ctx: Context, on: Boolean) =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_COMMON_BRAKE_GLOW, on).apply()
+    fun brakeIntensity(ctx: Context?): com.mg4.control.model.BrakeGlow.Intensity = com.mg4.control.model.BrakeGlow.Intensity.fromKey(
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_COMMON_BRAKE_INTENSITY, null))
+    fun setBrakeIntensity(ctx: Context, i: com.mg4.control.model.BrakeGlow.Intensity) =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_COMMON_BRAKE_INTENSITY, i.key).apply()
+
     /**
      * Unité de distance : le réglage général de l'appli depuis le 2026-11-10 ([DistanceSetting]),
      * qui a repris le choix fait ici. En Auto, relit la voiture (binder, au plus une fois par minute).

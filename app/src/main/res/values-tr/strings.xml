@@ -1018,6 +1018,12 @@
     <string name="settings_cluster_power_desc">Otomatik: %1$d kW ölçek, sürüşte öğrenilir. Bir tepe değeri aştığında hemen yükselir, 5 sakin yolculuktan sonra düşer.</string>
     <string name="settings_cluster_animation">Animasyon süresi</string>
     <string name="settings_cluster_animation_desc">Göstergenin bir değerden diğerine kayma süresi. Daha uzun: daha yumuşak, ancak daha yavaş takip eder.</string>
+    <string name="settings_cluster_brake_glow">Fren parıltısı</string>
+    <string name="settings_cluster_brake_intensity">Yoğunluk</string>
+    <string name="settings_cluster_brake_soft">Hafif</string>
+    <string name="settings_cluster_brake_medium">Orta</string>
+    <string name="settings_cluster_brake_strong">Güçlü</string>
+    <string name="settings_cluster_brake_desc">Araç sert yavaşladığında (fren veya güçlü rejenerasyon) sürücü ekranının kenarı kırmızı yanar. Hızdan hesaplanır: hiçbir fren sensörü okunmaz.</string>
     <string name="cluster_regen_kw">REJEN. kW</string>
     <string name="cluster_stopped_kw">kW duruşta</string>
     <string name="cluster_trip_avg">ORT. YOLCULUK</string>

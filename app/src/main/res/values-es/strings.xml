@@ -1018,6 +1018,12 @@
     <string name="settings_cluster_power_desc">Auto: escala de %1$d kW, aprendida al conducir. Sube en cuanto un pico la supera y baja tras 5 trayectos más tranquilos.</string>
     <string name="settings_cluster_animation">Duración de la animación</string>
     <string name="settings_cluster_animation_desc">Tiempo que tarda el indicador en pasar de un valor al siguiente. Más largo: más suave, pero sigue más despacio.</string>
+    <string name="settings_cluster_brake_glow">Halo de frenada</string>
+    <string name="settings_cluster_brake_intensity">Intensidad</string>
+    <string name="settings_cluster_brake_soft">Discreta</string>
+    <string name="settings_cluster_brake_medium">Media</string>
+    <string name="settings_cluster_brake_strong">Fuerte</string>
+    <string name="settings_cluster_brake_desc">El borde de la pantalla del conductor se ilumina en rojo cuando el coche desacelera con fuerza (frenada o regeneración fuerte). Calculado a partir de la velocidad: no se lee ningún sensor de freno.</string>
     <string name="cluster_regen_kw">REGEN. kW</string>
     <string name="cluster_stopped_kw">kW parado</string>
     <string name="cluster_trip_avg">MEDIA VIAJE</string>

@@ -1036,6 +1036,12 @@
     <string name="settings_cluster_power_desc">Auto : échelle à %1$d kW, apprise en roulant. Elle monte dès qu’une pointe la dépasse et redescend après 5 trajets plus calmes.</string>
     <string name="settings_cluster_animation">Durée de l\'animation</string>
     <string name="settings_cluster_animation_desc">Temps que met la jauge pour glisser d\'une valeur à la suivante. Plus long : plus doux, mais elle suit moins vite.</string>
+    <string name="settings_cluster_brake_glow">Halo de freinage</string>
+    <string name="settings_cluster_brake_intensity">Intensité</string>
+    <string name="settings_cluster_brake_soft">Discrète</string>
+    <string name="settings_cluster_brake_medium">Moyenne</string>
+    <string name="settings_cluster_brake_strong">Forte</string>
+    <string name="settings_cluster_brake_desc">Le pourtour de l\'écran conducteur s\'éclaire en rouge quand la voiture ralentit fortement (freinage ou forte récupération). Calculé à partir de la vitesse : aucun capteur de frein n\'est lu.</string>
     <string name="cluster_regen_kw">RÉCUP. kW</string>
     <string name="cluster_stopped_kw">kW à l\'arrêt</string>
     <string name="cluster_trip_avg">MOY. TRAJET</string>

@@ -925,6 +925,12 @@
     <string name="settings_cluster_power_desc">Automaticky: rozsah stupnice %1$d kW, určený podle jízdy. Zvýší se při překročení dosavadního maxima a sníží se po 5 klidnějších jízdách.</string>
     <string name="settings_cluster_animation">Délka animace</string>
     <string name="settings_cluster_animation_desc">Doba přechodu ukazatele z jedné hodnoty na druhou. Delší doba znamená plynulejší pohyb, ale pomalejší odezvu.</string>
+    <string name="settings_cluster_brake_glow">Záře při brzdění</string>
+    <string name="settings_cluster_brake_intensity">Intenzita</string>
+    <string name="settings_cluster_brake_soft">Jemná</string>
+    <string name="settings_cluster_brake_medium">Střední</string>
+    <string name="settings_cluster_brake_strong">Silná</string>
+    <string name="settings_cluster_brake_desc">Okraj displeje řidiče se rozsvítí červeně, když auto prudce zpomaluje (brzdění nebo silná rekuperace). Počítáno z rychlosti: žádný snímač brzdy se nečte.</string>
     <string name="cluster_regen_kw">REKUP. kW</string>
     <string name="cluster_stopped_kw">kW při stání</string>
     <string name="cluster_trip_avg">PRŮM. JÍZDY</string>

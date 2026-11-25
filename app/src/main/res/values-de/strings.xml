@@ -1018,6 +1018,12 @@
     <string name="settings_cluster_power_desc">Auto: Skala %1$d kW, beim Fahren gelernt. Sie steigt, sobald eine Spitze sie übersteigt, und sinkt nach 5 ruhigeren Fahrten.</string>
     <string name="settings_cluster_animation">Animationsdauer</string>
     <string name="settings_cluster_animation_desc">Zeit, die die Anzeige braucht, um von einem Wert zum nächsten zu gleiten. Länger: weicher, folgt aber langsamer.</string>
+    <string name="settings_cluster_brake_glow">Bremsleuchten</string>
+    <string name="settings_cluster_brake_intensity">Intensität</string>
+    <string name="settings_cluster_brake_soft">Dezent</string>
+    <string name="settings_cluster_brake_medium">Mittel</string>
+    <string name="settings_cluster_brake_strong">Stark</string>
+    <string name="settings_cluster_brake_desc">Der Rand der Fahreranzeige leuchtet rot, wenn das Auto stark verzögert (Bremsen oder starke Rekuperation). Aus der Geschwindigkeit berechnet: Es wird kein Bremssensor gelesen.</string>
     <string name="cluster_regen_kw">REKUP. kW</string>
     <string name="cluster_stopped_kw">kW im Stand</string>
     <string name="cluster_trip_avg">Ø FAHRT</string>

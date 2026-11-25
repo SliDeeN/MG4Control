@@ -1793,6 +1793,115 @@
                                 android:textColor="@color/dash_text_lo"
                                 android:textSize="18sp" />
 
+                            <!-- Halo de freinage (issue #278) : coupé par défaut, intensité Moyenne. -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="14dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/settings_cluster_brake_glow"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="19sp" />
+
+                                <com.mg4.control.ui.widget.SegmentSwitch
+                                    android:id="@+id/switch_cluster_brake_glow"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:checked="false" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/row_cluster_brake_intensity"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="150dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/settings_cluster_brake_intensity"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="19sp" />
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="horizontal">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_cluster_brake_soft"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:minHeight="52dp"
+                                        android:layout_weight="1"
+                                        android:layout_marginEnd="4dp"
+                                        android:text="@string/settings_cluster_brake_soft"
+                                        android:textAllCaps="false"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="19sp"
+                                        android:maxLines="1"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="14dp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_cluster_brake_medium"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:minHeight="52dp"
+                                        android:layout_weight="1"
+                                        android:layout_marginHorizontal="4dp"
+                                        android:text="@string/settings_cluster_brake_medium"
+                                        android:textAllCaps="false"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="19sp"
+                                        android:maxLines="1"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="14dp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_cluster_brake_strong"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:minHeight="52dp"
+                                        android:layout_weight="1"
+                                        android:layout_marginStart="4dp"
+                                        android:text="@string/settings_cluster_brake_strong"
+                                        android:textAllCaps="false"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="19sp"
+                                        android:maxLines="1"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="14dp" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="@string/settings_cluster_brake_desc"
+                                android:textColor="@color/dash_text_lo"
+                                android:textSize="18sp" />
+
                         </LinearLayout>
 
 

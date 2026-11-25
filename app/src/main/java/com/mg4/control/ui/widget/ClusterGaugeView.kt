@@ -341,8 +341,53 @@ class ClusterGaugeView(context: Context) : View(context) {
         }
     }
 
+    // ── Halo de freinage (issue #278) : pourtour rouge, fondu à l'allumage et à l'extinction ──
+    private var haloPart = 0f
+    private var haloIntensite = com.mg4.control.model.BrakeGlow.Intensity.MEDIUM
+    private var haloAnimation: ValueAnimator? = null
+    private val haloTrait = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+
+    /** Allume ou éteint le halo ([intensite] `null` : celle d'avant). Fil principal. */
+    fun freinage(on: Boolean, intensite: com.mg4.control.model.BrakeGlow.Intensity?) {
+        intensite?.let { haloIntensite = it }
+        val cible = if (on) 1f else 0f
+        if (haloPart == cible && haloAnimation?.isRunning != true) return
+        haloAnimation?.cancel()
+        val depart = haloPart
+        haloAnimation = ValueAnimator.ofFloat(depart, cible).apply {
+            duration = (com.mg4.control.model.BrakeGlow.FONDU_MS * kotlin.math.abs(cible - depart)).toLong().coerceAtLeast(1L)
+            addUpdateListener {
+                haloPart = it.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    /**
+     * Lueur intérieure sur tout le pourtour du carré de 260 : des cadres concentriques de plus en
+     * plus transparents vers le centre, sans recouvrement aux coins. Jamais sur la charge ni la
+     * pré-climatisation (le lecteur ne l'allume pas, et on vérifie ici).
+     */
+    private fun halo(canvas: Canvas, c: Contenu?) {
+        if (haloPart <= 0f || c == null || c.charge != null || c.preClim != null || edition != null) return
+        val largeur = haloIntensite.largeurPx
+        val pas = largeur / HALO_CADRES
+        haloTrait.strokeWidth = pas + 0.5f
+        for (i in 0 until HALO_CADRES) {
+            val reste = 1f - i / HALO_CADRES.toFloat()
+            haloTrait.color = C_FREIN
+            haloTrait.alpha = (255 * haloIntensite.alpha * haloPart * reste * reste).toInt().coerceIn(0, 255)
+            val m = pas * i + pas / 2f
+            val r = (HALO_ARRONDI - m).coerceAtLeast(0f)
+            cadre.set(m, m, COTE - m, COTE - m)
+            canvas.drawRoundRect(cadre, r, r, haloTrait)
+        }
+    }
+
     override fun onDetachedFromWindow() {
         animation?.cancel()
+        haloAnimation?.cancel()
         super.onDetachedFromWindow()
     }
 
@@ -351,6 +396,17 @@ class ClusterGaugeView(context: Context) : View(context) {
         // Tout le carré, avant même le premier relevé : rien de la page de l'appli SAIC, dessous,
         // ne doit transparaître.
         canvas.drawColor(FOND)
+        dessiner(canvas)
+        if (haloPart > 0f) {
+            canvas.save()
+            val echelle = minOf(width, height) / ClusterGauge.SIDE_PX.toFloat()
+            canvas.scale(echelle, echelle)
+            halo(canvas, contenu)
+            canvas.restore()
+        }
+    }
+
+    private fun dessiner(canvas: Canvas) {
         val c = contenu ?: return
         val echelle = minOf(width, height) / ClusterGauge.SIDE_PX.toFloat()
         canvas.save()
@@ -1507,5 +1563,9 @@ class ClusterGaugeView(context: Context) : View(context) {
         private const val REFLET_PX = 18f
         /** Fiche de la pré-climatisation : marges gauche et droite. */
         private const val MARGE_FICHE = 22f
+        /** Halo de freinage (issue #278) : rouge feu stop, cadres et arrondi extérieur. */
+        private val C_FREIN = Color.rgb(0xFF, 0x2A, 0x2A)
+        private const val HALO_CADRES = 10
+        private const val HALO_ARRONDI = 18f
     }
 }
