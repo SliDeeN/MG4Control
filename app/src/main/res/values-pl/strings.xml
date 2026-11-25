@@ -1497,7 +1497,6 @@
     <string name="preclim_camp">Tryb kempingowy</string>
     <string name="preclim_camp_short">Kemping</string>
     <string name="preclim_camp_delay">Opóźnienie przed włączeniem</string>
-    <string name="preclim_camp_lock">Zablokuj drzwi</string>
     <string name="preclim_camp_soc">Minimalna bateria</string>
     <string name="preclim_camp_record">Nagrywanie wideo</string>
     <string name="preclim_camp_screen">Ekran w nocy</string>

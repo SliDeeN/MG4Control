@@ -69,7 +69,6 @@ enum class CampingScreen {
 data class CampingConfig(
     /** Délai avant l'activation (verrouillage, vidéo, écran de nuit), en secondes : l'un de [CampingPlan.DELAYS_S]. */
     val delayS: Int = CampingPlan.DEFAULT_DELAY_S,
-    val lockDoors: Boolean = true,
     val minSoc: Int = CampingPlan.DEFAULT_SOC,
     /** Enregistrement vidéo par l'appli caméra — seulement si elle se pilote et que l'enregistrement auto est permis. */
     val record: Boolean = true,

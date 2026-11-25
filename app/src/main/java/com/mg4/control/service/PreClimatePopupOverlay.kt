@@ -457,8 +457,6 @@ object PreClimatePopupOverlay {
         delai.libelle.text = v.s(R.string.preclim_camp_delay)
         pas(delai) { r, d -> r.camping?.let { r.copy(camping = it.copy(delayS = CampingPlan.stepDelay(it.delayS, d))) } ?: r }
         v.campDelai = delai
-        v.campBloc.addView(rangeeChoix(v, R.string.preclim_camp_lock, listOf(v.s(R.string.segment_no), v.s(R.string.segment_yes)),
-            if (camping.lockDoors) 1 else 0, 200f) { modifier { c -> c.copy(lockDoors = it == 1) } })
         val batterie = ligneReglage(v, v.campBloc)
         batterie.libelle.text = v.s(R.string.preclim_camp_soc)
         pas(batterie) { r, d -> r.camping?.let { r.copy(camping = it.copy(minSoc = CampingPlan.clampSoc(it.minSoc + d * CampingPlan.SOC_STEP))) } ?: r }
@@ -619,7 +617,7 @@ object PreClimatePopupOverlay {
         listOfNotNull(
             R.drawable.ic_preclim_tent to v.s(R.string.preclim_camp_warn_ready),
             R.drawable.ic_preclim_handle to v.s(R.string.preclim_camp_warn_door),
-            if (c.lockDoors) R.drawable.ic_preclim_key to v.s(R.string.preclim_camp_warn_unlock) else null,
+            R.drawable.ic_preclim_key to v.s(R.string.preclim_camp_warn_unlock),
             R.drawable.ic_cluster_battery_charging to v.s(R.string.preclim_camp_warn_battery, c.minSoc),
             R.drawable.ic_dialog_warning to v.s(R.string.preclim_camp_warn_lights),
         ).forEach { (icone, texte) ->

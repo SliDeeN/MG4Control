@@ -1497,7 +1497,6 @@
     <string name="preclim_camp">Kamp modu</string>
     <string name="preclim_camp_short">Kamp</string>
     <string name="preclim_camp_delay">Etkinleşmeden önce gecikme</string>
-    <string name="preclim_camp_lock">Kapıları kilitle</string>
     <string name="preclim_camp_soc">Minimum batarya</string>
     <string name="preclim_camp_record">Video kaydı</string>
     <string name="preclim_camp_screen">Gece ekran</string>

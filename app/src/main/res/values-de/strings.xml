@@ -1497,7 +1497,6 @@
     <string name="preclim_camp">Camping-Modus</string>
     <string name="preclim_camp_short">Camping</string>
     <string name="preclim_camp_delay">Verzögerung bis zum Start</string>
-    <string name="preclim_camp_lock">Türen verriegeln</string>
     <string name="preclim_camp_soc">Mindest-Akkustand</string>
     <string name="preclim_camp_record">Videoaufnahme</string>
     <string name="preclim_camp_screen">Bildschirm nachts</string>

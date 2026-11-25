@@ -215,7 +215,7 @@ object PreClimate {
                 "1er cycle dans ${"%.0f".format(java.util.Locale.US, PreClimatePlan.minutesUntil(borne.firstMinuteOfDay, mur))} min") +
                 (if (borne.surveillance) ", SURVEILLANCE (clim coupée)" else
                     ", clim ${borne.tempC} °C ventil. ${borne.fan}${if (borne.dog) ", mode chien" else ""}") +
-                (camp?.let { ", CAMPING (${if (it.auto) "AUTO débit ${it.autoVolume}" else "manuel"}, A/C ${it.ac}, ECO ${it.eco}, air ${it.airMask}, recyclage ${it.recirc}, portes ${if (it.lockDoors) "verrouillées" else "non verrouillées"}, " +
+                (camp?.let { ", CAMPING (${if (it.auto) "AUTO débit ${it.autoVolume}" else "manuel"}, A/C ${it.ac}, ECO ${it.eco}, air ${it.airMask}, recyclage ${it.recirc}, " +
                     "vidéo ${it.record}, écran ${it.screen}, messages caméra ${it.msgCamera} eCall ${it.msgEcall})" } ?: "") + ", activation dans " +
                 "${(e.lockAtMs - maintenant) / 1000} s, arrêt sous ${e.minSoc} % (batterie ${soc ?: "?"} %) ; avant : $snap")
             principal.post {
@@ -287,16 +287,7 @@ object PreClimate {
     }
 
     private fun verrouiller(e: Etat, maintenant: Long) {
-        val camp = e.req.camping
-        // Camping sans verrouillage (2026-11-24) : rien n'est verrouillé, l'écran de nuit s'affiche.
-        if (camp != null && !camp.lockDoors) {
-            AppLogger.i(TAG, "mode camping actif — portes laissées déverrouillées (réglage)")
-            val actif = e.copy(phase = Phase.ACTIVE, lock = LockState.NONE)
-            etat = actif
-            lancerVideoCamping(e)
-            suivre(actif, maintenant)
-            return
-        }
+        // Camping : portes toujours verrouillées (2026-11-25, l'option « sans verrouillage » est retirée).
         MG4Hardware.lockDoors()
         val actif = e.copy(phase = Phase.ACTIVE, lock = LockState.PENDING)
         etat = actif

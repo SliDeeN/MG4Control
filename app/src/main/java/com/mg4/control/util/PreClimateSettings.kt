@@ -44,7 +44,6 @@ object PreClimateSettings {
 
     /** Mode camping (2026-11-24) : ses réglages, retenus pour la nuit suivante. */
     private const val KEY_CAMP_DELAY = "preclim_camp_delay_s"
-    private const val KEY_CAMP_LOCK = "preclim_camp_lock"
     private const val KEY_CAMP_SOC = "preclim_camp_min_soc"
     private const val KEY_CAMP_RECORD = "preclim_camp_record"
     private const val KEY_CAMP_SCREEN = "preclim_camp_screen"
@@ -69,7 +68,6 @@ object PreClimateSettings {
         val d = CampingConfig()
         return CampingConfig(
             delayS = CampingPlan.clampDelay(p.getInt(KEY_CAMP_DELAY, d.delayS)),
-            lockDoors = p.getBoolean(KEY_CAMP_LOCK, d.lockDoors),
             minSoc = CampingPlan.clampSoc(p.getInt(KEY_CAMP_SOC, d.minSoc)),
             record = p.getBoolean(KEY_CAMP_RECORD, d.record),
             screen = CampingScreen.entries.firstOrNull { it.name == p.getString(KEY_CAMP_SCREEN, null) } ?: d.screen,
@@ -94,7 +92,7 @@ object PreClimateSettings {
     fun saveCamping(ctx: Context, c: CampingConfig) {
         prefs(ctx).edit()
             .putInt(KEY_CAMP_DELAY, CampingPlan.clampDelay(c.delayS))
-            .putBoolean(KEY_CAMP_LOCK, c.lockDoors)
+            .remove("preclim_camp_lock")
             .putInt(KEY_CAMP_SOC, CampingPlan.clampSoc(c.minSoc))
             .putBoolean(KEY_CAMP_RECORD, c.record)
             .putString(KEY_CAMP_SCREEN, c.screen.name)

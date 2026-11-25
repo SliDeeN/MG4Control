@@ -1498,7 +1498,6 @@
     <string name="preclim_camp">Campingmodus</string>
     <string name="preclim_camp_short">Camping</string>
     <string name="preclim_camp_delay">Forsinkelse før start</string>
-    <string name="preclim_camp_lock">Lås dørene</string>
     <string name="preclim_camp_soc">Minimum batteri</string>
     <string name="preclim_camp_record">Videoopptak</string>
     <string name="preclim_camp_screen">Skjerm om natten</string>

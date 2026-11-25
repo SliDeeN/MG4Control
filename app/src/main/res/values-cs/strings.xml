@@ -1399,7 +1399,6 @@
     <string name="preclim_camp">Režim kempování</string>
     <string name="preclim_camp_short">Kempování</string>
     <string name="preclim_camp_delay">Zpoždění před spuštěním</string>
-    <string name="preclim_camp_lock">Zamknout dveře</string>
     <string name="preclim_camp_soc">Minimální baterie</string>
     <string name="preclim_camp_record">Nahrávání videa</string>
     <string name="preclim_camp_screen">Obrazovka v noci</string>

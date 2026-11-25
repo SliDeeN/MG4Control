@@ -1497,7 +1497,6 @@
     <string name="preclim_camp">Modo camping</string>
     <string name="preclim_camp_short">Camping</string>
     <string name="preclim_camp_delay">Retardo antes de activarse</string>
-    <string name="preclim_camp_lock">Bloquear las puertas</string>
     <string name="preclim_camp_soc">Batería mínima</string>
     <string name="preclim_camp_record">Grabación de vídeo</string>
     <string name="preclim_camp_screen">Pantalla de noche</string>

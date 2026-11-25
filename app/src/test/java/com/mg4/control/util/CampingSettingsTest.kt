@@ -33,7 +33,7 @@ class CampingSettingsTest {
 
     @Test
     fun `everything set in the window comes back`() {
-        val c = CampingConfig(delayS = 300, lockDoors = false, minSoc = 45, record = false, screen = CampingScreen.OFF,
+        val c = CampingConfig(delayS = 300, minSoc = 45, record = false, screen = CampingScreen.OFF,
             msgCamera = false, msgEcall = true, tempC = 17, fan = 3, ac = false, recirc = 2, auto = true, autoVolume = 0,
             airMask = AirFlow.FACE or AirFlow.REAR_DEFROST, eco = true)
         val r = PreClimateSettings.lastRequest(ctx, 600.0, 21, 4).copy(camping = c)
