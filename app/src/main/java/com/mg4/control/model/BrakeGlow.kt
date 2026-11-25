@@ -97,10 +97,15 @@ class BrakeGlow {
     }
 
     /** Intensité choisie dans les réglages communs de l'écran conducteur. */
-    enum class Intensity(val key: String, val alpha: Float, val largeurPx: Float) {
-        SOFT("soft", 0.45f, 14f),
-        MEDIUM("medium", 0.70f, 20f),
-        STRONG("strong", 1.00f, 28f);
+    /**
+     * [alpha] : opacité de la lueur au bord ; [largeurPx] : jusqu'où elle s'étend vers le centre
+     * (carré de 260) ; [bord] : opacité du liseré du contour. Lueur plus large et plus douce depuis
+     * la photo du 2026-11-25 (l'ancienne, 14–28 px, se lisait comme un cadre).
+     */
+    enum class Intensity(val key: String, val alpha: Float, val largeurPx: Float, val bord: Float) {
+        SOFT("soft", 0.42f, 30f, 0.55f),
+        MEDIUM("medium", 0.62f, 42f, 0.80f),
+        STRONG("strong", 0.85f, 56f, 1.00f);
 
         companion object {
             fun fromKey(key: String?): Intensity = entries.firstOrNull { it.key == key } ?: MEDIUM

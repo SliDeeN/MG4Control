@@ -365,24 +365,32 @@ class ClusterGaugeView(context: Context) : View(context) {
     }
 
     /**
-     * Lueur intérieure sur tout le pourtour du carré de 260 : des cadres concentriques de plus en
-     * plus transparents vers le centre, sans recouvrement aux coins. Jamais sur la charge ni la
-     * pré-climatisation (le lecteur ne l'allume pas, et on vérifie ici).
+     * Lueur intérieure sur tout le pourtour du carré de 260 : un cadre d'un pixel par pas, de plus
+     * en plus transparent vers le centre (décroissance douce, sans palier), puis un liseré fin et
+     * peu opaque sur le contour. Maquette « Après » validée le 2026-11-25. Jamais sur la charge ni
+     * la pré-climatisation (le lecteur ne l'allume pas, et on vérifie ici).
      */
     private fun halo(canvas: Canvas, c: Contenu?) {
         if (haloPart <= 0f || c == null || c.charge != null || c.preClim != null || edition != null) return
-        val largeur = haloIntensite.largeurPx
-        val pas = largeur / HALO_CADRES
-        haloTrait.strokeWidth = pas + 0.5f
-        for (i in 0 until HALO_CADRES) {
-            val reste = 1f - i / HALO_CADRES.toFloat()
-            haloTrait.color = C_FREIN
-            haloTrait.alpha = (255 * haloIntensite.alpha * haloPart * reste * reste).toInt().coerceIn(0, 255)
-            val m = pas * i + pas / 2f
-            val r = (HALO_ARRONDI - m).coerceAtLeast(0f)
+        val s = haloIntensite
+        val n = s.largeurPx.toInt()
+        haloTrait.strokeWidth = 1.5f
+        haloTrait.color = C_FREIN
+        for (k in 0 until n) {
+            val t = k / n.toFloat()
+            val f = kotlin.math.exp(-3.4f * t) * (1f - t) * (1f - t * 0.5f)
+            haloTrait.alpha = (255 * s.alpha * haloPart * f).toInt().coerceIn(0, 255)
+            if (haloTrait.alpha == 0) continue
+            val m = k + 0.5f
+            val r = (HALO_ARRONDI - m * 0.4f).coerceAtLeast(6f)
             cadre.set(m, m, COTE - m, COTE - m)
             canvas.drawRoundRect(cadre, r, r, haloTrait)
         }
+        haloTrait.strokeWidth = 2f
+        haloTrait.color = C_FREIN_BORD
+        haloTrait.alpha = (255 * s.bord * haloPart * 0.55f).toInt().coerceIn(0, 255)
+        cadre.set(1f, 1f, COTE - 1f, COTE - 1f)
+        canvas.drawRoundRect(cadre, HALO_ARRONDI, HALO_ARRONDI, haloTrait)
     }
 
     override fun onDetachedFromWindow() {
@@ -1563,9 +1571,9 @@ class ClusterGaugeView(context: Context) : View(context) {
         private const val REFLET_PX = 18f
         /** Fiche de la pré-climatisation : marges gauche et droite. */
         private const val MARGE_FICHE = 22f
-        /** Halo de freinage (issue #278) : rouge feu stop, cadres et arrondi extérieur. */
+        /** Halo de freinage (issue #278) : rouge feu stop, liseré un peu plus clair, arrondi extérieur. */
         private val C_FREIN = Color.rgb(0xFF, 0x2A, 0x2A)
-        private const val HALO_CADRES = 10
-        private const val HALO_ARRONDI = 18f
+        private val C_FREIN_BORD = Color.rgb(0xFF, 0x46, 0x46)
+        private const val HALO_ARRONDI = 24f
     }
 }
