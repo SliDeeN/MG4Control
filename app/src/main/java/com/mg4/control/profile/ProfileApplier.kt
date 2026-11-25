@@ -96,13 +96,18 @@ object ProfileApplier {
     private fun scheduleApply(profile: DrivingProfile, autoStart: Boolean, onComplete: ((Boolean) -> Unit)?) {
         currentApply?.cancel()
         currentApply = applierScope.launch {
+            val debut = android.os.SystemClock.elapsedRealtime()
             val gen = FirmwareInfo.getGeneration()
             applyMutex.withLock { applyLocked(profile, autoStart, gen, onComplete) }
-            if (gen == FirmwareInfo.Gen.SWI133 && profile.appliesSafety) {
+            if (profile.appliesSafety && MG4Hardware.hasDrowsinessAndEsc()) {
                 profile.escEnabled?.let {
-                    // Après les autres réglages et hors du verrou des profils : une nouvelle
-                    // application peut continuer pendant la confirmation d'une bascule déjà partie.
-                    AppLogger.i(TAG, "  Esc=$it → ${MG4Hardware.setSwi133ProfileEsc(it)}")
+                    // Tous les firmwares depuis le 2026-11-25 (issue #277) : après les autres réglages,
+                    // hors du verrou des profils (une nouvelle application peut continuer pendant la
+                    // confirmation d'une bascule déjà partie), une fois le service des aides prêt,
+                    // et au plus tôt 5 s après le passage en RUN.
+                    MG4Hardware.awaitKatman4Ready()
+                    currentCoroutineContext().ensureActive()
+                    AppLogger.i(TAG, "  Esc=$it → ${MG4Hardware.setProfileEsc(it, debut)}")
                 }
             }
         }
@@ -449,19 +454,15 @@ object ProfileApplier {
             AppLogger.w(TAG, "  [VERIFY] $name ÉCHEC après 3 tentatives (lu=$finalVal, attendu=$desired)")
     }
 
-    /** ESC et somnolence sur les firmwares où la séquence ADAS peut arriver sur le fil UI. */
+    /**
+     * Somnolence sur les firmwares où la séquence ADAS peut arriver sur le fil UI : hors de lui.
+     * L'ESC n'est plus écrit ici (issue #277) : il passe partout par [MG4Hardware.setProfileEsc],
+     * après le reste du profil.
+     */
     private fun applySafety(profile: DrivingProfile) {
         if (!MG4Hardware.hasDrowsinessAndEsc()) return
-        if (profile.escEnabled == null &&
-            profile.drowsinessEnabled == null &&
-            profile.drowsinessSensitivity == null) return
-
-        applierScope.launch {
-            applyDrowsiness(profile)
-            profile.escEnabled?.let {
-                AppLogger.i(TAG, "  Esc=$it → ${MG4Hardware.setEsc(it)}")
-            }
-        }
+        if (profile.drowsinessEnabled == null && profile.drowsinessSensitivity == null) return
+        applierScope.launch { applyDrowsiness(profile) }
     }
 
     /** Écrit la sensibilité avant l'activation. Un champ null laisse le réglage du véhicule. */

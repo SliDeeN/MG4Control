@@ -2777,28 +2777,44 @@ object MG4Hardware {
     private val escMutex = Mutex()
 
     /**
-     * Le profil SWI133 attend le cycle RUN courant. Un changement de contact invalide même une
-     * demande qui était déjà en attente quand le véhicule s'est réveillé de nouveau.
+     * ESC d'un profil, sur tous les firmwares depuis le 2026-11-25 (issue #277, SWI68 : ESC coupé au
+     * démarrage à chaud — même cause que SWI133, corrigé le 2026-11-18). L'écriture est une bascule :
+     * lue trop tôt, au réveil des calculateurs, la voiture peut annoncer un état transitoire et la
+     * bascule couperait l'ESC. On attend donc le cycle RUN courant plus [ESC_SWI133_REVEIL_MS].
+     * Un changement de contact invalide même une demande déjà en attente.
+     *
+     * [debutMs] : départ de l'application du profil (temps monotone), repli si ce firmware n'a
+     * signalé aucun passage en RUN — l'allumage doit alors être relu en RUN.
      */
-    internal suspend fun setSwi133ProfileEsc(on: Boolean): Boolean {
+    internal suspend fun setProfileEsc(on: Boolean, debutMs: Long): Boolean {
+        if (!hasDrowsinessAndEsc()) return false
         val reveil = lastVcmIgnition?.takeIf { it.state == CarIgnitionItem.RUN }
-        if (reveil == null) {
-            AppLogger.i(SAFE_TAG, "ESC profil : attente d'un passage en RUN, aucune bascule")
-            return false
+        val depuis = when {
+            reveil != null -> reveil.elapsedMs
+            lastVcmIgnition == null && getCurrentIgnitionState() == CarIgnitionItem.RUN -> {
+                AppLogger.i(SAFE_TAG, "ESC profil : aucun passage en RUN signalé par ce firmware, repli sur le départ du profil")
+                debutMs
+            }
+            else -> {
+                AppLogger.i(SAFE_TAG, "ESC profil : attente d'un passage en RUN, aucune bascule")
+                return false
+            }
         }
-        val attente = ESC_SWI133_REVEIL_MS - (SystemClock.elapsedRealtime() - reveil.elapsedMs)
+        val attente = ESC_SWI133_REVEIL_MS - (SystemClock.elapsedRealtime() - depuis)
         if (attente > 0) {
             AppLogger.i(SAFE_TAG, "ESC profil : ${attente} ms restantes avant la première lecture")
             delay(attente)
         }
-        return setEscConfirmed(on, contexteValide = {
+        return setEscConfirmed(on, profil = true, contexteValide = {
             lastVcmIgnition === reveil && !GarageMode.isOn(appContext()) &&
                 getCurrentIgnitionState() == CarIgnitionItem.RUN
         }, avantBascule = {
             // Le conducteur peut déjà avoir quitté sa place de stationnement durant l'attente.
+            // Vitesse illisible : le levier en P suffit.
             val vitesse = getVehicleSpeedKmh()
-            if (vitesse != 0f) AppLogger.w(SAFE_TAG, "ESC profil : arrêt non confirmé (vitesse=$vitesse)")
-            vitesse == 0f
+            val arret = vitesse == 0f || (vitesse == null && isVehicleInPark() == true)
+            if (!arret) AppLogger.w(SAFE_TAG, "ESC profil : arrêt non confirmé (vitesse=$vitesse)")
+            arret
         })
     }
 
@@ -2809,12 +2825,17 @@ object MG4Hardware {
     }
 
     /** Exige trois lectures concordantes pour décider si l'unique bascule est nécessaire. */
+    /**
+     * [profil] : lectures espacées de 500 ms et relecture longue (≈ 4 s) — le chemin des profils sur
+     * tous les firmwares, et toutes les commandes sur SWI133, comme avant.
+     */
     private suspend fun setEscConfirmed(
         on: Boolean,
         contexteValide: () -> Boolean,
         avantBascule: () -> Boolean = { true },
+        profil: Boolean = false,
     ): Boolean = escMutex.withLock {
-        val swi133 = FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133
+        val swi133 = profil || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133
         val intervalle = if (swi133) ESC_SWI133_INTERVALLE_MS else ESC_INTERVALLE_MS
         val lectures = ArrayList<Boolean?>(ESC_LECTURES)
         repeat(ESC_LECTURES) { i ->
