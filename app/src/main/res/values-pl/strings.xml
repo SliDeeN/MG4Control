@@ -1023,7 +1023,7 @@
     <string name="settings_cluster_brake_soft">Delikatna</string>
     <string name="settings_cluster_brake_medium">Średnia</string>
     <string name="settings_cluster_brake_strong">Mocna</string>
-    <string name="settings_cluster_brake_desc">Krawędź ekranu kierowcy świeci na czerwono, gdy samochód mocno zwalnia (hamowanie lub silna rekuperacja). Obliczane na podstawie prędkości: żaden czujnik hamulca nie jest odczytywany.</string>
+    <string name="settings_cluster_brake_desc">Krawędź ekranu kierowcy świeci na czerwono po naciśnięciu pedału hamulca lub gdy samochód mocno zwalnia bez niego (silna rekuperacja).</string>
     <string name="cluster_regen_kw">ODZYSK kW</string>
     <string name="cluster_stopped_kw">kW na postoju</string>
     <string name="cluster_trip_avg">ŚR. PODRÓŻY</string>

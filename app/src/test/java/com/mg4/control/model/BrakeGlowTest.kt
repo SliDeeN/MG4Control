@@ -91,6 +91,45 @@ class BrakeGlowTest {
     }
 
     @Test
+    fun `the pedal lights it even standing still`() {
+        val g = BrakeGlow()
+        assertFalse(g.add(0, 0f, 0))
+        assertFalse(g.add(200, 0f, 225))
+        assertTrue(g.add(400, 0f, 750))
+        assertTrue(g.parPedale)
+        // Hystérésis : allumé jusqu'à 150.
+        assertTrue(g.add(600, 0f, 150))
+        assertFalse(g.add(800, 0f, 75))
+    }
+
+    @Test
+    fun `strong regeneration without the pedal still lights it`() {
+        val g = BrakeGlow()
+        var t = 0L
+        var v = 90f
+        repeat(6) { g.add(t, v, 0); t += 200; v -= 1.6f }
+        assertTrue(g.on)
+        assertTrue(g.parDeceleration)
+        assertFalse(g.parPedale)
+    }
+
+    @Test
+    fun `an unreadable pedal falls back to deceleration`() {
+        val g = BrakeGlow()
+        assertFalse(g.add(0, 50f, null))
+        assertFalse(g.add(200, 50f, null))
+        assertFalse(g.add(400, 50f, null))
+        assertTrue(g.add(600, 45f, null))
+    }
+
+    @Test
+    fun `an unreadable speed keeps the pedal working`() {
+        val g = BrakeGlow()
+        assertTrue(g.add(0, null, 4000))
+        assertFalse(g.add(200, null, 0))
+    }
+
+    @Test
     fun `intensity defaults to medium`() {
         assertEquals(BrakeGlow.Intensity.MEDIUM, BrakeGlow.Intensity.fromKey(null))
         assertEquals(BrakeGlow.Intensity.STRONG, BrakeGlow.Intensity.fromKey("strong"))

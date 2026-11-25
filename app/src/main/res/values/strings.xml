@@ -1041,7 +1041,7 @@
     <string name="settings_cluster_brake_soft">Discrète</string>
     <string name="settings_cluster_brake_medium">Moyenne</string>
     <string name="settings_cluster_brake_strong">Forte</string>
-    <string name="settings_cluster_brake_desc">Le pourtour de l\'écran conducteur s\'éclaire en rouge quand la voiture ralentit fortement (freinage ou forte récupération). Calculé à partir de la vitesse : aucun capteur de frein n\'est lu.</string>
+    <string name="settings_cluster_brake_desc">Le pourtour de l\'écran conducteur s\'éclaire en rouge quand on appuie sur la pédale de frein, ou quand la voiture ralentit fortement sans elle (forte récupération).</string>
     <string name="cluster_regen_kw">RÉCUP. kW</string>
     <string name="cluster_stopped_kw">kW à l\'arrêt</string>
     <string name="cluster_trip_avg">MOY. TRAJET</string>

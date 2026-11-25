@@ -1023,7 +1023,7 @@
     <string name="settings_cluster_brake_soft">Dezent</string>
     <string name="settings_cluster_brake_medium">Mittel</string>
     <string name="settings_cluster_brake_strong">Stark</string>
-    <string name="settings_cluster_brake_desc">Der Rand der Fahreranzeige leuchtet rot, wenn das Auto stark verzögert (Bremsen oder starke Rekuperation). Aus der Geschwindigkeit berechnet: Es wird kein Bremssensor gelesen.</string>
+    <string name="settings_cluster_brake_desc">Der Rand der Fahreranzeige leuchtet rot, wenn Sie das Bremspedal treten oder das Auto ohne Pedal stark verzögert (starke Rekuperation).</string>
     <string name="cluster_regen_kw">REKUP. kW</string>
     <string name="cluster_stopped_kw">kW im Stand</string>
     <string name="cluster_trip_avg">Ø FAHRT</string>

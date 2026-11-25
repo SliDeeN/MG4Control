@@ -96,6 +96,9 @@ object BrakePedalProbe {
         fil.postDelayed({ relever(t) }, RELEVE_MS)
     }
 
+    /** Pression brute de la pédale (halo de freinage), `null` si illisible. Fil de l'appelant (binder). */
+    fun pression(): Int? = lire(PROP_PRESSION)
+
     /** CarPropertyManager en zone globale ; -1 (échec) rendu `null`. */
     private fun lire(id: Int): Int? = runCatching { MG4Hardware.readIntGlobal(id) }.getOrNull()?.takeIf { it >= 0 }
 }

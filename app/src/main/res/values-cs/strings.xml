@@ -930,7 +930,7 @@
     <string name="settings_cluster_brake_soft">Jemná</string>
     <string name="settings_cluster_brake_medium">Střední</string>
     <string name="settings_cluster_brake_strong">Silná</string>
-    <string name="settings_cluster_brake_desc">Okraj displeje řidiče se rozsvítí červeně, když auto prudce zpomaluje (brzdění nebo silná rekuperace). Počítáno z rychlosti: žádný snímač brzdy se nečte.</string>
+    <string name="settings_cluster_brake_desc">Okraj displeje řidiče se rozsvítí červeně při sešlápnutí brzdového pedálu nebo když auto prudce zpomaluje bez něj (silná rekuperace).</string>
     <string name="cluster_regen_kw">REKUP. kW</string>
     <string name="cluster_stopped_kw">kW při stání</string>
     <string name="cluster_trip_avg">PRŮM. JÍZDY</string>

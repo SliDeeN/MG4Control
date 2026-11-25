@@ -1023,7 +1023,7 @@
     <string name="settings_cluster_brake_soft">Discreta</string>
     <string name="settings_cluster_brake_medium">Média</string>
     <string name="settings_cluster_brake_strong">Forte</string>
-    <string name="settings_cluster_brake_desc">A borda do ecrã do condutor acende a vermelho quando o carro abranda com força (travagem ou regeneração forte). Calculado a partir da velocidade: nenhum sensor de travão é lido.</string>
+    <string name="settings_cluster_brake_desc">A borda do ecrã do condutor acende a vermelho ao carregar no pedal do travão, ou quando o carro abranda com força sem ele (regeneração forte).</string>
     <string name="cluster_regen_kw">REGEN. kW</string>
     <string name="cluster_stopped_kw">kW parado</string>
     <string name="cluster_trip_avg">MÉDIA VIAGEM</string>

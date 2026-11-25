@@ -17,10 +17,11 @@
 package com.mg4.control.model
 
 /**
- * Halo de freinage (issue #278, 2026-11-25) : le pourtour de l'écran conducteur rougit quand la
- * voiture ralentit fortement. Aucun firmware n'expose l'état des feux stop (SWI68 à SWI173 fouillés),
- * et la pression de la pédale n'a jamais été lue : on s'en tient à la décélération, tirée de la
- * vitesse — freinage ou forte récupération, ce que voit le conducteur qui suit.
+ * Halo de freinage (issue #278, 2026-11-25) : le pourtour de l'écran conducteur rougit quand on
+ * freine. Aucun firmware n'expose l'état des feux stop (SWI68 à SWI173 fouillés), mais tous déclarent
+ * la pression de la pédale de frein, lue sur SWI133 : halo = pédale enfoncée ([PEDALE_ON]) OU forte
+ * décélération tirée de la vitesse (forte récupération sans pédale, et secours quand la pédale est
+ * illisible).
  *
  * Décélération mesurée entre le relevé le plus ancien des [FENETRE_MS] dernières millisecondes et
  * le plus récent (au moins [ECART_MIN_MS] d'écart) : le pas d'un km/h de la vitesse ne fait pas
@@ -40,10 +41,32 @@ class BrakeGlow {
     var deceleration: Float? = null
         private set
 
-    /** Un relevé de vitesse (km/h) au temps monotone [tMs] ; rend l'état du halo. */
-    fun add(tMs: Long, kmh: Float?): Boolean {
+    /** Décélération au-dessus du seuil (avec hystérésis). */
+    var parDeceleration = false
+        private set
+
+    /** Pédale de frein enfoncée (avec hystérésis) ; faux quand la pédale est illisible. */
+    var parPedale = false
+        private set
+
+    /**
+     * Un relevé au temps monotone [tMs] : vitesse (km/h) et pression brute de la pédale de frein
+     * ([pedale], `null` = illisible). Rend l'état du halo : pédale enfoncée OU forte décélération.
+     */
+    fun add(tMs: Long, kmh: Float?, pedale: Int? = null): Boolean {
+        parPedale = when {
+            pedale == null -> false
+            parPedale -> pedale >= PEDALE_OFF
+            else -> pedale >= PEDALE_ON
+        }
+        parDeceleration = decel(tMs, kmh)
+        on = parPedale || parDeceleration
+        return on
+    }
+
+    private fun decel(tMs: Long, kmh: Float?): Boolean {
         if (kmh == null || (temps.isNotEmpty() && tMs - temps.last() > TROU_MS) || (temps.isNotEmpty() && tMs < temps.last())) {
-            reset()
+            viderVitesses()
             if (kmh == null) return false
         }
         temps.addLast(tMs)
@@ -54,17 +77,22 @@ class BrakeGlow {
             vitesses.removeFirst()
         }
         val dt = tMs - temps.first()
-        if (dt < ECART_MIN_MS) return on
+        if (dt < ECART_MIN_MS) return parDeceleration
         val d = (vitesses.first() - kmh) / 3.6f / (dt / 1000f)
         deceleration = d
-        on = if (on) d >= SEUIL_OFF else d >= SEUIL_ON
-        return on
+        return if (parDeceleration) d >= SEUIL_OFF else d >= SEUIL_ON
     }
 
-    fun reset() {
+    private fun viderVitesses() {
         temps.clear()
         vitesses.clear()
         deceleration = null
+        parDeceleration = false
+    }
+
+    fun reset() {
+        viderVitesses()
+        parPedale = false
         on = false
     }
 
@@ -83,6 +111,13 @@ class BrakeGlow {
         /** ≈ 4,7 km/h perdus par seconde : un freinage franc, pas un lever de pied. */
         const val SEUIL_ON = 1.3f
         const val SEUIL_OFF = 0.7f
+        /**
+         * Pédale (`SENSOR_BRAKE_PEDAL_DRIVER_APPLIED_PRESSURE`, relevé SWI133 du 2026-11-25) : 0
+         * relâchée, ≈ 650–1800 appui léger, ≈ 4300–4700 appui franc, par pas de 75. Allumé à partir
+         * de 300 (un effleurement ne compte pas), éteint sous 150.
+         */
+        const val PEDALE_ON = 300
+        const val PEDALE_OFF = 150
         const val FENETRE_MS = 600L
         const val ECART_MIN_MS = 400L
         const val TROU_MS = 1_500L

@@ -1023,7 +1023,7 @@
     <string name="settings_cluster_brake_soft">Subtle</string>
     <string name="settings_cluster_brake_medium">Medium</string>
     <string name="settings_cluster_brake_strong">Strong</string>
-    <string name="settings_cluster_brake_desc">The edge of the driver display glows red when the car slows down hard (braking or strong regeneration). Worked out from the speed: no brake sensor is read.</string>
+    <string name="settings_cluster_brake_desc">The edge of the driver display glows red when you press the brake pedal, or when the car slows down hard without it (strong regeneration).</string>
     <string name="cluster_regen_kw">REGEN kW</string>
     <string name="cluster_stopped_kw">kW stationary</string>
     <string name="cluster_trip_avg">TRIP AVG</string>

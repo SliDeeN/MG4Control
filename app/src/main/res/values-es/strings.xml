@@ -1023,7 +1023,7 @@
     <string name="settings_cluster_brake_soft">Discreta</string>
     <string name="settings_cluster_brake_medium">Media</string>
     <string name="settings_cluster_brake_strong">Fuerte</string>
-    <string name="settings_cluster_brake_desc">El borde de la pantalla del conductor se ilumina en rojo cuando el coche desacelera con fuerza (frenada o regeneración fuerte). Calculado a partir de la velocidad: no se lee ningún sensor de freno.</string>
+    <string name="settings_cluster_brake_desc">El borde de la pantalla del conductor se ilumina en rojo al pisar el pedal de freno, o cuando el coche desacelera con fuerza sin él (regeneración fuerte).</string>
     <string name="cluster_regen_kw">REGEN. kW</string>
     <string name="cluster_stopped_kw">kW parado</string>
     <string name="cluster_trip_avg">MEDIA VIAJE</string>

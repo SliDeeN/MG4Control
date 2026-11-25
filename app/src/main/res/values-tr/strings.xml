@@ -1023,7 +1023,7 @@
     <string name="settings_cluster_brake_soft">Hafif</string>
     <string name="settings_cluster_brake_medium">Orta</string>
     <string name="settings_cluster_brake_strong">Güçlü</string>
-    <string name="settings_cluster_brake_desc">Araç sert yavaşladığında (fren veya güçlü rejenerasyon) sürücü ekranının kenarı kırmızı yanar. Hızdan hesaplanır: hiçbir fren sensörü okunmaz.</string>
+    <string name="settings_cluster_brake_desc">Fren pedalına bastığınızda veya araç pedal olmadan sert yavaşladığında (güçlü rejenerasyon) sürücü ekranının kenarı kırmızı yanar.</string>
     <string name="cluster_regen_kw">REJEN. kW</string>
     <string name="cluster_stopped_kw">kW duruşta</string>
     <string name="cluster_trip_avg">ORT. YOLCULUK</string>

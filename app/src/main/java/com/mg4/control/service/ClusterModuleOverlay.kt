@@ -501,7 +501,8 @@ internal object ClusterModuleOverlay {
             val actif = ClusterModuleSettings.brakeGlowOn(ctx) && haloPermis && ReadyWatcher.ready == true
             val on = if (actif) {
                 val kmh = runCatching { MG4Hardware.getVehicleSpeedKmh() }.getOrNull()?.takeIf { it in 0f..300f }
-                frein.add(SystemClock.elapsedRealtime(), kmh)
+                // Pédale de frein (tous les firmwares la déclarent) ; illisible : décélération seule.
+                frein.add(SystemClock.elapsedRealtime(), kmh, com.mg4.control.hardware.BrakePedalProbe.pression())
             } else {
                 frein.reset()
                 false
@@ -509,8 +510,9 @@ internal object ClusterModuleOverlay {
             if (on != haloMontre) {
                 haloMontre = on
                 // Une ligne par bascule : à comparer avec la sonde de la pédale (MG4_BRAKE).
-                if (actif) AppLogger.i(TAG, String.format(java.util.Locale.US, "halo de freinage %s (décélération %.1f m/s²)",
-                    if (on) "allumé" else "éteint", frein.deceleration ?: 0f))
+                if (actif) AppLogger.i(TAG, String.format(java.util.Locale.US, "halo de freinage %s (pédale %s · décélération %.1f m/s²%s)",
+                    if (on) "allumé" else "éteint", if (frein.parPedale) "enfoncée" else "non", frein.deceleration ?: 0f,
+                    if (frein.parDeceleration) ", au-dessus du seuil" else ""))
                 val intensite = ClusterModuleSettings.brakeIntensity(ctx)
                 main.post { vue?.freinage(on, intensite) }
             }

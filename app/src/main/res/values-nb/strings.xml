@@ -1024,7 +1024,7 @@
     <string name="settings_cluster_brake_soft">Diskret</string>
     <string name="settings_cluster_brake_medium">Middels</string>
     <string name="settings_cluster_brake_strong">Sterk</string>
-    <string name="settings_cluster_brake_desc">Kanten av førerskjermen lyser rødt når bilen bremser kraftig ned (bremsing eller kraftig regenerering). Beregnet ut fra hastigheten: ingen bremsesensor leses.</string>
+    <string name="settings_cluster_brake_desc">Kanten av førerskjermen lyser rødt når du trykker på bremsepedalen, eller når bilen bremser kraftig ned uten den (kraftig regenerering).</string>
     <string name="cluster_regen_kw">REGEN kW</string>
     <string name="cluster_stopped_kw">kW stasjonær</string>
     <string name="cluster_trip_avg">TRIP AVG</string>
