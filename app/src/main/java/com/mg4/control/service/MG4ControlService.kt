@@ -235,6 +235,8 @@ class MG4ControlService : Service() {
         com.mg4.control.hardware.LightProbe.start(applicationContext)
         // Sonde de la pédale de frein (issue #278) : lecture seule, journalisée à chaque cycle READY.
         com.mg4.control.hardware.BrakePedalProbe.start()
+        // Sonde du guidage Android Auto / CarPlay (issue #285) : abonnement passif au service AllGo.
+        com.mg4.control.hardware.NavGuidanceProbe.start(applicationContext)
         // Luminosité automatique au démarrage : relit son interrupteur à chaque READY.
         com.mg4.control.automation.AutoBrightness.start(applicationContext)
         // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
