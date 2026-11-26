@@ -28,6 +28,12 @@ internal class ImportDialog(
     private val parcourir: () -> Unit,
     /** Titre de la fenêtre (2026-11-23) ; `null` = celui de l'import des automatisations. */
     private val titre: String? = null,
+    /**
+     * Fichiers acceptés en plus de [nom] (2026-11-26) : ceux qui commencent par ce préfixe (et
+     * finissent par « .json »), comme les automatisations partagées une à une. Plusieurs : on
+     * demande lequel. `null` = [nom] seulement.
+     */
+    private val prefixe: String? = null,
     private val lu: (String?, String) -> Unit,
 ) {
     private val main = Handler(Looper.getMainLooper())
@@ -112,9 +118,21 @@ internal class ImportDialog(
         if (choix == Destination.FOLDER) { toucher(choix); return }
         enCours = true
         val d = choix
-        val ou = if (d == Destination.USB) "${usb?.nom ?: "USB"}/${StatsExport.DOSSIER}/$nom" else "Download/${StatsExport.DOSSIER}/$nom"
         Thread {
-            val texte = StatsExport.lire(ctx, d, nom)
+            val noms = prefixe?.let { StatsExport.lister(ctx, d, it, ".json") }.orEmpty()
+            if (noms.size > 1) main.post {
+                enCours = false
+                AppDialog.choisir(ctx, titre = s(R.string.rule_import_which), choix = noms.map { AppDialog.Choix(it) },
+                    annuler = s(R.string.profile_cancel)) { i -> lireFichier(d, noms[i]) }
+            } else lireFichier(d, noms.firstOrNull() ?: nom)
+        }.start()
+    }
+
+    private fun lireFichier(d: Destination, fichier: String) {
+        enCours = true
+        val ou = if (d == Destination.USB) "${usb?.nom ?: "USB"}/${StatsExport.DOSSIER}/$fichier" else "Download/${StatsExport.DOSSIER}/$fichier"
+        Thread {
+            val texte = StatsExport.lire(ctx, d, fichier)
             main.post {
                 enCours = false
                 dialog?.dismiss()

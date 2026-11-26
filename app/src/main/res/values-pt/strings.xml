@@ -1865,6 +1865,15 @@
     </plurals>
     <string name="rule_export_title">Exportar automações</string>
     <string name="rule_export_subtitle">%1$d automações num ficheiro, para importar aqui ou noutro carro.</string>
+    <string name="rule_share">Partilhar</string>
+    <string name="rule_share_title">Partilhar «%1$s»</string>
+    <string name="rule_share_subtitle">Só esta automação num ficheiro, para importar noutro carro.</string>
+    <string name="rule_share_done_title">Automação exportada</string>
+    <string name="rule_export_all">Todas (%1$d)</string>
+    <string name="rule_export_pick">Escolher…</string>
+    <string name="rule_export_subtitle_some">%1$d de %2$d num ficheiro, para importar aqui ou noutro carro.</string>
+    <string name="rule_export_none_selected">Assinale pelo menos uma automação.</string>
+    <string name="rule_import_which">Que ficheiro importar?</string>
     <string name="rule_export_done_title">Automações exportadas</string>
     <string name="rule_import_title_from">Importar automações</string>
     <string name="rule_import_subtitle">Onde está o ficheiro?</string>

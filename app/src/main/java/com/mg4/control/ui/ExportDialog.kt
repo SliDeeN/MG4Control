@@ -41,6 +41,10 @@ internal class ExportDialog(
     private val parcourir: () -> Unit,
     /** Case à cocher sous les destinations (2026-11-23, sauvegarde des réglages) ; `null` = aucune. */
     private val case: Case? = null,
+    /** Vue posée au-dessus des destinations (2026-11-26, choix des automatisations) ; `null` = aucune. */
+    private val avant: View? = null,
+    /** Avant d'écrire : un message (rien à exporter…) arrête l'export ; `null` = on y va. */
+    private val verifier: (() -> String?)? = null,
 ) {
     /** Une option de l'export, lue par [fichiers] au moment d'écrire. */
     class Case(val libelle: String, var coche: Boolean)
@@ -51,6 +55,10 @@ internal class ExportDialog(
     private var usb: StatsExport.Usb? = null
     private var choix = Destination.DOWNLOADS
     private var enCours = false
+    private var vueSousTitre: TextView? = null
+
+    /** Change le sous-titre de la fenêtre ouverte (choix des automatisations). */
+    fun sousTitre(t: String) { vueSousTitre?.text = t }
 
     private fun s(id: Int, vararg a: Any): String = if (a.isEmpty()) ctx.getString(id) else ctx.getString(id, *a)
     private fun dp(v: Float) = OverlayKit.dp(ctx, v)
@@ -60,9 +68,13 @@ internal class ExportDialog(
         choix = StatsExport.destination(ctx, usb)
         val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_rule_value, null)
         vue.findViewById<TextView>(R.id.rule_value_title).text = titre
-        vue.findViewById<TextView>(R.id.rule_value_subtitle).apply {
+        vueSousTitre = vue.findViewById<TextView>(R.id.rule_value_subtitle).apply {
             text = sousTitre
             visibility = View.VISIBLE
+        }
+        avant?.let { a ->
+            vue.findViewById<LinearLayout>(R.id.rule_value_body).addView(a, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.bottomMargin = dp(14f) })
         }
         val rangee = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
         vue.findViewById<LinearLayout>(R.id.rule_value_body).addView(rangee,
@@ -136,6 +148,7 @@ internal class ExportDialog(
 
     private fun exporter() {
         if (enCours) return
+        verifier?.invoke()?.let { Toast.makeText(ctx, it, Toast.LENGTH_LONG).show(); return }
         enCours = true
         val d = choix
         StatsExport.retenir(ctx, d)

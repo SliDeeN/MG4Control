@@ -1872,6 +1872,15 @@
     </plurals>
     <string name="rule_export_title">Eksport automatyzacji</string>
     <string name="rule_export_subtitle">Automatyzacje (%1$d) w jednym pliku, do zaimportowania tutaj lub w innym samochodzie.</string>
+    <string name="rule_share">Udostępnij</string>
+    <string name="rule_share_title">Udostępnij „%1$s”</string>
+    <string name="rule_share_subtitle">Tylko ta automatyzacja w jednym pliku, do zaimportowania w innym samochodzie.</string>
+    <string name="rule_share_done_title">Automatyzacja wyeksportowana</string>
+    <string name="rule_export_all">Wszystkie (%1$d)</string>
+    <string name="rule_export_pick">Wybierz…</string>
+    <string name="rule_export_subtitle_some">%1$d z %2$d w jednym pliku, do zaimportowania tutaj lub w innym samochodzie.</string>
+    <string name="rule_export_none_selected">Zaznacz co najmniej jedną automatyzację.</string>
+    <string name="rule_import_which">Który plik zaimportować?</string>
     <string name="rule_export_done_title">Automatyzacje wyeksportowane</string>
     <string name="rule_import_title_from">Import automatyzacji</string>
     <string name="rule_import_subtitle">Gdzie jest plik?</string>

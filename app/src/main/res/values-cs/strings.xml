@@ -1770,6 +1770,15 @@
     </plurals>
     <string name="rule_export_title">Export automatizací</string>
     <string name="rule_export_subtitle">Automatizace (%1$d) v jednom souboru pro import do této aplikace nebo do jiného vozu.</string>
+    <string name="rule_share">Sdílet</string>
+    <string name="rule_share_title">Sdílet „%1$s“</string>
+    <string name="rule_share_subtitle">Jen tato automatizace v jednom souboru pro import do jiného vozu.</string>
+    <string name="rule_share_done_title">Automatizace exportována</string>
+    <string name="rule_export_all">Všechny (%1$d)</string>
+    <string name="rule_export_pick">Vybrat…</string>
+    <string name="rule_export_subtitle_some">%1$d z %2$d v jednom souboru pro import sem nebo do jiného vozu.</string>
+    <string name="rule_export_none_selected">Zaškrtněte alespoň jednu automatizaci.</string>
+    <string name="rule_import_which">Který soubor importovat?</string>
     <string name="rule_export_done_title">Automatizace exportovány</string>
     <string name="rule_import_title_from">Import automatizací</string>
     <string name="rule_import_subtitle">Kde je soubor?</string>

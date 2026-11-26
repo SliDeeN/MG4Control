@@ -89,7 +89,7 @@ class CustomRulesPage {
         for (r in regles) {
             val carte = gonfleur.inflate(R.layout.item_custom_rule, liste, false)
             val active = moteur && r.enabled
-            listOf(R.id.rule_name, R.id.rule_runs, R.id.rule_skips, R.id.rule_summary, R.id.rule_last_run, R.id.rule_edit, R.id.rule_test, R.id.rule_delete)
+            listOf(R.id.rule_name, R.id.rule_runs, R.id.rule_skips, R.id.rule_summary, R.id.rule_last_run, R.id.rule_edit, R.id.rule_test, R.id.rule_share, R.id.rule_delete)
                 .forEach { carte.findViewById<View>(it).alpha = if (active) 1f else ALPHA_COUPEE }
             // Compteurs (variante 3) : simples pastilles, sans action au toucher.
             val n = compteurs[r.id]
@@ -128,6 +128,7 @@ class CustomRulesPage {
                 CustomRules.test(ctx, r.id)
                 Toast.makeText(ctx, ctx.getString(R.string.rule_test_started, r.name), Toast.LENGTH_SHORT).show()
             }
+            carte.findViewById<View>(R.id.rule_share).setOnClickListener { partager(ctx, r) }
             carte.findViewById<View>(R.id.rule_delete).setOnClickListener { supprimer(ctx, r) }
             liste.addView(carte)
         }
@@ -371,23 +372,82 @@ class CustomRulesPage {
      */
     private fun exporter(ctx: Context) {
         val regles = CustomRuleStore.all(ctx)
-        exportDialog = ExportDialog(ctx,
+        fun dp(v: Float) = AppDialog.dp(ctx, v)
+        // « Toutes » ou « Choisir… » (2026-11-26) : une seule cochée donne le fichier à son nom.
+        var toutes = true
+        val cochees = linkedSetOf<String>()
+        fun retenues() = if (toutes) regles else regles.filter { it.id in cochees }
+        fun sousTitre() = if (toutes) ctx.getString(R.string.rule_export_subtitle, regles.size)
+            else ctx.getString(R.string.rule_export_subtitle_some, cochees.size, regles.size)
+        lateinit var fenetre: ExportDialog
+        val choix = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val liste = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val defil = android.widget.ScrollView(ctx).apply {
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(liste)
+            visibility = View.GONE
+        }
+        regles.forEach { r ->
+            liste.addView(android.widget.CheckBox(ctx).apply {
+                text = r.name
+                isSaveEnabled = false
+                setTextColor(ctx.getColor(R.color.text_primary))
+                textSize = 19f
+                buttonTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(R.color.dash_accent))
+                setOnCheckedChangeListener { _, on -> if (on) cochees += r.id else cochees -= r.id; fenetre.sousTitre(sousTitre()) }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52f)))
+        }
+        val segments = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundResource(R.drawable.bg_dialog_segments)
+            setPadding(dp(4f), dp(4f), dp(4f), dp(4f))
+        }
+        AppDialog.segments(segments, listOf(ctx.getString(R.string.rule_export_all, regles.size), ctx.getString(R.string.rule_export_pick)), 0) { i ->
+            toutes = i == 0
+            defil.visibility = if (toutes) View.GONE else View.VISIBLE
+            fenetre.sousTitre(sousTitre())
+        }
+        choix.addView(segments, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(60f)))
+        choix.addView(defil, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            dp((regles.size * 52f).coerceAtMost(LISTE_EXPORT_DP))).also { it.topMargin = dp(8f) })
+        fenetre = ExportDialog(ctx,
             titre = ctx.getString(R.string.rule_export_title),
-            sousTitre = ctx.getString(R.string.rule_export_subtitle, regles.size),
+            sousTitre = sousTitre(),
             bouton = ctx.getString(R.string.rule_tool_export),
             titreFait = ctx.getString(R.string.rule_export_done_title),
-            // Avec le nom des objets liés (2026-11-14) : relier par le nom sur une autre voiture.
-            fichiers = {
-                val objets = RuleRefLookup(ctx)
-                listOf(FICHIER to CustomRuleStore.encode(regles.map { r -> r.copy(exportNames = RuleRefs.names(r) { objets.name(it) }) }))
-            },
+            fichiers = { fichiersExport(ctx, retenues()) },
+            parcourir = parcourirDossier,
+            avant = choix.takeIf { regles.size > 1 },
+            verifier = { if (retenues().isEmpty()) ctx.getString(R.string.rule_export_none_selected) else null },
+        )
+        exportDialog = fenetre.also { it.ouvrir() }
+    }
+
+    /** Partager une automatisation (2026-11-26) : elle seule, dans un fichier à son nom. */
+    private fun partager(ctx: Context, r: CustomRule) {
+        exportDialog = ExportDialog(ctx,
+            titre = ctx.getString(R.string.rule_share_title, r.name),
+            sousTitre = ctx.getString(R.string.rule_share_subtitle),
+            bouton = ctx.getString(R.string.rule_tool_export),
+            titreFait = ctx.getString(R.string.rule_share_done_title),
+            fichiers = { fichiersExport(ctx, listOf(r)) },
             parcourir = parcourirDossier,
         ).also { it.ouvrir() }
     }
 
+    /**
+     * Le fichier d'export : avec le nom des objets liés (2026-11-14), pour relier par le nom sur une
+     * autre voiture. Une seule automatisation : le fichier porte son nom ([nomFichier]).
+     */
+    private fun fichiersExport(ctx: Context, regles: List<CustomRule>): List<Pair<String, String>> {
+        val objets = RuleRefLookup(ctx)
+        val nom = regles.singleOrNull()?.let { nomFichier(it.name) } ?: FICHIER
+        return listOf(nom to CustomRuleStore.encode(regles.map { r -> r.copy(exportNames = RuleRefs.names(r) { objets.name(it) }) }))
+    }
+
     /** Import : depuis Téléchargements, la clé USB, ou n'importe quel fichier choisi. */
     private fun importer(ctx: Context) {
-        importDialog = ImportDialog(ctx, FICHIER, parcourirFichier) { texte, ou -> importerTexte(ctx, texte, ou) }
+        importDialog = ImportDialog(ctx, FICHIER, parcourirFichier, prefixe = PREFIXE) { texte, ou -> importerTexte(ctx, texte, ou) }
             .also { it.ouvrir() }
     }
 
@@ -473,9 +533,23 @@ class CustomRulesPage {
             })
     }
 
-    private companion object {
+    companion object {
         /** Nom du fichier d'échange (le même qu'avant, pour retrouver les anciens exports). */
         const val FICHIER = "mg4control-automatisations.json"
+        /** Fichiers d'automatisations reconnus à l'import : l'export complet et ceux d'une seule. */
+        const val PREFIXE = "mg4control-automatisation"
+        private const val LISTE_EXPORT_DP = 260f
+
+        /**
+         * Fichier d'une automatisation partagée seule (2026-11-26) : « mg4control-automatisation-<nom>.json »,
+         * nom en minuscules sans accents, tirets à la place du reste, 40 caractères au plus.
+         */
+        internal fun nomFichier(nom: String): String {
+            val propre = java.text.Normalizer.normalize(nom, java.text.Normalizer.Form.NFD)
+                .replace(Regex("\\p{M}+"), "").lowercase(java.util.Locale.ROOT)
+                .replace(Regex("[^a-z0-9]+"), "-").trim('-').take(40).trim('-')
+            return "$PREFIXE-${propre.ifEmpty { "1" }}.json"
+        }
         const val ALPHA_COUPEE = 0.45f
     }
 

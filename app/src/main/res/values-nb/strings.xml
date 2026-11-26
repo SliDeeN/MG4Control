@@ -1859,6 +1859,15 @@
     </plurals>
     <string name="rule_export_title">Eksporter automatiseringer</string>
     <string name="rule_export_subtitle">%1$d automatiseringer i én fil, for import her eller i en annen bil.</string>
+    <string name="rule_share">Del</string>
+    <string name="rule_share_title">Del «%1$s»</string>
+    <string name="rule_share_subtitle">Bare denne automatiseringen i én fil, for import i en annen bil.</string>
+    <string name="rule_share_done_title">Automatisering eksportert</string>
+    <string name="rule_export_all">Alle (%1$d)</string>
+    <string name="rule_export_pick">Velg…</string>
+    <string name="rule_export_subtitle_some">%1$d av %2$d i én fil, for import her eller i en annen bil.</string>
+    <string name="rule_export_none_selected">Kryss av for minst én automatisering.</string>
+    <string name="rule_import_which">Hvilken fil skal importeres?</string>
     <string name="rule_export_done_title">Automatiseringer eksportert</string>
     <string name="rule_import_title_from">Importer automatiseringer</string>
     <string name="rule_import_subtitle">Hvor er filen?</string>

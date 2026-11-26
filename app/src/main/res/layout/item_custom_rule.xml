@@ -122,6 +122,24 @@
             app:strokeColor="@color/dash_border"
             app:cornerRadius="14dp" />
 
+        <!-- Partager cette automatisation seule (2026-11-26) : un fichier à importer ailleurs. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/rule_share"
+            android:layout_width="wrap_content"
+            android:layout_height="64dp"
+            android:layout_marginStart="10dp"
+            android:minWidth="140dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/rule_share"
+            android:textColor="@color/text_primary"
+            android:textSize="19sp"
+            android:textAllCaps="false"
+            app:backgroundTint="@color/dash_btn"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/dash_border"
+            app:cornerRadius="14dp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/rule_delete"
             android:layout_width="wrap_content"

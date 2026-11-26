@@ -183,6 +183,33 @@ object StatsExport {
         }
     }.onFailure { AppLogger.w(TAG, "import $d : ${it.javaClass.simpleName} ${it.message}") }.getOrNull()
 
+    /**
+     * Noms des fichiers de [d] qui commencent par [prefixe] et finissent par [suffixe] (2026-11-26 :
+     * automatisations partagées une à une), les plus récents d'abord quand la date est connue.
+     * Mêmes dossiers que [lire] ; vide si rien ou illisible.
+     */
+    fun lister(ctx: Context, d: Destination, prefixe: String, suffixe: String): List<String> = runCatching {
+        fun garde(n: String?) = n != null && n.startsWith(prefixe) && n.endsWith(suffixe)
+        when (d) {
+            Destination.DOWNLOADS -> listOf(telechargements(), Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS))
+                .flatMap { it.listFiles()?.filter { f -> f.isFile && garde(f.name) }.orEmpty() }
+                .sortedByDescending { it.lastModified() }.map { it.name }.distinct()
+            Destination.USB -> {
+                val cle = usb(ctx) ?: return emptyList()
+                val arbre = DocumentsContract.buildTreeDocumentUri(STOCKAGE, "${cle.uuid}:")
+                val racine = DocumentsContract.getTreeDocumentId(arbre)
+                listOfNotNull(enfant(ctx, arbre, racine, DOSSIER), racine).flatMap { parent ->
+                    val enfants = DocumentsContract.buildChildDocumentsUriUsingTree(arbre, parent)
+                    ctx.contentResolver.query(enfants, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                        DocumentsContract.Document.COLUMN_LAST_MODIFIED), null, null, null)?.use { c ->
+                        buildList { while (c.moveToNext()) c.getString(0)?.takeIf(::garde)?.let { add(it to c.getLong(1)) } }
+                    }.orEmpty()
+                }.sortedByDescending { it.second }.map { it.first }.distinct()
+            }
+            Destination.FOLDER -> emptyList()
+        }
+    }.onFailure { AppLogger.w(TAG, "liste $d : ${it.javaClass.simpleName} ${it.message}") }.getOrDefault(emptyList())
+
     fun lireUri(ctx: Context, uri: Uri): String? = runCatching {
         ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
     }.getOrNull()

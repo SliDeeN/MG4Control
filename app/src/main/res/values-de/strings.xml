@@ -1858,6 +1858,15 @@
     </plurals>
     <string name="rule_export_title">Automatisierungen exportieren</string>
     <string name="rule_export_subtitle">%1$d Automatisierungen in einer Datei, hier oder in einem anderen Auto zu importieren.</string>
+    <string name="rule_share">Teilen</string>
+    <string name="rule_share_title">„%1$s“ teilen</string>
+    <string name="rule_share_subtitle">Nur diese Automatisierung in einer Datei, in einem anderen Auto zu importieren.</string>
+    <string name="rule_share_done_title">Automatisierung exportiert</string>
+    <string name="rule_export_all">Alle (%1$d)</string>
+    <string name="rule_export_pick">Auswählen…</string>
+    <string name="rule_export_subtitle_some">%1$d von %2$d in einer Datei, hier oder in einem anderen Auto zu importieren.</string>
+    <string name="rule_export_none_selected">Wählen Sie mindestens eine Automatisierung aus.</string>
+    <string name="rule_import_which">Welche Datei importieren?</string>
     <string name="rule_export_done_title">Automatisierungen exportiert</string>
     <string name="rule_import_title_from">Automatisierungen importieren</string>
     <string name="rule_import_subtitle">Wo ist die Datei?</string>

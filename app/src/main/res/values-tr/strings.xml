@@ -1858,6 +1858,15 @@
     </plurals>
     <string name="rule_export_title">Otomasyonları dışa aktar</string>
     <string name="rule_export_subtitle">%1$d otomasyon tek dosyada; burada veya başka bir araçta içe aktarılabilir.</string>
+    <string name="rule_share">Paylaş</string>
+    <string name="rule_share_title">“%1$s” paylaş</string>
+    <string name="rule_share_subtitle">Yalnızca bu otomasyon tek dosyada; başka bir araçta içe aktarılabilir.</string>
+    <string name="rule_share_done_title">Otomasyon dışa aktarıldı</string>
+    <string name="rule_export_all">Tümü (%1$d)</string>
+    <string name="rule_export_pick">Seç…</string>
+    <string name="rule_export_subtitle_some">%2$d otomasyondan %1$d tanesi tek dosyada; burada veya başka bir araçta içe aktarılabilir.</string>
+    <string name="rule_export_none_selected">En az bir otomasyon işaretleyin.</string>
+    <string name="rule_import_which">Hangi dosya içe aktarılsın?</string>
     <string name="rule_export_done_title">Otomasyonlar dışa aktarıldı</string>
     <string name="rule_import_title_from">Otomasyonları içe aktar</string>
     <string name="rule_import_subtitle">Dosya nerede?</string>
