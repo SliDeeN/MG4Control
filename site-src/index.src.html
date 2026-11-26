@@ -131,7 +131,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span>
-        <b><span data-l="fr">20 nouveautés dans cette version</span><span data-l="en">20 new things in this release</span></b>
+        <b><span data-l="fr">25 nouveautés dans cette version</span><span data-l="en">25 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -144,7 +144,12 @@
         <a href="#f-odometer" data-feature="f-odometer"><span data-l="fr">⏲️ Le compteur kilométrique</span><span data-l="en">⏲️ The odometer</span></a>
         <a href="#f-tyres" data-feature="f-tyres"><span data-l="fr">🛞 Pop-up Pression des pneus</span><span data-l="en">🛞 Tyre pressure pop-up</span></a>
         <a href="#f-tyreinfo" data-feature="f-tyreinfo"><span data-l="fr">🌡️ Pneus dans les bulles et les automatisations</span><span data-l="en">🌡️ Tyres in bubbles and automations</span></a>
-        <a href="#f-preclim-unlimited" data-feature="f-preclim-unlimited"><span data-l="fr">♾️ Garde-voiture sans limite en READY</span><span data-l="en">♾️ Car keeper with no limit in READY</span></a>
+        <a href="#f-camping" data-feature="f-camping"><span data-l="fr">⛺ Mode camping</span><span data-l="en">⛺ Camping mode</span></a>
+        <a href="#f-brakeglow" data-feature="f-brakeglow"><span data-l="fr">🔴 Halo de freinage sur l'écran conducteur</span><span data-l="en">🔴 Brake glow on the driver display</span></a>
+        <a href="#f-cluster-icon" data-feature="f-cluster-icon"><span data-l="fr">🎯 L'icône de chaque case, au choix</span><span data-l="en">🎯 Each slot's icon, your choice</span></a>
+        <a href="#f-winpulse" data-feature="f-winpulse"><span data-l="fr">🪟 Vitres par impulsion</span><span data-l="en">🪟 Windows by pulse</span></a>
+        <a href="#f-ruleshare" data-feature="f-ruleshare"><span data-l="fr">📤 Partager une automatisation</span><span data-l="en">📤 Share one automation</span></a>
+        <a href="#f-actionpicker" data-feature="f-actionpicker"><span data-l="fr">🔎 Choix d'action avec pictogrammes</span><span data-l="en">🔎 Action picker with icons</span></a>
         <a href="#f-soundchannel" data-feature="f-soundchannel"><span data-l="fr">🔊 Les sons comme une annonce GPS</span><span data-l="en">🔊 Sounds like a GPS announcement</span></a>
         <a href="#f-backup" data-feature="f-backup"><span data-l="fr">💾 Sauvegarde de tous les réglages</span><span data-l="en">💾 Backup of all settings</span></a>
         <a href="#f-chargecurrent" data-feature="f-chargecurrent"><span data-l="fr">🔌 Courant de charge AC</span><span data-l="en">🔌 AC charging current</span></a>
@@ -686,6 +691,15 @@
         <p data-l="en">Replaces the old Shortcuts, Advanced and List sub-tabs. The left and right ★ buttons work right away with short and long presses, through the vehicle's signal: if the stock launcher already uses the button, it keeps priority. A double press, a per-profile setting or any other key go through <b>advanced capture</b> (accessibility service, see below). A banner says whether it is on; “Add a button” waits for a key press; the ⋮ menu renames a key (a name is suggested from its code: Home, Back, Volume +…). The “Enable” switch, at the end of the pills, only affects the steering-wheel keys. Comfort and safety actions re-read the vehicle state on every press: nothing is ever written blind.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-actionpicker" data-hl-key="act-pick" data-demo="actionPicker">
+      <h3><span data-l="fr">Choix d'action avec pictogrammes</span><span data-l="en">Action picker with icons</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span></h3>
+      <p data-l="fr">Attribuer une action à un bouton ouvre une fenêtre compacte : un pictogramme par action et une recherche.</p>
+      <p data-l="en">Assigning an action to a button opens a compact window: one icon per action and a search.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Elle remplace la liste déroulante des boutons physiques et des bulles : des tuiles sur trois colonnes, l'action en cours marquée, la recherche dans le nom, et « Aucune action » à côté d'Annuler.</p>
+        <p data-l="en">It replaces the drop-down list for physical buttons and bubbles: tiles in three columns, the current action marked, search by name, and “No action” next to Cancel.</p>
+      </details>
+    </div>
     <div class="pt" id="f-onepedal" data-hl-key="sc-onepedal" data-go="shortcuts:onepedal">
       <h3><span data-l="fr">1 Pédale : retour au niveau d'avant</span><span data-l="en">One Pedal: back to the previous level</span></h3>
       <p data-l="fr">Le second appui coupe le One Pedal et, par défaut, la voiture remet d'elle-même la régénération qu'elle avait avant (#226).</p>
@@ -1002,13 +1016,13 @@
         <p data-l="en">The “Car keeper” shortcut opens a window that always starts on “Now”: the climate runs for at most 15 min, 30 min, 1 h or 2 h. “At a time” schedules the first cycle, its length, the number of cycles and the pause between them; the climate stays off while waiting. The car must be in P. Before the countdown, a reminder tells you to keep the key with you and gives the three ways to unlock the car: the button on a front door handle, the key (lock, then unlock) and the iSmart app; “Don't remind me again” turns it off, and a switch on the Car keeper page turns it back on. Get out with the key: after an adjustable countdown, MG4Control locks the doors itself (locking with the key would switch the car off); before getting out, switch the lights and wipers to OFF yourself: the app doesn't do it. The floating buttons disappear from the countdown until the end. At the end, the climate goes back to its previous settings and the car switches off. Unlocking stops everything and leaves the car on; it also stops by itself below an adjustable battery level or if the car moves.</p>
       </details>
     </div>
-    <div class="pt is-new" id="f-preclim-unlimited" data-hl-key="preclim-unlimited" data-demo="preclimUnlimited">
-      <h3><span data-l="fr">Sans limite de durée, tant que la voiture reste en READY</span><span data-l="en">No time limit, while the car stays READY</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span></h3>
-      <p data-l="fr">Une voiture laissée en READY reste allumée : la durée « ∞ » garde la clim en marche toute la nuit, comme un mode camping.</p>
-      <p data-l="en">A car left in READY stays on: the “∞” duration keeps the climate running all night, like a camping mode.</p>
+    <div class="pt is-new" id="f-camping" data-hl-key="preclim-camp-tile" data-demo="camping">
+      <h3><span data-l="fr">Mode camping</span><span data-l="en">Camping mode</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span></h3>
+      <p data-l="fr">Dormir dans la voiture avec le chauffage ou la clim : un mode du Garde-voiture, sans limite de durée tant que les portes restent verrouillées (#194).</p>
+      <p data-l="en">Sleep in the car with the heating or the climate on: a Car keeper mode with no time limit as long as the doors stay locked (#194).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Dans la fenêtre du Garde-voiture, « Maintenant » seulement, sans mode chien ni surveillance, et seulement quand la voiture est en READY : la pastille apparaît et disparaît en direct. La choisir affiche un avertissement : la durée n'est illimitée que tant que la voiture reste en READY ; ouvrir la porte conducteur la ferait sortir de READY et la durée repasserait à 2 h ; l'arrêt sur batterie faible et au déverrouillage reste actif. « J'ai compris » garde « ∞ », « Annuler » remet la durée d'avant. Si la voiture sort de READY pendant le programme, il continue et s'arrête 2 h plus tard. L'écran de suivi montre le temps écoulé, « sans limite, tant que la voiture reste en READY », et l'écran conducteur « Sans limite · depuis … ». « ∞ » n'est jamais retenu : la fenêtre se rouvre sur 2 h.</p>
-        <p data-l="en">In the Car keeper window, “Now” only, without dog mode or surveillance, and only while the car is READY: the chip appears and disappears live. Picking it shows a warning: the duration is unlimited only while the car stays READY; opening the driver's door would take it out of READY and the duration would go back to 2 h; the low-battery and unlock stops still apply. “Got it” keeps “∞”, “Cancel” restores the previous duration. If the car leaves READY while running, the programme keeps going and stops 2 h later. The follow screen shows the time running, “no limit, while the car stays READY”, and the driver display “No limit · for …”. “∞” is never remembered: the window reopens on 2 h.</p>
+        <p data-l="fr">Tuile « Camping » à côté du mode chien et de la surveillance, en « Maintenant », READY ou non ; la choisir affiche à chaque fois un avertissement. Ses réglages remplacent les durées : délai avant activation (10 s à 10 min), batterie minimum, enregistrement vidéo (si l'application caméra se pilote), écran la nuit (atténué, plein, éteint ou écran de suivi), messages « Surveillance vidéo active » et « eCall actif ». À droite, sa propre clim : température, AUTO ou ventilation manuelle, A/C, recirculation. Ces réglages sont retenus pour la nuit suivante ; le choix du camping, jamais. Au lancement, la voiture doit passer au moins une fois en READY (pied sur le frein) : si elle n'y est pas, l'écran « Passez en READY » attend, sans limite, avec seulement Annuler. Ensuite READY n'est plus surveillé : le délai s'écoule, les portes se verrouillent (toujours), et la voiture reste allumée, chauffage et clim compris, tant qu'elles restent verrouillées. Déverrouiller arrête le camping et remet la clim comme avant ; il s'arrête aussi sous la batterie minimum ou si la voiture roule. Mettez vous-même les feux et les essuie-glaces sur OFF.</p>
+        <p data-l="en">A “Camping” tile next to dog mode and surveillance, in “Now”, READY or not; picking it shows a warning every time. Its settings replace the durations: delay before activation (10 s to 10 min), minimum battery, video recording (if the camera app can be driven), night screen (dimmed, full, off or follow screen), “Video surveillance on” and “eCall on” messages. On the right, its own climate: temperature, AUTO or manual fan, A/C, recirculation. These settings are kept for the next night; choosing camping never is. On start, the car must switch to READY at least once (foot on the brake): if it isn't, the “Switch to READY” screen waits, with no time limit and only Cancel. After that READY is no longer watched: the delay runs, the doors lock (always), and the car stays on, heating and climate included, as long as they stay locked. Unlocking stops camping and puts the climate back as it was; it also stops below the minimum battery or if the car moves. Switch the lights and wipers to OFF yourself.</p>
       </details>
     </div>
     <div class="pt" id="f-dogmode" data-hl-key="preclim-popup" data-demo="dogMode">
@@ -1199,6 +1213,15 @@
         <p data-l="en">The export (Downloads, USB drive or another folder) also writes the names of the places, profiles, sounds, custom shortcuts and ABRP accounts used (never their keys). On import, automations arrive switched off; “Run”, “Stop” and “Turn on / off” target the imported copies, not the originals, If / Else blocks included; a missing place, profile, sound, shortcut or ABRP account is linked to the one with the same name; navigation to coordinates stays as it is. The rest is listed “To link again”, with “Choose a place / a profile / a sound…” right there. As long as a link leads nowhere, the card shows “⚠ N links to fix”. In the mockup, “Import” shows an import coming from another car.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-ruleshare" data-hl-key="rule-share" data-demo="ruleShare">
+      <h3><span data-l="fr">Partager une automatisation</span><span data-l="en">Share one automation</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span></h3>
+      <p data-l="fr">Un bouton « Partager » sur chaque automatisation l'exporte seule, dans un fichier à son nom.</p>
+      <p data-l="en">A “Share” button on each automation exports it alone, in a file named after it.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Même fenêtre que l'export (Téléchargements, clé USB, autre dossier) ; le fichier s'appelle par exemple mg4control-automatisation-recup-au-demarrage.json. « Exporter » propose aussi « Toutes » ou « Choisir… » avec des cases à cocher ; une seule cochée donne aussi un fichier à son nom. À l'import, MG4Control trouve tous ces fichiers dans Téléchargements ou sur la clé USB, et demande lequel prendre s'il y en a plusieurs. Les liens (lieux, profils, sons, comptes ABRP) suivent comme pour l'export complet.</p>
+        <p data-l="en">Same window as the export (Downloads, USB drive, another folder); the file is called, for example, mg4control-automatisation-recup-au-demarrage.json. “Export” also offers “All” or “Choose…” with checkboxes; a single ticked automation also gets a file named after it. On import, MG4Control finds all these files in Downloads or on the USB drive, and asks which one to take when there are several. Links (places, profiles, sounds, ABRP accounts) follow as with the full export.</p>
+      </details>
+    </div>
     <div class="pt" id="f-rule-tpl" data-hl-key="rule-tpl" data-demo="ruleTpl">
       <h3><span data-l="fr">Modèles</span><span data-l="en">Templates</span></h3>
       <p data-l="fr">Des règles prêtes à adapter : message au démarrage, départ du matin en hiver, clim quand il fait chaud, volant ou siège chauffant coupé après un temps (#173), luminosité selon le soleil (#198), ABRP selon le profil (#188)…</p>
@@ -1255,6 +1278,15 @@
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
         <p data-l="fr">Seule la vitre conducteur signale sa position. Pour les trois autres, l'app ne sait pas quand la vitre arrive en butée : elle envoie l'ordre pendant cette durée. Trop courte, la vitre reste entrouverte, et une vitre arrière fatiguée peut demander un peu plus. Cinq secondes, c'est la valeur qu'utilise winclose sur MG4.</p>
         <p data-l="en">Only the driver's window reports its position. For the other three, the app can't tell when the window reaches its end stop: it sends the command for this long. Too short and the window stays ajar, and a tired rear window may need a little more. Five seconds is the value winclose uses on the MG4.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-winpulse" data-hl-key="win-pulse" data-demo="winPulse">
+      <h3><span data-l="fr">Vitres par impulsion</span><span data-l="en">Windows by pulse</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span></h3>
+      <p data-l="fr">Ouvrir ou fermer les quatre vitres un court instant, depuis leur position : par exemple pour les entrouvrir au soleil (#282).</p>
+      <p data-l="en">Open or close all four windows for a moment, from where they are: for example to crack them open in the sun (#282).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Deux raccourcis, « Ouvrir / Fermer toutes les vitres par impulsion », aussi proposés dans Mes automatisations (Vitres, quatre modes). La durée se règle de 0,2 à 2 s (0,5 s par défaut) dans la carte des vitres, avec deux boutons pour l'essayer. Une impulsion répétée ouvre ou ferme un peu plus. La fermeture par impulsion n'a pas d'anti-pincement.</p>
+        <p data-l="en">Two shortcuts, “Open / Close all windows by pulse”, also offered in My automations (Windows, four modes). The duration is set from 0.2 to 2 s (0.5 s by default) in the windows card, with two buttons to try it. A repeated pulse opens or closes a little more. Closing by pulse has no anti-pinch.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="win-auto" data-demo="windows">
@@ -1571,6 +1603,15 @@
         <p data-l="en">“Value colour” row, under the text size. Only the figure takes the colour: the label, unit and icon stay grey, and a missing value (“–”) is never coloured. Default: white, and the regeneration colour for energy recovered; a chosen colour replaces it for that slot only. Not offered for a pill (profile, mode), which keeps its mode's colour. Slot labels are now all in capitals, with a short word for long names (OUT TEMP, TRIP DIST…) (#268).</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-cluster-icon" data-hl-key="cl-icon" data-demo="clusterIcon">
+      <h3><span data-l="fr">L'icône de chaque case, au choix</span><span data-l="en">Each slot's icon, your choice</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span></h3>
+      <p data-l="fr">En affichage « Icône + valeur », chaque case de l'écran conducteur peut prendre n'importe quel symbole de la bibliothèque des bulles.</p>
+      <p data-l="en">In “Icon + value” display, each driver display slot can use any symbol from the bubble library.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Ligne « Icône » dans la personnalisation avancée : « Choisir… » ouvre la fenêtre des symboles (recherche, catégories, « Récentes » avec les icônes des autres cases), sans icônes d'application puisque l'écran conducteur dessine tout en gris ; « Par défaut » revient au pictogramme de l'information. Changer d'information remet le pictogramme par défaut. Les pictogrammes par défaut ont aussi été refaits : un symbole plein par information, au lieu d'un même pictogramme pour toute une famille (bouclier, flocon, voiture). Trois s'ajoutent à la bibliothèque : One Pedal, portière et ventilateur « A ».</p>
+        <p data-l="en">“Icon” row in the advanced customisation: “Choose…” opens the symbol window (search, categories, “Recent” with the other slots' icons), without app icons since the driver display draws everything in grey; “Default” goes back to the information's icon. Changing the information resets the icon. The default icons were redone too: one filled symbol per piece of information, instead of one icon for a whole family (shield, snowflake, car). Three join the library: One Pedal, car door and fan “A”.</p>
+      </details>
+    </div>
     <div class="pt is-new" id="f-odometer" data-hl-key="cl-layout" data-demo="odometer">
       <h3><span data-l="fr">Le compteur kilométrique</span><span data-l="en">The odometer</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span></h3>
       <p data-l="fr">Le kilométrage total de la voiture devient une information : dans une bulle, dans une case de l'écran conducteur, en km ou en miles, et dans les automatisations (#268).</p>
@@ -1578,6 +1619,15 @@
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
         <p data-l="fr">C'est la valeur que la voiture affiche au combiné, déjà envoyée à ABRP. Dans Mes automatisations, catégorie Voiture : au-dessus ou en dessous d'un seuil, de 0 à 500 000 km par pas de 500, par exemple pour un rappel d'entretien. Valeur d'exemple dans la maquette : 11 356 km.</p>
         <p data-l="en">It is the value the car shows on the cluster, already sent to ABRP. In My automations, Car category: above or below a threshold, from 0 to 500,000 km in steps of 500, for example for a service reminder. Example value in the mockup: 11,356 km.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-brakeglow" data-hl-key="s-cluster-brake" data-demo="brakeGlow">
+      <h3><span data-l="fr">Halo de freinage</span><span data-l="en">Brake glow</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.1</span></h3>
+      <p data-l="fr">Le pourtour de l'écran conducteur s'éclaire en rouge quand vous freinez (#278).</p>
+      <p data-l="en">The edge of the driver display glows red when you brake (#278).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Dans les réglages communs de la carte Écran conducteur, coupé par défaut. Il s'allume à la moindre pression sur la pédale de frein, ou quand la voiture ralentit fortement sans elle (forte récupération), puis s'éteint en fondu. Trois intensités : discrète, moyenne, forte. C'est une estimation de MG4Control : il n'indique pas l'état réel des feux stop, ce que rappelle un avertissement à l'activation. Dans l'aperçu de l'écran conducteur, plus bas, « Freiner » le montre une fois le halo activé.</p>
+        <p data-l="en">In the shared settings of the Driver display card, off by default. It lights up at the slightest press on the brake pedal, or when the car slows down hard without it (strong regeneration), then fades out. Three intensities: subtle, medium, strong. It is an estimate by MG4Control: it does not show the real state of the brake lights, as a warning reminds you when turning it on. In the driver display preview further down, “Brake” shows it once the glow is on.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-tabs" data-hl-key="s-cluster-refresh" data-demo="cluster">

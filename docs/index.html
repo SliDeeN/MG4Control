@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=6d7a1e7c">
-  <link rel="stylesheet" href="assets/css/sim.css?v=24f1c177">
+  <link rel="stylesheet" href="assets/css/sim.css?v=aad6c19e">
   <link rel="stylesheet" href="assets/css/explorer.css?v=4173a27a">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span>
-        <b><span data-l="fr">20 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">25 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -151,7 +151,12 @@
         <a href="#f-odometer" data-feature="f-odometer"><span data-l="fr">⏲️ Le compteur kilométrique</span></a>
         <a href="#f-tyres" data-feature="f-tyres"><span data-l="fr">🛞 Pop-up Pression des pneus</span></a>
         <a href="#f-tyreinfo" data-feature="f-tyreinfo"><span data-l="fr">🌡️ Pneus dans les bulles et les automatisations</span></a>
-        <a href="#f-preclim-unlimited" data-feature="f-preclim-unlimited"><span data-l="fr">♾️ Garde-voiture sans limite en READY</span></a>
+        <a href="#f-camping" data-feature="f-camping"><span data-l="fr">⛺ Mode camping</span></a>
+        <a href="#f-brakeglow" data-feature="f-brakeglow"><span data-l="fr">🔴 Halo de freinage sur l'écran conducteur</span></a>
+        <a href="#f-cluster-icon" data-feature="f-cluster-icon"><span data-l="fr">🎯 L'icône de chaque case, au choix</span></a>
+        <a href="#f-winpulse" data-feature="f-winpulse"><span data-l="fr">🪟 Vitres par impulsion</span></a>
+        <a href="#f-ruleshare" data-feature="f-ruleshare"><span data-l="fr">📤 Partager une automatisation</span></a>
+        <a href="#f-actionpicker" data-feature="f-actionpicker"><span data-l="fr">🔎 Choix d'action avec pictogrammes</span></a>
         <a href="#f-soundchannel" data-feature="f-soundchannel"><span data-l="fr">🔊 Les sons comme une annonce GPS</span></a>
         <a href="#f-backup" data-feature="f-backup"><span data-l="fr">💾 Sauvegarde de tous les réglages</span></a>
         <a href="#f-chargecurrent" data-feature="f-chargecurrent"><span data-l="fr">🔌 Courant de charge AC</span></a>
@@ -604,6 +609,13 @@
         <p data-l="fr">Remplace les anciens sous-onglets Raccourcis, Avancés et Liste. Les boutons ★ gauche et droit fonctionnent d'emblée en appui court et long, par le signal du véhicule : si le launcher d'origine utilise déjà le bouton, il reste prioritaire. Un double appui, un réglage par profil ou toute autre touche passent par la <b>capture avancée</b> (service d'accessibilité, voir plus bas). Un bandeau dit si elle est active ; « Ajouter un bouton » attend l'appui d'une touche ; le menu ⋮ renomme une touche (un nom est proposé d'après son code : Accueil, Retour, Volume +…). L'interrupteur « Activer », au bout des pastilles, ne concerne que les touches du volant. Les actions de confort et de sécurité relisent l'état du véhicule à chaque pression : rien n'est écrit à l'aveugle.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-actionpicker" data-hl-key="act-pick" data-demo="actionPicker">
+      <h3><span data-l="fr">Choix d'action avec pictogrammes</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
+      <p data-l="fr">Attribuer une action à un bouton ouvre une fenêtre compacte : un pictogramme par action et une recherche.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Elle remplace la liste déroulante des boutons physiques et des bulles : des tuiles sur trois colonnes, l'action en cours marquée, la recherche dans le nom, et « Aucune action » à côté d'Annuler.</p>
+      </details>
+    </div>
     <div class="pt" id="f-onepedal" data-hl-key="sc-onepedal" data-go="shortcuts:onepedal">
       <h3><span data-l="fr">1 Pédale : retour au niveau d'avant</span></h3>
       <p data-l="fr">Le second appui coupe le One Pedal et, par défaut, la voiture remet d'elle-même la régénération qu'elle avait avant (#226).</p>
@@ -857,11 +869,11 @@
         <p data-l="fr">Le raccourci « Garde-voiture » ouvre une fenêtre qui démarre toujours sur « Maintenant » : la clim tourne au plus 15 min, 30 min, 1 h ou 2 h. « À une heure » programme le premier cycle, sa durée, le nombre de cycles et la pause entre deux ; la clim reste coupée en attendant. La voiture doit être en P. Avant le décompte, un rappel dit de garder la clé sur soi et donne les trois façons de déverrouiller la voiture : le bouton d'une poignée avant, la clé (verrouiller puis déverrouiller) et l'application iSmart ; « Ne plus me rappeler » le coupe, un interrupteur de la page Garde-voiture le remet. Sortez avec la clé : après un décompte réglable, MG4Control verrouille lui-même les portes (verrouiller avec la clé éteindrait la voiture) ; avant de sortir, mettez vous-même les feux et les essuie-glaces sur OFF : l'application ne s'en charge pas. Les boutons flottants disparaissent du décompte jusqu'à la fin. À la fin, la clim retrouve les réglages qu'elle avait avant et la voiture s'éteint. Déverrouiller arrête tout et laisse la voiture allumée ; l'arrêt est aussi automatique sous un niveau de batterie réglable ou si la voiture roule.</p>
       </details>
     </div>
-    <div class="pt is-new" id="f-preclim-unlimited" data-hl-key="preclim-unlimited" data-demo="preclimUnlimited">
-      <h3><span data-l="fr">Sans limite de durée, tant que la voiture reste en READY</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
-      <p data-l="fr">Une voiture laissée en READY reste allumée : la durée « ∞ » garde la clim en marche toute la nuit, comme un mode camping.</p>
+    <div class="pt is-new" id="f-camping" data-hl-key="preclim-camp-tile" data-demo="camping">
+      <h3><span data-l="fr">Mode camping</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
+      <p data-l="fr">Dormir dans la voiture avec le chauffage ou la clim : un mode du Garde-voiture, sans limite de durée tant que les portes restent verrouillées (#194).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Dans la fenêtre du Garde-voiture, « Maintenant » seulement, sans mode chien ni surveillance, et seulement quand la voiture est en READY : la pastille apparaît et disparaît en direct. La choisir affiche un avertissement : la durée n'est illimitée que tant que la voiture reste en READY ; ouvrir la porte conducteur la ferait sortir de READY et la durée repasserait à 2 h ; l'arrêt sur batterie faible et au déverrouillage reste actif. « J'ai compris » garde « ∞ », « Annuler » remet la durée d'avant. Si la voiture sort de READY pendant le programme, il continue et s'arrête 2 h plus tard. L'écran de suivi montre le temps écoulé, « sans limite, tant que la voiture reste en READY », et l'écran conducteur « Sans limite · depuis … ». « ∞ » n'est jamais retenu : la fenêtre se rouvre sur 2 h.</p>
+        <p data-l="fr">Tuile « Camping » à côté du mode chien et de la surveillance, en « Maintenant », READY ou non ; la choisir affiche à chaque fois un avertissement. Ses réglages remplacent les durées : délai avant activation (10 s à 10 min), batterie minimum, enregistrement vidéo (si l'application caméra se pilote), écran la nuit (atténué, plein, éteint ou écran de suivi), messages « Surveillance vidéo active » et « eCall actif ». À droite, sa propre clim : température, AUTO ou ventilation manuelle, A/C, recirculation. Ces réglages sont retenus pour la nuit suivante ; le choix du camping, jamais. Au lancement, la voiture doit passer au moins une fois en READY (pied sur le frein) : si elle n'y est pas, l'écran « Passez en READY » attend, sans limite, avec seulement Annuler. Ensuite READY n'est plus surveillé : le délai s'écoule, les portes se verrouillent (toujours), et la voiture reste allumée, chauffage et clim compris, tant qu'elles restent verrouillées. Déverrouiller arrête le camping et remet la clim comme avant ; il s'arrête aussi sous la batterie minimum ou si la voiture roule. Mettez vous-même les feux et les essuie-glaces sur OFF.</p>
       </details>
     </div>
     <div class="pt" id="f-dogmode" data-hl-key="preclim-popup" data-demo="dogMode">
@@ -1016,6 +1028,13 @@
         <p data-l="fr">L'export (Téléchargements, clé USB ou autre dossier) écrit aussi le nom des lieux, profils, sons, raccourcis perso et comptes ABRP utilisés (jamais leurs clés). À l'import, les automatisations arrivent coupées ; « Lancer », « Arrêter » et « Activer / Couper » visent les copies importées et non les originales, blocs Si / Sinon compris ; un lieu, profil, son, raccourci ou compte ABRP absent est relié à celui du même nom ; une navigation vers des coordonnées reste telle quelle. Le reste est listé « À réassocier », avec « Choisir un lieu / un profil / un son… » sur place. Tant qu'un lien ne mène nulle part, la carte affiche « ⚠ N liens à réassocier ». Dans la maquette, « Importer » montre un import venu d'une autre voiture.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-ruleshare" data-hl-key="rule-share" data-demo="ruleShare">
+      <h3><span data-l="fr">Partager une automatisation</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
+      <p data-l="fr">Un bouton « Partager » sur chaque automatisation l'exporte seule, dans un fichier à son nom.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Même fenêtre que l'export (Téléchargements, clé USB, autre dossier) ; le fichier s'appelle par exemple mg4control-automatisation-recup-au-demarrage.json. « Exporter » propose aussi « Toutes » ou « Choisir… » avec des cases à cocher ; une seule cochée donne aussi un fichier à son nom. À l'import, MG4Control trouve tous ces fichiers dans Téléchargements ou sur la clé USB, et demande lequel prendre s'il y en a plusieurs. Les liens (lieux, profils, sons, comptes ABRP) suivent comme pour l'export complet.</p>
+      </details>
+    </div>
     <div class="pt" id="f-rule-tpl" data-hl-key="rule-tpl" data-demo="ruleTpl">
       <h3><span data-l="fr">Modèles</span></h3>
       <p data-l="fr">Des règles prêtes à adapter : message au démarrage, départ du matin en hiver, clim quand il fait chaud, volant ou siège chauffant coupé après un temps (#173), luminosité selon le soleil (#198), ABRP selon le profil (#188)…</p>
@@ -1062,6 +1081,13 @@
       <p data-l="fr">Les vitres sans capteur bougent pendant une durée réglable : 5 s par défaut, de 2 à 10 s.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">Seule la vitre conducteur signale sa position. Pour les trois autres, l'app ne sait pas quand la vitre arrive en butée : elle envoie l'ordre pendant cette durée. Trop courte, la vitre reste entrouverte, et une vitre arrière fatiguée peut demander un peu plus. Cinq secondes, c'est la valeur qu'utilise winclose sur MG4.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-winpulse" data-hl-key="win-pulse" data-demo="winPulse">
+      <h3><span data-l="fr">Vitres par impulsion</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
+      <p data-l="fr">Ouvrir ou fermer les quatre vitres un court instant, depuis leur position : par exemple pour les entrouvrir au soleil (#282).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Deux raccourcis, « Ouvrir / Fermer toutes les vitres par impulsion », aussi proposés dans Mes automatisations (Vitres, quatre modes). La durée se règle de 0,2 à 2 s (0,5 s par défaut) dans la carte des vitres, avec deux boutons pour l'essayer. Une impulsion répétée ouvre ou ferme un peu plus. La fermeture par impulsion n'a pas d'anti-pincement.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="win-auto" data-demo="windows">
@@ -1320,11 +1346,25 @@
         <p data-l="fr">Ligne « Couleur de la valeur », sous la taille du texte. Seul le chiffre prend la couleur : le libellé, l'unité et l'icône restent gris, et une valeur absente (« – ») n'est jamais colorée. Par défaut : blanc, et la couleur de la récupération pour l'énergie récupérée ; une couleur choisie la remplace pour cette case seulement. Pas proposé pour une pastille (profil, mode), qui garde la couleur de son mode. Les libellés des cases sont désormais tous en capitales, avec un mot court pour les noms longs (TEMP. EXT., DIST. TRAJET…) (#268).</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-cluster-icon" data-hl-key="cl-icon" data-demo="clusterIcon">
+      <h3><span data-l="fr">L'icône de chaque case, au choix</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
+      <p data-l="fr">En affichage « Icône + valeur », chaque case de l'écran conducteur peut prendre n'importe quel symbole de la bibliothèque des bulles.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Ligne « Icône » dans la personnalisation avancée : « Choisir… » ouvre la fenêtre des symboles (recherche, catégories, « Récentes » avec les icônes des autres cases), sans icônes d'application puisque l'écran conducteur dessine tout en gris ; « Par défaut » revient au pictogramme de l'information. Changer d'information remet le pictogramme par défaut. Les pictogrammes par défaut ont aussi été refaits : un symbole plein par information, au lieu d'un même pictogramme pour toute une famille (bouclier, flocon, voiture). Trois s'ajoutent à la bibliothèque : One Pedal, portière et ventilateur « A ».</p>
+      </details>
+    </div>
     <div class="pt is-new" id="f-odometer" data-hl-key="cl-layout" data-demo="odometer">
       <h3><span data-l="fr">Le compteur kilométrique</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
       <p data-l="fr">Le kilométrage total de la voiture devient une information : dans une bulle, dans une case de l'écran conducteur, en km ou en miles, et dans les automatisations (#268).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">C'est la valeur que la voiture affiche au combiné, déjà envoyée à ABRP. Dans Mes automatisations, catégorie Voiture : au-dessus ou en dessous d'un seuil, de 0 à 500 000 km par pas de 500, par exemple pour un rappel d'entretien. Valeur d'exemple dans la maquette : 11 356 km.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-brakeglow" data-hl-key="s-cluster-brake" data-demo="brakeGlow">
+      <h3><span data-l="fr">Halo de freinage</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.1</span></h3>
+      <p data-l="fr">Le pourtour de l'écran conducteur s'éclaire en rouge quand vous freinez (#278).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Dans les réglages communs de la carte Écran conducteur, coupé par défaut. Il s'allume à la moindre pression sur la pédale de frein, ou quand la voiture ralentit fortement sans elle (forte récupération), puis s'éteint en fondu. Trois intensités : discrète, moyenne, forte. C'est une estimation de MG4Control : il n'indique pas l'état réel des feux stop, ce que rappelle un avertissement à l'activation. Dans l'aperçu de l'écran conducteur, plus bas, « Freiner » le montre une fois le halo activé.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-tabs" data-hl-key="s-cluster-refresh" data-demo="cluster">
@@ -1849,8 +1889,8 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=e5fd69df"></script>
-<script src="assets/js/sim.js?v=33799753"></script>
+<script src="assets/js/strings.js?v=8655dd13"></script>
+<script src="assets/js/sim.js?v=8478314d"></script>
 <script src="assets/js/site.js?v=a3c1886a"></script>
 <script src="assets/js/explorer.js?v=16d44a4f"></script>
 </body>
