@@ -753,6 +753,15 @@
     <string name="win_course_title">Travel time</string>
     <string name="win_course_label">Full travel</string>
     <string name="win_course_hint">How long the app drives the windows without a sensor, for a full open or close. The driver window keeps its own automatic travel. Too short, and the window stays ajar.</string>
+    <string name="win_pulse_title">Pulse</string>
+    <string name="win_pulse_label">Pulse length</string>
+    <string name="win_pulse_try">Try on all 4 windows</string>
+    <string name="win_pulse_open">Open</string>
+    <string name="win_pulse_close">Close</string>
+    <string name="win_pulse_hint">Opens or closes all four windows for a short moment, from wherever they are: "Open / Close all windows by pulse" shortcuts and automations. Handy to crack the windows open in the sun. Repeating a pulse opens or closes a little more.</string>
+    <string name="win_pulse_warning">Closing by pulse has no anti-pinch protection.</string>
+    <string name="shortcuts_action_windows_pulse_open">Open all windows by pulse</string>
+    <string name="shortcuts_action_windows_pulse_close">Close all windows by pulse</string>
     <string name="win_cal_advanced_title">Advanced</string>
     <string name="win_cal_advanced_label">Per-window calibration</string>
     <string name="win_cal_advanced_desc">Measures each window\'s real travel, more accurate than the general time. Measurements are kept if you turn the option off.</string>

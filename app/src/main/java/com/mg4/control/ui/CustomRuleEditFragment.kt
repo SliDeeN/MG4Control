@@ -1369,7 +1369,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
         // Voiture
         sujet(s(R.string.rule_act_windows), Cat.CAR, "sub:windows",
-            lancer(ShortcutAction.WINDOWS_OPEN_ALL), lancer(ShortcutAction.WINDOWS_CLOSE_ALL))
+            lancer(ShortcutAction.WINDOWS_OPEN_ALL), lancer(ShortcutAction.WINDOWS_CLOSE_ALL),
+            lancer(ShortcutAction.WINDOWS_PULSE_OPEN), lancer(ShortcutAction.WINDOWS_PULSE_CLOSE))
         val profils = ProfileManager(ctx).getAll()
         sujet(s(R.string.rule_subject_profile), Cat.CAR, "sub:profile", *(profils.map { p ->
             ModeAct(s(R.string.rule_act_profile_fmt, p.name), p.name, { it.type == RuleAction.Type.PROFILE && it.profileId == p.id }) {

@@ -121,7 +121,11 @@ enum class ShortcutAction(val id: Int) {
     TYRE_POPUP(55),
     // Module suivant de l'écran conducteur (2026-11-20) : le module suivant de la liste de l'onglet
     // affiché, pour le profil en cours (voir ClusterModuleOverlay.nextModule). N'écrit rien.
-    CLUSTER_NEXT_MODULE(56);
+    CLUSTER_NEXT_MODULE(56),
+    // Vitres par impulsion (issue #282, 2026-11-26) : les quatre vitres un court instant (durée réglée
+    // dans la carte des vitres), depuis leur position actuelle. Actions directes, sans bascule.
+    WINDOWS_PULSE_OPEN(57),
+    WINDOWS_PULSE_CLOSE(58);
 
     companion object {
         /**

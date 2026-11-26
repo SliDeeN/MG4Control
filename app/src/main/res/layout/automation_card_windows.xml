@@ -502,6 +502,155 @@
                 android:paddingEnd="16dp"
                 android:paddingTop="6dp" />
 
+            <!-- Impulsion (issue #282) : un court instant sur les 4 vitres, depuis leur position. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:text="@string/win_pulse_title"
+                android:textColor="@color/dash_text_lo"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.12"
+                android:textAllCaps="true"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="7dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/dash_border" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/win_pulse_label"
+                    android:textColor="@color/text_primary"
+                    android:textSize="19sp" />
+
+                <TextView
+                    android:id="@+id/win_pulse_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="90dp"
+                    android:gravity="end"
+                    android:textColor="@color/text_primary"
+                    android:textSize="19sp"
+                    android:fontFamily="monospace" />
+
+            </LinearLayout>
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/slider_win_pulse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:valueFrom="0.2"
+                android:valueTo="2"
+                android:value="0.5"
+                android:stepSize="0.1"
+                app:labelBehavior="gone"
+                app:thumbRadius="14dp"
+                app:trackHeight="10dp"
+                app:thumbColor="@color/dash_accent"
+                app:trackColorActive="@color/dash_accent"
+                app:trackColorInactive="@color/dash_border" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="6dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/win_pulse_try"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="18sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_win_pulse_open"
+                    android:layout_width="wrap_content"
+                    android:layout_height="56dp"
+                    android:layout_marginStart="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:text="@string/win_pulse_open"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    app:icon="@drawable/ic_window_down"
+                    app:iconTint="@color/text_secondary"
+                    app:iconSize="22dp"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="14dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_win_pulse_close"
+                    android:layout_width="wrap_content"
+                    android:layout_height="56dp"
+                    android:layout_marginStart="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:text="@string/win_pulse_close"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    app:icon="@drawable/ic_window_up"
+                    app:iconTint="@color/text_secondary"
+                    app:iconSize="22dp"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="14dp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/win_pulse_hint"
+                android:textColor="@color/text_secondary"
+                android:textSize="18sp"
+                android:lineSpacingExtra="2dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/win_pulse_warning"
+                android:textColor="@color/dash_warn"
+                android:textSize="18sp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="6dp" />
+
         </LinearLayout>
 
         <View

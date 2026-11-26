@@ -5,6 +5,7 @@ import android.widget.Switch
 import android.widget.TextView
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.PowerWindows
 import com.mg4.control.model.PowerWindow
 import com.mg4.control.model.WindowCommand
@@ -46,6 +47,7 @@ class WindowsPanel {
     fun bind(view: View, onAutoCloseToggled: (Boolean) -> Unit = {}) {
         root = view
         bindCourse(view)
+        bindPulse(view)
         bindAdvanced(view)
 
         autoClose.bind(view, onAutoCloseToggled)
@@ -88,6 +90,40 @@ class WindowsPanel {
     private fun showCourse(seconds: Float) {
         val ctx = root?.context ?: return
         courseValue?.text = ctx.getString(
+            R.string.win_cal_seconds, String.format(Locale.getDefault(), "%.1f", seconds))
+    }
+
+    // ── Impulsion (issue #282) ──────────────────────────────────────────────
+
+    private var pulseValue: TextView? = null
+
+    /** Curseur en secondes ; les boutons d'essai envoient tout de suite une impulsion aux 4 vitres. */
+    private fun bindPulse(view: View) {
+        pulseValue = view.findViewById(R.id.win_pulse_value)
+        val slider = view.findViewById<Slider>(R.id.slider_win_pulse).apply {
+            valueFrom = WindowCommand.MIN_PULSE_MS / 1000f
+            valueTo = WindowCommand.MAX_PULSE_MS / 1000f
+            stepSize = WindowCommand.PULSE_STEP_MS / 1000f
+            value = (PowerWindows.pulseMs(context) / 1000f).coerceIn(valueFrom, valueTo)
+            showPulse(value)
+            addOnChangeListener { s, seconds, fromUser ->
+                showPulse(seconds)
+                if (fromUser) PowerWindows.setPulseMs(s.context, Math.round(seconds * 1000f).toLong())
+            }
+        }
+        fun essai(sens: WindowCommand.Direction) {
+            val ms = PowerWindows.pulseMs(slider.context)
+            AppLogger.i(PowerWindows.TAG, "essai d'impulsion ${if (sens == WindowCommand.Direction.DOWN) "ouverture" else "fermeture"} $ms ms (carte des vitres)")
+            PowerWindows.prepare()
+            PowerWindows.pulseAll(sens, ms)
+        }
+        view.findViewById<View>(R.id.btn_win_pulse_open).setOnClickListener { essai(WindowCommand.Direction.DOWN) }
+        view.findViewById<View>(R.id.btn_win_pulse_close).setOnClickListener { essai(WindowCommand.Direction.UP) }
+    }
+
+    private fun showPulse(seconds: Float) {
+        val ctx = root?.context ?: return
+        pulseValue?.text = ctx.getString(
             R.string.win_cal_seconds, String.format(Locale.getDefault(), "%.1f", seconds))
     }
 

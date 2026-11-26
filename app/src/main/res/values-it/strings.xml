@@ -753,6 +753,15 @@
     <string name="win_course_title">Tempo di corsa</string>
     <string name="win_course_label">Corsa completa</string>
     <string name="win_course_hint">Durata dell\'impulso inviato ai vetri senza sensore, per un\'apertura o una chiusura completa. Il vetro del conducente mantiene la sua corsa automatica. Troppo breve, il vetro resta socchiuso.</string>
+    <string name="win_pulse_title">Impulso</string>
+    <string name="win_pulse_label">Durata dell\'impulso</string>
+    <string name="win_pulse_try">Prova sui 4 finestrini</string>
+    <string name="win_pulse_open">Apri</string>
+    <string name="win_pulse_close">Chiudi</string>
+    <string name="win_pulse_hint">Apre o chiude i quattro finestrini per un breve istante, dalla posizione in cui si trovano: scorciatoie «Aprire / Chiudere tutti i finestrini a impulso» e automazioni. Utile per socchiudere i finestrini al sole. Ripetere un impulso apre o chiude un po\' di più.</string>
+    <string name="win_pulse_warning">La chiusura a impulso non ha l\'antischiacciamento.</string>
+    <string name="shortcuts_action_windows_pulse_open">Aprire tutti i finestrini a impulso</string>
+    <string name="shortcuts_action_windows_pulse_close">Chiudere tutti i finestrini a impulso</string>
     <string name="win_cal_advanced_title">Avanzate</string>
     <string name="win_cal_advanced_label">Calibrazione per vetro</string>
     <string name="win_cal_advanced_desc">Misura la corsa reale di ogni vetro, più precisa del tempo generale. Le misure restano salvate se disattivi l\'opzione.</string>

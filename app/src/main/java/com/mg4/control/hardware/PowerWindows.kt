@@ -130,6 +130,7 @@ object PowerWindows {
     private fun calKey(window: PowerWindow, part: String) = "win_cal_${window.name.lowercase(Locale.ROOT)}_$part"
 
     private const val KEY_COURSE_MS = "win_course_ms"
+    private const val KEY_PULSE_MS = "win_pulse_ms"
     private const val KEY_CAL_ADVANCED = "win_cal_advanced"
 
     /** Durée de course retenue pour les vitres sans calibrage propre, lue une fois par le worker. */
@@ -272,6 +273,34 @@ object PowerWindows {
         }
     }
 
+    /** Durée d'impulsion réglée (issue #282), commune aux deux sens. */
+    fun pulseMs(context: Context): Long = WindowCommand.clampPulseMs(
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getLong(KEY_PULSE_MS, WindowCommand.DEFAULT_PULSE_MS))
+
+    fun setPulseMs(context: Context, ms: Long) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putLong(KEY_PULSE_MS, WindowCommand.clampPulseMs(ms)).apply()
+    }
+
+    private val pulseWake = WindowWakeLock("MG4Control:vitres-impulsion")
+
+    /**
+     * Impulsion sur les quatre vitres (issue #282) : la commande manuelle répétée pendant [ms], puis
+     * le stop — conducteur compris, pour que les quatre bougent pareil. Depuis la position actuelle :
+     * aucune fermeture préalable (décision du 2026-11-26), répétée elle ouvre ou ferme un peu plus.
+     */
+    fun pulseAll(direction: Direction, ms: Long) {
+        val duree = WindowCommand.clampPulseMs(ms)
+        pulseWake.acquire(duree + 3_000L)
+        val origin = "impulsion ${if (direction == Direction.UP) "fermeture" else "ouverture"} $duree ms"
+        worker.post {
+            PowerWindow.entries.forEach { w ->
+                lastAutoMs.remove(w)
+                startRepeat(w, WindowCommand.manual(direction), duree, finger = false, label = origin)
+            }
+        }
+    }
+
     /** Tout ouvrir / tout fermer : toujours la course automatique, jamais le stop. */
     fun autoAll(direction: Direction) {
         val origin = "tout ${if (direction == Direction.UP) "fermer" else "ouvrir"}"
@@ -359,7 +388,10 @@ object PowerWindows {
                     return
                 }
                 if (send(window, value, label, quiet = true)) hold.sent++ else hold.failed++
-                worker.postDelayed(this, WindowCommand.HOLD_REPEAT_MS)
+                // La dernière attente s'arrête sur la durée voulue (impulsions courtes, issue #282),
+                // au lieu du multiple de 120 ms suivant.
+                val reste = maxMs - (SystemClock.elapsedRealtime() - hold.startMs)
+                worker.postDelayed(this, reste.coerceIn(1L, WindowCommand.HOLD_REPEAT_MS))
             }
         }
         hold = Hold(value, SystemClock.elapsedRealtime(), finger, label, repeat, autoClose)

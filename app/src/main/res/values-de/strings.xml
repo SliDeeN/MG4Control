@@ -753,6 +753,15 @@
     <string name="win_course_title">Laufzeit</string>
     <string name="win_course_label">Vollständige Fahrt</string>
     <string name="win_course_hint">So lange steuert die App Fenster ohne Sensor, für vollständiges Öffnen oder Schließen. Das Fahrerfenster behält seine eigene Automatik. Zu kurz, und das Fenster bleibt einen Spalt offen.</string>
+    <string name="win_pulse_title">Impuls</string>
+    <string name="win_pulse_label">Impulsdauer</string>
+    <string name="win_pulse_try">An allen 4 Fenstern testen</string>
+    <string name="win_pulse_open">Öffnen</string>
+    <string name="win_pulse_close">Schließen</string>
+    <string name="win_pulse_hint">Öffnet oder schließt alle vier Fenster kurz, von ihrer aktuellen Position aus: Verknüpfungen „Alle Fenster per Impuls öffnen / schließen“ und Automatisierungen. Praktisch, um die Fenster in der Sonne einen Spalt zu öffnen. Ein wiederholter Impuls öffnet oder schließt etwas weiter.</string>
+    <string name="win_pulse_warning">Das Schließen per Impuls hat keinen Einklemmschutz.</string>
+    <string name="shortcuts_action_windows_pulse_open">Alle Fenster per Impuls öffnen</string>
+    <string name="shortcuts_action_windows_pulse_close">Alle Fenster per Impuls schließen</string>
     <string name="win_cal_advanced_title">Erweitert</string>
     <string name="win_cal_advanced_label">Kalibrierung je Fenster</string>
     <string name="win_cal_advanced_desc">Misst die tatsächliche Fahrt jedes Fensters, genauer als die allgemeine Zeit. Die Messungen bleiben erhalten, wenn Sie die Option ausschalten.</string>

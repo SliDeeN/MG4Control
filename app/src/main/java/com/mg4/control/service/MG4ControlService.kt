@@ -1125,6 +1125,16 @@ class MG4ControlService : Service() {
             return
         }
 
+        // Vitres par impulsion (issue #282) : un court instant, depuis la position actuelle.
+        if (action == ShortcutAction.WINDOWS_PULSE_OPEN || action == ShortcutAction.WINDOWS_PULSE_CLOSE) {
+            val sens = if (action == ShortcutAction.WINDOWS_PULSE_OPEN) WindowCommand.Direction.DOWN else WindowCommand.Direction.UP
+            val ms = PowerWindows.pulseMs(this@MG4ControlService)
+            AppLogger.i(TAG, "SHORTCUT vitres : impulsion ${if (sens == WindowCommand.Direction.DOWN) "ouverture" else "fermeture"} $ms ms")
+            PowerWindows.prepare()
+            PowerWindows.pulseAll(sens, ms)
+            return
+        }
+
         // VEHICLE_POWER_OFF : check P → confirmation (overlay) → extinction. Sinon message "en P".
         if (action == ShortcutAction.VEHICLE_POWER_OFF) {
             VehiclePowerOffOverlay.demander(this@MG4ControlService, "raccourci")

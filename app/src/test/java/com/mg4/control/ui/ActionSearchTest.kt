@@ -93,7 +93,7 @@ class ActionSearchTest {
         assertFalse(chercher(r, "voiture").contains("Régler la voiture"))
         assertEquals(listOf("Volume\n4 modes"), chercher(r, "volume").filter { it.startsWith("Volume") })
         // Les mots d'un mode trouvent le sujet : « fermer toutes » → Vitres.
-        assertTrue(chercher(r, "fermer toutes").toString(), "Vitres\n2 modes" in libelles(r))
+        assertTrue(chercher(r, "fermer toutes").toString(), "Vitres\n4 modes" in libelles(r))
         assertTrue(chercher(r, "accueil").toString(), "Retour à l'accueil" in libelles(r))
         // Le raccourci « Paramètres Android » n'est plus proposé : la page précise le couvre.
         assertFalse(chercher(r, "parametres android").contains("Paramètres Android"))

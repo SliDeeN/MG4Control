@@ -99,6 +99,8 @@ object ShortcutCatalog {
             // vitres sans capteur suivent la calibration de l'onglet Automatisation.
             add(Item(ctx.getString(R.string.shortcuts_action_windows_open),    ShortcutAction.WINDOWS_OPEN_ALL))
             add(Item(ctx.getString(R.string.shortcuts_action_windows_close),   ShortcutAction.WINDOWS_CLOSE_ALL))
+            add(Item(ctx.getString(R.string.shortcuts_action_windows_pulse_open),  ShortcutAction.WINDOWS_PULSE_OPEN))
+            add(Item(ctx.getString(R.string.shortcuts_action_windows_pulse_close), ShortcutAction.WINDOWS_PULSE_CLOSE))
             add(Item(ctx.getString(R.string.shortcuts_action_apply_profile),   ShortcutAction.APPLY_PROFILE))
             add(Item(ctx.getString(R.string.shortcuts_action_profile_picker), ShortcutAction.PROFILE_PICKER))
             add(Item(ctx.getString(R.string.shortcuts_action_profile_cycle),  ShortcutAction.PROFILE_CYCLE))

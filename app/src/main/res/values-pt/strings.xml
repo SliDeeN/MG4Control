@@ -753,6 +753,15 @@
     <string name="win_course_title">Tempo de curso</string>
     <string name="win_course_label">Curso completo</string>
     <string name="win_course_hint">Duração do impulso enviado aos vidros sem sensor, para uma abertura ou fecho completo. O vidro do condutor mantém o seu curso automático. Demasiado curto, o vidro fica entreaberto.</string>
+    <string name="win_pulse_title">Impulso</string>
+    <string name="win_pulse_label">Duração do impulso</string>
+    <string name="win_pulse_try">Experimentar nos 4 vidros</string>
+    <string name="win_pulse_open">Abrir</string>
+    <string name="win_pulse_close">Fechar</string>
+    <string name="win_pulse_hint">Abre ou fecha os quatro vidros por um instante, a partir da posição em que estão: atalhos «Abrir / Fechar todos os vidros por impulso» e automações. Útil para entreabrir os vidros ao sol. Repetir um impulso abre ou fecha um pouco mais.</string>
+    <string name="win_pulse_warning">O fecho por impulso não tem antientalamento.</string>
+    <string name="shortcuts_action_windows_pulse_open">Abrir todos os vidros por impulso</string>
+    <string name="shortcuts_action_windows_pulse_close">Fechar todos os vidros por impulso</string>
     <string name="win_cal_advanced_title">Avançado</string>
     <string name="win_cal_advanced_label">Calibração por vidro</string>
     <string name="win_cal_advanced_desc">Mede o curso real de cada vidro, mais exato do que o tempo geral. As medições são mantidas se desativar a opção.</string>

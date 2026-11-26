@@ -762,6 +762,15 @@
     <string name="win_course_title">Durée de course</string>
     <string name="win_course_label">Course complète</string>
     <string name="win_course_hint">Durée d\'impulsion envoyée aux vitres sans capteur, pour une ouverture ou une fermeture complète. La vitre conducteur garde sa course automatique d\'origine. Trop courte, la vitre reste entrouverte.</string>
+    <string name="win_pulse_title">Impulsion</string>
+    <string name="win_pulse_label">Durée d\'impulsion</string>
+    <string name="win_pulse_try">Essayer sur les 4 vitres</string>
+    <string name="win_pulse_open">Ouvrir</string>
+    <string name="win_pulse_close">Fermer</string>
+    <string name="win_pulse_hint">Ouvre ou ferme les quatre vitres un court instant, depuis la position où elles se trouvent : raccourcis « Ouvrir / Fermer toutes les vitres par impulsion » et automatisations. Utile pour entrouvrir les vitres au soleil. Une impulsion répétée ouvre ou ferme un peu plus.</string>
+    <string name="win_pulse_warning">La fermeture par impulsion n\'a pas d\'anti-pincement.</string>
+    <string name="shortcuts_action_windows_pulse_open">Ouvrir toutes les vitres par impulsion</string>
+    <string name="shortcuts_action_windows_pulse_close">Fermer toutes les vitres par impulsion</string>
     <string name="win_cal_advanced_title">Avancé</string>
     <string name="win_cal_advanced_label">Calibrage par vitre</string>
     <string name="win_cal_advanced_desc">Mesure la course réelle de chaque vitre, plus juste que la durée générale. Les mesures restent enregistrées si vous désactivez l\'option.</string>

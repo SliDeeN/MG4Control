@@ -753,6 +753,15 @@
     <string name="win_course_title">Czas przesuwu</string>
     <string name="win_course_label">Pełny przesuw</string>
     <string name="win_course_hint">Jak długo aplikacja steruje szybami bez czujnika przy pełnym otwarciu lub zamknięciu. Szyba kierowcy zachowuje własny przesuw automatyczny. Zbyt krótko, a szyba pozostanie uchylona.</string>
+    <string name="win_pulse_title">Impuls</string>
+    <string name="win_pulse_label">Czas impulsu</string>
+    <string name="win_pulse_try">Wypróbuj na 4 szybach</string>
+    <string name="win_pulse_open">Otwórz</string>
+    <string name="win_pulse_close">Zamknij</string>
+    <string name="win_pulse_hint">Otwiera lub zamyka wszystkie cztery szyby na krótką chwilę, od miejsca, w którym są: skróty «Otwórz / Zamknij wszystkie szyby impulsem» i automatyzacje. Przydatne, by uchylić szyby w słońcu. Powtórzony impuls otwiera lub zamyka trochę bardziej.</string>
+    <string name="win_pulse_warning">Zamykanie impulsem nie ma zabezpieczenia przed przytrzaśnięciem.</string>
+    <string name="shortcuts_action_windows_pulse_open">Otwórz wszystkie szyby impulsem</string>
+    <string name="shortcuts_action_windows_pulse_close">Zamknij wszystkie szyby impulsem</string>
     <string name="win_cal_advanced_title">Zaawansowane</string>
     <string name="win_cal_advanced_label">Kalibracja każdej szyby</string>
     <string name="win_cal_advanced_desc">Mierzy rzeczywisty przesuw każdej szyby, dokładniej niż czas ogólny. Pomiary są zachowywane po wyłączeniu opcji.</string>

@@ -664,6 +664,15 @@
     <string name="win_course_title">Doba pohybu</string>
     <string name="win_course_label">Úplné otevření nebo zavření</string>
     <string name="win_course_hint">Doba, po kterou aplikace ovládá okna bez snímače při úplném otevření nebo zavření. Okno řidiče nadále využívá vlastní automatický dojezd. Při příliš krátké době zůstane okno pootevřené.</string>
+    <string name="win_pulse_title">Impulz</string>
+    <string name="win_pulse_label">Délka impulzu</string>
+    <string name="win_pulse_try">Vyzkoušet na všech 4 oknech</string>
+    <string name="win_pulse_open">Otevřít</string>
+    <string name="win_pulse_close">Zavřít</string>
+    <string name="win_pulse_hint">Otevře nebo zavře všechna čtyři okna na krátkou chvíli z polohy, ve které jsou: zkratky «Otevřít / Zavřít všechna okna impulzem» a automatizace. Hodí se k pootevření oken na slunci. Opakovaný impulz otevře nebo zavře o něco víc.</string>
+    <string name="win_pulse_warning">Zavírání impulzem nemá ochranu proti přivření.</string>
+    <string name="shortcuts_action_windows_pulse_open">Otevřít všechna okna impulzem</string>
+    <string name="shortcuts_action_windows_pulse_close">Zavřít všechna okna impulzem</string>
     <string name="win_cal_advanced_title">Pokročilé</string>
     <string name="win_cal_advanced_label">Kalibrace jednotlivých oken</string>
     <string name="win_cal_advanced_desc">Změří skutečnou dobu pohybu každého okna, což je přesnější než společně nastavená doba. Naměřené hodnoty zůstanou zachovány i po vypnutí této volby.</string>

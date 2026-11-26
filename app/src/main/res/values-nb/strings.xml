@@ -754,6 +754,15 @@
     <string name="win_course_title">Reisetid</string>
     <string name="win_course_label">Full reise</string>
     <string name="win_course_hint">Hvor lenge appen kjører vinduene uten sensor, for full åpning eller lukking. Førervinduet beholder sin egen automatiske kjøring. For kort, og vinduet står på gløtt.</string>
+    <string name="win_pulse_title">Impuls</string>
+    <string name="win_pulse_label">Impulsvarighet</string>
+    <string name="win_pulse_try">Prøv på alle 4 vinduene</string>
+    <string name="win_pulse_open">Åpne</string>
+    <string name="win_pulse_close">Lukk</string>
+    <string name="win_pulse_hint">Åpner eller lukker alle fire vinduene et kort øyeblikk, fra der de står: snarveiene «Åpne / Lukk alle vinduer med impuls» og automasjoner. Nyttig for å glippe vinduene i sola. En gjentatt impuls åpner eller lukker litt mer.</string>
+    <string name="win_pulse_warning">Lukking med impuls har ingen klembeskyttelse.</string>
+    <string name="shortcuts_action_windows_pulse_open">Åpne alle vinduer med impuls</string>
+    <string name="shortcuts_action_windows_pulse_close">Lukk alle vinduer med impuls</string>
     <string name="win_cal_advanced_title">Avansert</string>
     <string name="win_cal_advanced_label">Kalibrering per vindu</string>
     <string name="win_cal_advanced_desc">Måler den faktiske bevegelsen til hvert vindu. Dette er mer nøyaktig enn den generelle tiden. Målingene beholdes hvis du slår av alternativet.</string>

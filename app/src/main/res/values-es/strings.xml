@@ -753,6 +753,15 @@
     <string name="win_course_title">Tiempo de recorrido</string>
     <string name="win_course_label">Recorrido completo</string>
     <string name="win_course_hint">Duración del impulso enviado a las ventanillas sin sensor, para abrir o cerrar del todo. La del conductor conserva su recorrido automático. Si es demasiado corta, la ventanilla queda entreabierta.</string>
+    <string name="win_pulse_title">Impulso</string>
+    <string name="win_pulse_label">Duración del impulso</string>
+    <string name="win_pulse_try">Probar en las 4 ventanillas</string>
+    <string name="win_pulse_open">Abrir</string>
+    <string name="win_pulse_close">Cerrar</string>
+    <string name="win_pulse_hint">Abre o cierra las cuatro ventanillas un instante, desde donde estén: accesos directos «Abrir / Cerrar todas las ventanillas por impulso» y automatizaciones. Útil para entreabrir las ventanillas al sol. Repetir un impulso abre o cierra un poco más.</string>
+    <string name="win_pulse_warning">El cierre por impulso no tiene antipinzamiento.</string>
+    <string name="shortcuts_action_windows_pulse_open">Abrir todas las ventanillas por impulso</string>
+    <string name="shortcuts_action_windows_pulse_close">Cerrar todas las ventanillas por impulso</string>
     <string name="win_cal_advanced_title">Avanzado</string>
     <string name="win_cal_advanced_label">Calibración por ventanilla</string>
     <string name="win_cal_advanced_desc">Mide el recorrido real de cada ventanilla, más exacto que el tiempo general. Las medidas se conservan si desactivas la opción.</string>

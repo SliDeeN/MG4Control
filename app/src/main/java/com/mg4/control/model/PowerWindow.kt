@@ -65,6 +65,19 @@ object WindowCommand {
     /** Ramène une durée saisie dans les bornes, sur un pas entier. */
     fun clampCourseMs(ms: Long): Long =
         (ms / COURSE_STEP_MS * COURSE_STEP_MS).coerceIn(MIN_COURSE_MS, MAX_COURSE_MS)
+
+    /**
+     * Impulsion (issue #282, 2026-11-26) : le mécanisme de la course émulée, mais le temps d'un court
+     * instant, depuis la position où se trouve la vitre — pour entrouvrir les vitres au soleil.
+     */
+    const val DEFAULT_PULSE_MS = 500L
+    const val MIN_PULSE_MS = 200L
+    const val MAX_PULSE_MS = 2_000L
+    const val PULSE_STEP_MS = 100L
+
+    /** Durée d'impulsion dans les bornes, arrondie au pas (le curseur rend des secondes flottantes). */
+    fun clampPulseMs(ms: Long): Long =
+        (Math.round(ms / PULSE_STEP_MS.toDouble()) * PULSE_STEP_MS).coerceIn(MIN_PULSE_MS, MAX_PULSE_MS)
     /**
      * Plus grande position valide. Le service véhicule SWI68 rejette toute lecture au-delà
      * (`max_vehicle_window_get` = 100) ; en voiture, 127.5 et 255 restent figés sur les vitres

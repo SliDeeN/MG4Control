@@ -753,6 +753,15 @@
     <string name="win_course_title">Hareket süresi</string>
     <string name="win_course_label">Tam hareket</string>
     <string name="win_course_hint">Sensörü olmayan camlara gönderilen darbenin süresi, tam açma ya da kapatma için. Sürücü camı kendi otomatik hareketini korur. Çok kısa olursa cam aralık kalır.</string>
+    <string name="win_pulse_title">Kısa hareket</string>
+    <string name="win_pulse_label">Kısa hareket süresi</string>
+    <string name="win_pulse_try">4 camda dene</string>
+    <string name="win_pulse_open">Aç</string>
+    <string name="win_pulse_close">Kapat</string>
+    <string name="win_pulse_hint">Dört camı bulundukları konumdan kısa bir süre açar veya kapatır: «Tüm camları kısa hareketle aç / kapat» kısayolları ve otomasyonlar. Güneşte camları biraz aralamak için kullanışlıdır. Tekrarlanan kısa hareket biraz daha açar veya kapatır.</string>
+    <string name="win_pulse_warning">Kısa hareketle kapatmada sıkışma koruması yoktur.</string>
+    <string name="shortcuts_action_windows_pulse_open">Tüm camları kısa hareketle aç</string>
+    <string name="shortcuts_action_windows_pulse_close">Tüm camları kısa hareketle kapat</string>
     <string name="win_cal_advanced_title">Gelişmiş</string>
     <string name="win_cal_advanced_label">Cam başına kalibrasyon</string>
     <string name="win_cal_advanced_desc">Her camın gerçek hareketini ölçer; genel süreden daha isabetlidir. Seçeneği kapatırsanız ölçümler saklı kalır.</string>

@@ -126,4 +126,14 @@ class PowerWindowTest {
         assertTrue(WindowCommand.stopsWhenUnattended(WindowCommand.MANUAL_UP))
         assertFalse(WindowCommand.stopsWhenUnattended(WindowCommand.MANUAL_DOWN))
     }
+
+    @Test
+    fun `duree d'impulsion bornee et arrondie au pas (issue 282)`() {
+        assertEquals(500L, WindowCommand.clampPulseMs(WindowCommand.DEFAULT_PULSE_MS))
+        // Le curseur rend des secondes flottantes : 0,5 s peut arriver en 499 ms.
+        assertEquals(500L, WindowCommand.clampPulseMs(499))
+        assertEquals(700L, WindowCommand.clampPulseMs(651))
+        assertEquals(WindowCommand.MIN_PULSE_MS, WindowCommand.clampPulseMs(0))
+        assertEquals(WindowCommand.MAX_PULSE_MS, WindowCommand.clampPulseMs(9_000))
+    }
 }
