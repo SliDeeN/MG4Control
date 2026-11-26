@@ -74,4 +74,10 @@
     <color name="quick_toggle_bg">#FFE1F5EE</color>
     <color name="quick_toggle_border">#FF1D9E75</color>
     <color name="quick_toggle_text">#FF085041</color>
+    <!-- Voiture de la fenêtre Pression des pneus (issue #279, 2026-11-26, variante B) : carrosserie,
+         toit et vitres en tons moyens, contour net — lisible au soleil. -->
+    <color name="tyre_car_body">#FFC9D3E1</color>
+    <color name="tyre_car_roof">#FF9EADC2</color>
+    <color name="tyre_car_window">#FF4E5B6E</color>
+    <color name="tyre_car_outline">#FF3B4757</color>
 </resources>

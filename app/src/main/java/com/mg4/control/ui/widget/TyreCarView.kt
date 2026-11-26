@@ -13,12 +13,19 @@ import com.mg4.control.R
  * La voiture vue de dessus de la fenêtre Pression des pneus (maquette du 2026-11-20) : carrosserie,
  * vitres, toit, et les quatre roues à la couleur de leur état ([couleurs] : avant gauche, avant
  * droite, arrière gauche, arrière droite). Dessinée dans une boîte 200 × 400, mise à l'échelle.
+ * Couleurs propres et contour (issue #279, 2026-11-26) : peinte avant aux couleurs des cases, elle
+ * se confondait avec le fond de la fenêtre (contraste ≈ 1,1), surtout en thème clair au soleil.
  */
 class TyreCarView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
-    private val corps = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.dash_section) }
-    private val toit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.dash_border) }
-    private val vitre = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.dash_text_lo) }
+    private val corps = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.tyre_car_body) }
+    private val contour = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        color = context.getColor(R.color.tyre_car_outline)
+    }
+    private val toit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.tyre_car_roof) }
+    private val vitre = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.tyre_car_window) }
     private val roue = Paint(Paint.ANTI_ALIAS_FLAG)
     private val r = RectF()
     private val p = Path()
@@ -39,6 +46,7 @@ class TyreCarView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         }
         r.set(32f, 14f, 168f, 386f)
         canvas.drawRoundRect(r, 58f, 58f, corps)
+        canvas.drawRoundRect(r, 58f, 58f, contour)
         p.reset()
         p.moveTo(50f, 118f); p.quadTo(100f, 92f, 150f, 118f); p.lineTo(142f, 168f); p.quadTo(100f, 156f, 58f, 168f); p.close()
         canvas.drawPath(p, vitre)

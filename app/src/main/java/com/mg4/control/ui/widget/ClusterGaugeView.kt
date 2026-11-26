@@ -647,9 +647,15 @@ class ClusterGaugeView(context: Context) : View(context) {
 
     // ── Module « Pneus » (variante A, 2026-11-20) ────────────────────────────
 
-    private val pneuCorps = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x2A, 0x2A, 0x2E) }
-    private val pneuVitre = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x16, 0x16, 0x1A) }
-    private val pneuToit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x3A, 0x3A, 0x40) }
+    // Contraste relevé comme la fenêtre Pression des pneus (issue #279, 2026-11-26) : tons moyens et contour.
+    private val pneuCorps = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x3A, 0x3E, 0x48) }
+    private val pneuContour = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        color = Color.rgb(0xBC, 0xC3, 0xCF)
+    }
+    private val pneuVitre = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x8E, 0x95, 0xA3) }
+    private val pneuToit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(0x54, 0x5A, 0x66) }
     private val pneuRoue = Paint(Paint.ANTI_ALIAS_FLAG)
     private val pneuTexte = Paint(Paint.ANTI_ALIAS_FLAG)
     private val pneuRect = RectF()
@@ -686,6 +692,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         }
         pneuRect.set(32f, 14f, 168f, 386f)
         canvas.drawRoundRect(pneuRect, 58f, 58f, pneuCorps)
+        canvas.drawRoundRect(pneuRect, 58f, 58f, pneuContour)
         pneuChemin.reset()
         pneuChemin.moveTo(50f, 118f); pneuChemin.quadTo(100f, 92f, 150f, 118f); pneuChemin.lineTo(142f, 168f)
         pneuChemin.quadTo(100f, 156f, 58f, 168f); pneuChemin.close()
