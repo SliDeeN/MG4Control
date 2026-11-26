@@ -91,15 +91,14 @@ class BrakeGlowTest {
     }
 
     @Test
-    fun `the pedal lights it even standing still`() {
+    fun `the slightest pedal press lights it, even standing still`() {
         val g = BrakeGlow()
         assertFalse(g.add(0, 0f, 0))
-        assertFalse(g.add(200, 0f, 225))
-        assertTrue(g.add(400, 0f, 750))
+        // Un pas de 75 (le plus petit relevé) suffit, comme les feux stop au moindre effleurement.
+        assertTrue(g.add(200, 0f, 75))
         assertTrue(g.parPedale)
-        // Hystérésis : allumé jusqu'à 150.
-        assertTrue(g.add(600, 0f, 150))
-        assertFalse(g.add(800, 0f, 75))
+        assertTrue(g.add(400, 0f, 750))
+        assertFalse(g.add(600, 0f, 0))
     }
 
     @Test

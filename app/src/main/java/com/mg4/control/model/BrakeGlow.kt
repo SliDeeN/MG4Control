@@ -118,11 +118,12 @@ class BrakeGlow {
         const val SEUIL_OFF = 0.7f
         /**
          * Pédale (`SENSOR_BRAKE_PEDAL_DRIVER_APPLIED_PRESSURE`, relevé SWI133 du 2026-11-25) : 0
-         * relâchée, ≈ 650–1800 appui léger, ≈ 4300–4700 appui franc, par pas de 75. Allumé à partir
-         * de 300 (un effleurement ne compte pas), éteint sous 150.
+         * relâchée, ≈ 650–1800 appui léger, ≈ 4300–4700 appui franc, par pas de 75. Allumé dès la
+         * moindre pression (2026-11-26 : les feux stop s'allument au moindre effleurement, constaté
+         * par le rapporteur de #278), éteint à 0.
          */
-        const val PEDALE_ON = 300
-        const val PEDALE_OFF = 150
+        const val PEDALE_ON = 1
+        const val PEDALE_OFF = 1
         const val FENETRE_MS = 600L
         const val ECART_MIN_MS = 400L
         const val TROU_MS = 1_500L
