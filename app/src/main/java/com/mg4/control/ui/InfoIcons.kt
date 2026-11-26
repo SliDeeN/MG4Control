@@ -11,37 +11,87 @@ import com.mg4.control.model.RuleSignal
  */
 object InfoIcons {
 
+    /**
+     * Un symbole plein par information (refonte du 2026-11-26) : plus de pictogrammes en contour,
+     * ni de pictogramme partagé par toute une famille (bouclier, flocon, voiture…).
+     */
     fun of(key: String?): Int {
         when (key) {
-            ClusterInfo.TRIP_AVERAGE -> return R.drawable.ic_info_chart
-            ClusterInfo.TRIP_DISTANCE -> return R.drawable.ic_info_route
-            ClusterInfo.TRIP_ENERGY, ClusterInfo.POWER -> return R.drawable.ic_cat_bolt
-            ClusterInfo.TRIP_REGEN -> return R.drawable.ic_info_regen
+            BubbleInfo.TIME -> return R.drawable.ic_sym_schedule
+            ClusterInfo.TRIP_AVERAGE -> return R.drawable.ic_sym_equalizer
+            ClusterInfo.TRIP_DISTANCE -> return R.drawable.ic_sym_route
+            ClusterInfo.TRIP_ENERGY -> return R.drawable.ic_sym_offline_bolt
+            ClusterInfo.TRIP_REGEN -> return R.drawable.ic_sym_savings
+            ClusterInfo.POWER -> return R.drawable.ic_sym_bolt
         }
-        val s = BubbleInfo.signal(key) ?: return R.drawable.ic_cat_clock
+        val s = BubbleInfo.signal(key) ?: return R.drawable.ic_sym_info
         return when (s) {
-            RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.CHARGE_LIMIT, RuleSignal.BATTERY_HEAT -> R.drawable.ic_cat_battery
-            RuleSignal.CHARGE_CURRENT -> R.drawable.ic_cat_plug
-            RuleSignal.PLUGGED, RuleSignal.CHARGE_DC -> R.drawable.ic_cat_plug
-            // Les températures (extérieure, consigne) : un thermomètre, pas le flocon de la clim.
-            RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_TEMP -> R.drawable.ic_info_thermometer
-            RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO,
-            RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> R.drawable.ic_cat_snow
-            RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT -> R.drawable.ic_cat_seat
-            RuleSignal.STEERING_HEAT -> R.drawable.ic_cat_steering
-            RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
-            RuleSignal.LOCKED, RuleSignal.KEY_AWAY, RuleSignal.FRONT_DOOR -> R.drawable.ic_cat_shield
-            RuleSignal.BRIGHTNESS, RuleSignal.NIGHT, RuleSignal.SUN_UP -> R.drawable.ic_cat_screen
-            RuleSignal.VOLUME, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL, RuleSignal.PROJECTION -> R.drawable.ic_cat_music
-            RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.HOTSPOT_ON, RuleSignal.WIFI_SSID, RuleSignal.BT_DEVICE,
-            RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> R.drawable.ic_cat_wifi
-            RuleSignal.PROFILE -> R.drawable.ic_cat_star
-            RuleSignal.ALTITUDE -> R.drawable.ic_info_mountain
-            RuleSignal.ODOMETER -> R.drawable.ic_info_odometer
-            RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL, RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX,
-            RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR, RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR,
-            RuleSignal.TYRE_ALERT -> R.drawable.ic_sym_tire_repair
-            else -> R.drawable.ic_cat_car
+            // Batterie et charge
+            RuleSignal.SOC -> R.drawable.ic_sym_battery_5_bar
+            RuleSignal.RANGE -> R.drawable.ic_sym_electric_car
+            RuleSignal.CHARGING -> R.drawable.ic_sym_battery_charging_full
+            RuleSignal.CHARGE_LIMIT -> R.drawable.ic_sym_battery_full
+            RuleSignal.CHARGE_CURRENT -> R.drawable.ic_sym_electrical_services
+            RuleSignal.PLUGGED -> R.drawable.ic_sym_power
+            RuleSignal.CHARGE_DC -> R.drawable.ic_sym_ev_station
+            RuleSignal.BATTERY_HEAT -> R.drawable.ic_sym_local_fire_department
+            // Climatisation
+            RuleSignal.OUTSIDE_TEMP -> R.drawable.ic_sym_device_thermostat
+            RuleSignal.HVAC_TEMP -> R.drawable.ic_sym_thermostat
+            RuleSignal.HVAC_ON -> R.drawable.ic_sym_air
+            RuleSignal.AC_ON -> R.drawable.ic_sym_ac_unit
+            // AUTO règle surtout la ventilation (issue #160) : ventilateur « A ».
+            RuleSignal.HVAC_AUTO -> R.drawable.ic_info_fan_auto
+            RuleSignal.HVAC_ECO -> R.drawable.ic_clim_eco
+            RuleSignal.FAN -> R.drawable.ic_hvac_fan
+            RuleSignal.RECIRC -> R.drawable.ic_sym_repeat
+            RuleSignal.DEFROST_FRONT -> R.drawable.ic_air_windshield_front
+            RuleSignal.DEFROST_REAR -> R.drawable.ic_air_windshield_rear
+            RuleSignal.SEAT_HEAT_LEFT -> R.drawable.ic_seat_heat_left
+            RuleSignal.SEAT_HEAT_RIGHT -> R.drawable.ic_seat_heat_right
+            RuleSignal.STEERING_HEAT -> R.drawable.ic_steering_wheel_heat
+            // Sécurité et accès
+            RuleSignal.AEB -> R.drawable.ic_sym_car_crash
+            RuleSignal.TSR -> R.drawable.ic_sym_traffic
+            RuleSignal.ESC -> R.drawable.ic_sym_security
+            RuleSignal.DROWSINESS -> R.drawable.ic_sym_coffee
+            RuleSignal.OVERSPEED_ALARM -> R.drawable.ic_sym_notifications
+            RuleSignal.LOCKED -> R.drawable.ic_sym_lock
+            RuleSignal.KEY_AWAY -> R.drawable.ic_sym_key
+            RuleSignal.FRONT_DOOR -> R.drawable.ic_info_car_door
+            // Conduite
+            RuleSignal.READY -> R.drawable.ic_sym_power_settings_new
+            RuleSignal.GEAR -> R.drawable.ic_sym_local_parking
+            RuleSignal.SPEED -> R.drawable.ic_sym_speed
+            RuleSignal.DRIVE_MODE -> R.drawable.ic_sym_tune
+            RuleSignal.REGEN -> R.drawable.ic_sym_sync
+            RuleSignal.ONE_PEDAL -> R.drawable.ic_info_one_pedal
+            RuleSignal.ENERGY_SAVING -> R.drawable.ic_sym_battery_saver
+            RuleSignal.DRIVE_MINUTES -> R.drawable.ic_sym_timer
+            RuleSignal.ODOMETER -> R.drawable.ic_sym_map
+            RuleSignal.ALTITUDE -> R.drawable.ic_sym_terrain
+            RuleSignal.TURN_SIGNAL -> R.drawable.ic_sym_swap_horiz
+            // Écran et média
+            RuleSignal.BRIGHTNESS -> R.drawable.ic_sym_brightness_high
+            RuleSignal.NIGHT -> R.drawable.ic_sym_dark_mode
+            RuleSignal.SUN_UP -> R.drawable.ic_sym_wb_sunny
+            RuleSignal.VOLUME -> R.drawable.ic_sym_volume_up
+            RuleSignal.MEDIA_PLAYING -> R.drawable.ic_sym_play_circle
+            RuleSignal.IN_CALL -> R.drawable.ic_sym_call
+            RuleSignal.PROJECTION -> R.drawable.ic_source_projection
+            // Connexions et divers
+            RuleSignal.BT_ON -> R.drawable.ic_sym_bluetooth
+            RuleSignal.BT_DEVICE -> R.drawable.ic_sym_smartphone
+            RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID -> R.drawable.ic_sym_wifi
+            RuleSignal.HOTSPOT_ON -> R.drawable.ic_sym_podcasts
+            RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> R.drawable.ic_sym_signal_cellular_alt
+            RuleSignal.PROFILE -> R.drawable.ic_sym_person
+            RuleSignal.FIRMWARE -> R.drawable.ic_sym_info
+            // Pneus : le même pneu, l'unité (bar ou °C) fait la différence ; l'alerte à part.
+            RuleSignal.TYRE_PRESSURE_MIN, RuleSignal.TYRE_PRESSURE_FL, RuleSignal.TYRE_PRESSURE_FR, RuleSignal.TYRE_PRESSURE_RL,
+            RuleSignal.TYRE_PRESSURE_RR, RuleSignal.TYRE_TEMP_MAX, RuleSignal.TYRE_TEMP_FL, RuleSignal.TYRE_TEMP_FR,
+            RuleSignal.TYRE_TEMP_RL, RuleSignal.TYRE_TEMP_RR -> R.drawable.ic_sym_tire_repair
+            RuleSignal.TYRE_ALERT -> R.drawable.ic_sym_warning
         }
     }
 

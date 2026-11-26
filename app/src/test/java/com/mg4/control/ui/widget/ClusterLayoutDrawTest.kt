@@ -37,10 +37,10 @@ class ClusterLayoutDrawTest {
     private val dossier = File("build/cluster229").also { it.mkdirs() }
 
     private val blocs = listOf(
-        ClusterGaugeView.Bloc("PAUL", null, "Profil", R.drawable.ic_cat_star, PillContent("PAUL", DriveMode.ECO), ClusterInfo.STYLE_PILL, "M"),
-        ClusterGaugeView.Bloc("64", "%", "Batterie", R.drawable.ic_cat_battery, null, ClusterInfo.STYLE_ICON, "M"),
-        ClusterGaugeView.Bloc("16,4", "kWh/100 km", "Moyenne trajet", R.drawable.ic_info_chart, null, ClusterInfo.STYLE_LABEL, "M"),
-        ClusterGaugeView.Bloc("+1210", "Wh", "Récup.", R.drawable.ic_info_regen, null, ClusterInfo.STYLE_LABEL, "L", couleur = 0xFF378ADD.toInt()),
+        ClusterGaugeView.Bloc("PAUL", null, "Profil", R.drawable.ic_sym_person, PillContent("PAUL", DriveMode.ECO), ClusterInfo.STYLE_PILL, "M"),
+        ClusterGaugeView.Bloc("64", "%", "Batterie", R.drawable.ic_sym_battery_5_bar, null, ClusterInfo.STYLE_ICON, "M"),
+        ClusterGaugeView.Bloc("16,4", "kWh/100 km", "Moyenne trajet", R.drawable.ic_sym_equalizer, null, ClusterInfo.STYLE_LABEL, "M"),
+        ClusterGaugeView.Bloc("+1210", "Wh", "Récup.", R.drawable.ic_sym_savings, null, ClusterInfo.STYLE_LABEL, "L", couleur = 0xFF378ADD.toInt()),
     )
     private val disposition = ClusterLayout(slots = listOf(
         ClusterBlock(RuleSignal.PROFILE.name, ClusterInfo.STYLE_PILL), ClusterBlock(RuleSignal.SOC.name, ClusterInfo.STYLE_ICON),
