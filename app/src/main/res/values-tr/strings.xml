@@ -605,6 +605,7 @@
     <string name="wheel_hint_voice">Sesli asistan</string>
     <string name="wheel_remove_key_msg">Kısayolları tüm profiller için silinecek.</string>
     <string name="wheel_pick_action">Hangi eylem?</string>
+    <string name="pick_action_none">Eylem yok</string>
     <string name="adv_sc_list_title">Kısayol listesi</string>
 
     <!-- Cycle de régénération personnalisable -->

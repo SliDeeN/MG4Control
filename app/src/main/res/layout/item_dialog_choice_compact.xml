@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tuile compacte de la grille de choix (2026-11-26, choix d'une action pour un bouton du volant
+     ou une bulle) : pictogramme à gauche, nom à côté — six rangées tiennent dans la fenêtre au lieu
+     de trois. Mêmes identifiants que item_dialog_choice.xml : AppDialog les peint pareil. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="64dp"
+    android:layout_weight="1"
+    android:background="@drawable/bg_dialog_tile"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="14dp"
+    android:paddingEnd="10dp">
+
+    <ImageView
+        android:id="@+id/choice_item_icon"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_marginEnd="12dp"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/choice_item_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="22dp"
+        android:layout_marginEnd="8dp"
+        android:gravity="center"
+        android:paddingStart="9dp"
+        android:paddingEnd="9dp"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/choice_item_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+</LinearLayout>

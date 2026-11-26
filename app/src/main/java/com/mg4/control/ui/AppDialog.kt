@@ -50,6 +50,9 @@ internal object AppDialog {
      * une tuile coupée dit mieux qu'une barre qu'il y a une suite.
      */
     private const val LIGNES_VISIBLES = 3
+    /** Tuiles compactes (pictogramme + nom, 2026-11-26) : hauteur et rangées visibles. */
+    private const val TUILE_COMPACTE_DP = 64f
+    private const val LIGNES_VISIBLES_COMPACTES = 5
 
     /** Au-delà, la fenêtre de choix a un champ de recherche (2026-11-05). */
     private const val SEUIL_RECHERCHE = 9
@@ -288,6 +291,8 @@ internal object AppDialog {
         val sousLibelle: CharSequence? = null,
         /** Mots cherchés en plus, jamais affichés (les modes d'un sujet : « température » trouve « Consigne clim »). */
         val motsCles: CharSequence? = null,
+        /** [icone] est un pictogramme à teinter (gris, bleu si choisi), pas l'icône en couleur d'une appli. */
+        val teinte: Boolean = false,
     )
 
     /**
@@ -327,6 +332,11 @@ internal object AppDialog {
         categories: List<Categorie>? = null,
         recents: String? = null,
         cles: List<String>? = null,
+        /** Tuiles compactes, pictogramme à gauche, plus de rangées visibles (choix d'une action). */
+        compact: Boolean = false,
+        /** Bouton « Aucune action » à côté d'Annuler (hors fenêtre à étapes) ; `null` = aucun. */
+        aucun: CharSequence? = null,
+        onAucun: () -> Unit = {},
         onChoix: (Int) -> Unit,
     ) {
         fun retenirChoix(rang: Int) {
@@ -347,7 +357,7 @@ internal object AppDialog {
                     surAnnule = { a.fermer(); onAnnule() },
                     surRetour = if (a.peutRetour) ({ a.retour() }) else null,
                     surChoix = surChoix,
-                    fenetre = { a.dialog }), LARGEUR_CHOIX_DP)
+                    fenetre = { a.dialog }, compact = compact), LARGEUR_CHOIX_DP)
             }
             return
         }
@@ -356,7 +366,8 @@ internal object AppDialog {
             surAnnule = { dialog?.dismiss(); onAnnule() },
             surRetour = null,
             surChoix = { rang -> retenirChoix(rang); dialog?.dismiss(); onChoix(rang) },
-            fenetre = { dialog })
+            fenetre = { dialog }, compact = compact,
+            aucun = aucun, surAucun = { dialog?.dismiss(); onAucun() })
         dialog = afficher(context, vue, LARGEUR_CHOIX_DP).also {
             // « dismiss » ne passe pas par ici : seuls le retour et le toucher à côté annulent.
             it.setOnCancelListener { onAnnule() }
@@ -369,6 +380,9 @@ internal object AppDialog {
         sousTitre: CharSequence?, @DrawableRes icone: Int, choisi: Int,
         surAnnule: () -> Unit, surRetour: (() -> Unit)?, surChoix: (Int) -> Unit,
         fenetre: () -> android.app.Dialog? = { null },
+        compact: Boolean = false,
+        aucun: CharSequence? = null,
+        surAucun: () -> Unit = {},
     ): View {
         val gonfleur = LayoutInflater.from(context)
         val vue = gonfleur.inflate(R.layout.dialog_choice, null)
@@ -387,10 +401,12 @@ internal object AppDialog {
         val lignes = vue.findViewById<LinearLayout>(R.id.choice_rows)
         val defilement = vue.findViewById<ScrollView>(R.id.choice_scroll)
         val ecart = dp(context, ECART_DP)
-        if (choix.size > COLONNES * LIGNES_VISIBLES) {
-            val ligne = dp(context, TUILE_DP) + ecart
+        val tuileDp = if (compact) TUILE_COMPACTE_DP else TUILE_DP
+        val lignesVisibles = if (compact) LIGNES_VISIBLES_COMPACTES else LIGNES_VISIBLES
+        if (choix.size > COLONNES * lignesVisibles) {
+            val ligne = dp(context, tuileDp) + ecart
             defilement.layoutParams = defilement.layoutParams.apply {
-                height = ligne * LIGNES_VISIBLES + dp(context, TUILE_DP) / 2
+                height = ligne * lignesVisibles + dp(context, tuileDp) / 2
             }
         }
         var tuileChoisie: View? = null
@@ -400,7 +416,8 @@ internal object AppDialog {
         fun remplir(filtre: String) {
             val cle = sansAccents(filtre.trim())
             val visibles = choix.indices.filter { cle.isEmpty() || trouve(choix[it], cle) }
-            tuileChoisie = grille(context, lignes, visibles, choix, choisi, COLONNES, surChoix)
+            tuileChoisie = grille(context, lignes, visibles, choix, choisi, COLONNES, surChoix,
+                if (compact) R.layout.item_dialog_choice_compact else R.layout.item_dialog_choice)
         }
         remplir("")
         if (choix.size > SEUIL_RECHERCHE) {
@@ -413,8 +430,12 @@ internal object AppDialog {
             setOnClickListener { surAnnule() }
         }
         vue.findViewById<TextView>(R.id.choice_back).apply {
-            visibility = if (surRetour == null) View.GONE else View.VISIBLE
-            setOnClickListener { surRetour?.invoke() }
+            when {
+                surRetour != null -> { visibility = View.VISIBLE; setOnClickListener { surRetour() } }
+                // « Aucune action » (2026-11-26) : à la place de Retour, à côté d'Annuler.
+                aucun != null -> { text = aucun; visibility = View.VISIBLE; setOnClickListener { surAucun() } }
+                else -> visibility = View.GONE
+            }
         }
 
         // Le choix en cours peut être loin dans la grille : on l'amène en vue une fois posée.
@@ -434,6 +455,7 @@ internal object AppDialog {
     private fun grille(
         context: Context, lignes: LinearLayout, rangs: List<Int>, choix: List<Choix>, choisi: Int,
         colonnes: Int, surChoix: (Int) -> Unit,
+        @androidx.annotation.LayoutRes tuile: Int = R.layout.item_dialog_choice,
     ): View? {
         lignes.removeAllViews()
         if (rangs.isEmpty()) {
@@ -460,7 +482,7 @@ internal object AppDialog {
             // même largeur que les autres, le reste étant du vide.
             repeat(colonnes) { colonne ->
                 val rang = ligne.getOrNull(colonne) ?: -1
-                val cellule = gonfleur.inflate(R.layout.item_dialog_choice, rangee, false)
+                val cellule = gonfleur.inflate(tuile, rangee, false)
                 (cellule.layoutParams as LinearLayout.LayoutParams).marginStart = if (colonne > 0) ecart else 0
                 val c = choix.getOrNull(rang)
                 if (c == null) {
@@ -745,6 +767,8 @@ internal object AppDialog {
         cellule.findViewById<ImageView>(R.id.choice_item_icon).apply {
             setImageDrawable(c.icone)
             visibility = if (c.icone == null) View.GONE else View.VISIBLE
+            if (c.teinte) imageTintList = ColorStateList.valueOf(
+                context.getColor(if (choisie) R.color.dash_accent else R.color.text_secondary))
         }
         cellule.findViewById<TextView>(R.id.choice_item_pill).apply {
             if (c.pastille.isNullOrEmpty()) {

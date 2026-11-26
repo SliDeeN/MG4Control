@@ -605,6 +605,7 @@
     <string name="wheel_hint_voice">Assistente de voz</string>
     <string name="wheel_remove_key_msg">Os atalhos serão apagados para todos os perfis.</string>
     <string name="wheel_pick_action">Que ação?</string>
+    <string name="pick_action_none">Nenhuma ação</string>
     <string name="adv_sc_list_title">Lista de atalhos</string>
 
     <!-- Cycle de régénération personnalisable -->

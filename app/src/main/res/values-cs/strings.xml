@@ -533,6 +533,7 @@
     <string name="wheel_hint_voice">Hlasový asistent</string>
     <string name="wheel_remove_key_msg">Jeho zkratky budou smazány ve všech profilech.</string>
     <string name="wheel_pick_action">Jaká akce?</string>
+    <string name="pick_action_none">Žádná akce</string>
     <string name="adv_sc_list_title">Seznam zkratek</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Přepínání rekuperace</string>

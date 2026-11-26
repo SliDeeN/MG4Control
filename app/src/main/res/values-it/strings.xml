@@ -605,6 +605,7 @@
     <string name="wheel_hint_voice">Assistente vocale</string>
     <string name="wheel_remove_key_msg">Le sue scorciatoie verranno cancellate per tutti i profili.</string>
     <string name="wheel_pick_action">Quale azione?</string>
+    <string name="pick_action_none">Nessuna azione</string>
     <string name="adv_sc_list_title">Elenco scorciatoie</string>
 
     <!-- Cycle de régénération personnalisable -->

@@ -605,6 +605,7 @@
     <string name="wheel_hint_voice">Asystent głosowy</string>
     <string name="wheel_remove_key_msg">Jego skróty zostaną usunięte we wszystkich profilach.</string>
     <string name="wheel_pick_action">Jaka akcja?</string>
+    <string name="pick_action_none">Brak akcji</string>
     <string name="adv_sc_list_title">Lista skrótów</string>
 
     <!-- Cycle de régénération personnalisable -->

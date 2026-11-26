@@ -337,14 +337,22 @@ class WheelButtonsPage(private val host: Host) {
 
     // ── Attribution ──────────────────────────────────────────────────────────
 
+    /**
+     * Fenêtre de choix (2026-11-26) : tuiles compactes avec pictogramme, recherche, et « Aucune
+     * action » en bouton à côté d'Annuler plutôt qu'en première tuile.
+     */
     private fun choisir(code: Int, press: PressType, actuelle: Lecture) {
-        val actions = host.actions()
+        val toutes = host.actions()
+        val actions = toutes.filter { it.second != ShortcutAction.NONE }
         AppDialog.choisir(ctx,
             titre = s(R.string.wheel_pick_action),
             sousTitre = nomTouche(code),
-            choix = actions.map { AppDialog.Choix(it.first) },
+            choix = actions.map { (nom, a) -> AppDialog.Choix(nom, icone = ctx.getDrawable(ShortcutIcons.of(a)), teinte = true) },
             annuler = s(R.string.profile_cancel),
             choisi = if (actuelle.herite) -1 else actions.indexOfFirst { it.second == actuelle.action },
+            compact = true,
+            aucun = if (toutes.any { it.second == ShortcutAction.NONE }) s(R.string.pick_action_none) else null,
+            onAucun = { attribuer(code, press, ShortcutAction.NONE) },
         ) { rang -> attribuer(code, press, actions[rang].second) }
     }
 

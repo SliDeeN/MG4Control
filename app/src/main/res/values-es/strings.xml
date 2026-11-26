@@ -605,6 +605,7 @@
     <string name="wheel_hint_voice">Asistente de voz</string>
     <string name="wheel_remove_key_msg">Sus atajos se borrarán para todos los perfiles.</string>
     <string name="wheel_pick_action">¿Qué acción?</string>
+    <string name="pick_action_none">Ninguna acción</string>
     <string name="adv_sc_list_title">Lista de atajos</string>
 
     <!-- Cycle de régénération personnalisable -->

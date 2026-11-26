@@ -605,6 +605,7 @@
     <string name="wheel_hint_voice">Sprachassistent</string>
     <string name="wheel_remove_key_msg">Ihre Kurzbefehle werden für alle Profile gelöscht.</string>
     <string name="wheel_pick_action">Welche Aktion?</string>
+    <string name="pick_action_none">Keine Aktion</string>
     <string name="adv_sc_list_title">Kürzelliste</string>
 
     <!-- Cycle de régénération personnalisable -->

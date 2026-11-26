@@ -605,6 +605,7 @@
     <string name="wheel_hint_voice">Voice assistant</string>
     <string name="wheel_remove_key_msg">Its shortcuts will be erased, for all profiles.</string>
     <string name="wheel_pick_action">Which action?</string>
+    <string name="pick_action_none">No action</string>
     <string name="adv_sc_list_title">Shortcut list</string>
 
     <!-- Cycle de régénération personnalisable -->

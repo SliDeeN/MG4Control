@@ -310,9 +310,9 @@ class FloatingButtonsPage {
     private fun choisirAction(actuelle: String?, dejaPerso: String? = null, surChoix: (ShortcutAction, String, String?) -> Unit) {
         val ctx = fragment?.context ?: return
         AppDialog.choisir(ctx, ctx.getString(R.string.floating_choose_action),
-            actions.map { AppDialog.Choix(it.first) },
+            actions.map { (nom, a) -> AppDialog.Choix(nom, icone = ctx.getDrawable(ShortcutIcons.of(a)), teinte = true) },
             annuler = ctx.getString(android.R.string.cancel),
-            choisi = actions.indexOfFirst { it.second.name == actuelle }) { rang ->
+            choisi = actions.indexOfFirst { it.second.name == actuelle }, compact = true) { rang ->
             val (nom, action) = actions[rang]
             if (action == ShortcutAction.OPEN_CUSTOM_APP) {
                 // L'appli lancée : son paquet est gardé comme l'id d'un raccourci perso, son nom sert de titre.

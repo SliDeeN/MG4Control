@@ -607,6 +607,7 @@
     <string name="wheel_hint_voice">Taleassistent</string>
     <string name="wheel_remove_key_msg">Snarveiene til knappen slettes, for alle profiler.</string>
     <string name="wheel_pick_action">Hvilken handling?</string>
+    <string name="pick_action_none">Ingen handling</string>
     <string name="adv_sc_list_title">Snarveiliste</string>
 
     <!-- Cycle de régénération personnalisable -->

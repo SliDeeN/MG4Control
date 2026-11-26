@@ -611,6 +611,7 @@
     <string name="wheel_hint_voice">Assistant vocal</string>
     <string name="wheel_remove_key_msg">Ses raccourcis seront effacés, pour tous les profils.</string>
     <string name="wheel_pick_action">Quelle action ?</string>
+    <string name="pick_action_none">Aucune action</string>
     <string name="adv_sc_list_title">Liste des raccourcis</string>
 
     <!-- Cycle de régénération personnalisable -->
