@@ -20,6 +20,7 @@ import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.AverageUnit
+import com.mg4.control.model.BubbleIcon
 import com.mg4.control.model.ClusterBlock
 import com.mg4.control.model.ClusterConfig
 import com.mg4.control.model.ClusterGaugeStyle
@@ -429,6 +430,7 @@ class ClusterLayoutEditor(
                 else -> R.string.floating_info_style_label
             }), st == s) { change(b.copy(style = s)) }
         })
+        if (st == ClusterInfo.STYLE_ICON) iconeBloc(slot, b)
         val taille = ClusterInfo.size(b)
         rangee(R.string.cluster_layout_size, listOf(ClusterInfo.SIZE_S, ClusterInfo.SIZE_M, ClusterInfo.SIZE_L).map { t ->
             Option(t, taille == t) { change(b.copy(size = t)) }
@@ -521,6 +523,44 @@ class ClusterLayoutEditor(
             disposition = ClusterLayouts.withSlot(disposition, slot, nouveau)
             maj()
         }
+    }
+
+    /**
+     * Affichage « Icône » (2026-11-26) : le pictogramme de la case, « Choisir » (les symboles des
+     * bulles) et « Par défaut » (celui de l'information), comme pour une bulle d'information.
+     */
+    private fun iconeBloc(slot: Int, b: ClusterBlock) {
+        etiquette(R.string.floating_field_icon)
+        val ligne = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        ligne.addView(FrameLayout(ctx).apply {
+            OverlayKit.fond(this, ctx.getColor(R.color.dash_btn), ctx.getColor(R.color.dash_border), dp(1f), rayon = dp(14f).toFloat())
+            addView(android.widget.ImageView(ctx).apply {
+                setImageResource(ClusterBlocks.icone(b))
+                imageTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(R.color.text_primary))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, FrameLayout.LayoutParams(dp(36f), dp(36f), Gravity.CENTER))
+        }, LinearLayout.LayoutParams(dp(56f), dp(56f)).also { it.marginEnd = dp(8f) })
+        fun change(icone: String?) {
+            ClusterLayouts.slots(disposition)[slot]?.let { disposition = ClusterLayouts.withSlot(disposition, slot, it.copy(icon = icone)) }
+            maj()
+        }
+        ligne.addView(materiel(ctx.getString(R.string.custom_choose)).apply {
+            ProfileChips.peindre(this, false)
+            setOnClickListener {
+                val recentes = ClusterLayouts.slots(disposition).filterIndexed { i, _ -> i != slot }.mapNotNull { it?.icon }
+                // Sans choix, le pictogramme de l'information est marqué (s'il est au catalogue) ;
+                // le reprendre revient à « Par défaut ».
+                val defaut = BubbleSymbols.byRes(InfoIcons.of(b.info))?.let { BubbleIcon.symbol(it.name) }
+                BubbleIcons.choisirSymbole(ctx, b.icon ?: defaut, recentes) { change(it.takeIf { r -> r != defaut }) }
+            }
+        }, LinearLayout.LayoutParams(0, dp(56f), 1f))
+        ligne.addView(materiel(ctx.getString(R.string.color_default)).apply {
+            ProfileChips.peindre(this, false)
+            visibility = if (b.icon != null) View.VISIBLE else View.INVISIBLE
+            setOnClickListener { change(null) }
+        }, LinearLayout.LayoutParams(0, dp(56f), 1f).also { it.marginStart = dp(8f) })
+        panneau.addView(ligne, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            .also { it.topMargin = dp(6f) })
     }
 
     // ── Briques du panneau ───────────────────────────────────────────────────

@@ -81,12 +81,24 @@ object BubbleIcons {
      * [actuelle] est marquée ; [surChoix] reçoit la référence choisie.
      */
     fun choisir(ctx: Context, b: FloatingButton, actuelle: String?, recentes: List<String>, surChoix: (String) -> Unit) {
+        fenetre(ctx, if (BubbleIcon.isIcon(b)) apps(ctx, b) else emptyList(), actuelle,
+            recentes.filter { BubbleIcon.isIcon(b) || BubbleIcon.symbolName(it) != null }, surChoix)
+    }
+
+    /**
+     * Choisir un symbole seul (2026-11-26) — cases « Icône » de l'écran conducteur, qui dessine tout
+     * en gris : pas d'icônes d'applis. « Récentes » = les symboles des autres cases.
+     */
+    fun choisirSymbole(ctx: Context, actuelle: String?, recentes: List<String>, surChoix: (String) -> Unit) =
+        fenetre(ctx, emptyList(), actuelle, recentes.filter { BubbleIcon.symbolName(it) != null }, surChoix)
+
+    private fun fenetre(ctx: Context, apps: List<String>, actuelle: String?, recentes: List<String>, surChoix: (String) -> Unit) {
         fun s(id: Int) = ctx.getString(id)
         val symboles = BubbleSymbols.CATEGORIES.associate { c -> c.key to c.symbols.map { BubbleIcon.symbol(it.name) } }
         val cats = buildList {
-            if (BubbleIcon.isIcon(b)) apps(ctx, b).takeIf { it.isNotEmpty() }
+            apps.takeIf { it.isNotEmpty() }
                 ?.let { add(Cat(s(R.string.floating_icon_cat_app), R.drawable.ic_cat_screen, it.map(BubbleIcon::app))) }
-            recentes.filter { BubbleIcon.isIcon(b) || BubbleIcon.symbolName(it) != null }.distinct()
+            recentes.distinct()
                 .takeIf { it.isNotEmpty() }?.let { add(Cat(s(R.string.rule_cat_recent), R.drawable.ic_cat_clock, it)) }
             add(Cat(s(R.string.rule_cat_car), R.drawable.ic_cat_car, symboles["car"].orEmpty()))
             add(Cat(s(R.string.rule_cat_climate), R.drawable.ic_cat_snow, symboles["climate"].orEmpty()))

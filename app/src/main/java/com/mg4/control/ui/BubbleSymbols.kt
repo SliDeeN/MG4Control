@@ -5,7 +5,8 @@ import com.mg4.control.R
 /**
  * Symboles proposés pour les bulles flottantes (2026-11-17, demande d'un utilisateur) : Material
  * Icons « outlined » (Apache 2.0, Google), copiés en vecteurs depuis Android Studio par
- * `symbols.py` — FICHIER GÉNÉRÉ, ne pas modifier à la main. Les noms servent à l'enregistrement
+ * `symbols.py` — FICHIER GÉNÉRÉ, ne pas modifier à la main (sauf one_pedal, car_door et fan_auto,
+ * pictogrammes des informations ajoutés le 2026-11-26 : à reporter si le fichier est régénéré). Les noms servent à l'enregistrement
  * (« sym:<nom> ») et à la recherche.
  */
 object BubbleSymbols {
@@ -45,6 +46,9 @@ object BubbleSymbols {
             Symbol("radar", R.drawable.ic_sym_radar),
             Symbol("sports_motorsports", R.drawable.ic_sym_sports_motorsports),
             Symbol("tune", R.drawable.ic_sym_tune),
+            // Ajoutés à la main (2026-11-26), hors Material Icons : pictogrammes des informations.
+            Symbol("one_pedal", R.drawable.ic_info_one_pedal),
+            Symbol("car_door", R.drawable.ic_info_car_door),
         )),
         Category("climate", listOf(
             Symbol("ac_unit", R.drawable.ic_sym_ac_unit),
@@ -58,6 +62,7 @@ object BubbleSymbols {
             Symbol("wb_sunny", R.drawable.ic_sym_wb_sunny),
             Symbol("cloud", R.drawable.ic_sym_cloud),
             Symbol("hvac", R.drawable.ic_sym_hvac),
+            Symbol("fan_auto", R.drawable.ic_info_fan_auto),
             Symbol("waves", R.drawable.ic_sym_waves),
             Symbol("dehaze", R.drawable.ic_sym_dehaze),
             Symbol("masks", R.drawable.ic_sym_masks),
@@ -221,4 +226,7 @@ object BubbleSymbols {
     private val PAR_NOM: Map<String, Symbol> by lazy { CATEGORIES.flatMap { it.symbols }.associateBy { it.name } }
 
     fun byName(name: String?): Symbol? = name?.let { PAR_NOM[it] }
+
+    /** Le symbole qui dessine [res] (pictogramme par défaut d'une information), s'il est au catalogue. */
+    fun byRes(res: Int): Symbol? = CATEGORIES.asSequence().flatMap { it.symbols }.firstOrNull { it.res == res }
 }

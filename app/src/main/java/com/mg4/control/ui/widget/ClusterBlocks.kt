@@ -111,12 +111,16 @@ object ClusterBlocks {
         return ClusterLayouts.slots(l).map { b -> b?.let { bloc(ctx, it, lu, general, mots, locale, recup) } }
     }
 
+    /** Pictogramme de la case : celui choisi (2026-11-26), sinon celui de l'information. */
+    fun icone(b: ClusterBlock): Int =
+        com.mg4.control.ui.BubbleSymbols.byName(com.mg4.control.model.BubbleIcon.symbolName(b.icon))?.res ?: InfoIcons.of(b.info)
+
     private fun bloc(
         ctx: Context, b: ClusterBlock, lu: Lecture, general: DistanceUnit, mots: AndroidRuleWords, locale: Locale, recup: Int,
     ): ClusterGaugeView.Bloc {
         val style = ClusterInfo.style(b)
         val taille = ClusterInfo.size(b)
-        val icone = InfoIcons.of(b.info)
+        val icone = icone(b)
         val lib = libelle(ctx, b.info, mots, locale)
         // Couleur choisie pour la valeur (2026-11-22) : par-dessus celle de la récupération ; jamais sur « — ».
         fun fait(v: Pair<String, String?>, pastille: com.mg4.control.model.PillContent? = null, couleur: Int? = null) =

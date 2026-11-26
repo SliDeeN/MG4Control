@@ -29,6 +29,11 @@ data class ClusterBlock(
     val period: String? = null,
     /** Couleur de la valeur, ARGB (2026-11-22) ; `null` = blanc, ou la couleur de la récupération pour elle. */
     val color: Int? = null,
+    /**
+     * Pictogramme choisi pour l'affichage « Icône » (2026-11-26), « sym:<nom> » comme les bulles ;
+     * `null` = celui de l'information ([com.mg4.control.ui.InfoIcons]).
+     */
+    val icon: String? = null,
 )
 
 /**
