@@ -824,6 +824,7 @@ internal object ClusterModuleOverlay {
         val enMarche = (e.phase == PreClimate.Phase.ACTIVE && step is PreClimatePlan.Step.Running) ||
             (decompte && e.req.mode == PreClimateMode.NOW)
         val etape = when {
+            decompte && e.waitReady -> ClusterGaugeView.Etape.AttenteReady
             decompte -> ClusterGaugeView.Etape.Decompte(((e.lockAtMs - maintenant).coerceAtLeast(0L) + 999).div(1000).toInt())
             step is PreClimatePlan.Step.Waiting -> ClusterGaugeView.Etape.Attente(e.wallTimes.getOrNull(step.index)?.first ?: 0)
             step is PreClimatePlan.Step.Running && e.req.mode == PreClimateMode.NOW &&

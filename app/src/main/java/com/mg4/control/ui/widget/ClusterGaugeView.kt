@@ -136,8 +136,10 @@ class ClusterGaugeView(context: Context) : View(context) {
         data class Restant(val minutes: Int, val finMinute: Int) : Etape()
         data class Cycle(val numero: Int, val total: Int, val finMinute: Int) : Etape()
         data class Attente(val prochainMinute: Int) : Etape()
-        /** Durée illimitée (2026-11-23) : en marche depuis [minutes], tant que la voiture reste en READY. */
+        /** Durée illimitée (mode camping) : en marche depuis [minutes], tant que les portes restent verrouillées. */
         data class Illimite(val minutes: Int) : Etape()
+        /** Mode camping (issue #194) : décompte suspendu jusqu'au passage en READY. */
+        data object AttenteReady : Etape()
     }
 
     /** Ce que montre le module. Puissance lissée, positive en décharge ; `null` = illisible. */
@@ -1052,6 +1054,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             is Etape.Cycle -> context.getString(R.string.cluster_preclim_cycle, e.numero, e.total, heure(e.finMinute))
             is Etape.Attente -> context.getString(R.string.cluster_preclim_next, heure(e.prochainMinute))
             is Etape.Illimite -> context.getString(R.string.cluster_preclim_unlimited, duree(e.minutes))
+            Etape.AttenteReady -> context.getString(R.string.preclim_cd_camp_ready_title)
         }
         aGauche(canvas, ligne, MARGE_FICHE, 181f, 14f, cTexte, Typeface.DEFAULT)
 
@@ -1093,7 +1096,7 @@ class ClusterGaugeView(context: Context) : View(context) {
                 aDroite(canvas, heure(e.finMinute), d, 104f, 18f, cTexte2, moyen)
             }
             // La surveillance n'existe qu'en « Maintenant » : ni cycle ni attente.
-            is Etape.Cycle, is Etape.Attente, is Etape.Illimite -> Unit
+            is Etape.Cycle, is Etape.Attente, is Etape.Illimite, Etape.AttenteReady -> Unit
         }
 
         // Barre de l'étape, sans reflet : le décompte se vide, le temps écoulé la remplit.

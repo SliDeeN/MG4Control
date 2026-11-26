@@ -171,12 +171,11 @@ object PreClimatePlan {
     const val DEFAULT_MAX_MIN = 60
 
     /**
-     * Sans limite de durée : le mode camping (2026-11-24, qui remplace la durée « ∞ »), voiture en
-     * READY seulement — elle ne reste allumée sans limite que là. Si elle en sort pendant le mode, il
-     * s'arrête [UNLIMITED_FALLBACK_MIN] plus tard (sa décision du 2026-11-23, gardée).
+     * Sans limite de durée : le mode camping (2026-11-24, qui remplace la durée « ∞ »). Depuis l'issue
+     * #194 (2026-11-26), READY n'est demandé qu'une fois, au lancement : ensuite, verrouillée de
+     * l'intérieur, la voiture reste allumée hors READY — plus de repli à 2 h.
      */
     const val UNLIMITED = 0
-    const val UNLIMITED_FALLBACK_MIN = 120
     /** Fin d'un cycle sans limite, en temps monotone : bien au-delà de toute nuit, sans débordement. */
     private const val SANS_FIN_MS = Long.MAX_VALUE / 4
 
@@ -187,11 +186,8 @@ object PreClimatePlan {
     fun camping(req: PreClimateRequest): Boolean =
         req.camping != null && req.mode == PreClimateMode.NOW && !req.dog && !req.surveillance
 
-    /** Cycle sans limite (repli à faire si la voiture sort de READY). */
+    /** Cycle sans limite (mode camping). */
     fun isUnlimited(c: Cycle): Boolean = c.endMs >= SANS_FIN_MS
-
-    /** Repli à la sortie de READY : le même cycle, arrêté [UNLIMITED_FALLBACK_MIN] après [nowMs]. */
-    fun fallback(c: Cycle, nowMs: Long): Cycle = Cycle(c.startMs, nowMs + UNLIMITED_FALLBACK_MIN * MS_PAR_MIN)
     /** Mode chien : toujours la durée la plus longue, sans choix. */
     const val DOG_MAX_MIN = 120
 

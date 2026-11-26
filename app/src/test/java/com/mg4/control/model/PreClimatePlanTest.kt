@@ -222,17 +222,6 @@ class PreClimatePlanTest {
         assertEquals(600 to -1, PreClimatePlan.wallTimes(c, 600.0).single())
     }
 
-    @Test fun `leaving READY keeps camping running for two more hours`() {
-        val c = PreClimatePlan.cycles(camp(), 0L, 600.0).single()
-        val sortie = 5 * 3_600_000L
-        val repli = PreClimatePlan.fallback(c, sortie)
-        assertFalse(PreClimatePlan.isUnlimited(repli))
-        assertEquals(0L, repli.startMs)
-        assertEquals(sortie + 120 * 60_000L, repli.endMs)
-        assertTrue(PreClimatePlan.step(listOf(repli), 0L, sortie + 119 * 60_000L) is PreClimatePlan.Step.Running)
-        assertEquals(PreClimatePlan.Step.Done, PreClimatePlan.step(listOf(repli), 0L, sortie + 121 * 60_000L))
-    }
-
     @Test fun `camping delay steps through its list and stays inside it`() {
         assertEquals(120, CampingPlan.stepDelay(60, 1))
         assertEquals(45, CampingPlan.stepDelay(60, -1))

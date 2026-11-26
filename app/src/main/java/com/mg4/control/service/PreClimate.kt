@@ -92,6 +92,11 @@ object PreClimate {
         val powerOffOk: Boolean? = null,
         /** Puissance tirée de la batterie, lissée, en W (issue #210) ; null = illisible. */
         val powerW: Int? = null,
+        /**
+         * Mode camping (issue #194, 2026-11-26) : décompte suspendu tant que la voiture n'est pas passée
+         * en READY depuis le lancement. Pas de limite d'attente : seul « Annuler » en sort.
+         */
+        val waitReady: Boolean = false,
     )
 
     private val fil by lazy { HandlerThread("mg4-preclim").also { it.start() } }
@@ -181,13 +186,7 @@ object PreClimate {
                 // (issue #180) : « Maintenant » seulement aussi, et elle l'emporte sur le mode chien.
                 surveillance = surveillance,
                 dog = req.dog && !surveillance && req.mode == PreClimateMode.NOW,
-                maxMin = PreClimatePlan.maxMinutes(req.copy(surveillance = surveillance)).let { m ->
-                    // Sans limite seulement voiture en READY : sinon 2 h, comme au repli.
-                    if (m == PreClimatePlan.UNLIMITED && com.mg4.control.hardware.ReadyWatcher.ready != true) {
-                        AppLogger.w(TAG, "mode camping demandé hors READY → ${PreClimatePlan.UNLIMITED_FALLBACK_MIN} min")
-                        PreClimatePlan.UNLIMITED_FALLBACK_MIN
-                    } else m
-                })
+                maxMin = PreClimatePlan.maxMinutes(req.copy(surveillance = surveillance)))
             val maintenant = SystemClock.elapsedRealtime()
             val mur = minuteDuJour()
             val cycles = PreClimatePlan.cycles(borne, maintenant, mur)
@@ -200,8 +199,11 @@ object PreClimate {
             ticks = 0
             campRecAt = 0L
             puissance.reset()
+            // Camping (issue #194) : la voiture doit passer au moins une fois en READY ; ensuite, verrouillée
+            // de l'intérieur, elle reste allumée sans READY. Déjà en READY : rien à demander.
+            val attendreReady = camp != null && !enReady()
             val e = Etat(
-                phase = Phase.COUNTDOWN, req = borne, startMs = maintenant, startWallMinute = mur,
+                phase = Phase.COUNTDOWN, req = borne, startMs = maintenant, startWallMinute = mur, waitReady = attendreReady,
                 // Camping : son propre délai avant activation, indépendant de celui de la page.
                 lockAtMs = maintenant + (camp?.delayS ?: PreClimateSettings.lockSeconds(app)) * 1_000L,
                 cycles = cycles, wallTimes = PreClimatePlan.wallTimes(borne, mur), step = null,
@@ -215,7 +217,7 @@ object PreClimate {
                 "1er cycle dans ${"%.0f".format(java.util.Locale.US, PreClimatePlan.minutesUntil(borne.firstMinuteOfDay, mur))} min") +
                 (if (borne.surveillance) ", SURVEILLANCE (clim coupée)" else
                     ", clim ${borne.tempC} °C ventil. ${borne.fan}${if (borne.dog) ", mode chien" else ""}") +
-                (camp?.let { ", CAMPING (${if (it.auto) "AUTO débit ${it.autoVolume}" else "manuel"}, A/C ${it.ac}, ECO ${it.eco}, air ${it.airMask}, recyclage ${it.recirc}, " +
+                (camp?.let { ", CAMPING (${if (attendreReady) "READY demandé, " else "déjà en READY, "}${if (it.auto) "AUTO débit ${it.autoVolume}" else "manuel"}, A/C ${it.ac}, ECO ${it.eco}, air ${it.airMask}, recyclage ${it.recirc}, " +
                     "vidéo ${it.record}, écran ${it.screen}, messages caméra ${it.msgCamera} eCall ${it.msgEcall})" } ?: "") + ", activation dans " +
                 "${(e.lockAtMs - maintenant) / 1000} s, arrêt sous ${e.minSoc} % (batterie ${soc ?: "?"} %) ; avant : $snap")
             principal.post {
@@ -280,11 +282,43 @@ object PreClimate {
         val maintenant = SystemClock.elapsedRealtime()
         ticks++
         when (e.phase) {
-            Phase.COUNTDOWN -> if (maintenant >= e.lockAtMs) verrouiller(e, maintenant) else publier(e)
+            Phase.COUNTDOWN -> when {
+                e.waitReady -> attendreReady(e, maintenant)
+                maintenant >= e.lockAtMs -> verrouiller(e, maintenant)
+                else -> publier(e)
+            }
             Phase.ACTIVE -> suivre(e, maintenant)
             Phase.ENDED -> Unit
         }
     }
+
+    /**
+     * Camping (issue #194) : décompte suspendu jusqu'au premier READY, puis tout repart de cet instant
+     * (délai avant activation, début du camping). READY n'est plus regardé ensuite.
+     */
+    private fun attendreReady(e: Etat, maintenant: Long) {
+        if (!enReady()) {
+            // L'échéance suit l'horloge : le décompte affiché reste plein tant qu'on attend.
+            etat = e.copy(lockAtMs = maintenant + (e.lockAtMs - e.startMs), startMs = maintenant)
+                .also { publier(it) }
+            return
+        }
+        val mur = minuteDuJour()
+        val delai = e.lockAtMs - e.startMs
+        val parti = e.copy(waitReady = false, startMs = maintenant, startWallMinute = mur, lockAtMs = maintenant + delai,
+            cycles = PreClimatePlan.cycles(e.req, maintenant, mur), wallTimes = PreClimatePlan.wallTimes(e.req, mur))
+        etat = parti
+        AppLogger.i(TAG, "camping : READY vu, activation dans ${delai / 1000} s — READY n'est plus surveillé")
+        publier(parti)
+    }
+
+    /**
+     * READY lu directement (une lecture par seconde pendant l'attente) : [com.mg4.control.hardware.ReadyWatcher]
+     * ne lit que s'il a un abonné. Illisible = pas en READY.
+     */
+    private fun enReady(): Boolean =
+        com.mg4.control.hardware.ReadyWatcher.ready == true ||
+            com.mg4.control.model.WindowAutoCloseTrigger.readyFromRaw(MG4Hardware.readEptReadyRaw()) == true
 
     private fun verrouiller(e: Etat, maintenant: Long) {
         // Camping : portes toujours verrouillées (2026-11-25, l'option « sans verrouillage » est retirée).
@@ -348,23 +382,6 @@ object PreClimate {
         if (kmh != null && kmh > DRIVING_KMH) { terminer(PreClimateEnd.DRIVING); return }
         val soc = EnergyReader.soc()
         if (soc != null && soc < e.minSoc) { terminer(PreClimateEnd.BATTERY); return }
-        // Durée illimitée : la voiture est sortie de READY (porte conducteur…) — le mode continue,
-        // arrêté 2 h plus tard (sa décision du 2026-11-23).
-        if (e.cycles.size == 1 && PreClimatePlan.isUnlimited(e.cycles[0]) &&
-            com.mg4.control.hardware.ReadyWatcher.ready == false) {
-            val cycle = PreClimatePlan.fallback(e.cycles[0], maintenant)
-            val finMur = (e.startWallMinute + (cycle.endMs - e.startMs) / 60_000.0)
-            val replie = e.copy(
-                req = e.req.copy(maxMin = ((cycle.endMs - e.startMs) / 60_000L).toInt()),
-                cycles = listOf(cycle),
-                wallTimes = listOf((e.wallTimes.firstOrNull()?.first ?: e.startWallMinute.toInt()) to
-                    Math.floorMod(Math.round(finMur), 1440L).toInt()))
-            AppLogger.w(TAG, "sortie de READY pendant la durée illimitée → arrêt dans " +
-                "${PreClimatePlan.UNLIMITED_FALLBACK_MIN} min (vers ${replie.wallTimes[0].second / 60}:${"%02d".format(replie.wallTimes[0].second % 60)})")
-            etat = replie
-            suivre(replie, maintenant)
-            return
-        }
         val step = PreClimatePlan.step(e.cycles, e.lockAtMs, maintenant)
         if (step == PreClimatePlan.Step.Done) { terminer(PreClimateEnd.DONE); return }
         // Camping : nouvel enregistrement avant que l'appli caméra n'arrête le sien (120 min au plus).

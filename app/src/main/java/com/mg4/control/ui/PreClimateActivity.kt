@@ -200,7 +200,6 @@ class PreClimateActivity : Activity() {
         val survTitre: TextView = racine.findViewById(R.id.preclim_surv_title)
         val survTexte: TextView = racine.findViewById(R.id.preclim_surv_text)
         val survEcall: TextView = racine.findViewById(R.id.preclim_surv_ecall)
-        val survReady: TextView = racine.findViewById(R.id.preclim_surv_ready)
         val survEtat: TextView = racine.findViewById(R.id.preclim_surv_status)
         val survRec: TextView = racine.findViewById(R.id.preclim_surv_rec)
         val survMasquer: TextView = racine.findViewById(R.id.preclim_surv_hide)
@@ -305,7 +304,7 @@ class PreClimateActivity : Activity() {
         v.fin.visibility = if (e.phase == PreClimate.Phase.ENDED) View.VISIBLE else View.GONE
         when {
             e.phase == PreClimate.Phase.COUNTDOWN -> peindreDecompte(e, maintenant)
-            campAvert -> peindreCamping(e, maintenant)
+            campAvert -> peindreCamping(e)
             surv -> peindreSurveillance(e)
             chien -> peindreChien(e, maintenant)
             e.phase == PreClimate.Phase.ACTIVE -> peindreSuivi(e, maintenant)
@@ -341,6 +340,7 @@ class PreClimateActivity : Activity() {
             PreClimatePlan.trend(e.req.tempC, e.outsideC) == PreClimateTrend.HEATING) v.chaud else v.accent
 
     private fun peindreDecompte(e: PreClimate.Etat, maintenant: Long) {
+        if (e.waitReady) { peindreAttenteReady(e); return }
         val reste = (e.lockAtMs - maintenant).coerceAtLeast(0L)
         val secondes = ((reste + 999) / 1000).toInt()
         val camp = e.req.camping != null
@@ -364,6 +364,22 @@ class PreClimateActivity : Activity() {
         v.cdAvertChien.text = v.s(if (e.req.surveillance) R.string.preclim_surv_warning else R.string.preclim_dog_warning)
     }
 
+    /**
+     * Camping (issue #194, 2026-11-26) : avant le décompte, la voiture doit passer une fois en READY.
+     * Pas de limite d'attente : « Annuler » seulement.
+     */
+    private fun peindreAttenteReady(e: PreClimate.Etat) {
+        v.cdChiffre.text = "READY"
+        v.cdChiffre.setTextSize(TypedValue.COMPLEX_UNIT_SP, 64f)
+        v.cdUnite.text = v.s(R.string.preclim_cd_camp_ready_unit)
+        v.cdTitre.text = v.s(R.string.preclim_cd_camp_ready_title)
+        v.cdTexte.text = v.s(R.string.preclim_cd_camp_ready_text)
+        v.cdAnneau.anim = PreClimateRingView.Anim.AUCUNE
+        v.cdAnneau.fraction = 1f
+        v.cdClim.text = v.s(R.string.preclim_cd_camp, resumeDemande(e))
+        v.cdAvertChien.visibility = View.GONE
+    }
+
     private fun peindreSuivi(e: PreClimate.Etat, maintenant: Long) {
         v.titre.text = if (e.req.camping != null) v.s(R.string.preclim_camp) + " · " + heure(PreClimate.minuteDuJour().toInt())
             else v.s(R.string.preclim_live_title, heure(PreClimate.minuteDuJour().toInt()))
@@ -372,7 +388,7 @@ class PreClimateActivity : Activity() {
         v.anneau.fraction = step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
         v.anneau.couleur = couleurClim(e)
         val aUneHeure = e.req.mode == PreClimateMode.AT_TIME
-        // Durée illimitée (2026-11-23) : le temps écoulé, anneau plein, tant que la voiture reste en READY.
+        // Durée illimitée (camping) : le temps écoulé, anneau plein, tant que les portes restent verrouillées.
         if (step is PreClimatePlan.Step.Running && !aUneHeure && PreClimatePlan.isUnlimited(e.cycles[step.index])) {
             v.anneau.anim = PreClimateRingView.Anim.ONDES
             v.anneau.fraction = 1f
@@ -438,9 +454,10 @@ class PreClimateActivity : Activity() {
     /**
      * Mode camping (2026-11-24) : l'écran de la surveillance, avec les messages choisis — « Surveillance
      * vidéo active » (titre et texte de la surveillance), « eCall actif », en grand s'il est seul —, la
-     * pastille REC si la vidéo tourne, et le temps qui reste si la voiture est sortie de READY.
+     * pastille REC si la vidéo tourne. Sans limite, READY ou non (issue #194) : tant que les portes
+     * restent verrouillées.
      */
-    private fun peindreCamping(e: PreClimate.Etat, maintenant: Long) {
+    private fun peindreCamping(e: PreClimate.Etat) {
         val c = e.req.camping ?: return
         // Message caméra dès qu'il est choisi (2026-11-25) : une dashcam non pilotée par MG4Control peut
         // filmer seule en READY. La pastille REC, elle, ne suit que notre vidéo. Sans message, la tente.
@@ -454,11 +471,6 @@ class PreClimateActivity : Activity() {
         v.survEcall.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (seul) 58f else 28f)
         v.survEcall.setTextColor(if (seul) v.danger else v.texte)
         v.survEtat.text = v.s(R.string.preclim_camp_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e))
-        // Sortie de READY : le camping s'arrête 2 h plus tard — le temps qui reste, en orange.
-        val cycle = e.cycles.firstOrNull()
-        val replie = cycle != null && !PreClimatePlan.isUnlimited(cycle)
-        v.survReady.visibility = if (replie) View.VISIBLE else View.GONE
-        if (replie && cycle != null) v.survReady.text = v.s(R.string.preclim_camp_ready_left, duree(minutesRestantes(cycle.endMs, maintenant)))
         peindreRec()
     }
 
@@ -469,7 +481,6 @@ class PreClimateActivity : Activity() {
         v.survTitre.visibility = View.VISIBLE
         v.survTexte.visibility = View.VISIBLE
         v.survEcall.visibility = View.GONE
-        v.survReady.visibility = View.GONE
         v.survEtat.text = v.s(R.string.preclim_surv_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e),
             heure((e.startWallMinute + e.req.maxMin).roundToInt()))
         peindreRec()

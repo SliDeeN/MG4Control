@@ -20,7 +20,6 @@ import android.widget.Toast
 import com.mg4.control.R
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.hardware.ReadyWatcher
 import com.mg4.control.model.CampingConfig
 import com.mg4.control.model.CampingPlan
 import com.mg4.control.model.CampingScreen
@@ -79,23 +78,10 @@ object PreClimatePopupOverlay {
     private var avantCamping: PreClimateRequest? = null
 
     /**
-     * READY suivi tant que le pop-up est ouvert : la tuile « Camping » apparaît et disparaît en direct ;
-     * choisie, elle est retirée si la voiture quitte READY (2026-11-24, comme « ∞ » avant elle).
+     * Tuile « Camping » proposée : « Maintenant », READY ou non (issue #194, 2026-11-26) — le passage
+     * en READY est demandé au lancement, par l'écran de suivi.
      */
-    private val ecouteReady = ReadyWatcher.Listener { ready, _ ->
-        handler.post {
-            val r = req ?: return@post
-            if (!ready && r.camping != null) {
-                AppLogger.i(TAG, "Pop-up — sortie de READY : mode camping retiré")
-                vues?.avertCamping?.visibility = View.GONE
-                changer { it.copy(camping = null) }
-            } else peindre()
-        }
-    }
-
-    /** Tuile « Camping » proposée : « Maintenant », voiture en READY. */
-    private fun campingPossible(r: PreClimateRequest): Boolean =
-        r.mode == PreClimateMode.NOW && ReadyWatcher.ready == true
+    private fun campingPossible(r: PreClimateRequest): Boolean = r.mode == PreClimateMode.NOW
     /**
      * Appli caméra (issue #180), lue à l'ouverture : la surveillance est proposée à tous depuis le
      * 2026-11-08 ; l'appli ne fait que dire, sous « Clim coupée », si quelque chose sera filmé.
@@ -182,7 +168,6 @@ object PreClimatePopupOverlay {
         gestionnaire = wm
         vues = v
         demarrage = false
-        ReadyWatcher.add(ecouteReady)
         peindre()
         AppLogger.i(TAG, "Pop-up affiché — clim ${clim.temp ?: "?"} °C, ventilation ${if (clim.auto) "AUTO" else clim.fan ?: "?"}, " +
             "bornes ${clim.tempMin}–${clim.tempMax} °C / ${clim.fanMin}–${clim.fanMax}, " +
@@ -202,7 +187,6 @@ object PreClimatePopupOverlay {
         handler.post {
             val v = vue ?: return@post
             runCatching { gestionnaire?.removeView(v) }
-            ReadyWatcher.remove(ecouteReady)
             vue = null
             vues = null
             gestionnaire = null
@@ -616,7 +600,6 @@ object PreClimatePopupOverlay {
         v.campRangees.removeAllViews()
         listOfNotNull(
             R.drawable.ic_preclim_tent to v.s(R.string.preclim_camp_warn_ready),
-            R.drawable.ic_preclim_handle to v.s(R.string.preclim_camp_warn_door),
             R.drawable.ic_preclim_key to v.s(R.string.preclim_camp_warn_unlock),
             R.drawable.ic_cluster_battery_charging to v.s(R.string.preclim_camp_warn_battery, c.minSoc),
             R.drawable.ic_dialog_warning to v.s(R.string.preclim_camp_warn_lights),
