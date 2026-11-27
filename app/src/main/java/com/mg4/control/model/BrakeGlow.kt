@@ -20,10 +20,13 @@ package com.mg4.control.model
  * Halo de freinage (issue #278, 2026-11-25) : le pourtour de l'écran conducteur rougit quand on
  * freine. Aucun firmware n'expose l'état des feux stop (SWI68 à SWI173 fouillés), mais tous déclarent
  * la pression de la pédale de frein, lue sur SWI133 : halo = pédale enfoncée ([PEDALE_ON]) OU forte
- * décélération tirée de la vitesse (forte récupération sans pédale, et secours quand la pédale est
- * illisible).
+ * décélération (forte récupération sans pédale, et secours quand la pédale est illisible).
  *
- * Décélération mesurée entre le relevé le plus ancien des [FENETRE_MS] dernières millisecondes et
+ * Décélération (2026-11-27, relevés SWI133 du 27/11) : d'abord le capteur d'accélération
+ * longitudinale de la voiture (`SENSOR_ACCELERATION_PORTRAIT`, négatif au ralentissement, cohérent
+ * avec la vitesse et sans son retard), moyenné sur les [MOYENNE_ACCEL] derniers relevés ; le mode
+ * « freinage par récupération » de la voiture, lui, passe à 7 au moindre lever de pied — inutilisable.
+ * Sans capteur, la vitesse : décélération mesurée entre le relevé le plus ancien des [FENETRE_MS] dernières millisecondes et
  * le plus récent (au moins [ECART_MIN_MS] d'écart) : le pas d'un km/h de la vitesse ne fait pas
  * clignoter le halo. Seuils avec hystérésis : allumé au-dessus de [SEUIL_ON], éteint sous [SEUIL_OFF]
  * (m/s²). Une vitesse illisible, ou un trou de plus de [TROU_MS], éteint et repart de zéro.
@@ -32,6 +35,8 @@ class BrakeGlow {
 
     private val temps = ArrayDeque<Long>()
     private val vitesses = ArrayDeque<Float>()
+    private val accels = ArrayDeque<Float>()
+    private var dernierAccelMs = 0L
 
     /** Halo allumé. */
     var on = false
@@ -53,15 +58,28 @@ class BrakeGlow {
      * Un relevé au temps monotone [tMs] : vitesse (km/h) et pression brute de la pédale de frein
      * ([pedale], `null` = illisible). Rend l'état du halo : pédale enfoncée OU forte décélération.
      */
-    fun add(tMs: Long, kmh: Float?, pedale: Int? = null): Boolean {
+    fun add(tMs: Long, kmh: Float?, pedale: Int? = null, accel: Float? = null): Boolean {
         parPedale = when {
             pedale == null -> false
             parPedale -> pedale >= PEDALE_OFF
             else -> pedale >= PEDALE_ON
         }
-        parDeceleration = decel(tMs, kmh)
+        parDeceleration = if (accel != null) decelMesuree(tMs, accel) else { accels.clear(); decel(tMs, kmh) }
         on = parPedale || parDeceleration
         return on
+    }
+
+    /** Décélération lue sur le capteur ([accel] en m/s², négatif au ralentissement), moyennée. */
+    private fun decelMesuree(tMs: Long, accel: Float): Boolean {
+        if (accels.isNotEmpty() && (tMs - dernierAccelMs > TROU_MS || tMs < dernierAccelMs)) accels.clear()
+        dernierAccelMs = tMs
+        accels.addLast(accel)
+        while (accels.size > MOYENNE_ACCEL) accels.removeFirst()
+        // Pas de décision avant d'avoir de quoi moyenner : un à-coup au premier relevé n'allume rien.
+        if (accels.size < MOYENNE_ACCEL) return parDeceleration
+        val d = -accels.average().toFloat()
+        deceleration = d
+        return if (parDeceleration) d >= SEUIL_OFF else d >= SEUIL_ON
     }
 
     private fun decel(tMs: Long, kmh: Float?): Boolean {
@@ -86,6 +104,7 @@ class BrakeGlow {
     private fun viderVitesses() {
         temps.clear()
         vitesses.clear()
+        accels.clear()
         deceleration = null
         parDeceleration = false
     }
@@ -127,6 +146,8 @@ class BrakeGlow {
         const val FENETRE_MS = 600L
         const val ECART_MIN_MS = 400L
         const val TROU_MS = 1_500L
+        /** Relevés du capteur d'accélération moyennés (3 × 200 ms) : un à-coup isolé n'allume rien. */
+        const val MOYENNE_ACCEL = 3
         /** Relevé de la vitesse dédié au halo, plus serré que l'actualisation de la jauge. */
         const val RELEVE_MS = 200L
         /** Fondu à l'allumage et à l'extinction. */

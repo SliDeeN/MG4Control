@@ -128,6 +128,39 @@ class BrakeGlowTest {
         assertFalse(g.add(200, null, 0))
     }
 
+    // Capteur d'accélération de la voiture (2026-11-27) : prioritaire sur la vitesse, moyenné sur 3 relevés.
+    @Test
+    fun `the measured deceleration lights it above 1_3 and holds it above 0_7`() {
+        val g = BrakeGlow()
+        assertFalse(g.add(0, 40f, 0, -0.5f))
+        assertFalse(g.add(200, 40f, 0, -1.5f))
+        // (−0,5 − 1,5 − 1,6) / 3 = −1,2 : pas encore.
+        assertFalse(g.add(400, 40f, 0, -1.6f))
+        assertTrue(g.add(600, 39f, 0, -1.6f))
+        assertTrue(g.add(800, 38f, 0, -0.9f))
+        assertTrue(g.add(1000, 37f, 0, -0.8f))
+        assertFalse(g.add(1200, 36f, 0, -0.2f))
+    }
+
+    @Test
+    fun `a single jolt of the sensor does not light it`() {
+        val g = BrakeGlow()
+        assertFalse(g.add(0, 30f, 0, -0.3f))
+        assertFalse(g.add(200, 30f, 0, -2.4f))
+        assertFalse(g.add(400, 30f, 0, -0.3f))
+    }
+
+    @Test
+    fun `the sensor wins over the speed`() {
+        val g = BrakeGlow()
+        // La vitesse chute fort, mais le capteur dit à peine −0,3 : rien.
+        assertFalse(g.add(0, 60f, 0, -0.3f))
+        assertFalse(g.add(200, 55f, 0, -0.3f))
+        assertFalse(g.add(400, 50f, 0, -0.3f))
+        assertFalse(g.add(600, 45f, 0, -0.3f))
+        assertEquals(0.3f, g.deceleration!!, 0.01f)
+    }
+
     @Test
     fun `intensity defaults to medium`() {
         assertEquals(BrakeGlow.Intensity.MEDIUM, BrakeGlow.Intensity.fromKey(null))

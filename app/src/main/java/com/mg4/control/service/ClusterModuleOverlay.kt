@@ -502,7 +502,9 @@ internal object ClusterModuleOverlay {
             val on = if (actif) {
                 val kmh = runCatching { MG4Hardware.getVehicleSpeedKmh() }.getOrNull()?.takeIf { it in 0f..300f }
                 // Pédale de frein (tous les firmwares la déclarent) ; illisible : décélération seule.
-                frein.add(SystemClock.elapsedRealtime(), kmh, com.mg4.control.hardware.BrakePedalProbe.pression())
+                // Décélération : capteur d'accélération de la voiture (2026-11-27), sinon la vitesse.
+                frein.add(SystemClock.elapsedRealtime(), kmh, com.mg4.control.hardware.BrakePedalProbe.pression(),
+                    com.mg4.control.hardware.BrakePedalProbe.acceleration())
             } else {
                 frein.reset()
                 false
