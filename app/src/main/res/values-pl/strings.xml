@@ -516,6 +516,17 @@
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">Zewnętrzne API (KeyMapper, Tasker…)</string>
     <string name="settings_external_api_warn">⚠ Pozwala każdej zainstalowanej aplikacji sterować ustawieniami jazdy. Blokada prędkości nadal działa. Pozostaw wyłączone, jeśli tego nie potrzebujesz.</string>
+    <string name="profile_api_title">API profili</string>
+    <string name="profile_api_desc">Zaufane aplikacje, np. launcher, mogą odczytywać Twoje profile i stosować wybrany. Każdą trzeba raz zatwierdzić w oknie, które otwiera się przy jej pierwszym żądaniu. Działa nawet przy wyłączonym zewnętrznym API.</string>
+    <string name="profile_api_empty">Żadna aplikacja nie prosiła jeszcze o dostęp.</string>
+    <string name="profile_api_allowed">Dozwolona</string>
+    <string name="profile_api_denied">Odrzucona</string>
+    <string name="profile_api_changed">Zmieniony podpis: dostęp zablokowany</string>
+    <string name="profile_api_remove">Usuń</string>
+    <string name="profile_api_request_title">„%1$s” prosi o dostęp do Twoich profili</string>
+    <string name="profile_api_request_msg">Ta aplikacja będzie mogła odczytać listę Twoich profili i zastosować wybrany. Dostęp możesz odebrać w Ustawieniach zaawansowanych › API profili.</string>
+    <string name="profile_api_allow">Zezwól</string>
+    <string name="profile_api_deny">Odrzuć</string>
 
     <!-- Confirmation d'activation de l'API externe (issue #79) -->
     <string name="external_api_confirm_title">Włączyć zewnętrzne API?</string>

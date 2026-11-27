@@ -2665,6 +2665,44 @@
                     android:layout_height="1dp"
                     android:background="@color/dash_border" />
 
+                <!-- API Profils (issue #288, 2026-11-27) : indépendante de l'interrupteur ci-dessus.
+                     Les applications qui ont demandé l'accès, autorisées ou refusées ; lignes
+                     faites par le code (SettingsFragment.majApiProfils). -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_api_title"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="19sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/profile_api_desc"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="16sp" />
+
+                    <LinearLayout
+                        android:id="@+id/profile_api_list"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
                 <LinearLayout
                     android:id="@+id/row_auto_update"
                     android:layout_width="match_parent"

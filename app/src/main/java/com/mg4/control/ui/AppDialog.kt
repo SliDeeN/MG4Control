@@ -186,11 +186,13 @@ internal object AppDialog {
     }
 
     /** Affiche [vue] et rend la fenêtre, à refermer par `dismiss()`. */
-    fun afficher(context: Context, vue: View, largeurDp: Float, annulable: Boolean = true): AlertDialog {
+    fun afficher(context: Context, vue: View, largeurDp: Float, annulable: Boolean = true, superpose: Boolean = false): AlertDialog {
         val dialog = AlertDialog.Builder(context)
             .setView(vue)
             .setCancelable(annulable)
             .create()
+        // Montrée depuis le service, par-dessus une autre application (API Profils, 2026-11-27).
+        if (superpose) dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.show()
         // Après show() : avant, la fenêtre n'a pas encore ses dimensions et le réglage est perdu.
@@ -222,6 +224,9 @@ internal object AppDialog {
         non: CharSequence? = null,
         onOui: () -> Unit = {},
         onNon: () -> Unit = {},
+        /** Par-dessus une autre application (fenêtre ouverte par le service) ; [annulable] faux : il faut répondre. */
+        superpose: Boolean = false,
+        annulable: Boolean = true,
     ): AlertDialog {
         val vue = LayoutInflater.from(context).inflate(R.layout.dialog_confirm, null)
 
@@ -249,7 +254,7 @@ internal object AppDialog {
         }
         if (message.isNullOrEmpty()) vue.findViewById<View>(R.id.confirm_dialog_scroll).visibility = View.GONE
 
-        val dialog = afficher(context, vue, LARGEUR_CONFIRMATION_DP)
+        val dialog = afficher(context, vue, LARGEUR_CONFIRMATION_DP, annulable, superpose)
         vue.findViewById<TextView>(R.id.confirm_dialog_yes).apply {
             text = oui
             setTextColor(context.getColor(surVif))

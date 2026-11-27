@@ -118,6 +118,8 @@ class SettingsFragment : Fragment() {
     private var combineDeplie = false
     /** Refait la rangée de profils et repeint la carte, au retour sur l'écran. */
     private var majCarteCombine: (() -> Unit)? = null
+    /** Liste des applications de l'API Profils (#288), refaite au retour sur l'écran. */
+    private var listeApiProfils: LinearLayout? = null
 
     companion object {
         private const val STATE_CATEGORY = "settings_category"
@@ -888,6 +890,8 @@ class SettingsFragment : Fragment() {
         // Le seul verrou de cette API : tant qu'il est off, le receiver et le provider refusent.
         // L'ACTIVATION passe par une confirmation explicite ; la désactivation est immédiate —
         // on ne met jamais d'obstacle devant un retour à l'état sûr.
+        listeApiProfils = view.findViewById(R.id.profile_api_list)
+        majApiProfils()
         val switchExternalApi = view.findViewById<Switch>(R.id.switch_external_api)
         switchExternalApi.isChecked = prefs.getBoolean(ExternalApi.KEY_ENABLED, false)
         // Drapeau plutôt que retrait/remise de l'écouteur : les remises à zéro programmatiques
@@ -1299,8 +1303,73 @@ class SettingsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        majApiProfils()
         majCarteCombine?.invoke()
         if (combineDeplie && pageInterfaceVisible()) apercuCombine?.demarrer()
+    }
+
+    /**
+     * API Profils (issue #288) : une ligne par application qui a demandé l'accès — son nom, sa
+     * réponse (autorisée, refusée, signature modifiée) et « Retirer », qui oublie la réponse
+     * (l'application redemandera). Vide : une phrase le dit.
+     */
+    private fun majApiProfils() {
+        val liste = listeApiProfils ?: return
+        val ctx = liste.context
+        fun dp(v: Float) = com.mg4.control.service.OverlayKit.dp(ctx, v)
+        liste.removeAllViews()
+        val apps = com.mg4.control.api.ProfileApiAccess.entries(ctx)
+        if (apps.isEmpty()) {
+            liste.addView(TextView(ctx).apply {
+                text = getString(R.string.profile_api_empty)
+                setTextColor(ctx.getColor(R.color.dash_text_lo))
+                textSize = 16f
+            })
+            return
+        }
+        apps.forEach { e ->
+            val st = com.mg4.control.api.ProfileApiAccess.status(ctx, e.pkg)
+            val ligne = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, dp(6f), 0, dp(6f))
+            }
+            ligne.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(ctx).apply {
+                    text = com.mg4.control.api.ProfileApiAccess.label(ctx, e.pkg).takeIf { it != e.pkg } ?: e.label ?: e.pkg
+                    setTextColor(ctx.getColor(R.color.text_primary))
+                    textSize = 18f
+                })
+                addView(TextView(ctx).apply {
+                    text = getString(when (st) {
+                        com.mg4.control.api.ProfileApiAccess.Status.ALLOWED -> R.string.profile_api_allowed
+                        com.mg4.control.api.ProfileApiAccess.Status.CHANGED -> R.string.profile_api_changed
+                        else -> R.string.profile_api_denied
+                    }) + " · " + e.pkg
+                    setTextColor(ctx.getColor(when (st) {
+                        com.mg4.control.api.ProfileApiAccess.Status.ALLOWED -> R.color.dash_eco
+                        com.mg4.control.api.ProfileApiAccess.Status.CHANGED -> R.color.dash_warn
+                        else -> R.color.text_secondary
+                    }))
+                    textSize = 15f
+                })
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            ligne.addView(MaterialButton(ctx).apply {
+                text = getString(R.string.profile_api_remove)
+                isAllCaps = false
+                textSize = 17f
+                insetTop = 0; insetBottom = 0
+                cornerRadius = dp(14f)
+                strokeWidth = dp(1f)
+                ProfileChips.peindre(this, false)
+                setOnClickListener {
+                    com.mg4.control.api.ProfileApiAccess.remove(ctx, e.pkg)
+                    majApiProfils()
+                }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(52f)).also { it.marginStart = dp(12f) })
+            liste.addView(ligne)
+        }
     }
 
     /** L'aperçu de l'écran conducteur ne tourne que sur l'onglet Interface (2026-11-14). */

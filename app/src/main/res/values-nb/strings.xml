@@ -518,6 +518,17 @@
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">Ekstern API (KeyMapper, Tasker...)</string>
     <string name="settings_external_api_warn">⚠ Lar alle installerte apper styre kjøreinnstillingene. Fartslåsen gjelder fortsatt. La funksjonen være av hvis du ikke trenger den.</string>
+    <string name="profile_api_title">Profil-API</string>
+    <string name="profile_api_desc">Klarerte apper, for eksempel en launcher, kan lese profilene dine og bruke én. Hver må godkjennes én gang, i et vindu som åpnes ved første forespørsel. Virker selv når det eksterne API-et er av.</string>
+    <string name="profile_api_empty">Ingen app har bedt om tilgang ennå.</string>
+    <string name="profile_api_allowed">Tillatt</string>
+    <string name="profile_api_denied">Avvist</string>
+    <string name="profile_api_changed">Signatur endret: tilgang blokkert</string>
+    <string name="profile_api_remove">Fjern</string>
+    <string name="profile_api_request_title">«%1$s» ber om tilgang til profilene dine</string>
+    <string name="profile_api_request_msg">Denne appen vil kunne lese listen over profilene dine og bruke den du velger. Du kan fjerne tilgangen under Avanserte innstillinger › Profil-API.</string>
+    <string name="profile_api_allow">Tillat</string>
+    <string name="profile_api_deny">Avvis</string>
 
     <!-- Confirmation d'activation de l'API externe (issue #79) -->
     <string name="external_api_confirm_title">Vil du aktivere den eksterne API-en?</string>

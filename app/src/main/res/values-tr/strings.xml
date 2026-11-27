@@ -516,6 +516,17 @@
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">Dış API (KeyMapper, Tasker…)</string>
     <string name="settings_external_api_warn">⚠ Kurulu her uygulamanın sürüş ayarlarını denetlemesine izin verir. Hız kilidi yine de geçerlidir. İhtiyacınız yoksa kapalı bırakın.</string>
+    <string name="profile_api_title">Profil API\'si</string>
+    <string name="profile_api_desc">Güvenilir uygulamalar (örneğin bir launcher) profillerinizi okuyabilir ve birini uygulayabilir. Her biri, ilk isteğinde açılan bir pencerede bir kez onaylanmalıdır. Harici API kapalıyken de çalışır.</string>
+    <string name="profile_api_empty">Henüz hiçbir uygulama erişim istemedi.</string>
+    <string name="profile_api_allowed">İzin verildi</string>
+    <string name="profile_api_denied">Reddedildi</string>
+    <string name="profile_api_changed">İmza değişti: erişim engellendi</string>
+    <string name="profile_api_remove">Kaldır</string>
+    <string name="profile_api_request_title">“%1$s” profillerinize erişim istiyor</string>
+    <string name="profile_api_request_msg">Bu uygulama profil listenizi okuyabilecek ve seçtiğiniz profili uygulayabilecek. Erişimi Gelişmiş ayarlar › Profil API\'si bölümünden kaldırabilirsiniz.</string>
+    <string name="profile_api_allow">İzin ver</string>
+    <string name="profile_api_deny">Reddet</string>
 
     <!-- Confirmation d'activation de l'API externe (issue #79) -->
     <string name="external_api_confirm_title">Dış API etkinleştirilsin mi?</string>

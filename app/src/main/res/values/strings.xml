@@ -522,6 +522,17 @@
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">API externe (KeyMapper, Tasker…)</string>
     <string name="settings_external_api_warn">⚠ Permet à toute application installée de piloter les réglages de conduite. Le verrou de vitesse reste actif. Laissez désactivé si vous n\'en avez pas l\'usage.</string>
+    <string name="profile_api_title">API Profils</string>
+    <string name="profile_api_desc">Des applications de confiance, un launcher par exemple, peuvent lire vos profils et en appliquer un. Chacune doit être autorisée une fois, dans une fenêtre qui s\'ouvre à sa première demande. Fonctionne même quand l\'API externe est désactivée.</string>
+    <string name="profile_api_empty">Aucune application n\'a encore demandé l\'accès.</string>
+    <string name="profile_api_allowed">Autorisée</string>
+    <string name="profile_api_denied">Refusée</string>
+    <string name="profile_api_changed">Signature modifiée : accès bloqué</string>
+    <string name="profile_api_remove">Retirer</string>
+    <string name="profile_api_request_title">« %1$s » demande l\'accès à vos profils</string>
+    <string name="profile_api_request_msg">Cette application pourra lire la liste de vos profils et appliquer celui de votre choix. Vous pourrez retirer l\'accès dans Réglages avancés › API Profils.</string>
+    <string name="profile_api_allow">Autoriser</string>
+    <string name="profile_api_deny">Refuser</string>
 
     <!-- Confirmation d'activation de l'API externe (issue #79) -->
     <string name="external_api_confirm_title">Activer l\'API externe ?</string>

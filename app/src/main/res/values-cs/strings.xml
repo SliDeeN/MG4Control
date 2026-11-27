@@ -456,6 +456,17 @@
     <string name="settings_maintenance">Údržba</string>
     <string name="settings_external_api">Externí API (KeyMapper, Tasker…)</string>
     <string name="settings_external_api_warn">⚠ Umožní jakékoli nainstalované aplikaci měnit jízdní nastavení. Blokování podle rychlosti zůstává v platnosti. Ponechte vypnuté, pokud tuto funkci nepotřebujete.</string>
+    <string name="profile_api_title">API profilů</string>
+    <string name="profile_api_desc">Důvěryhodné aplikace, například launcher, mohou číst vaše profily a jeden z nich použít. Každou je třeba jednou povolit v okně, které se otevře při jejím prvním požadavku. Funguje i při vypnutém externím API.</string>
+    <string name="profile_api_empty">Zatím žádná aplikace nepožádala o přístup.</string>
+    <string name="profile_api_allowed">Povoleno</string>
+    <string name="profile_api_denied">Odmítnuto</string>
+    <string name="profile_api_changed">Podpis změněn: přístup zablokován</string>
+    <string name="profile_api_remove">Odebrat</string>
+    <string name="profile_api_request_title">„%1$s“ žádá o přístup k vašim profilům</string>
+    <string name="profile_api_request_msg">Tato aplikace bude moci číst seznam vašich profilů a použít ten, který zvolíte. Přístup můžete odebrat v Pokročilých nastaveních › API profilů.</string>
+    <string name="profile_api_allow">Povolit</string>
+    <string name="profile_api_deny">Odmítnout</string>
     <string name="external_api_confirm_title">Zapnout externí API?</string>
     <string name="external_api_confirm_warn">JAKÁKOLI NAINSTALOVANÁ APLIKACE BUDE MOCI PŘEVZÍT KONTROLU NAD VOZEM.</string>
     <string name="external_api_confirm_msg">Jízdní režim, rekuperaci, vyhřívání sedadel a volantu, klimatizaci a profily bude moci ovládat aplikace třetí strany bez vašeho dalšího souhlasu.\n\nBlokování podle rychlosti zůstává aktivní.\n\nZapněte pouze tehdy, pokud skutečně používáte KeyMapper, Tasker nebo podobný nástroj.</string>

@@ -516,6 +516,17 @@
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">Externe API (KeyMapper, Tasker…)</string>
     <string name="settings_external_api_warn">⚠ Erlaubt jeder installierten App, Fahreinstellungen zu steuern. Die Geschwindigkeitssperre bleibt aktiv. Aus lassen, wenn nicht benötigt.</string>
+    <string name="profile_api_title">Profile-API</string>
+    <string name="profile_api_desc">Vertrauenswürdige Apps, etwa ein Launcher, können Ihre Profile lesen und eines anwenden. Jede muss einmal erlaubt werden, in einem Fenster, das sich bei ihrer ersten Anfrage öffnet. Funktioniert auch bei ausgeschalteter externer API.</string>
+    <string name="profile_api_empty">Noch keine App hat Zugriff angefragt.</string>
+    <string name="profile_api_allowed">Erlaubt</string>
+    <string name="profile_api_denied">Abgelehnt</string>
+    <string name="profile_api_changed">Signatur geändert: Zugriff gesperrt</string>
+    <string name="profile_api_remove">Entfernen</string>
+    <string name="profile_api_request_title">„%1$s“ möchte auf Ihre Profile zugreifen</string>
+    <string name="profile_api_request_msg">Diese App kann die Liste Ihrer Profile lesen und das gewählte Profil anwenden. Den Zugriff können Sie unter Erweiterte Einstellungen › Profile-API entziehen.</string>
+    <string name="profile_api_allow">Erlauben</string>
+    <string name="profile_api_deny">Ablehnen</string>
 
     <!-- Confirmation d'activation de l'API externe (issue #79) -->
     <string name="external_api_confirm_title">Externe API aktivieren?</string>

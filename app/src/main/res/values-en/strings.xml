@@ -516,6 +516,17 @@
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">External API (KeyMapper, Tasker…)</string>
     <string name="settings_external_api_warn">⚠ Lets any installed app control driving settings. The speed lock still applies. Leave off if you don\'t need it.</string>
+    <string name="profile_api_title">Profiles API</string>
+    <string name="profile_api_desc">Trusted apps, such as a launcher, can read your profiles and apply one. Each must be allowed once, in a window that opens on its first request. Works even when the external API is off.</string>
+    <string name="profile_api_empty">No app has asked for access yet.</string>
+    <string name="profile_api_allowed">Allowed</string>
+    <string name="profile_api_denied">Denied</string>
+    <string name="profile_api_changed">Signature changed: access blocked</string>
+    <string name="profile_api_remove">Remove</string>
+    <string name="profile_api_request_title">“%1$s” asks for access to your profiles</string>
+    <string name="profile_api_request_msg">This app will be able to read your list of profiles and apply the one you choose. You can remove access in Advanced settings › Profiles API.</string>
+    <string name="profile_api_allow">Allow</string>
+    <string name="profile_api_deny">Deny</string>
 
     <!-- Confirmation d'activation de l'API externe (issue #79) -->
     <string name="external_api_confirm_title">Enable the external API?</string>

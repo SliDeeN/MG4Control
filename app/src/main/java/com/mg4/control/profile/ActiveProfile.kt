@@ -47,6 +47,8 @@ object ActiveProfile {
         if (profileId == null) prefs.edit().remove(KEY).apply()
         else prefs.edit().putString(KEY, profileId).apply()
         AppLogger.i(TAG, "profil actif = ${profileId ?: "aucun"}")
+        // API Profils (#288) : les applications qui observent la liste voient le changement.
+        com.mg4.control.api.ProfilesProvider.notifierChangement(ctx)
     }
 
     /**

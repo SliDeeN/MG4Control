@@ -516,6 +516,17 @@
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">API esterna (KeyMapper, Tasker…)</string>
     <string name="settings_external_api_warn">⚠ Consente a qualsiasi app installata di controllare le impostazioni di guida. Il blocco per velocità resta attivo. Lasciare disattivato se non serve.</string>
+    <string name="profile_api_title">API Profili</string>
+    <string name="profile_api_desc">Le app affidabili, come un launcher, possono leggere i tuoi profili e applicarne uno. Ognuna va autorizzata una volta, in una finestra che si apre alla sua prima richiesta. Funziona anche con l\'API esterna disattivata.</string>
+    <string name="profile_api_empty">Nessuna app ha ancora chiesto l\'accesso.</string>
+    <string name="profile_api_allowed">Autorizzata</string>
+    <string name="profile_api_denied">Rifiutata</string>
+    <string name="profile_api_changed">Firma cambiata: accesso bloccato</string>
+    <string name="profile_api_remove">Rimuovi</string>
+    <string name="profile_api_request_title">«%1$s» chiede l\'accesso ai tuoi profili</string>
+    <string name="profile_api_request_msg">Questa app potrà leggere l\'elenco dei tuoi profili e applicare quello che scegli. Puoi revocare l\'accesso in Impostazioni avanzate › API Profili.</string>
+    <string name="profile_api_allow">Autorizza</string>
+    <string name="profile_api_deny">Rifiuta</string>
 
     <!-- Confirmation d'activation de l'API externe (issue #79) -->
     <string name="external_api_confirm_title">Attivare l\'API esterna?</string>

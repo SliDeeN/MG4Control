@@ -258,5 +258,7 @@ class ProfileManager(private val context: Context) {
         // commit() et non apply() : la mutation suivante relit immédiatement le blob,
         // une écriture asynchrone rouvrirait la fenêtre de perte de mise à jour.
         prefs.edit().putString(KEY_PROFILES, gson.toJson(list)).commit()
+        // API Profils (#288) : profil ajouté, renommé, supprimé ou déplacé.
+        com.mg4.control.api.ProfilesProvider.notifierChangement(context)
     }
 }
