@@ -43,4 +43,39 @@ class NavGuidanceProbeTest {
         assertTrue(t, t.contains("ROAD_AFTER_JUNCTION=A6"))
         assertEquals("aucune donnée", NavGuidanceProbe.decrire(null))
     }
+
+    @Test
+    fun `the window state keeps the arrow, the texts per type, merged CarPlay keys and the counters`() {
+        NavGuidanceProbe.oublier()
+        val fleche = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888)
+        NavGuidanceProbe.memoriser(NavGuidanceProbe.ACTION_AA, Bundle().apply {
+            putString("com.allgo.extra.AANAV_message", "350 m")
+            putInt("com.allgo.extra.AANAV_message_type", 1)
+            putParcelable("com.allgo.extra.AANAV_icon", fleche)
+        }, "…")
+        NavGuidanceProbe.memoriser(NavGuidanceProbe.ACTION_AA, Bundle().apply {
+            putString("com.allgo.extra.AANAV_message", "Tournez à droite")
+            putInt("com.allgo.extra.AANAV_message_type", 3)
+        }, "…")
+        NavGuidanceProbe.memoriser("com.allgo.action.MEDIA", Bundle(), "brut média")
+        var e = NavGuidanceProbe.etat()
+        assertEquals(2, e.aa)
+        assertEquals(1, e.autres)
+        assertEquals(NavGuidanceProbe.Source.ANDROID_AUTO, e.source)
+        assertEquals("Tournez à droite", e.resume?.grand)
+        assertEquals("1 : 350 m", e.resume?.ligne1)
+        assertEquals(128, e.image?.width)
+        assertEquals("Android Auto · type 3 · image 128×128", e.detail)
+        assertEquals("com.allgo.action.MEDIA : brut média", e.brut)
+
+        // CarPlay : mises à jour partielles fusionnées, pas d'image.
+        NavGuidanceProbe.memoriser(NavGuidanceProbe.ACTION_CARPLAY, Bundle().apply { putString("DIST_TO_NEXT_JUNCTION", "300") }, "…")
+        NavGuidanceProbe.memoriser(NavGuidanceProbe.ACTION_CARPLAY, Bundle().apply { putString("ROAD_AFTER_JUNCTION", "A6") }, "…")
+        e = NavGuidanceProbe.etat()
+        assertEquals(2, e.carplay)
+        assertEquals("300", e.resume?.grand)
+        assertEquals("A6", e.resume?.ligne1)
+        assertEquals(null, e.image)
+        NavGuidanceProbe.oublier()
+    }
 }

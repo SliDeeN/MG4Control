@@ -1119,6 +1119,12 @@ class SettingsFragment : Fragment() {
             setOnClickListener { TyreDebugDialog.afficher(requireContext()) }
         }
 
+        // Guidage AA / CarPlay : outil de relevé (issue #285, 2026-11-28), débloqué avec le Diagnostic, sous Pneus.
+        view.findViewById<MaterialButton>(R.id.btn_nav_debug).apply {
+            visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
+            setOnClickListener { NavDebugDialog.afficher(requireContext()) }
+        }
+
         btnUpdate.setOnClickListener {
             btnUpdate.isEnabled = false
 
