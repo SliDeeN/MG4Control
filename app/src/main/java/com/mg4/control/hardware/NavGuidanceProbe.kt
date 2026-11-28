@@ -203,6 +203,8 @@ object NavGuidanceProbe {
         demarre = true
         contexte = ctx.applicationContext
         fil.post { lier() }
+        // Journal d'AllGo sur la navigation (2026-11-28) : dit pourquoi rien n'arrive jusqu'ici.
+        AllGoNavLog.start()
     }
 
     private fun lier() {
