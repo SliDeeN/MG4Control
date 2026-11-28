@@ -182,7 +182,6 @@ class MainActivity : AppCompatActivity() {
                 findViewById<View>(R.id.btn_diagnostic)?.visibility = View.VISIBLE
                 findViewById<View>(R.id.btn_charge_state)?.visibility = View.VISIBLE
                 findViewById<View>(R.id.btn_tyre_debug)?.visibility = View.VISIBLE
-                findViewById<View>(R.id.btn_nav_debug)?.visibility = View.VISIBLE
                 Toast.makeText(this, getString(R.string.diagnostic_unlocked), Toast.LENGTH_SHORT).show()
             }
         }

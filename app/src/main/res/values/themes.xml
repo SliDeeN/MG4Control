@@ -75,27 +75,4 @@
         <item name="iconPadding">10dp</item>
         <item name="iconGravity">textStart</item>
     </style>
-
-    <!-- Fenêtre « Guidage AA / CarPlay » (outil de relevé, 2026-11-28). -->
-    <style name="NavDebugChip">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:paddingStart">14dp</item>
-        <item name="android:paddingEnd">14dp</item>
-        <item name="android:paddingTop">6dp</item>
-        <item name="android:paddingBottom">6dp</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:maxLines">1</item>
-        <item name="android:ellipsize">end</item>
-    </style>
-
-    <style name="NavDebugLabel">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">@color/dash_text_lo</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:maxLines">1</item>
-        <item name="android:ellipsize">end</item>
-    </style>
 </resources>
